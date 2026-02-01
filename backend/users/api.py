@@ -337,6 +337,17 @@ def initialize_system(request):
          'description': 'Erlaubt das Löschen von Events', 'category': 'kalender'},
         {'code': 'kalender.ressourcen', 'name': 'Ressourcen verwalten', 
          'description': 'Erlaubt das Verwalten von Ressourcen', 'category': 'kalender'},
+        # Inventar
+        {'code': 'inventar.view', 'name': 'Inventar anzeigen', 
+         'description': 'Erlaubt das Anzeigen des Inventars', 'category': 'inventar'},
+        {'code': 'inventar.create', 'name': 'Items erstellen', 
+         'description': 'Erlaubt das Erstellen von Inventar-Items', 'category': 'inventar'},
+        {'code': 'inventar.edit', 'name': 'Items bearbeiten', 
+         'description': 'Erlaubt das Bearbeiten von Items', 'category': 'inventar'},
+        {'code': 'inventar.delete', 'name': 'Items löschen', 
+         'description': 'Erlaubt das Löschen von Items', 'category': 'inventar'},
+        {'code': 'inventar.ausleihe', 'name': 'Ausleihen verwalten', 
+         'description': 'Erlaubt das Verwalten von Ausleihen', 'category': 'inventar'},
     ]
     
     created_permissions = []

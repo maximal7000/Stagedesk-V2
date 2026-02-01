@@ -17,7 +17,8 @@ import {
   Moon,
   Calendar,
   Package,
-  Tag
+  Tag,
+  Boxes
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -37,6 +38,7 @@ export default function DashboardLayout({ children }) {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, permission: null },
     { name: 'Kalender', href: '/kalender', icon: Calendar, permission: 'kalender.view' },
+    { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'haushalte',
     'users',
     'kalender',
+    'inventar',
 ]
 
 MIDDLEWARE = [

@@ -129,6 +129,8 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
         haushalt_id: selectedHaushalt || null,
         geschaetztes_budget: parseFloat(formData.geschaetztes_budget) || 0,
         teilnehmer_anzahl: parseInt(formData.teilnehmer_anzahl) || 0,
+        // Leere Strings auf null setzen für optionale Felder
+        wiederholung_ende: formData.wiederholung_ende || null,
         ressourcen: selectedRessourcen.map(r => ({
           ressource_id: r.ressource_id || r.id,
           anzahl: r.anzahl || 1,
