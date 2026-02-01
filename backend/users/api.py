@@ -264,8 +264,12 @@ def update_user(request, user_id: int, payload: UserProfileAdminUpdateSchema):
         perms = Permission.objects.filter(code__in=payload.permission_codes)
         user.permissions.set(perms)
     
+    # forced_theme: Leerer String oder "none" = keine Erzwingung
     if payload.forced_theme is not None:
-        user.forced_theme = payload.forced_theme if payload.forced_theme else None
+        if payload.forced_theme in ('', 'none', None):
+            user.forced_theme = None
+        else:
+            user.forced_theme = payload.forced_theme
     if payload.theme_locked is not None:
         user.theme_locked = payload.theme_locked
     
@@ -298,14 +302,16 @@ def update_setting(request, key: str, payload: GlobalSettingUpdateSchema):
     return setting
 
 
-# ========== Setup: Initial Permissions ==========
+# ========== Setup: Initial Permissions (Admin) ==========
 
 @users_router.post("/setup/init", auth=keycloak_auth)
 def initialize_system(request):
     """
-    System initialisieren - erstellt Standard-Permissions
+    System initialisieren - erstellt Standard-Permissions (nur Admin)
     Admin-Status kommt aus Keycloak (Rolle "admin" im Realm oder Client)
     """
+    if not is_admin(request):
+        return {"error": "Keine Berechtigung - nur Admins können das System initialisieren"}, 403
     
     # Standard-Permissions erstellen
     default_permissions = [

@@ -247,9 +247,11 @@ export default function AdminPage() {
                         <label className="block text-sm text-gray-400 mb-2">Theme erzwingen</label>
                         <div className="flex gap-2">
                           <button
-                            onClick={() => setEditingUser({ ...editingUser, forced_theme: null })}
+                            onClick={() => setEditingUser({ ...editingUser, forced_theme: 'none' })}
                             className={`px-3 py-1.5 rounded-lg text-sm ${
-                              !editingUser.forced_theme ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'
+                              !editingUser.forced_theme || editingUser.forced_theme === 'none' 
+                                ? 'bg-blue-600 text-white' 
+                                : 'bg-gray-700 text-gray-300'
                             }`}
                           >
                             Keine
