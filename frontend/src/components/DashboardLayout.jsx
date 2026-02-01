@@ -14,7 +14,10 @@ import {
   Settings,
   Shield,
   Sun,
-  Moon
+  Moon,
+  Calendar,
+  Package,
+  Tag
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -33,8 +36,15 @@ export default function DashboardLayout({ children }) {
   // Navigation mit Permission-Check
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, permission: null },
+    { name: 'Kalender', href: '/kalender', icon: Calendar, permission: 'kalender.view' },
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
+
+  // Kalender-Unternavigation
+  const kalenderSubNav = hasPermission('kalender.view') ? [
+    { name: 'Ressourcen', href: '/ressourcen', icon: Package },
+    { name: 'Kategorien', href: '/kategorien', icon: Tag },
+  ] : [];
 
   // Admin-Navigation
   const adminNavigation = isAdmin ? [
@@ -46,7 +56,12 @@ export default function DashboardLayout({ children }) {
   };
 
   const getPageTitle = () => {
-    const allNav = [...navigation, ...adminNavigation, { name: 'Einstellungen', href: '/settings' }];
+    const allNav = [
+      ...navigation, 
+      ...kalenderSubNav,
+      ...adminNavigation, 
+      { name: 'Einstellungen', href: '/settings' }
+    ];
     return allNav.find((item) => location.pathname.startsWith(item.href) && item.href !== '/')?.name 
       || (location.pathname === '/' ? 'Dashboard' : 'Dashboard');
   };
@@ -102,6 +117,32 @@ export default function DashboardLayout({ children }) {
               </Link>
             );
           })}
+
+          {/* Kalender Sub-Navigation */}
+          {kalenderSubNav.length > 0 && (
+            <div className="pl-4 space-y-1">
+              {kalenderSubNav.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href;
+                
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
+                      isActive
+                        ? 'bg-gray-700 text-white'
+                        : 'text-gray-500 hover:text-white hover:bg-gray-800'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    <span>{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           {/* Admin Section */}
           {adminNavigation.length > 0 && (

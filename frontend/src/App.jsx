@@ -12,6 +12,9 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import HaushaltePage from './pages/HaushaltePage';
 import HaushaltDetailPage from './pages/HaushaltDetailPage';
+import KalenderPage from './pages/KalenderPage';
+import RessourcenPage from './pages/RessourcenPage';
+import KategorienPage from './pages/KategorienPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import DesignTestPage from './pages/DesignTestPage';
@@ -48,6 +51,9 @@ function AppContent() {
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/haushalte" element={<HaushaltePage />} />
                   <Route path="/haushalte/:id" element={<HaushaltDetailPage />} />
+                  <Route path="/kalender" element={<KalenderPage />} />
+                  <Route path="/ressourcen" element={<RessourcenPage />} />
+                  <Route path="/kategorien" element={<KategorienPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />

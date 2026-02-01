@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'haushalte',
     'users',
+    'kalender',
 ]
 
 MIDDLEWARE = [

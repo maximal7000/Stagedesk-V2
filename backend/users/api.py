@@ -317,6 +317,7 @@ def initialize_system(request):
     default_permissions = [
         {'code': 'theme.light_mode', 'name': 'Light Mode aktivieren', 
          'description': 'Erlaubt das Wechseln zum Light Mode', 'category': 'appearance'},
+        # Haushalte
         {'code': 'haushalte.view', 'name': 'Haushalte anzeigen', 
          'description': 'Erlaubt das Anzeigen von Haushalten', 'category': 'haushalte'},
         {'code': 'haushalte.create', 'name': 'Haushalte erstellen', 
@@ -325,6 +326,17 @@ def initialize_system(request):
          'description': 'Erlaubt das Bearbeiten von Haushalten', 'category': 'haushalte'},
         {'code': 'haushalte.delete', 'name': 'Haushalte löschen', 
          'description': 'Erlaubt das Löschen von Haushalten', 'category': 'haushalte'},
+        # Kalender
+        {'code': 'kalender.view', 'name': 'Kalender anzeigen', 
+         'description': 'Erlaubt das Anzeigen des Kalenders', 'category': 'kalender'},
+        {'code': 'kalender.create', 'name': 'Events erstellen', 
+         'description': 'Erlaubt das Erstellen von Events', 'category': 'kalender'},
+        {'code': 'kalender.edit', 'name': 'Events bearbeiten', 
+         'description': 'Erlaubt das Bearbeiten von Events', 'category': 'kalender'},
+        {'code': 'kalender.delete', 'name': 'Events löschen', 
+         'description': 'Erlaubt das Löschen von Events', 'category': 'kalender'},
+        {'code': 'kalender.ressourcen', 'name': 'Ressourcen verwalten', 
+         'description': 'Erlaubt das Verwalten von Ressourcen', 'category': 'kalender'},
     ]
     
     created_permissions = []

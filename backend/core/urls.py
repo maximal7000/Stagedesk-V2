@@ -20,6 +20,7 @@ from ninja import NinjaAPI
 
 from haushalte.api import haushalte_router, kategorien_router
 from users.api import users_router
+from kalender.api import kalender_router
 
 # Django Ninja API-Instanz
 api = NinjaAPI(
@@ -39,6 +40,7 @@ def health_check(request):
 api.add_router("/haushalte", haushalte_router)
 api.add_router("/kategorien", kategorien_router)
 api.add_router("/users", users_router)
+api.add_router("/kalender", kalender_router)
 
 
 urlpatterns = [
