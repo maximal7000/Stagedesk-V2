@@ -4,8 +4,17 @@
 import { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { 
-  Home, Wallet, LogOut, User, Menu, X, ChevronDown,
-  Settings, Shield, Sun, Moon
+  Home, 
+  Wallet, 
+  LogOut, 
+  User, 
+  Menu, 
+  X,
+  ChevronDown,
+  Settings,
+  Shield,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -21,11 +30,13 @@ export default function DashboardLayout({ children }) {
 
   const user = auth.user?.profile;
 
+  // Navigation mit Permission-Check
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, permission: null },
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 
+  // Admin-Navigation
   const adminNavigation = isAdmin ? [
     { name: 'Admin', href: '/admin', icon: Shield },
   ] : [];
@@ -42,6 +53,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -49,11 +61,13 @@ export default function DashboardLayout({ children }) {
         />
       )}
 
+      {/* Sidebar */}
       <aside
         className={`fixed top-0 left-0 z-50 h-full w-64 bg-gray-900 border-r border-gray-800 transform transition-transform duration-200 ease-in-out lg:translate-x-0 flex flex-col ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
+        {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800">
           <h1 className="text-xl font-bold text-white">Stagedesk</h1>
           <button
@@ -64,6 +78,7 @@ export default function DashboardLayout({ children }) {
           </button>
         </div>
 
+        {/* Main Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
@@ -88,6 +103,7 @@ export default function DashboardLayout({ children }) {
             );
           })}
 
+          {/* Admin Section */}
           {adminNavigation.length > 0 && (
             <>
               <div className="pt-4 pb-2">
@@ -119,7 +135,9 @@ export default function DashboardLayout({ children }) {
           )}
         </nav>
 
+        {/* Bottom Section: Settings & User */}
         <div className="border-t border-gray-800">
+          {/* Settings Link */}
           <Link
             to="/settings"
             onClick={() => setSidebarOpen(false)}
@@ -133,6 +151,7 @@ export default function DashboardLayout({ children }) {
             <span className="font-medium">Einstellungen</span>
           </Link>
 
+          {/* User Menu */}
           <div className="p-4">
             <div className="relative">
               <button
@@ -151,13 +170,16 @@ export default function DashboardLayout({ children }) {
                 <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
+              {/* User Dropdown */}
               {userMenuOpen && (
                 <div className="absolute bottom-full left-0 right-0 mb-2 bg-gray-800 border border-gray-700 rounded-lg shadow-lg overflow-hidden">
+                  {/* Theme Indicator */}
                   <div className="px-4 py-2 border-b border-gray-700 flex items-center gap-2 text-sm text-gray-400">
                     {isDark ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                     <span>{isDark ? 'Dark Mode' : 'Light Mode'}</span>
                   </div>
                   
+                  {/* Admin Badge */}
                   {isAdmin && (
                     <div className="px-4 py-2 border-b border-gray-700">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-purple-600/20 text-purple-400 rounded">
@@ -181,7 +203,9 @@ export default function DashboardLayout({ children }) {
         </div>
       </aside>
 
+      {/* Main Content */}
       <div className="lg:pl-64">
+        {/* Top Bar */}
         <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-4 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
@@ -196,6 +220,7 @@ export default function DashboardLayout({ children }) {
             </h2>
           </div>
 
+          {/* Mobile User Icon */}
           <div className="lg:hidden">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
@@ -203,6 +228,7 @@ export default function DashboardLayout({ children }) {
           </div>
         </header>
 
+        {/* Page Content */}
         <main className="p-4 lg:p-8">
           {children}
         </main>

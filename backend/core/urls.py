@@ -16,7 +16,32 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from ninja import NinjaAPI
+
+from haushalte.api import haushalte_router, kategorien_router
+from users.api import users_router
+
+# Django Ninja API-Instanz
+api = NinjaAPI(
+    title="Stagedesk API",
+    version="1.0.0",
+    description="Haushalts- und Budget-Management API"
+)
+
+
+@api.get("/health")
+def health_check(request):
+    """Einfacher Health-Check-Endpoint"""
+    return {"status": "ok"}
+
+
+# Router hinzufügen
+api.add_router("/haushalte", haushalte_router)
+api.add_router("/kategorien", kategorien_router)
+api.add_router("/users", users_router)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/', api.urls),
 ]

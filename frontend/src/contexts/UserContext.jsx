@@ -1,5 +1,6 @@
 /**
  * User Context - Verwaltet User-Profil, Permissions und Sessions
+ * Admin-Status und Rollen kommen aus Keycloak JWT
  */
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from 'react-oidc-context';
@@ -20,6 +21,7 @@ export function UserProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
+  // Profil laden
   const fetchProfile = useCallback(async () => {
     if (!auth.isAuthenticated) {
       setLoading(false);
@@ -33,8 +35,9 @@ export function UserProvider({ children }) {
       setProfile(data);
       setPermissions(data.permissions || []);
       setKeycloakRoles(data.keycloak_roles || []);
-      setIsAdmin(data.is_admin);
+      setIsAdmin(data.is_admin);  // Kommt aus Keycloak
       
+      // Theme aus Profil übernehmen
       if (data.forced_theme) {
         setForcedTheme(data.forced_theme);
         setCanChangeTheme(false);
@@ -52,6 +55,7 @@ export function UserProvider({ children }) {
     }
   }, [auth.isAuthenticated, setTheme, setForcedTheme, setCanChangeTheme]);
 
+  // Sessions laden
   const fetchSessions = useCallback(async () => {
     if (!auth.isAuthenticated) return;
 
@@ -63,6 +67,7 @@ export function UserProvider({ children }) {
     }
   }, [auth.isAuthenticated]);
 
+  // Session registrieren
   const registerSession = useCallback(async () => {
     if (!auth.isAuthenticated) return;
 
@@ -73,6 +78,7 @@ export function UserProvider({ children }) {
     }
   }, [auth.isAuthenticated]);
 
+  // Session widerrufen
   const revokeSession = useCallback(async (sessionId) => {
     try {
       await apiClient.delete(`/users/me/sessions/${sessionId}`);
@@ -84,6 +90,7 @@ export function UserProvider({ children }) {
     }
   }, []);
 
+  // Theme aktualisieren
   const updateTheme = useCallback(async (newTheme) => {
     try {
       await apiClient.put('/users/me', { theme: newTheme });
@@ -95,11 +102,13 @@ export function UserProvider({ children }) {
     }
   }, [setTheme]);
 
+  // Permission prüfen
   const hasPermission = useCallback((permissionCode) => {
     if (isAdmin) return true;
     return permissions.includes(permissionCode);
   }, [isAdmin, permissions]);
 
+  // System initialisieren (macht ersten User zum Admin)
   const initializeSystem = useCallback(async () => {
     try {
       const response = await apiClient.post('/users/setup/init');
@@ -111,6 +120,7 @@ export function UserProvider({ children }) {
     }
   }, [fetchProfile]);
 
+  // Beim Login Profil und Session laden
   useEffect(() => {
     if (auth.isAuthenticated && !initialized) {
       fetchProfile();
@@ -118,6 +128,7 @@ export function UserProvider({ children }) {
     }
   }, [auth.isAuthenticated, initialized, fetchProfile, registerSession]);
 
+  // Beim Logout zurücksetzen
   useEffect(() => {
     if (!auth.isAuthenticated) {
       setProfile(null);

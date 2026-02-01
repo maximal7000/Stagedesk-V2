@@ -2,53 +2,125 @@
 
 /* Tailwind v4 Custom Theme */
 @theme {
+  /* Custom Gray Shades */
   --color-gray-750: #2d3748;
   --color-gray-950: #0a0e14;
 }
 
-/* Dark Mode als Standard */
+/* ===== DARK MODE (Standard) ===== */
 :root.dark,
 :root:not(.light) {
   color-scheme: dark;
-  --bg-primary: rgb(10 14 20);
-  --bg-secondary: rgb(17 24 39);
-  --bg-tertiary: rgb(31 41 55);
+  
+  --bg-primary: rgb(10 14 20); /* gray-950 */
+  --bg-secondary: rgb(17 24 39); /* gray-900 */
+  --bg-tertiary: rgb(31 41 55); /* gray-800 */
+  --bg-hover: rgb(55 65 81); /* gray-700 */
+  
   --text-primary: rgb(255 255 255);
-  --text-secondary: rgb(156 163 175);
-  --border-color: rgb(31 41 55);
+  --text-secondary: rgb(156 163 175); /* gray-400 */
+  --text-muted: rgb(107 114 128); /* gray-500 */
+  
+  --border-color: rgb(31 41 55); /* gray-800 */
+  --border-hover: rgb(55 65 81); /* gray-700 */
 }
 
-/* Light Mode */
+/* ===== LIGHT MODE ===== */
 :root.light {
   color-scheme: light;
-  --bg-primary: rgb(249 250 251);
-  --bg-secondary: rgb(255 255 255);
-  --bg-tertiary: rgb(243 244 246);
-  --text-primary: rgb(17 24 39);
-  --text-secondary: rgb(75 85 99);
-  --border-color: rgb(229 231 235);
+  
+  --bg-primary: rgb(249 250 251); /* gray-50 */
+  --bg-secondary: rgb(255 255 255); /* white */
+  --bg-tertiary: rgb(243 244 246); /* gray-100 */
+  --bg-hover: rgb(229 231 235); /* gray-200 */
+  
+  --text-primary: rgb(17 24 39); /* gray-900 */
+  --text-secondary: rgb(75 85 99); /* gray-600 */
+  --text-muted: rgb(107 114 128); /* gray-500 */
+  
+  --border-color: rgb(229 231 235); /* gray-200 */
+  --border-hover: rgb(209 213 219); /* gray-300 */
 }
 
+/* Global Styles mit CSS Variables */
 * {
   border-color: var(--border-color);
 }
 
 body {
-  margin: 0;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* Light Mode Overrides */
-:root.light .bg-gray-900 { background-color: var(--bg-secondary) !important; }
-:root.light .bg-gray-950 { background-color: var(--bg-primary) !important; }
-:root.light .bg-gray-800 { background-color: var(--bg-tertiary) !important; }
-:root.light .border-gray-800 { border-color: var(--border-color) !important; }
-:root.light .text-white { color: var(--text-primary) !important; }
-:root.light .text-gray-400 { color: var(--text-secondary) !important; }
+/* Light Mode Overrides für bestimmte Komponenten */
+:root.light .bg-gray-900 {
+  background-color: var(--bg-secondary) !important;
+}
+
+:root.light .bg-gray-950 {
+  background-color: var(--bg-primary) !important;
+}
+
+:root.light .bg-gray-800 {
+  background-color: var(--bg-tertiary) !important;
+}
+
+:root.light .bg-gray-800\/30,
+:root.light .hover\:bg-gray-800:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+:root.light .border-gray-800 {
+  border-color: var(--border-color) !important;
+}
+
+:root.light .border-gray-700 {
+  border-color: var(--border-hover) !important;
+}
+
+:root.light .text-white {
+  color: var(--text-primary) !important;
+}
+
+:root.light .text-gray-400 {
+  color: var(--text-secondary) !important;
+}
+
+:root.light .text-gray-500 {
+  color: var(--text-muted) !important;
+}
+
+/* Sidebar im Light Mode */
+:root.light aside.bg-gray-900 {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Cards und Panels im Light Mode */
+:root.light .bg-gray-900.border {
+  background-color: var(--bg-secondary) !important;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+}
+
+/* Inputs im Light Mode */
+:root.light input.bg-gray-800,
+:root.light select.bg-gray-800,
+:root.light textarea.bg-gray-800 {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Header im Light Mode */
+:root.light header.bg-gray-900 {
+  background-color: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+

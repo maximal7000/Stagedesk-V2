@@ -1,0 +1,30 @@
+---
+alwaysApply: true
+---
+
+---
+description: Projektregeln für Stagedesk (Django Ninja & React Tailwind)
+globs: **/*
+---
+
+# Stagedesk Coding Standards
+
+## General
+- Sprache: Deutsch.
+- Architektur: Clean Code, DRY, Fokus auf Performance.
+
+## Backend (Django Ninja)
+- Framework: Django Ninja (Async bevorzugt).
+- Auth: Keycloak JWT-Validierung über die `KeycloakAuth` Klasse.
+- Dokumentation: Automatische Swagger-Docs nutzen.
+
+## Frontend (React + Tailwind)
+- **Styling: Ausschließlich Tailwind CSS.**
+- **Theming: Dark Mode ist Standard (`class="dark"`).**
+- UI-Library: Bevorzuge shadcn/ui Komponenten.
+- Icons: lucide-react.
+
+## API & Auth
+- Nutze einen zentralen Axios-Interceptor für API-Calls.
+- Hänge das Keycloak-Bearer-Token automatisch an jeden Request an `/api/` an.
+- Behandle 401-Fehler (Token abgelaufen) zentral durch einen Redirect zum Login.

@@ -1,111 +1,562 @@
-import { useState, useEffect, useRef } from 'react';
+/**
+ * Haushalt Detail - Zeigt alle Artikel eines Haushalts
+ * Mit Live-Aktualisierung und Inline-Editing
+ */
+import { useState, useEffect, useRef, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Wallet, TrendingUp, TrendingDown, Trash2, Edit, ExternalLink, Loader2, RefreshCw, Wand2, Save, X } from 'lucide-react';
+import { 
+  ArrowLeft, Plus, Wallet, TrendingUp, TrendingDown, 
+  Trash2, Edit, ExternalLink, Loader2, Package, RefreshCw,
+  Wand2, Save, X, LayoutGrid, List, Columns
+} from 'lucide-react';
 import apiClient from '../lib/api';
 import EditHaushaltModal from '../components/EditHaushaltModal';
-import ArtikelModal from '../components/ArtikelModal';
 
 const POLL_INTERVAL = 5000;
-const formatPreis = (v) => parseFloat(v || 0).toLocaleString('de-DE', { minimumFractionDigits: 2 }) + ' EUR';
+
+// Preis formatieren mit € hinten
+const formatPreis = (value) => {
+  const num = parseFloat(value) || 0;
+  return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+};
+
+// Separate Editing-Row Komponente mit eigenem lokalem State (verhindert Parent-Rerenders)
+const EditingRow = memo(function EditingRow({ 
+  item, 
+  onSave, 
+  onCancel, 
+  onParse, 
+  parsingId, 
+  savingId 
+}) {
+  const [localData, setLocalData] = useState({
+    name: item.name || '',
+    link: item.link || '',
+    preis: item.preis || '',
+    anzahl: item.anzahl || 1
+  });
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSave(localData);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  };
+
+  const handleParse = async () => {
+    const result = await onParse(item.id, localData.link);
+    if (result) {
+      setLocalData(prev => ({
+        ...prev,
+        name: result.name || prev.name,
+        preis: result.preis || prev.preis,
+      }));
+    }
+  };
+
+  return (
+    <tr className="bg-blue-950/20 border-b border-gray-800">
+      <td className="p-2">
+        <input
+          type="text"
+          value={localData.name}
+          onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+        />
+      </td>
+      <td className="p-2">
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={localData.link}
+            onChange={(e) => setLocalData({ ...localData, link: e.target.value })}
+            onKeyDown={handleKeyDown}
+            placeholder="https://..."
+            className="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            onClick={handleParse}
+            disabled={!localData.link || parsingId === item.id}
+            className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white rounded"
+            title="Auto-Vervollständigen"
+          >
+            {parsingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+          </button>
+        </div>
+      </td>
+      <td className="p-2">
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            value={localData.preis}
+            onChange={(e) => setLocalData({ ...localData, preis: e.target.value })}
+            onKeyDown={handleKeyDown}
+            step="0.01"
+            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-gray-500 text-sm">€</span>
+        </div>
+      </td>
+      <td className="p-2">
+        <input
+          type="number"
+          value={localData.anzahl}
+          onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
+          onKeyDown={handleKeyDown}
+          min="1"
+          className="w-16 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center focus:ring-2 focus:ring-blue-500"
+        />
+      </td>
+      <td className="p-2 text-right text-white font-medium">
+        {formatPreis((parseFloat(localData.preis) || 0) * (parseInt(localData.anzahl) || 1))}
+      </td>
+      <td className="p-2">
+        <div className="flex gap-1 justify-end">
+          <button
+            onClick={() => onSave(localData)}
+            disabled={savingId === item.id}
+            className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded"
+          >
+            {savingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          </button>
+          <button onClick={onCancel} className="p-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+// Separate NewRow Komponente mit eigenem lokalem State
+const NewRowComponent = memo(function NewRowComponent({ 
+  kategorie, 
+  onSave, 
+  onCancel, 
+  onParse, 
+  parsingId, 
+  savingId 
+}) {
+  const [localData, setLocalData] = useState({
+    name: '',
+    link: '',
+    preis: '',
+    anzahl: 1
+  });
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (localData.name) onSave(localData, kategorie);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      onCancel();
+    }
+  };
+
+  const handleParse = async () => {
+    const result = await onParse(localData.link);
+    if (result) {
+      setLocalData(prev => ({
+        ...prev,
+        name: result.name || prev.name,
+        preis: result.preis || prev.preis,
+      }));
+    }
+  };
+
+  return (
+    <tr className="bg-green-950/20 border-b border-gray-800">
+      <td className="p-2">
+        <input
+          type="text"
+          value={localData.name}
+          onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
+          onKeyDown={handleKeyDown}
+          placeholder="Produktname..."
+          className="w-full px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm focus:ring-2 focus:ring-green-500"
+          autoFocus
+        />
+      </td>
+      <td className="p-2">
+        <div className="flex gap-1">
+          <input
+            type="text"
+            value={localData.link}
+            onChange={(e) => setLocalData({ ...localData, link: e.target.value })}
+            onKeyDown={handleKeyDown}
+            placeholder="https://..."
+            className="flex-1 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm focus:ring-2 focus:ring-green-500"
+          />
+          <button
+            onClick={handleParse}
+            disabled={!localData.link || parsingId === 'new'}
+            className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white rounded"
+          >
+            {parsingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+          </button>
+        </div>
+      </td>
+      <td className="p-2">
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            value={localData.preis}
+            onChange={(e) => setLocalData({ ...localData, preis: e.target.value })}
+            onKeyDown={handleKeyDown}
+            placeholder="0.00"
+            step="0.01"
+            className="w-20 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-right focus:ring-2 focus:ring-green-500"
+          />
+          <span className="text-gray-500 text-sm">€</span>
+        </div>
+      </td>
+      <td className="p-2">
+        <input
+          type="number"
+          value={localData.anzahl}
+          onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
+          onKeyDown={handleKeyDown}
+          min="1"
+          className="w-16 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-center focus:ring-2 focus:ring-green-500"
+        />
+      </td>
+      <td className="p-2 text-right text-white font-medium">
+        {formatPreis((parseFloat(localData.preis) || 0) * (parseInt(localData.anzahl) || 1))}
+      </td>
+      <td className="p-2">
+        <div className="flex gap-1 justify-end">
+          <button
+            onClick={() => onSave(localData, kategorie)}
+            disabled={!localData.name || savingId === 'new'}
+            className="p-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 text-white rounded"
+          >
+            {savingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          </button>
+          <button onClick={onCancel} className="p-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 export default function HaushaltDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  
   const [haushalt, setHaushalt] = useState(null);
   const [artikel, setArtikel] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showArtikelModal, setShowArtikelModal] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [isPolling, setIsPolling] = useState(true);
+  const pollIntervalRef = useRef(null);
+  
+  // Ansicht: 'tabs' | 'split' | 'stacked'
+  const [viewMode, setViewMode] = useState('tabs');
+  const [activeTab, setActiveTab] = useState('konsumitiv');
+  
+  // Inline-Editing States
   const [editingId, setEditingId] = useState(null);
-  const [editingData, setEditingData] = useState({});
   const [savingId, setSavingId] = useState(null);
-  const pollRef = useRef(null);
+  const [parsingId, setParsingId] = useState(null);
+  
+  // Neue Zeile
+  const [newRow, setNewRow] = useState(null);
+
+  // Initiales Laden - nur bei ID-Wechsel
+  useEffect(() => {
+    fetchData();
+  }, [id]);
+  
+  // Polling - pausiert während Bearbeitung
+  useEffect(() => {
+    if (isPolling && !editingId && !newRow) {
+      pollIntervalRef.current = setInterval(() => {
+        fetchData(true);
+      }, POLL_INTERVAL);
+    }
+    
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, [id, isPolling, editingId, newRow]);
 
   const fetchData = async (silent = false) => {
     try {
-      if (!silent) setLoading(true);
-      const [hRes, aRes] = await Promise.all([
-        apiClient.get('/haushalte/' + id),
-        apiClient.get('/haushalte/' + id + '/artikel'),
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
+      
+      const [haushaltRes, artikelRes] = await Promise.all([
+        apiClient.get(`/haushalte/${id}`),
+        apiClient.get(`/haushalte/${id}/artikel`),
       ]);
-      setHaushalt(hRes.data);
-      setArtikel(aRes.data);
-      setError(null);
+      
+      setHaushalt(haushaltRes.data);
+      setArtikel(artikelRes.data);
+      setLastUpdate(new Date());
     } catch (err) {
-      if (!silent) setError('Fehler beim Laden');
+      if (!silent) {
+        setError('Daten konnten nicht geladen werden.');
+      }
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
-  useEffect(() => { fetchData(); }, [id]);
-
-  useEffect(() => {
-    if (isPolling && !editingId) {
-      pollRef.current = setInterval(() => fetchData(true), POLL_INTERVAL);
-    }
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [id, isPolling, editingId]);
-
-  const startEditing = (a) => {
-    setEditingId(a.id);
-    setEditingData({ name: a.name, preis: a.preis, anzahl: a.anzahl, link: a.link || '' });
+  // Inline-Editing
+  const startEditing = (item) => {
+    setEditingId(item.id);
   };
 
-  const saveEditing = async () => {
+  // Speichern für EditingRow (erhält Daten als Parameter)
+  const handleSaveEditing = async (localData) => {
     if (!editingId) return;
+    
     setSavingId(editingId);
     try {
-      await apiClient.put('/haushalte/' + id + '/artikel/' + editingId, {
-        name: editingData.name,
-        preis: parseFloat(editingData.preis) || 0,
-        anzahl: parseInt(editingData.anzahl) || 1,
-        link: editingData.link || '',
+      await apiClient.put(`/haushalte/${id}/artikel/${editingId}`, {
+        name: localData.name,
+        preis: parseFloat(localData.preis) || 0,
+        anzahl: parseInt(localData.anzahl) || 1,
+        link: localData.link || '',
         beschreibung: '',
       });
+      
       setEditingId(null);
       fetchData();
     } catch (err) {
-      alert('Fehler beim Speichern');
+      alert('Änderungen konnten nicht gespeichert werden.');
     } finally {
       setSavingId(null);
     }
   };
 
-  const cancelEditing = () => { setEditingId(null); setEditingData({}); };
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
 
-  const handleDelete = async (artikelId) => {
-    if (!confirm('Artikel loeschen?')) return;
+  // Parse für EditingRow - gibt Ergebnis zurück
+  const handleParseLink = async (artikelId, link) => {
+    if (!link) return null;
+    
+    setParsingId(artikelId);
     try {
-      await apiClient.delete('/haushalte/' + id + '/artikel/' + artikelId);
-      fetchData();
+      const response = await apiClient.post('/haushalte/parse-link/', { url: link });
+      return response.data;
     } catch (err) {
-      alert('Fehler');
+      console.error('Parse-Fehler:', err);
+      return null;
+    } finally {
+      setParsingId(null);
     }
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); saveEditing(); }
-    else if (e.key === 'Escape') { e.preventDefault(); cancelEditing(); }
+  // Neue Zeile
+  const addNewRow = (kategorie) => {
+    setNewRow({
+      name: '',
+      preis: '',
+      anzahl: 1,
+      link: '',
+      beschreibung: '',
+      kategorie,
+    });
+    if (viewMode === 'tabs') {
+      setActiveTab(kategorie);
+    }
   };
 
-  if (loading) return <div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-12 h-12 text-blue-500 animate-spin" /></div>;
-  if (error || !haushalt) return (
-    <div className="bg-gray-900 border border-red-800 rounded-xl p-12 text-center">
-      <p className="text-red-400 mb-4">{error || 'Nicht gefunden'}</p>
-      <button onClick={() => navigate('/haushalte')} className="px-4 py-2 bg-gray-800 text-white rounded-lg">Zurueck</button>
-    </div>
-  );
+  // Speichern für NewRow (erhält Daten als Parameter)
+  const handleSaveNewRow = async (localData, kategorie) => {
+    if (!localData.name) return;
+    
+    setSavingId('new');
+    try {
+      await apiClient.post(`/haushalte/${id}/artikel`, {
+        name: localData.name,
+        preis: parseFloat(localData.preis) || 0,
+        anzahl: parseInt(localData.anzahl) || 1,
+        kategorie: kategorie,
+        link: localData.link || '',
+        beschreibung: '',
+      });
+      
+      setNewRow(null);
+      fetchData();
+    } catch (err) {
+      alert('Artikel konnte nicht erstellt werden.');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
-  const budgetK = parseFloat(haushalt.budget_konsumitiv) || 0;
-  const budgetI = parseFloat(haushalt.budget_investiv) || 0;
-  const gesamtK = parseFloat(haushalt.gesamt_konsumitiv) || 0;
-  const gesamtI = parseFloat(haushalt.gesamt_investiv) || 0;
-  const artikelK = artikel.filter(a => a.kategorie === 'konsumitiv');
-  const artikelI = artikel.filter(a => a.kategorie === 'investiv');
+  const cancelNewRow = () => {
+    setNewRow(null);
+  };
 
+  // Parse für NewRow - gibt Ergebnis zurück
+  const handleParseNewRow = async (link) => {
+    if (!link) return null;
+    
+    setParsingId('new');
+    try {
+      const response = await apiClient.post('/haushalte/parse-link/', { url: link });
+      return response.data;
+    } catch (err) {
+      console.error('Parse-Fehler:', err);
+      return null;
+    } finally {
+      setParsingId(null);
+    }
+  };
+
+  const handleDeleteArtikel = async (artikelId) => {
+    if (!confirm('Möchtest du diesen Artikel wirklich löschen?')) return;
+    
+    try {
+      await apiClient.delete(`/haushalte/${id}/artikel/${artikelId}`);
+      fetchData();
+    } catch (err) {
+      alert('Artikel konnte nicht gelöscht werden.');
+    }
+  };
+
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !haushalt) {
+    return (
+      <div className="bg-gray-900 border border-red-800 rounded-xl p-12 text-center">
+        <p className="text-red-400 mb-4">{error || 'Haushalt nicht gefunden'}</p>
+        <button
+          onClick={() => navigate('/haushalte')}
+          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg"
+        >
+          Zurück zur Übersicht
+        </button>
+      </div>
+    );
+  }
+
+  const budgetKonsumitiv = parseFloat(haushalt.budget_konsumitiv) || 0;
+  const budgetInvestitiv = parseFloat(haushalt.budget_investiv) || 0;
+  const gesamtKonsumitiv = parseFloat(haushalt.gesamt_konsumitiv) || 0;
+  const gesamtInvestitiv = parseFloat(haushalt.gesamt_investiv) || 0;
+  const gesamtBudget = budgetKonsumitiv + budgetInvestitiv;
+  const gesamtAusgaben = gesamtKonsumitiv + gesamtInvestitiv;
+
+  const artikelKonsumitiv = artikel.filter(a => a.kategorie === 'konsumitiv');
+  const artikelInvestitiv = artikel.filter(a => a.kategorie === 'investiv');
+
+  // Tabellen-Zeile Komponente (nicht im Editing-Modus)
+  const ArtikelRow = ({ item, kategorie }) => {
+    const isEditing = editingId === item.id;
+    
+    if (isEditing) {
+      return (
+        <EditingRow
+          item={item}
+          onSave={handleSaveEditing}
+          onCancel={cancelEditing}
+          onParse={handleParseLink}
+          parsingId={parsingId}
+          savingId={savingId}
+        />
+      );
+    }
+    
+    return (
+      <tr className="border-b border-gray-800 hover:bg-gray-800/30 group">
+        <td className="p-3">
+          <span 
+            className="text-white cursor-pointer hover:text-blue-400"
+            onClick={() => startEditing(item)}
+          >
+            {item.name}
+          </span>
+        </td>
+        <td className="p-3">
+          {item.link ? (
+            <a
+              href={item.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Link
+            </a>
+          ) : (
+            <span className="text-gray-600 text-sm">—</span>
+          )}
+        </td>
+        <td className="p-3 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
+          {formatPreis(item.preis)}
+        </td>
+        <td className="p-3 text-center text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
+          {item.anzahl}
+        </td>
+        <td className="p-3 text-right text-white font-medium">
+          {formatPreis(item.gesamtpreis)}
+        </td>
+        <td className="p-3">
+          <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => startEditing(item)}
+              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => handleDeleteArtikel(item.id)}
+              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  };
+
+  // Neue Zeile Komponente Wrapper
+  const NewRow = ({ kategorie }) => {
+    if (!newRow || newRow.kategorie !== kategorie) return null;
+    
+    return (
+      <NewRowComponent
+        kategorie={kategorie}
+        onSave={handleSaveNewRow}
+        onCancel={cancelNewRow}
+        onParse={handleParseNewRow}
+        parsingId={parsingId}
+        savingId={savingId}
+      />
+    );
+  };
+
+  // Tabellen-Komponente
   const ArtikelTabelle = ({ items, kategorie, color, icon: Icon, budget, ausgaben }) => (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className={`p-4 border-b border-gray-800 ${color === 'orange' ? 'bg-orange-950/20' : 'bg-green-950/20'}`}>
@@ -116,80 +567,242 @@ export default function HaushaltDetailPage() {
             <span className="text-sm text-gray-400">({items.length})</span>
           </div>
           <p className={`text-lg font-bold ${color === 'orange' ? 'text-orange-400' : 'text-green-400'}`}>
-            {formatPreis(ausgaben)} <span className="text-gray-500 text-sm">/ {formatPreis(budget)}</span>
+            {formatPreis(ausgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(budget)}</span>
           </p>
         </div>
+        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mt-3">
+          <div
+            className={`h-full transition-all ${
+              budget > 0 && (ausgaben / budget) > 0.9 
+                ? 'bg-red-500' 
+                : color === 'orange' ? 'bg-orange-500' : 'bg-green-500'
+            }`}
+            style={{ width: `${budget > 0 ? Math.min((ausgaben / budget) * 100, 100) : 0}%` }}
+          />
+        </div>
       </div>
+      
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase">
-              <th className="p-3">Name</th><th className="p-3">Link</th><th className="p-3 text-right">Preis</th>
-              <th className="p-3 text-center">Anz.</th><th className="p-3 text-right">Gesamt</th><th className="p-3"></th>
+            <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <th className="p-3 w-[30%]">Name</th>
+              <th className="p-3 w-[20%]">Link</th>
+              <th className="p-3 w-[12%] text-right">Preis</th>
+              <th className="p-3 w-[8%] text-center">Anz.</th>
+              <th className="p-3 w-[14%] text-right">Gesamt</th>
+              <th className="p-3 w-[16%]"></th>
             </tr>
           </thead>
           <tbody>
-            {items.map((a) => editingId === a.id ? (
-              <tr key={a.id} className="bg-blue-950/20 border-b border-gray-800">
-                <td className="p-2"><input type="text" value={editingData.name} onChange={(e) => setEditingData({ ...editingData, name: e.target.value })} onKeyDown={handleKeyDown} className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm" /></td>
-                <td className="p-2"><input type="text" value={editingData.link} onChange={(e) => setEditingData({ ...editingData, link: e.target.value })} onKeyDown={handleKeyDown} placeholder="https://..." className="w-full px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm" /></td>
-                <td className="p-2"><input type="number" value={editingData.preis} onChange={(e) => setEditingData({ ...editingData, preis: e.target.value })} onKeyDown={handleKeyDown} step="0.01" className="w-20 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right" /></td>
-                <td className="p-2"><input type="number" value={editingData.anzahl} onChange={(e) => setEditingData({ ...editingData, anzahl: e.target.value })} onKeyDown={handleKeyDown} min="1" className="w-16 px-2 py-1 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center" /></td>
-                <td className="p-2 text-right text-white">{formatPreis((parseFloat(editingData.preis) || 0) * (parseInt(editingData.anzahl) || 1))}</td>
-                <td className="p-2">
-                  <div className="flex gap-1 justify-end">
-                    <button onClick={saveEditing} disabled={savingId === a.id} className="p-1.5 bg-green-600 text-white rounded">{savingId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}</button>
-                    <button onClick={cancelEditing} className="p-1.5 bg-gray-700 text-white rounded"><X className="w-4 h-4" /></button>
-                  </div>
-                </td>
-              </tr>
-            ) : (
-              <tr key={a.id} className="border-b border-gray-800 hover:bg-gray-800/30 group">
-                <td className="p-3 text-white cursor-pointer hover:text-blue-400" onClick={() => startEditing(a)}>{a.name}</td>
-                <td className="p-3">{a.link ? <a href={a.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm"><ExternalLink className="w-3 h-3" />Link</a> : <span className="text-gray-600">-</span>}</td>
-                <td className="p-3 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(a)}>{formatPreis(a.preis)}</td>
-                <td className="p-3 text-center text-gray-300">{a.anzahl}</td>
-                <td className="p-3 text-right text-white font-medium">{formatPreis(a.gesamtpreis)}</td>
-                <td className="p-3">
-                  <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100">
-                    <button onClick={() => startEditing(a)} className="p-1.5 text-gray-400 hover:text-blue-400 rounded"><Edit className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(a.id)} className="p-1.5 text-gray-400 hover:text-red-400 rounded"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </td>
-              </tr>
+            {items.map((item) => (
+              <ArtikelRow key={item.id} item={item} kategorie={kategorie} />
             ))}
+            <NewRow kategorie={kategorie} />
           </tbody>
         </table>
       </div>
-      <button onClick={() => setShowArtikelModal(true)} className={`w-full p-3 ${color === 'orange' ? 'text-orange-400 hover:bg-orange-950/20' : 'text-green-400 hover:bg-green-950/20'} flex items-center justify-center gap-2 border-t border-gray-800`}>
-        <Plus className="w-4 h-4" />Neuer Artikel
-      </button>
+      
+      {(!newRow || newRow.kategorie !== kategorie) && (
+        <button
+          onClick={() => addNewRow(kategorie)}
+          className={`w-full p-3 ${color === 'orange' ? 'text-orange-400 hover:bg-orange-950/20' : 'text-green-400 hover:bg-green-950/20'} flex items-center justify-center gap-2 transition-colors border-t border-gray-800`}
+        >
+          <Plus className="w-4 h-4" />
+          Neuen Artikel hinzufügen
+        </button>
+      )}
     </div>
   );
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/haushalte')} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><ArrowLeft className="w-5 h-5" /></button>
+        <button
+          onClick={() => navigate('/haushalte')}
+          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">{haushalt.name}</h1>
-          {haushalt.beschreibung && <p className="text-gray-400">{haushalt.beschreibung}</p>}
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-white">{haushalt.name}</h1>
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded"
+            >
+              <Edit className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            {haushalt.beschreibung && <p className="text-gray-400 text-sm">{haushalt.beschreibung}</p>}
+            <button
+              onClick={() => setIsPolling(!isPolling)}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                isPolling ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-500'
+              }`}
+            >
+              <RefreshCw className={`w-3 h-3 ${isPolling ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
+              {isPolling ? 'Live' : 'Pausiert'}
+            </button>
+            {lastUpdate && <span className="text-xs text-gray-600">{lastUpdate.toLocaleTimeString('de-DE')}</span>}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setIsPolling(!isPolling)} className={`p-2 rounded-lg flex items-center gap-1 text-xs ${isPolling ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-500'}`}>
-            <RefreshCw className={`w-3 h-3 ${isPolling ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />{isPolling ? 'Live' : 'Pause'}
+        
+        {/* Ansicht-Umschalter */}
+        <div className="flex bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('tabs')}
+            className={`p-2 rounded ${viewMode === 'tabs' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            title="Tabs"
+          >
+            <LayoutGrid className="w-4 h-4" />
           </button>
-          <button onClick={() => setShowEditModal(true)} className="p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-lg"><Edit className="w-5 h-5" /></button>
+          <button
+            onClick={() => setViewMode('split')}
+            className={`p-2 rounded ${viewMode === 'split' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            title="Nebeneinander"
+          >
+            <Columns className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('stacked')}
+            className={`p-2 rounded ${viewMode === 'stacked' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            title="Untereinander"
+          >
+            <List className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ArtikelTabelle items={artikelK} kategorie="konsumitiv" color="orange" icon={TrendingDown} budget={budgetK} ausgaben={gesamtK} />
-        <ArtikelTabelle items={artikelI} kategorie="investiv" color="green" icon={TrendingUp} budget={budgetI} ausgaben={gesamtI} />
+      {/* Budget Übersicht */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Wallet className="w-5 h-5 text-blue-400" />
+            <span className="text-gray-400">Gesamt</span>
+          </div>
+          <p className="text-lg font-bold text-white">
+            {formatPreis(gesamtAusgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(gesamtBudget)}</span>
+          </p>
+        </div>
+        <div className="h-2 bg-gray-800 rounded-full overflow-hidden mt-3">
+          <div
+            className={`h-full transition-all ${
+              gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.9 ? 'bg-red-500' : 'bg-blue-500'
+            }`}
+            style={{ width: `${gesamtBudget > 0 ? Math.min((gesamtAusgaben / gesamtBudget) * 100, 100) : 0}%` }}
+          />
+        </div>
       </div>
 
-      <EditHaushaltModal isOpen={showEditModal} onClose={() => setShowEditModal(false)} haushalt={haushalt} onUpdated={() => fetchData()} />
-      <ArtikelModal isOpen={showArtikelModal} onClose={() => setShowArtikelModal(false)} haushaltId={id} onCreated={() => fetchData()} />
+      {/* Tabellen - Je nach Ansicht */}
+      {viewMode === 'tabs' && (
+        <div>
+          {/* Tab-Buttons */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setActiveTab('konsumitiv')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'konsumitiv'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              <TrendingDown className="w-5 h-5" />
+              Konsumitiv ({artikelKonsumitiv.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('investiv')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                activeTab === 'investiv'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+              }`}
+            >
+              <TrendingUp className="w-5 h-5" />
+              Investitiv ({artikelInvestitiv.length})
+            </button>
+          </div>
+          
+          {/* Aktive Tabelle */}
+          {activeTab === 'konsumitiv' && (
+            <ArtikelTabelle
+              items={artikelKonsumitiv}
+              kategorie="konsumitiv"
+              color="orange"
+              icon={TrendingDown}
+              budget={budgetKonsumitiv}
+              ausgaben={gesamtKonsumitiv}
+            />
+          )}
+          {activeTab === 'investiv' && (
+            <ArtikelTabelle
+              items={artikelInvestitiv}
+              kategorie="investiv"
+              color="green"
+              icon={TrendingUp}
+              budget={budgetInvestitiv}
+              ausgaben={gesamtInvestitiv}
+            />
+          )}
+        </div>
+      )}
+
+      {viewMode === 'split' && (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <ArtikelTabelle
+            items={artikelKonsumitiv}
+            kategorie="konsumitiv"
+            color="orange"
+            icon={TrendingDown}
+            budget={budgetKonsumitiv}
+            ausgaben={gesamtKonsumitiv}
+          />
+          <ArtikelTabelle
+            items={artikelInvestitiv}
+            kategorie="investiv"
+            color="green"
+            icon={TrendingUp}
+            budget={budgetInvestitiv}
+            ausgaben={gesamtInvestitiv}
+          />
+        </div>
+      )}
+
+      {viewMode === 'stacked' && (
+        <div className="space-y-6">
+          <ArtikelTabelle
+            items={artikelKonsumitiv}
+            kategorie="konsumitiv"
+            color="orange"
+            icon={TrendingDown}
+            budget={budgetKonsumitiv}
+            ausgaben={gesamtKonsumitiv}
+          />
+          <ArtikelTabelle
+            items={artikelInvestitiv}
+            kategorie="investiv"
+            color="green"
+            icon={TrendingUp}
+            budget={budgetInvestitiv}
+            ausgaben={gesamtInvestitiv}
+          />
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <EditHaushaltModal
+          haushalt={haushalt}
+          onClose={() => setShowEditModal(false)}
+          onUpdated={(updated) => {
+            setHaushalt(updated);
+            setShowEditModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

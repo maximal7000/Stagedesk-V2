@@ -10,8 +10,10 @@ export function ThemeProvider({ children }) {
   const [forcedTheme, setForcedTheme] = useState(null);
   const [canChangTheme, setCanChangeTheme] = useState(true);
 
+  // Effektives Theme (erzwungen oder selbst gewählt)
   const effectiveTheme = forcedTheme || theme;
 
+  // Theme auf DOM anwenden
   useEffect(() => {
     const root = document.documentElement;
     
@@ -33,6 +35,7 @@ export function ThemeProvider({ children }) {
     }
   }, [effectiveTheme]);
 
+  // System Theme Listener
   useEffect(() => {
     if (effectiveTheme !== 'system') return;
 
