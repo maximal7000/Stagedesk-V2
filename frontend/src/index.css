@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Tailwind v4 Custom Theme */
+@theme {
+  --color-gray-750: #2d3748;
+  --color-gray-950: #0a0e14;
+}
+
+/* Dark Mode als Standard */
+:root.dark,
+:root:not(.light) {
+  color-scheme: dark;
+  --bg-primary: rgb(10 14 20);
+  --bg-secondary: rgb(17 24 39);
+  --bg-tertiary: rgb(31 41 55);
+  --text-primary: rgb(255 255 255);
+  --text-secondary: rgb(156 163 175);
+  --border-color: rgb(31 41 55);
+}
+
+/* Light Mode */
+:root.light {
+  color-scheme: light;
+  --bg-primary: rgb(249 250 251);
+  --bg-secondary: rgb(255 255 255);
+  --bg-tertiary: rgb(243 244 246);
+  --text-primary: rgb(17 24 39);
+  --text-secondary: rgb(75 85 99);
+  --border-color: rgb(229 231 235);
+}
+
+* {
+  border-color: var(--border-color);
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Light Mode Overrides */
+:root.light .bg-gray-900 { background-color: var(--bg-secondary) !important; }
+:root.light .bg-gray-950 { background-color: var(--bg-primary) !important; }
+:root.light .bg-gray-800 { background-color: var(--bg-tertiary) !important; }
+:root.light .border-gray-800 { border-color: var(--border-color) !important; }
+:root.light .text-white { color: var(--text-primary) !important; }
+:root.light .text-gray-400 { color: var(--text-secondary) !important; }
