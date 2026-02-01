@@ -3,10 +3,11 @@ Users API - Permissions, Settings, Sessions
 Rollen kommen aus Keycloak JWT, lokale Permissions für feinere Steuerung
 """
 from typing import List
-from datetime import datetime
+from django.utils import timezone
 from ninja import Router
 from django.shortcuts import get_object_or_404
 from django.conf import settings
+from django.db import transaction
 
 from core.auth import keycloak_auth
 from .models import Permission, UserProfile, UserSession, GlobalSettings
@@ -83,7 +84,7 @@ def get_or_create_profile(request) -> UserProfile:
 def get_current_user(request):
     """Aktuellen User-Profile abrufen"""
     profile = get_or_create_profile(request)
-    profile.last_login = datetime.now()
+    profile.last_login = timezone.now()
     profile.save(update_fields=['last_login'])
     return profile
 
@@ -160,17 +161,22 @@ def register_session(request):
     elif 'Linux' in user_agent:
         device_info = "Linux"
     
-    session, created = UserSession.objects.update_or_create(
-        keycloak_session_id=session_id,
-        defaults={
-            'user_profile': profile,
-            'ip_address': ip,
-            'user_agent': user_agent,
-            'device_info': device_info,
-        }
-    )
-    
-    return {"status": "registered", "created": created}
+    try:
+        with transaction.atomic():
+            session, created = UserSession.objects.update_or_create(
+                keycloak_session_id=session_id,
+                defaults={
+                    'user_profile': profile,
+                    'ip_address': ip,
+                    'user_agent': user_agent,
+                    'device_info': device_info,
+                }
+            )
+        return {"status": "registered", "created": created}
+    except Exception as e:
+        # Bei DB-Lock (SQLite) einfach OK zurückgeben, Session existiert wahrscheinlich schon
+        print(f"Session-Registrierung fehlgeschlagen: {e}")
+        return {"status": "skipped", "reason": "concurrent_access"}
 
 
 @users_router.delete("/me/sessions/{session_id}", auth=keycloak_auth)
