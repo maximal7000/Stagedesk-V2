@@ -1,13 +1,12 @@
 """
-Pydantic Schemas für Inventar & Ausleihe API
+Pydantic Schemas für Inventar & Ausleihe API v2
 """
 from typing import Optional, List
 from datetime import datetime, date
-from decimal import Decimal
 from ninja import Schema
 
 
-# ========== Kategorie Schemas ==========
+# ========== Kategorie ==========
 
 class KategorieSchema(Schema):
     id: int
@@ -38,18 +37,9 @@ class KategorieCreateSchema(Schema):
     sortierung: int = 0
 
 
-class KategorieUpdateSchema(Schema):
-    name: Optional[str] = None
-    farbe: Optional[str] = None
-    icon: Optional[str] = None
-    beschreibung: Optional[str] = None
-    parent_id: Optional[int] = None
-    sortierung: Optional[int] = None
+# ========== Standort ==========
 
-
-# ========== Lagerort Schemas ==========
-
-class LagerortSchema(Schema):
+class StandortSchema(Schema):
     id: int
     name: str
     beschreibung: str
@@ -62,33 +52,97 @@ class LagerortSchema(Schema):
         return obj.items.filter(ist_aktiv=True).count()
 
 
-class LagerortCreateSchema(Schema):
+class StandortCreateSchema(Schema):
     name: str
     beschreibung: str = ''
     adresse: str = ''
 
 
-# ========== Item Schemas ==========
+# ========== Hersteller ==========
 
-class ItemListSchema(Schema):
-    """Kompakte Ansicht für Listen"""
+class HerstellerSchema(Schema):
     id: int
     name: str
-    inventar_nr: str
-    qr_code: str
+    website: str
+    notizen: str
+    anzahl_items: int
+
+    @staticmethod
+    def resolve_anzahl_items(obj):
+        return obj.items.filter(ist_aktiv=True).count()
+
+
+class HerstellerCreateSchema(Schema):
+    name: str
+    website: str = ''
+    notizen: str = ''
+
+
+# ========== Ausleiher ==========
+
+class AusleiherSchema(Schema):
+    id: int
+    name: str
+    organisation: str
+    email: str
+    telefon: str
+    adresse: str
+    notizen: str
+    ist_aktiv: bool
+
+
+class AusleiherCreateSchema(Schema):
+    name: str
+    organisation: str = ''
+    email: str = ''
+    telefon: str = ''
+    adresse: str = ''
+    notizen: str = ''
+
+
+class AusleiherUpdateSchema(Schema):
+    name: Optional[str] = None
+    organisation: Optional[str] = None
+    email: Optional[str] = None
+    telefon: Optional[str] = None
+    adresse: Optional[str] = None
+    notizen: Optional[str] = None
+    ist_aktiv: Optional[bool] = None
+
+
+# ========== QR-Code ==========
+
+class QRCodeSchema(Schema):
+    id: int
+    code: str
+    bezeichnung: str
+    ist_primaer: bool
+
+
+class QRCodeCreateSchema(Schema):
+    code: str
+    bezeichnung: str = ''
+    ist_primaer: bool = False
+
+
+# ========== Item ==========
+
+class ItemListSchema(Schema):
+    """Kompakte Liste"""
+    id: int
+    name: str
+    beschreibung: str
     kategorie_id: Optional[int]
     kategorie_name: Optional[str]
     kategorie_farbe: Optional[str]
+    standort_id: Optional[int]
+    standort_name: Optional[str]
+    hersteller_id: Optional[int]
+    hersteller_name: Optional[str]
     status: str
     status_display: str
-    zustand: str
-    zustand_display: str
-    lagerort_id: Optional[int]
-    lagerort_name: Optional[str]
-    lagerplatz: str
-    menge: int
-    einheit: str
-    kaufpreis: Decimal
+    seriennummer: str
+    haupt_qr_code: Optional[str]
     bild_url: Optional[str]
 
     @staticmethod
@@ -100,16 +154,16 @@ class ItemListSchema(Schema):
         return obj.kategorie.farbe if obj.kategorie else '#6B7280'
 
     @staticmethod
+    def resolve_standort_name(obj):
+        return obj.standort.name if obj.standort else None
+
+    @staticmethod
+    def resolve_hersteller_name(obj):
+        return obj.hersteller.name if obj.hersteller else None
+
+    @staticmethod
     def resolve_status_display(obj):
         return obj.get_status_display()
-
-    @staticmethod
-    def resolve_zustand_display(obj):
-        return obj.get_zustand_display()
-
-    @staticmethod
-    def resolve_lagerort_name(obj):
-        return obj.lagerort.name if obj.lagerort else None
 
     @staticmethod
     def resolve_bild_url(obj):
@@ -117,46 +171,27 @@ class ItemListSchema(Schema):
 
 
 class ItemSchema(Schema):
-    """Vollständige Item-Details"""
+    """Vollständig"""
     id: int
     name: str
     beschreibung: str
-    inventar_nr: str
-    seriennummer: str
-    qr_code: str
-    barcode: str
     kategorie_id: Optional[int]
     kategorie_name: Optional[str]
     kategorie_farbe: Optional[str]
+    standort_id: Optional[int]
+    standort_name: Optional[str]
+    hersteller_id: Optional[int]
+    hersteller_name: Optional[str]
+    seriennummer: str
     status: str
     status_display: str
-    zustand: str
-    zustand_display: str
-    zustand_notizen: str
-    lagerort_id: Optional[int]
-    lagerort_name: Optional[str]
-    lagerplatz: str
-    menge: int
-    einheit: str
-    mindestbestand: int
-    kaufdatum: Optional[date]
-    kaufpreis: Decimal
-    lieferant: str
-    garantie_bis: Optional[date]
-    aktueller_wert: Decimal
-    abschreibung_jahre: int
     bilder: List[str]
-    technische_daten: dict
-    letzte_wartung: Optional[date]
-    naechste_wartung: Optional[date]
-    wartungsintervall_tage: int
-    braucht_wartung: bool
     notizen: str
-    tags: List[str]
     ist_aktiv: bool
-    ist_ausleihbar: bool
+    ist_verfuegbar: bool
+    qr_codes: List[QRCodeSchema]
+    haupt_qr_code: Optional[str]
     erstellt_am: datetime
-    aktualisiert_am: datetime
 
     @staticmethod
     def resolve_kategorie_name(obj):
@@ -167,162 +202,168 @@ class ItemSchema(Schema):
         return obj.kategorie.farbe if obj.kategorie else '#6B7280'
 
     @staticmethod
+    def resolve_standort_name(obj):
+        return obj.standort.name if obj.standort else None
+
+    @staticmethod
+    def resolve_hersteller_name(obj):
+        return obj.hersteller.name if obj.hersteller else None
+
+    @staticmethod
     def resolve_status_display(obj):
         return obj.get_status_display()
 
     @staticmethod
-    def resolve_zustand_display(obj):
-        return obj.get_zustand_display()
-
-    @staticmethod
-    def resolve_lagerort_name(obj):
-        return obj.lagerort.name if obj.lagerort else None
+    def resolve_qr_codes(obj):
+        return obj.qr_codes.all()
 
 
 class ItemCreateSchema(Schema):
     name: str
     beschreibung: str = ''
     kategorie_id: Optional[int] = None
+    standort_id: Optional[int] = None
+    hersteller_id: Optional[int] = None
     seriennummer: str = ''
-    barcode: str = ''
-    zustand: str = 'gut'
-    zustand_notizen: str = ''
-    lagerort_id: Optional[int] = None
-    lagerplatz: str = ''
-    menge: int = 1
-    einheit: str = 'Stück'
-    mindestbestand: int = 0
-    kaufdatum: Optional[date] = None
-    kaufpreis: Decimal = Decimal('0')
-    lieferant: str = ''
-    garantie_bis: Optional[date] = None
-    aktueller_wert: Decimal = Decimal('0')
-    abschreibung_jahre: int = 5
     bilder: List[str] = []
-    technische_daten: dict = {}
-    wartungsintervall_tage: int = 365
     notizen: str = ''
-    tags: List[str] = []
+    qr_codes: List[QRCodeCreateSchema] = []
 
 
 class ItemUpdateSchema(Schema):
     name: Optional[str] = None
     beschreibung: Optional[str] = None
     kategorie_id: Optional[int] = None
+    standort_id: Optional[int] = None
+    hersteller_id: Optional[int] = None
     seriennummer: Optional[str] = None
-    barcode: Optional[str] = None
     status: Optional[str] = None
-    zustand: Optional[str] = None
-    zustand_notizen: Optional[str] = None
-    lagerort_id: Optional[int] = None
-    lagerplatz: Optional[str] = None
-    menge: Optional[int] = None
-    einheit: Optional[str] = None
-    mindestbestand: Optional[int] = None
-    kaufdatum: Optional[date] = None
-    kaufpreis: Optional[Decimal] = None
-    lieferant: Optional[str] = None
-    garantie_bis: Optional[date] = None
-    aktueller_wert: Optional[Decimal] = None
-    abschreibung_jahre: Optional[int] = None
     bilder: Optional[List[str]] = None
-    technische_daten: Optional[dict] = None
-    letzte_wartung: Optional[date] = None
-    naechste_wartung: Optional[date] = None
-    wartungsintervall_tage: Optional[int] = None
     notizen: Optional[str] = None
-    tags: Optional[List[str]] = None
     ist_aktiv: Optional[bool] = None
 
 
-# ========== Ausleihe Schemas ==========
+# ========== Item-Sets ==========
 
-class AusleihePositionSchema(Schema):
+class ItemSetPositionSchema(Schema):
     id: int
     item_id: int
     item_name: str
-    item_inventar_nr: str
-    item_qr_code: str
-    menge: int
-    zustand_ausleihe: str
-    zustand_rueckgabe: str
-    unterschrift: str
+    item_status: str
+    anzahl: int
     notizen: str
-    ist_zurueckgegeben: bool
-    rueckgabe_am: Optional[datetime]
 
     @staticmethod
     def resolve_item_name(obj):
         return obj.item.name
 
     @staticmethod
-    def resolve_item_inventar_nr(obj):
-        return obj.item.inventar_nr
-
-    @staticmethod
-    def resolve_item_qr_code(obj):
-        return obj.item.qr_code
+    def resolve_item_status(obj):
+        return obj.item.status
 
 
-class AusleihePositionCreateSchema(Schema):
-    item_id: int
-    menge: int = 1
-    zustand_ausleihe: str = ''
-    notizen: str = ''
-    unterschrift: str = ''  # Base64 für individuelle Unterschrift
-
-
-class AusleiheSchema(Schema):
+class ItemSetSchema(Schema):
     id: int
-    ausleiher_name: str
-    ausleiher_email: str
-    ausleiher_telefon: str
-    ausleiher_organisation: str
-    zweck: str
-    event_id: Optional[int]
-    event_titel: Optional[str]
-    ausleihe_von: datetime
-    ausleihe_bis: datetime
-    tatsaechliche_rueckgabe: Optional[datetime]
-    unterschrift_modus: str
-    unterschrift_modus_display: str
-    unterschrift_ausleihe: str
-    unterschrift_rueckgabe: str
-    status: str
-    status_display: str
-    notizen_ausleihe: str
-    notizen_rueckgabe: str
+    name: str
+    beschreibung: str
+    farbe: str
+    ist_aktiv: bool
     anzahl_items: int
-    ist_ueberfaellig: bool
-    positionen: List[AusleihePositionSchema]
-    erstellt_von: str
-    erstellt_am: datetime
-
-    @staticmethod
-    def resolve_event_titel(obj):
-        return obj.event.titel if obj.event else None
-
-    @staticmethod
-    def resolve_status_display(obj):
-        return obj.get_status_display()
-
-    @staticmethod
-    def resolve_unterschrift_modus_display(obj):
-        return obj.get_unterschrift_modus_display()
+    positionen: List[ItemSetPositionSchema]
 
     @staticmethod
     def resolve_positionen(obj):
         return obj.positionen.select_related('item').all()
 
 
-class AusleiheListSchema(Schema):
-    """Kompakte Ansicht für Listen"""
+class ItemSetCreateSchema(Schema):
+    name: str
+    beschreibung: str = ''
+    farbe: str = '#8B5CF6'
+    positionen: List[dict] = []  # [{item_id, anzahl, notizen}]
+
+
+class ItemSetUpdateSchema(Schema):
+    name: Optional[str] = None
+    beschreibung: Optional[str] = None
+    farbe: Optional[str] = None
+    ist_aktiv: Optional[bool] = None
+    positionen: Optional[List[dict]] = None
+
+
+# ========== Ausleihliste ==========
+
+class AusleihePositionSchema(Schema):
+    id: int
+    item_id: int
+    item_name: str
+    item_qr_code: Optional[str]
+    unterschrift: str
+    zustand_ausleihe: str
+    zustand_rueckgabe: str
+    foto_ausleihe: str
+    foto_rueckgabe: str
+    ist_zurueckgegeben: bool
+    rueckgabe_am: Optional[datetime]
+    rueckgabe_notizen: str
+
+    @staticmethod
+    def resolve_item_name(obj):
+        return obj.item.name
+
+    @staticmethod
+    def resolve_item_qr_code(obj):
+        return obj.item.haupt_qr_code
+
+
+class AusleiheListeSchema(Schema):
+    id: int
+    ausleiher_id: Optional[int]
+    ausleiher_name: str
+    ausleiher_organisation: str
+    ausleiher_email: Optional[str]
+    zweck: str
+    frist: Optional[date]
+    modus: str
+    modus_display: str
+    status: str
+    status_display: str
+    unterschrift_ausleihe: str
+    unterschrift_rueckgabe: str
+    notizen: str
+    notizen_rueckgabe: str
+    rueckgabe_am: Optional[datetime]
+    rueckgabe_zustand: str
+    anzahl_items: int
+    ist_ueberfaellig: bool
+    positionen: List[AusleihePositionSchema]
+    erstellt_am: datetime
+
+    @staticmethod
+    def resolve_modus_display(obj):
+        return obj.get_modus_display()
+
+    @staticmethod
+    def resolve_status_display(obj):
+        return obj.get_status_display()
+
+    @staticmethod
+    def resolve_ausleiher_email(obj):
+        return obj.ausleiher.email if obj.ausleiher else None
+
+    @staticmethod
+    def resolve_positionen(obj):
+        return obj.positionen.select_related('item').all()
+
+
+class AusleiheListeListSchema(Schema):
+    """Kompakt für Listen"""
     id: int
     ausleiher_name: str
     ausleiher_organisation: str
     zweck: str
-    ausleihe_von: datetime
-    ausleihe_bis: datetime
+    frist: Optional[date]
+    modus: str
     status: str
     status_display: str
     anzahl_items: int
@@ -334,43 +375,59 @@ class AusleiheListSchema(Schema):
         return obj.get_status_display()
 
 
-class AusleiheCreateSchema(Schema):
-    ausleiher_name: str
-    ausleiher_email: str = ''
-    ausleiher_telefon: str = ''
+class AusleihePositionCreateSchema(Schema):
+    item_id: int
+    unterschrift: str = ''
+    zustand_ausleihe: str = 'ok'
+    foto_ausleihe: str = ''
+
+
+class AusleiheListeCreateSchema(Schema):
+    ausleiher_id: Optional[int] = None
+    ausleiher_name: str = ''
     ausleiher_organisation: str = ''
     zweck: str = ''
-    event_id: Optional[int] = None
-    ausleihe_von: datetime
-    ausleihe_bis: datetime
-    unterschrift_modus: str = 'global'
-    unterschrift_ausleihe: str = ''  # Base64 für globale Unterschrift
-    notizen_ausleihe: str = ''
-    positionen: List[AusleihePositionCreateSchema]
+    frist: Optional[date] = None
+    modus: str = 'global'
+    unterschrift_ausleihe: str = ''
+    notizen: str = ''
+    positionen: List[AusleihePositionCreateSchema] = []  # leer = Liste "offen", Items später hinzufügen
 
 
-class AusleiheRueckgabeSchema(Schema):
-    """Schema für Rückgabe"""
-    unterschrift_rueckgabe: str = ''  # Base64 Signatur
+class RueckgabeSchema(Schema):
+    unterschrift_rueckgabe: str = ''
     notizen_rueckgabe: str = ''
-    positionen: List[dict] = []  # [{item_id, zustand_rueckgabe, notizen}]
+    rueckgabe_zustand: str = 'ok'
+    positionen: List[dict] = []  # [{item_id, zustand_rueckgabe, foto_rueckgabe, rueckgabe_notizen}]
 
 
-# ========== Wartung Schemas ==========
+class SchnellRueckgabeSchema(Schema):
+    """Für Schnell-Rückgabe per QR"""
+    qr_code: str
+    zustand: str = 'ok'
+    notizen: str = ''
 
-class WartungSchema(Schema):
+
+class AktivierenSchema(Schema):
+    """Zum Aktivieren einer offenen Ausleihliste"""
+    unterschrift_ausleihe: str = ''
+    positionen_unterschriften: List[dict] = []  # [{item_id, unterschrift}] für modus individuell
+
+
+# ========== Reservierung ==========
+
+class ReservierungSchema(Schema):
     id: int
     item_id: int
     item_name: str
-    typ: str
-    typ_display: str
-    datum: date
-    beschreibung: str
-    kosten: Decimal
-    dienstleister: str
-    zustand_vorher: str
-    zustand_nachher: str
-    erstellt_von: str
+    ausleiher_id: Optional[int]
+    ausleiher_name: str
+    datum_von: date
+    datum_bis: date
+    zweck: str
+    status: str
+    status_display: str
+    notizen: str
     erstellt_am: datetime
 
     @staticmethod
@@ -378,35 +435,44 @@ class WartungSchema(Schema):
         return obj.item.name
 
     @staticmethod
-    def resolve_typ_display(obj):
-        return obj.get_typ_display()
+    def resolve_status_display(obj):
+        return obj.get_status_display()
 
 
-class WartungCreateSchema(Schema):
+class ReservierungCreateSchema(Schema):
     item_id: int
-    typ: str = 'inspektion'
-    datum: date
-    beschreibung: str
-    kosten: Decimal = Decimal('0')
-    dienstleister: str = ''
-    zustand_vorher: str = ''
-    zustand_nachher: str = ''
+    ausleiher_id: Optional[int] = None
+    ausleiher_name: str = ''
+    datum_von: date
+    datum_bis: date
+    zweck: str = ''
+    notizen: str = ''
 
 
-# ========== Filter Schemas ==========
+# ========== Gespeicherte Filter ==========
+
+class GespeicherterFilterSchema(Schema):
+    id: int
+    name: str
+    filter_json: dict
+
+
+class GespeicherterFilterCreateSchema(Schema):
+    name: str
+    filter_json: dict
+
+
+# ========== Filter ==========
 
 class ItemFilterSchema(Schema):
     kategorie_id: Optional[int] = None
-    lagerort_id: Optional[int] = None
+    standort_id: Optional[int] = None
+    hersteller_id: Optional[int] = None
     status: Optional[str] = None
-    zustand: Optional[str] = None
-    suche: Optional[str] = None  # Suche in Name, Inventarnummer, Seriennummer
+    suche: Optional[str] = None
 
 
 class AusleiheFilterSchema(Schema):
     status: Optional[str] = None
     ausleiher: Optional[str] = None
-    von: Optional[datetime] = None
-    bis: Optional[datetime] = None
-    item_id: Optional[int] = None
     nur_ueberfaellig: bool = False

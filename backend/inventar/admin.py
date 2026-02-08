@@ -1,50 +1,71 @@
 from django.contrib import admin
-from .models import InventarKategorie, Lagerort, InventarItem, Ausleihe, AusleihePosition, Wartung
+from .models import (
+    InventarKategorie, Standort, Hersteller, Ausleiher,
+    InventarItem, ItemQRCode, ItemSet, ItemSetPosition,
+    Ausleihliste, AusleihePosition, Reservierung, GespeicherterFilter
+)
 
 
 @admin.register(InventarKategorie)
 class InventarKategorieAdmin(admin.ModelAdmin):
-    list_display = ['name', 'parent', 'farbe', 'sortierung']
+    list_display = ['name', 'parent', 'farbe']
     list_filter = ['parent']
+
+
+@admin.register(Standort)
+class StandortAdmin(admin.ModelAdmin):
+    list_display = ['name', 'ist_aktiv']
+
+
+@admin.register(Hersteller)
+class HerstellerAdmin(admin.ModelAdmin):
+    list_display = ['name', 'website']
     search_fields = ['name']
 
 
-@admin.register(Lagerort)
-class LagerortAdmin(admin.ModelAdmin):
-    list_display = ['name', 'ist_aktiv']
-    list_filter = ['ist_aktiv']
+@admin.register(Ausleiher)
+class AusleiherAdmin(admin.ModelAdmin):
+    list_display = ['name', 'organisation', 'email', 'ist_aktiv']
+    search_fields = ['name', 'organisation']
 
 
-class WartungInline(admin.TabularInline):
-    model = Wartung
-    extra = 0
+class ItemQRCodeInline(admin.TabularInline):
+    model = ItemQRCode
+    extra = 1
 
 
 @admin.register(InventarItem)
 class InventarItemAdmin(admin.ModelAdmin):
-    list_display = ['name', 'inventar_nr', 'kategorie', 'status', 'zustand', 'lagerort', 'menge']
-    list_filter = ['status', 'zustand', 'kategorie', 'lagerort']
-    search_fields = ['name', 'inventar_nr', 'seriennummer', 'qr_code']
-    readonly_fields = ['qr_code', 'inventar_nr']
-    inlines = [WartungInline]
+    list_display = ['name', 'kategorie', 'standort', 'hersteller', 'status']
+    list_filter = ['status', 'kategorie', 'standort', 'hersteller']
+    search_fields = ['name', 'seriennummer']
+    inlines = [ItemQRCodeInline]
+
+
+class ItemSetPositionInline(admin.TabularInline):
+    model = ItemSetPosition
+    extra = 1
+
+
+@admin.register(ItemSet)
+class ItemSetAdmin(admin.ModelAdmin):
+    list_display = ['name', 'anzahl_items', 'ist_aktiv']
+    inlines = [ItemSetPositionInline]
 
 
 class AusleihePositionInline(admin.TabularInline):
     model = AusleihePosition
     extra = 0
-    readonly_fields = ['item']
 
 
-@admin.register(Ausleihe)
-class AusleiheAdmin(admin.ModelAdmin):
-    list_display = ['id', 'ausleiher_name', 'status', 'ausleihe_von', 'ausleihe_bis', 'anzahl_items']
-    list_filter = ['status']
-    search_fields = ['ausleiher_name', 'ausleiher_organisation']
+@admin.register(Ausleihliste)
+class AusleihelisteAdmin(admin.ModelAdmin):
+    list_display = ['id', 'ausleiher_name', 'status', 'frist', 'anzahl_items']
+    list_filter = ['status', 'modus']
     inlines = [AusleihePositionInline]
 
 
-@admin.register(Wartung)
-class WartungAdmin(admin.ModelAdmin):
-    list_display = ['item', 'typ', 'datum', 'kosten']
-    list_filter = ['typ']
-    date_hierarchy = 'datum'
+@admin.register(Reservierung)
+class ReservierungAdmin(admin.ModelAdmin):
+    list_display = ['item', 'ausleiher_name', 'datum_von', 'datum_bis', 'status']
+    list_filter = ['status']

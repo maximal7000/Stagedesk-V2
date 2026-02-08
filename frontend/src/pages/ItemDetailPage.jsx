@@ -1,85 +1,61 @@
 /**
- * Item Detail-Seite mit QR-Code, Historie, Wartung
+ * Item Detail-Seite (v2 - vereinfacht)
+ * Autocomplete für Kategorie/Standort/Hersteller, QR rechts neben Basis-Infos.
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, Edit, Trash2, Save, X, Loader2, Package,
-  QrCode, MapPin, Calendar, DollarSign, Wrench, History,
-  AlertTriangle, Clock, Tag, FileText, Plus
+  ArrowLeft, Edit, Trash2, Save, Loader2, Package,
+  QrCode, MapPin, Building, Plus, X
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import apiClient from '../lib/api';
+import AutocompleteInput from '../components/AutocompleteInput';
 
 const STATUS_FARBEN = {
   verfuegbar: 'bg-green-500',
   ausgeliehen: 'bg-blue-500',
   reserviert: 'bg-yellow-500',
-  wartung: 'bg-orange-500',
   defekt: 'bg-red-500',
 };
 
-const ZUSTAND_OPTIONS = [
-  { value: 'neu', label: 'Neu' },
-  { value: 'sehr_gut', label: 'Sehr gut' },
-  { value: 'gut', label: 'Gut' },
-  { value: 'verschleiss', label: 'Verschleiß' },
-  { value: 'beschaedigt', label: 'Beschädigt' },
-  { value: 'defekt', label: 'Defekt' },
-];
+const STATUS_LABELS = {
+  verfuegbar: 'Verfügbar',
+  ausgeliehen: 'Ausgeliehen',
+  reserviert: 'Reserviert',
+  defekt: 'Defekt',
+};
 
 export default function ItemDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isNew = id === 'neu';
+  const isNew = id === 'neu' || !id;
   
   const [item, setItem] = useState(null);
   const [kategorien, setKategorien] = useState([]);
-  const [lagerorte, setLagerorte] = useState([]);
-  const [wartungen, setWartungen] = useState([]);
-  const [ausleihen, setAusleihen] = useState([]);
+  const [standorte, setStandorte] = useState([]);
+  const [hersteller, setHersteller] = useState([]);
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(isNew);
-  const [activeTab, setActiveTab] = useState('details');
+  
+  // QR-Code Modal
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [newQrCode, setNewQrCode] = useState('');
+  const [newQrBezeichnung, setNewQrBezeichnung] = useState('');
   
   // Form Data
   const [formData, setFormData] = useState({
     name: '',
     beschreibung: '',
     kategorie_id: '',
+    standort_id: '',
+    hersteller_id: '',
     seriennummer: '',
-    barcode: '',
-    zustand: 'gut',
-    zustand_notizen: '',
-    lagerort_id: '',
-    lagerplatz: '',
-    menge: 1,
-    einheit: 'Stück',
-    mindestbestand: 0,
-    kaufdatum: '',
-    kaufpreis: '',
-    lieferant: '',
-    garantie_bis: '',
-    aktueller_wert: '',
-    abschreibung_jahre: 5,
-    wartungsintervall_tage: 365,
+    status: 'verfuegbar',
     notizen: '',
-    tags: [],
     bilder: [],
-    technische_daten: {},
-  });
-
-  // Wartungs-Modal
-  const [showWartungModal, setShowWartungModal] = useState(false);
-  const [wartungData, setWartungData] = useState({
-    typ: 'inspektion',
-    datum: new Date().toISOString().split('T')[0],
-    beschreibung: '',
-    kosten: '',
-    dienstleister: '',
-    zustand_vorher: '',
-    zustand_nachher: '',
+    qr_codes: [],
   });
 
   const fetchData = useCallback(async () => {
@@ -90,21 +66,17 @@ export default function ItemDetailPage() {
     
     setLoading(true);
     try {
-      const [itemRes, kategorienRes, lagerorteRes, wartungenRes] = await Promise.all([
+      const [itemRes, kategorienRes, standorteRes, herstellerRes] = await Promise.all([
         apiClient.get(`/inventar/items/${id}`),
         apiClient.get('/inventar/kategorien'),
-        apiClient.get('/inventar/lagerorte'),
-        apiClient.get(`/inventar/wartungen?item_id=${id}`),
+        apiClient.get('/inventar/standorte'),
+        apiClient.get('/inventar/hersteller'),
       ]);
 
       setItem(itemRes.data);
       setKategorien(kategorienRes.data);
-      setLagerorte(lagerorteRes.data);
-      setWartungen(wartungenRes.data);
-      
-      // Ausleihen für dieses Item laden
-      const ausleihenRes = await apiClient.get(`/inventar/ausleihen?item_id=${id}`);
-      setAusleihen(ausleihenRes.data);
+      setStandorte(standorteRes.data);
+      setHersteller(herstellerRes.data);
 
       // Form befüllen
       const i = itemRes.data;
@@ -112,26 +84,13 @@ export default function ItemDetailPage() {
         name: i.name || '',
         beschreibung: i.beschreibung || '',
         kategorie_id: i.kategorie_id || '',
+        standort_id: i.standort_id || '',
+        hersteller_id: i.hersteller_id || '',
         seriennummer: i.seriennummer || '',
-        barcode: i.barcode || '',
-        zustand: i.zustand || 'gut',
-        zustand_notizen: i.zustand_notizen || '',
-        lagerort_id: i.lagerort_id || '',
-        lagerplatz: i.lagerplatz || '',
-        menge: i.menge || 1,
-        einheit: i.einheit || 'Stück',
-        mindestbestand: i.mindestbestand || 0,
-        kaufdatum: i.kaufdatum || '',
-        kaufpreis: i.kaufpreis || '',
-        lieferant: i.lieferant || '',
-        garantie_bis: i.garantie_bis || '',
-        aktueller_wert: i.aktueller_wert || '',
-        abschreibung_jahre: i.abschreibung_jahre || 5,
-        wartungsintervall_tage: i.wartungsintervall_tage || 365,
+        status: i.status || 'verfuegbar',
         notizen: i.notizen || '',
-        tags: i.tags || [],
         bilder: i.bilder || [],
-        technische_daten: i.technische_daten || {},
+        qr_codes: i.qr_codes || [],
       });
     } catch (err) {
       console.error('Fehler:', err);
@@ -142,29 +101,39 @@ export default function ItemDetailPage() {
 
   useEffect(() => {
     fetchData();
-    // Kategorien und Lagerorte auch bei neuem Item laden
+    // Stammdaten auch bei neuem Item laden
     if (isNew) {
       Promise.all([
         apiClient.get('/inventar/kategorien'),
-        apiClient.get('/inventar/lagerorte'),
-      ]).then(([katRes, lagRes]) => {
+        apiClient.get('/inventar/standorte'),
+        apiClient.get('/inventar/hersteller'),
+      ]).then(([katRes, standRes, herRes]) => {
         setKategorien(katRes.data);
-        setLagerorte(lagRes.data);
+        setStandorte(standRes.data);
+        setHersteller(herRes.data);
       });
     }
   }, [fetchData, isNew]);
 
   const handleSave = async () => {
+    if (!formData.name) {
+      alert('Bitte einen Namen eingeben');
+      return;
+    }
+    
     setSaving(true);
     try {
       const payload = {
-        ...formData,
+        name: formData.name,
+        beschreibung: formData.beschreibung,
         kategorie_id: formData.kategorie_id || null,
-        lagerort_id: formData.lagerort_id || null,
-        kaufpreis: parseFloat(formData.kaufpreis) || 0,
-        aktueller_wert: parseFloat(formData.aktueller_wert) || 0,
-        kaufdatum: formData.kaufdatum || null,
-        garantie_bis: formData.garantie_bis || null,
+        standort_id: formData.standort_id || null,
+        hersteller_id: formData.hersteller_id || null,
+        seriennummer: formData.seriennummer,
+        status: formData.status,
+        notizen: formData.notizen,
+        bilder: formData.bilder,
+        qr_codes: isNew ? formData.qr_codes : undefined, // QR-Codes nur bei Erstellen
       };
 
       if (isNew) {
@@ -193,27 +162,69 @@ export default function ItemDetailPage() {
     }
   };
 
-  const handleAddWartung = async () => {
-    try {
-      await apiClient.post('/inventar/wartungen', {
-        item_id: parseInt(id),
-        ...wartungData,
-        kosten: parseFloat(wartungData.kosten) || 0,
-      });
-      setShowWartungModal(false);
-      setWartungData({
-        typ: 'inspektion',
-        datum: new Date().toISOString().split('T')[0],
-        beschreibung: '',
-        kosten: '',
-        dienstleister: '',
-        zustand_vorher: '',
-        zustand_nachher: '',
-      });
-      fetchData();
-    } catch (err) {
-      alert('Wartung konnte nicht gespeichert werden');
+  const handleAddQrCode = async () => {
+    if (!newQrCode) return;
+    
+    if (isNew) {
+      // Bei neuem Item nur lokal hinzufügen
+      setFormData(f => ({
+        ...f,
+        qr_codes: [...f.qr_codes, { code: newQrCode, bezeichnung: newQrBezeichnung, ist_primaer: f.qr_codes.length === 0 }]
+      }));
+    } else {
+      // Bei existierendem Item API aufrufen
+      try {
+        await apiClient.post(`/inventar/items/${id}/qr`, {
+          code: newQrCode,
+          bezeichnung: newQrBezeichnung,
+          ist_primaer: formData.qr_codes.length === 0,
+        });
+        fetchData();
+      } catch (err) {
+        alert('QR-Code konnte nicht hinzugefügt werden');
+        return;
+      }
     }
+    
+    setShowQrModal(false);
+    setNewQrCode('');
+    setNewQrBezeichnung('');
+  };
+
+  const handleDeleteQrCode = async (qrId, qrCode) => {
+    if (!confirm('QR-Code löschen?')) return;
+    
+    if (isNew) {
+      setFormData(f => ({
+        ...f,
+        qr_codes: f.qr_codes.filter(q => q.code !== qrCode)
+      }));
+    } else {
+      try {
+        await apiClient.delete(`/inventar/items/${id}/qr/${qrId}`);
+        fetchData();
+      } catch (err) {
+        alert('QR-Code konnte nicht gelöscht werden');
+      }
+    }
+  };
+
+  const getDisplayName = (list, id) => list.find((o) => o.id === id)?.name || '';
+
+  const handleCreateKategorie = async (name) => {
+    const res = await apiClient.post('/inventar/kategorien', { name });
+    setKategorien((prev) => [...prev, res.data]);
+    return res.data;
+  };
+  const handleCreateStandort = async (name) => {
+    const res = await apiClient.post('/inventar/standorte', { name });
+    setStandorte((prev) => [...prev, res.data]);
+    return res.data;
+  };
+  const handleCreateHersteller = async (name) => {
+    const res = await apiClient.post('/inventar/hersteller', { name });
+    setHersteller((prev) => [...prev, res.data]);
+    return res.data;
   };
 
   if (loading) {
@@ -239,8 +250,8 @@ export default function ItemDetailPage() {
           <h1 className="text-2xl font-bold text-white">
             {isNew ? 'Neues Item' : (editing ? 'Item bearbeiten' : item?.name)}
           </h1>
-          {!isNew && item && (
-            <p className="text-gray-400">{item.inventar_nr}</p>
+          {!isNew && item?.seriennummer && (
+            <p className="text-gray-400">SN: {item.seriennummer}</p>
           )}
         </div>
 
@@ -284,299 +295,162 @@ export default function ItemDetailPage() {
         )}
       </div>
 
+      {/* Erste Zeile: Basis-Infos links, QR-Code rechts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
+        {/* Basis-Informationen (links) */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Tabs */}
-          {!isNew && !editing && (
-            <div className="border-b border-gray-800">
-              <div className="flex gap-4">
-                {[
-                  { id: 'details', label: 'Details', icon: FileText },
-                  { id: 'wartung', label: 'Wartung', icon: Wrench },
-                  { id: 'historie', label: 'Historie', icon: History },
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                      activeTab === tab.id
-                        ? 'border-blue-500 text-blue-400'
-                        : 'border-transparent text-gray-400 hover:text-white'
-                    }`}
-                  >
-                    <tab.icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                ))}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
+            <h3 className="text-lg font-medium text-white">Basis-Informationen</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  disabled={!editing && !isNew}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Kategorie</label>
+                <AutocompleteInput
+                  options={kategorien}
+                  valueId={formData.kategorie_id}
+                  displayName={getDisplayName(kategorien, formData.kategorie_id)}
+                  onChange={(id) => setFormData((f) => ({ ...f, kategorie_id: id || '' }))}
+                  onCreateNew={(editing || isNew) ? handleCreateKategorie : undefined}
+                  placeholder="Suchen oder neu anlegen..."
+                  disabled={!editing && !isNew}
+                  getOptionLabel={(o) => o.name}
+                  getOptionValue={(o) => o.id}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Standort</label>
+                <AutocompleteInput
+                  options={standorte}
+                  valueId={formData.standort_id}
+                  displayName={getDisplayName(standorte, formData.standort_id)}
+                  onChange={(id) => setFormData((f) => ({ ...f, standort_id: id || '' }))}
+                  onCreateNew={(editing || isNew) ? handleCreateStandort : undefined}
+                  placeholder="Suchen oder neu anlegen..."
+                  disabled={!editing && !isNew}
+                  getOptionLabel={(o) => o.name}
+                  getOptionValue={(o) => o.id}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Hersteller</label>
+                <AutocompleteInput
+                  options={hersteller}
+                  valueId={formData.hersteller_id}
+                  displayName={getDisplayName(hersteller, formData.hersteller_id)}
+                  onChange={(id) => setFormData((f) => ({ ...f, hersteller_id: id || '' }))}
+                  onCreateNew={(editing || isNew) ? handleCreateHersteller : undefined}
+                  placeholder="Suchen oder neu anlegen..."
+                  disabled={!editing && !isNew}
+                  getOptionLabel={(o) => o.name}
+                  getOptionValue={(o) => o.id}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Seriennummer</label>
+                <input
+                  type="text"
+                  value={formData.seriennummer}
+                  onChange={(e) => setFormData({ ...formData, seriennummer: e.target.value })}
+                  disabled={!editing && !isNew}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+                <textarea
+                  value={formData.beschreibung}
+                  onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
+                  disabled={!editing && !isNew}
+                  rows={3}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60 resize-none"
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-400 mb-1">Notizen</label>
+                <textarea
+                  value={formData.notizen}
+                  onChange={(e) => setFormData({ ...formData, notizen: e.target.value })}
+                  disabled={!editing && !isNew}
+                  rows={2}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60 resize-none"
+                />
               </div>
             </div>
-          )}
+          </div>
 
-          {/* Form / Details */}
-          {(isNew || editing || activeTab === 'details') && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
-              {/* Basis */}
-              <div>
-                <h3 className="text-lg font-medium text-white mb-4">Basis-Informationen</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-gray-400 mb-1">Name *</label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Kategorie</label>
-                    <select
-                      value={formData.kategorie_id}
-                      onChange={(e) => setFormData({ ...formData, kategorie_id: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    >
-                      <option value="">Keine Kategorie</option>
-                      {kategorien.map(k => (
-                        <option key={k.id} value={k.id}>{k.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Zustand</label>
-                    <select
-                      value={formData.zustand}
-                      onChange={(e) => setFormData({ ...formData, zustand: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    >
-                      {ZUSTAND_OPTIONS.map(z => (
-                        <option key={z.value} value={z.value}>{z.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Seriennummer</label>
-                    <input
-                      type="text"
-                      value={formData.seriennummer}
-                      onChange={(e) => setFormData({ ...formData, seriennummer: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Barcode</label>
-                    <input
-                      type="text"
-                      value={formData.barcode}
-                      onChange={(e) => setFormData({ ...formData, barcode: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
-                    <textarea
-                      value={formData.beschreibung}
-                      onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
-                      disabled={!editing && !isNew}
-                      rows={3}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60 resize-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Standort */}
-              <div>
-                <h3 className="text-lg font-medium text-white mb-4">Standort & Menge</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Lagerort</label>
-                    <select
-                      value={formData.lagerort_id}
-                      onChange={(e) => setFormData({ ...formData, lagerort_id: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    >
-                      <option value="">Kein Lagerort</option>
-                      {lagerorte.map(l => (
-                        <option key={l.id} value={l.id}>{l.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Lagerplatz</label>
-                    <input
-                      type="text"
-                      value={formData.lagerplatz}
-                      onChange={(e) => setFormData({ ...formData, lagerplatz: e.target.value })}
-                      disabled={!editing && !isNew}
-                      placeholder="z.B. Regal A3, Case 5"
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Menge</label>
-                    <input
-                      type="number"
-                      value={formData.menge}
-                      onChange={(e) => setFormData({ ...formData, menge: parseInt(e.target.value) || 1 })}
-                      disabled={!editing && !isNew}
-                      min="1"
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Einheit</label>
-                    <input
-                      type="text"
-                      value={formData.einheit}
-                      onChange={(e) => setFormData({ ...formData, einheit: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Kaufinfos */}
-              <div>
-                <h3 className="text-lg font-medium text-white mb-4">Kaufinformationen</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Kaufdatum</label>
-                    <input
-                      type="date"
-                      value={formData.kaufdatum}
-                      onChange={(e) => setFormData({ ...formData, kaufdatum: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Kaufpreis (€)</label>
-                    <input
-                      type="number"
-                      value={formData.kaufpreis}
-                      onChange={(e) => setFormData({ ...formData, kaufpreis: e.target.value })}
-                      disabled={!editing && !isNew}
-                      step="0.01"
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Lieferant</label>
-                    <input
-                      type="text"
-                      value={formData.lieferant}
-                      onChange={(e) => setFormData({ ...formData, lieferant: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm text-gray-400 mb-1">Garantie bis</label>
-                    <input
-                      type="date"
-                      value={formData.garantie_bis}
-                      onChange={(e) => setFormData({ ...formData, garantie_bis: e.target.value })}
-                      disabled={!editing && !isNew}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Wartung Tab */}
-          {!isNew && !editing && activeTab === 'wartung' && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-white">Wartungsprotokoll</h3>
+          {/* QR-Codes Liste */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-white">QR-Codes</h3>
+              {(editing || isNew) && (
                 <button
-                  onClick={() => setShowWartungModal(true)}
+                  onClick={() => setShowQrModal(true)}
                   className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
                 >
                   <Plus className="w-4 h-4" />
-                  Wartung eintragen
+                  QR-Code hinzufügen
                 </button>
-              </div>
-              
-              {wartungen.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">Keine Wartungen dokumentiert</p>
-              ) : (
-                <div className="space-y-3">
-                  {wartungen.map(w => (
-                    <div key={w.id} className="p-4 bg-gray-800 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-white">{w.typ_display}</span>
-                        <span className="text-sm text-gray-400">{w.datum}</span>
+              )}
+            </div>
+            
+            {formData.qr_codes.length === 0 ? (
+              <p className="text-gray-400 text-center py-4">Keine QR-Codes vorhanden</p>
+            ) : (
+              <div className="space-y-2">
+                {formData.qr_codes.map((qr, idx) => (
+                  <div key={qr.id || idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <QrCode className="w-5 h-5 text-gray-400" />
+                      <div>
+                        <span className="font-mono text-white">{qr.code}</span>
+                        {qr.bezeichnung && <span className="text-sm text-gray-400 ml-2">({qr.bezeichnung})</span>}
+                        {qr.ist_primaer && <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded ml-2">Primär</span>}
                       </div>
-                      <p className="text-sm text-gray-300">{w.beschreibung}</p>
-                      {w.kosten > 0 && (
-                        <p className="text-sm text-green-400 mt-2">Kosten: {w.kosten} €</p>
-                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Historie Tab */}
-          {!isNew && !editing && activeTab === 'historie' && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-              <h3 className="text-lg font-medium text-white mb-4">Ausleih-Historie</h3>
-              
-              {ausleihen.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">Keine Ausleihen für dieses Item</p>
-              ) : (
-                <div className="space-y-3">
-                  {ausleihen.map(a => (
-                    <Link
-                      key={a.id}
-                      to={`/ausleihen/${a.id}`}
-                      className="block p-4 bg-gray-800 rounded-lg hover:bg-gray-700"
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium text-white">{a.ausleiher_name}</span>
-                        <span className={`text-sm ${
-                          a.status === 'aktiv' ? 'text-blue-400' :
-                          a.status === 'zurueckgegeben' ? 'text-green-400' :
-                          'text-gray-400'
-                        }`}>
-                          {a.status_display}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-400">
-                        {new Date(a.ausleihe_von).toLocaleDateString('de-DE')} - {new Date(a.ausleihe_bis).toLocaleDateString('de-DE')}
-                      </p>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                    {(editing || isNew) && (
+                      <button
+                        onClick={() => handleDeleteQrCode(qr.id, qr.code)}
+                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* QR Code */}
-          {!isNew && item && (
+          {/* QR Code Display */}
+          {!isNew && item && item.haupt_qr_code && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
               <QRCodeSVG
-                value={item.qr_code}
+                value={item.haupt_qr_code}
                 size={180}
                 bgColor="transparent"
                 fgColor="#ffffff"
                 className="mx-auto"
               />
-              <p className="mt-4 text-sm text-gray-400 font-mono">{item.qr_code}</p>
+              <p className="mt-4 text-sm text-gray-400 font-mono">{item.haupt_qr_code}</p>
             </div>
           )}
 
@@ -588,18 +462,32 @@ export default function ItemDetailPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-400">Status</span>
                   <span className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${STATUS_FARBEN[item.status]}`} />
-                    {item.status_display}
+                    <span className={`w-2 h-2 rounded-full ${STATUS_FARBEN[item.status] || 'bg-gray-500'}`} />
+                    {item.status_display || STATUS_LABELS[item.status] || item.status}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Zustand</span>
-                  <span className="text-white">{item.zustand_display}</span>
-                </div>
-                {item.braucht_wartung && (
-                  <div className="flex items-center gap-2 text-orange-400 mt-4">
-                    <AlertTriangle className="w-4 h-4" />
-                    Wartung fällig!
+                {item.kategorie_name && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Kategorie</span>
+                    <span className="text-white">{item.kategorie_name}</span>
+                  </div>
+                )}
+                {item.standort_name && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Standort</span>
+                    <span className="text-white flex items-center gap-1">
+                      <MapPin className="w-4 h-4" />
+                      {item.standort_name}
+                    </span>
+                  </div>
+                )}
+                {item.hersteller_name && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Hersteller</span>
+                    <span className="text-white flex items-center gap-1">
+                      <Building className="w-4 h-4" />
+                      {item.hersteller_name}
+                    </span>
                   </div>
                 )}
               </div>
@@ -609,7 +497,7 @@ export default function ItemDetailPage() {
           {/* Quick Actions */}
           {!isNew && item && item.status === 'verfuegbar' && (
             <Link
-              to={`/ausleihen/neu?item=${item.id}`}
+              to={`/ausleihen?item=${item.id}`}
               className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-center"
             >
               Ausleihen
@@ -618,92 +506,60 @@ export default function ItemDetailPage() {
         </div>
       </div>
 
-      {/* Wartung Modal */}
-      {showWartungModal && (
+      {/* QR-Code Modal */}
+      {showQrModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Wartung eintragen</h2>
-              <button onClick={() => setShowWartungModal(false)} className="text-gray-400 hover:text-white">
+              <h2 className="text-lg font-semibold text-white">QR-Code hinzufügen</h2>
+              <button onClick={() => setShowQrModal(false)} className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-
+            
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Typ</label>
-                <select
-                  value={wartungData.typ}
-                  onChange={(e) => setWartungData({ ...wartungData, typ: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                >
-                  <option value="inspektion">Inspektion</option>
-                  <option value="reinigung">Reinigung</option>
-                  <option value="reparatur">Reparatur</option>
-                  <option value="pruefung">Prüfung (BGV)</option>
-                  <option value="update">Software/Firmware Update</option>
-                  <option value="sonstiges">Sonstiges</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm text-gray-400 mb-1">Datum</label>
+                <label className="block text-sm text-gray-400 mb-1">QR-Code *</label>
                 <input
-                  type="date"
-                  value={wartungData.datum}
-                  onChange={(e) => setWartungData({ ...wartungData, datum: e.target.value })}
+                  type="text"
+                  value={newQrCode}
+                  onChange={(e) => setNewQrCode(e.target.value)}
+                  placeholder="Code eingeben oder scannen..."
                   className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Beschreibung *</label>
-                <textarea
-                  value={wartungData.beschreibung}
-                  onChange={(e) => setWartungData({ ...wartungData, beschreibung: e.target.value })}
-                  rows={3}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                <label className="block text-sm text-gray-400 mb-1">Bezeichnung (optional)</label>
+                <input
+                  type="text"
+                  value={newQrBezeichnung}
+                  onChange={(e) => setNewQrBezeichnung(e.target.value)}
+                  placeholder="z.B. Hauptaufkleber, Ersatz..."
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
                 />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Kosten (€)</label>
-                  <input
-                    type="number"
-                    value={wartungData.kosten}
-                    onChange={(e) => setWartungData({ ...wartungData, kosten: e.target.value })}
-                    step="0.01"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-400 mb-1">Dienstleister</label>
-                  <input
-                    type="text"
-                    value={wartungData.dienstleister}
-                    onChange={(e) => setWartungData({ ...wartungData, dienstleister: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                  />
-                </div>
               </div>
             </div>
 
             <div className="flex gap-2 mt-6">
               <button
-                onClick={() => setShowWartungModal(false)}
+                onClick={() => setShowQrModal(false)}
                 className="flex-1 py-2 text-gray-400 hover:text-white"
               >
                 Abbrechen
               </button>
               <button
-                onClick={handleAddWartung}
-                disabled={!wartungData.beschreibung}
+                onClick={handleAddQrCode}
+                disabled={!newQrCode}
                 className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg"
               >
-                Speichern
+                Hinzufügen
               </button>
             </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }

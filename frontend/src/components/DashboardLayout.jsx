@@ -16,8 +16,8 @@ import {
   Sun,
   Moon,
   Calendar,
+  CalendarCheck,
   Package,
-  Tag,
   Boxes
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
@@ -37,15 +37,16 @@ export default function DashboardLayout({ children }) {
   // Navigation mit Permission-Check
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, permission: null },
+    { name: 'Veranstaltungsplaner', href: '/veranstaltung', icon: CalendarCheck, permission: null },
     { name: 'Kalender', href: '/kalender', icon: Calendar, permission: 'kalender.view' },
     { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 
-  // Kalender-Unternavigation
-  const kalenderSubNav = hasPermission('kalender.view') ? [
-    { name: 'Ressourcen', href: '/ressourcen', icon: Package },
-    { name: 'Kategorien', href: '/kategorien', icon: Tag },
+  // Inventar-Unternavigation
+  const inventarSubNav = hasPermission('inventar.view') ? [
+    { name: 'Ausleihen', href: '/ausleihen', icon: Package },
+    { name: 'Item-Sets', href: '/inventar/sets', icon: Boxes },
   ] : [];
 
   // Admin-Navigation
@@ -60,7 +61,7 @@ export default function DashboardLayout({ children }) {
   const getPageTitle = () => {
     const allNav = [
       ...navigation, 
-      ...kalenderSubNav,
+      ...inventarSubNav,
       ...adminNavigation, 
       { name: 'Einstellungen', href: '/settings' }
     ];
@@ -102,49 +103,49 @@ export default function DashboardLayout({ children }) {
             const isActive = item.href === '/' 
               ? location.pathname === '/' 
               : location.pathname.startsWith(item.href);
+            const isKalender = item.href === '/kalender';
+            const isInventar = item.href === '/inventar';
+            const isVeranstaltung = item.href === '/veranstaltung';
             
             return (
-              <Link
-                key={item.name}
-                to={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.name}</span>
-              </Link>
+              <div key={item.name} className="space-y-1">
+                <Link
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{item.name}</span>
+                </Link>
+                {/* Inventar Sub-Navigation: direkt unter Inventar */}
+                {isInventar && inventarSubNav.length > 0 && (
+                  <div className="pl-4 space-y-1">
+                    {inventarSubNav.map((sub) => {
+                      const SubIcon = sub.icon;
+                      const subActive = location.pathname === sub.href || (sub.href !== '/inventar' && location.pathname.startsWith(sub.href));
+                      return (
+                        <Link
+                          key={sub.name}
+                          to={sub.href}
+                          onClick={() => setSidebarOpen(false)}
+                          className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
+                            subActive ? 'bg-gray-700 text-white' : 'text-gray-500 hover:text-white hover:bg-gray-800'
+                          }`}
+                        >
+                          <SubIcon className="w-4 h-4" />
+                          <span>{sub.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
-
-          {/* Kalender Sub-Navigation */}
-          {kalenderSubNav.length > 0 && (
-            <div className="pl-4 space-y-1">
-              {kalenderSubNav.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-colors ${
-                      isActive
-                        ? 'bg-gray-700 text-white'
-                        : 'text-gray-500 hover:text-white hover:bg-gray-800'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
 
           {/* Admin Section */}
           {adminNavigation.length > 0 && (

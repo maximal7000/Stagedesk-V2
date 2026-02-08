@@ -1,51 +1,48 @@
 /**
- * Inventar-Übersicht mit Filter und Suche
+ * Inventar-Übersicht mit Filter und Suche (v2 - vereinfacht)
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   Plus, Search, Filter, Package, Grid, List, 
-  Loader2, AlertTriangle, QrCode, MapPin, Tag,
-  ChevronDown, X, Wrench
+  Loader2, QrCode, MapPin, Building, Layers,
+  X, ChevronRight
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import apiClient from '../lib/api';
 
 const STATUS_FARBEN = {
   verfuegbar: 'bg-green-500',
   ausgeliehen: 'bg-blue-500',
   reserviert: 'bg-yellow-500',
-  wartung: 'bg-orange-500',
   defekt: 'bg-red-500',
 };
 
-const ZUSTAND_FARBEN = {
-  neu: 'text-green-400',
-  sehr_gut: 'text-green-400',
-  gut: 'text-blue-400',
-  verschleiss: 'text-yellow-400',
-  beschaedigt: 'text-orange-400',
-  defekt: 'text-red-400',
-  ausgemustert: 'text-gray-400',
+const STATUS_LABELS = {
+  verfuegbar: 'Verfügbar',
+  ausgeliehen: 'Ausgeliehen',
+  reserviert: 'Reserviert',
+  defekt: 'Defekt',
 };
 
 export default function InventarPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [kategorien, setKategorien] = useState([]);
-  const [lagerorte, setLagerorte] = useState([]);
+  const [standorte, setStandorte] = useState([]);
+  const [hersteller, setHersteller] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // Filter
   const [suche, setSuche] = useState('');
   const [filterKategorie, setFilterKategorie] = useState('');
-  const [filterLagerort, setFilterLagerort] = useState('');
+  const [filterStandort, setFilterStandort] = useState('');
+  const [filterHersteller, setFilterHersteller] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [showFilter, setShowFilter] = useState(false);
   
   // View Mode
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+  const [viewMode, setViewMode] = useState('grid');
   
   // QR Scanner Modal
   const [showQrModal, setShowQrModal] = useState(false);
@@ -57,26 +54,29 @@ export default function InventarPage() {
       const params = new URLSearchParams();
       if (suche) params.append('suche', suche);
       if (filterKategorie) params.append('kategorie_id', filterKategorie);
-      if (filterLagerort) params.append('lagerort_id', filterLagerort);
+      if (filterStandort) params.append('standort_id', filterStandort);
+      if (filterHersteller) params.append('hersteller_id', filterHersteller);
       if (filterStatus) params.append('status', filterStatus);
 
-      const [itemsRes, kategorienRes, lagerorteRes, statsRes] = await Promise.all([
+      const [itemsRes, kategorienRes, standorteRes, herstellerRes, statsRes] = await Promise.all([
         apiClient.get(`/inventar/items?${params}`),
         apiClient.get('/inventar/kategorien'),
-        apiClient.get('/inventar/lagerorte'),
+        apiClient.get('/inventar/standorte'),
+        apiClient.get('/inventar/hersteller'),
         apiClient.get('/inventar/stats'),
       ]);
 
       setItems(itemsRes.data);
       setKategorien(kategorienRes.data);
-      setLagerorte(lagerorteRes.data);
+      setStandorte(standorteRes.data);
+      setHersteller(herstellerRes.data);
       setStats(statsRes.data);
     } catch (err) {
       console.error('Fehler beim Laden:', err);
     } finally {
       setLoading(false);
     }
-  }, [suche, filterKategorie, filterLagerort, filterStatus]);
+  }, [suche, filterKategorie, filterStandort, filterHersteller, filterStatus]);
 
   useEffect(() => {
     fetchData();
@@ -95,11 +95,12 @@ export default function InventarPage() {
   const clearFilters = () => {
     setSuche('');
     setFilterKategorie('');
-    setFilterLagerort('');
+    setFilterStandort('');
+    setFilterHersteller('');
     setFilterStatus('');
   };
 
-  const hasActiveFilters = suche || filterKategorie || filterLagerort || filterStatus;
+  const hasActiveFilters = suche || filterKategorie || filterStandort || filterHersteller || filterStatus;
 
   return (
     <div className="space-y-6">
@@ -108,7 +109,7 @@ export default function InventarPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">Inventar</h1>
           <p className="text-gray-400 mt-1">
-            {stats && `${stats.total_items} Items • ${stats.total_wert.toLocaleString('de-DE')} € Gesamtwert`}
+            {stats && `${stats.total_items} Items`}
           </p>
         </div>
 
@@ -119,6 +120,13 @@ export default function InventarPage() {
           >
             <Package className="w-5 h-5" />
             Ausleihen
+          </Link>
+          <Link
+            to="/inventar/sets"
+            className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-gray-300 hover:text-white rounded-lg"
+          >
+            <Layers className="w-5 h-5" />
+            Item-Sets
           </Link>
           <button
             onClick={() => setShowQrModal(true)}
@@ -141,19 +149,19 @@ export default function InventarPage() {
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="text-2xl font-bold text-white">{stats.status_counts.verfuegbar || 0}</div>
+            <div className="text-2xl font-bold text-white">{stats.status_counts?.verfuegbar || 0}</div>
             <div className="text-sm text-gray-400">Verfügbar</div>
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="text-2xl font-bold text-blue-400">{stats.status_counts.ausgeliehen || 0}</div>
+            <div className="text-2xl font-bold text-blue-400">{stats.status_counts?.ausgeliehen || 0}</div>
             <div className="text-sm text-gray-400">Ausgeliehen</div>
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="text-2xl font-bold text-orange-400">{stats.wartung_faellig}</div>
-            <div className="text-sm text-gray-400">Wartung fällig</div>
+            <div className="text-2xl font-bold text-yellow-400">{stats.status_counts?.reserviert || 0}</div>
+            <div className="text-sm text-gray-400">Reserviert</div>
           </div>
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="text-2xl font-bold text-red-400">{stats.ueberfaellige_ausleihen}</div>
+            <div className="text-2xl font-bold text-red-400">{stats.ueberfaellige_ausleihen || 0}</div>
             <div className="text-sm text-gray-400">Überfällig</div>
           </div>
         </div>
@@ -167,7 +175,7 @@ export default function InventarPage() {
             type="text"
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
-            placeholder="Suche nach Name, Inventarnummer, Seriennummer..."
+            placeholder="Suche nach Name, Seriennummer, QR-Code..."
             className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500"
           />
         </div>
@@ -214,7 +222,7 @@ export default function InventarPage() {
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm text-gray-400 mb-1">Kategorie</label>
               <select
@@ -229,15 +237,28 @@ export default function InventarPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Lagerort</label>
+              <label className="block text-sm text-gray-400 mb-1">Standort</label>
               <select
-                value={filterLagerort}
-                onChange={(e) => setFilterLagerort(e.target.value)}
+                value={filterStandort}
+                onChange={(e) => setFilterStandort(e.target.value)}
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
               >
-                <option value="">Alle Lagerorte</option>
-                {lagerorte.map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
+                <option value="">Alle Standorte</option>
+                {standorte.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">Hersteller</label>
+              <select
+                value={filterHersteller}
+                onChange={(e) => setFilterHersteller(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+              >
+                <option value="">Alle Hersteller</option>
+                {hersteller.map(h => (
+                  <option key={h.id} value={h.id}>{h.name}</option>
                 ))}
               </select>
             </div>
@@ -252,7 +273,6 @@ export default function InventarPage() {
                 <option value="verfuegbar">Verfügbar</option>
                 <option value="ausgeliehen">Ausgeliehen</option>
                 <option value="reserviert">Reserviert</option>
-                <option value="wartung">In Wartung</option>
                 <option value="defekt">Defekt</option>
               </select>
             </div>
@@ -291,7 +311,7 @@ export default function InventarPage() {
                   </div>
                 )}
                 {/* Status Badge */}
-                <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${STATUS_FARBEN[item.status]}`} />
+                <div className={`absolute top-2 right-2 w-3 h-3 rounded-full ${STATUS_FARBEN[item.status] || 'bg-gray-500'}`} />
               </div>
 
               <div className="p-4">
@@ -300,12 +320,14 @@ export default function InventarPage() {
                     <h3 className="font-medium text-white truncate group-hover:text-blue-400 transition-colors">
                       {item.name}
                     </h3>
-                    <p className="text-xs text-gray-500">{item.inventar_nr}</p>
+                    {item.seriennummer && (
+                      <p className="text-xs text-gray-500">{item.seriennummer}</p>
+                    )}
                   </div>
                   {item.kategorie_name && (
                     <span
                       className="shrink-0 px-2 py-0.5 text-xs rounded"
-                      style={{ backgroundColor: item.kategorie_farbe + '20', color: item.kategorie_farbe }}
+                      style={{ backgroundColor: (item.kategorie_farbe || '#6B7280') + '20', color: item.kategorie_farbe || '#6B7280' }}
                     >
                       {item.kategorie_name}
                     </span>
@@ -313,19 +335,21 @@ export default function InventarPage() {
                 </div>
 
                 <div className="mt-3 flex items-center justify-between text-sm">
-                  <span className={ZUSTAND_FARBEN[item.zustand] || 'text-gray-400'}>
-                    {item.zustand_display}
+                  <span className={`px-2 py-0.5 rounded text-xs ${STATUS_FARBEN[item.status]?.replace('bg-', 'bg-opacity-20 text-')}`}>
+                    {item.status_display || STATUS_LABELS[item.status] || item.status}
                   </span>
-                  <span className="text-gray-400">
-                    {item.menge > 1 ? `${item.menge}x` : ''} {item.einheit}
-                  </span>
+                  {item.hersteller_name && (
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Building className="w-3 h-3" />
+                      {item.hersteller_name}
+                    </span>
+                  )}
                 </div>
 
-                {item.lagerort_name && (
+                {item.standort_name && (
                   <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                     <MapPin className="w-3 h-3" />
-                    {item.lagerort_name}
-                    {item.lagerplatz && ` • ${item.lagerplatz}`}
+                    {item.standort_name}
                   </div>
                 )}
               </div>
@@ -339,10 +363,10 @@ export default function InventarPage() {
               <tr className="border-b border-gray-800">
                 <th className="text-left p-4 text-sm text-gray-400 font-medium">Item</th>
                 <th className="text-left p-4 text-sm text-gray-400 font-medium">Kategorie</th>
+                <th className="text-left p-4 text-sm text-gray-400 font-medium">Hersteller</th>
                 <th className="text-left p-4 text-sm text-gray-400 font-medium">Status</th>
-                <th className="text-left p-4 text-sm text-gray-400 font-medium">Zustand</th>
-                <th className="text-left p-4 text-sm text-gray-400 font-medium">Lagerort</th>
-                <th className="text-right p-4 text-sm text-gray-400 font-medium">Wert</th>
+                <th className="text-left p-4 text-sm text-gray-400 font-medium">Standort</th>
+                <th className="p-4"></th>
               </tr>
             </thead>
             <tbody>
@@ -363,7 +387,9 @@ export default function InventarPage() {
                       </div>
                       <div>
                         <div className="font-medium text-white">{item.name}</div>
-                        <div className="text-xs text-gray-500">{item.inventar_nr}</div>
+                        {item.seriennummer && (
+                          <div className="text-xs text-gray-500">{item.seriennummer}</div>
+                        )}
                       </div>
                     </div>
                   </td>
@@ -371,28 +397,26 @@ export default function InventarPage() {
                     {item.kategorie_name && (
                       <span
                         className="px-2 py-1 text-xs rounded"
-                        style={{ backgroundColor: item.kategorie_farbe + '20', color: item.kategorie_farbe }}
+                        style={{ backgroundColor: (item.kategorie_farbe || '#6B7280') + '20', color: item.kategorie_farbe || '#6B7280' }}
                       >
                         {item.kategorie_name}
                       </span>
                     )}
                   </td>
-                  <td className="p-4">
-                    <span className={`flex items-center gap-2 text-sm`}>
-                      <span className={`w-2 h-2 rounded-full ${STATUS_FARBEN[item.status]}`} />
-                      {item.status_display}
-                    </span>
+                  <td className="p-4 text-sm text-gray-400">
+                    {item.hersteller_name || '-'}
                   </td>
                   <td className="p-4">
-                    <span className={`text-sm ${ZUSTAND_FARBEN[item.zustand]}`}>
-                      {item.zustand_display}
+                    <span className="flex items-center gap-2 text-sm">
+                      <span className={`w-2 h-2 rounded-full ${STATUS_FARBEN[item.status] || 'bg-gray-500'}`} />
+                      {item.status_display || STATUS_LABELS[item.status] || item.status}
                     </span>
                   </td>
                   <td className="p-4 text-sm text-gray-400">
-                    {item.lagerort_name || '-'}
+                    {item.standort_name || '-'}
                   </td>
-                  <td className="p-4 text-right text-sm text-white">
-                    {item.kaufpreis > 0 ? `${parseFloat(item.kaufpreis).toLocaleString('de-DE')} €` : '-'}
+                  <td className="p-4">
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
                   </td>
                 </tr>
               ))}
@@ -419,7 +443,7 @@ export default function InventarPage() {
               value={qrInput}
               onChange={(e) => setQrInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleQrSearch()}
-              placeholder="INV-XXXXXXXXXXXX"
+              placeholder="QR-Code eingeben..."
               className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white mb-4"
               autoFocus
             />

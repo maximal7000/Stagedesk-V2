@@ -17,7 +17,10 @@ import RessourcenPage from './pages/RessourcenPage';
 import KategorienPage from './pages/KategorienPage';
 import InventarPage from './pages/InventarPage';
 import ItemDetailPage from './pages/ItemDetailPage';
+import ItemSetsPage from './pages/ItemSetsPage';
 import AusleihePage from './pages/AusleihePage';
+import VeranstaltungenPage from './pages/VeranstaltungenPage';
+import VeranstaltungDetailPage from './pages/VeranstaltungDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import DesignTestPage from './pages/DesignTestPage';
@@ -58,9 +61,14 @@ function AppContent() {
                   <Route path="/ressourcen" element={<RessourcenPage />} />
                   <Route path="/kategorien" element={<KategorienPage />} />
                   <Route path="/inventar" element={<InventarPage />} />
+                  <Route path="/inventar/neu" element={<ItemDetailPage />} />
+                  <Route path="/inventar/sets" element={<ItemSetsPage />} />
                   <Route path="/inventar/:id" element={<ItemDetailPage />} />
                   <Route path="/ausleihen" element={<AusleihePage />} />
                   <Route path="/ausleihen/:id" element={<AusleihePage />} />
+                  <Route path="/veranstaltung" element={<VeranstaltungenPage />} />
+                  <Route path="/veranstaltung/neu" element={<VeranstaltungDetailPage />} />
+                  <Route path="/veranstaltung/:id" element={<VeranstaltungDetailPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/admin" element={<AdminPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />

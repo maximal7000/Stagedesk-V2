@@ -1,18 +1,21 @@
 """
-Inventar & Ausleih-System
-- Inventar-Items mit Kategorien, Zustand, QR-Code
-- Ausleih-Vorgänge mit Unterschrift (Global/Individuell)
-- Wartungsprotokoll
+Inventar & Ausleih-System v2
+- Vereinfachte Items (ohne Kaufinfos, Wartung, Menge)
+- Hersteller als eigenes Model
+- Item-Sets
+- Ausleihlisten (Global/Individuell)
+- Ausleiher-Datenbank
+- Reservierungen
+- Mehrere QR-Codes pro Item
 """
 from django.db import models
-from django.core.validators import MinValueValidator
-from decimal import Decimal
+from django.core.mail import send_mail
+from django.conf import settings
 import uuid
-import hashlib
 
 
 class InventarKategorie(models.Model):
-    """Kategorien für Inventar (Licht, Ton, Video, etc.)"""
+    """Kategorien für Inventar"""
     name = models.CharField(max_length=100)
     farbe = models.CharField(max_length=7, default='#3B82F6')
     icon = models.CharField(max_length=50, default='package')
@@ -27,13 +30,11 @@ class InventarKategorie(models.Model):
         verbose_name_plural = 'Kategorien'
 
     def __str__(self):
-        if self.parent:
-            return f"{self.parent.name} > {self.name}"
-        return self.name
+        return f"{self.parent.name} > {self.name}" if self.parent else self.name
 
 
-class Lagerort(models.Model):
-    """Lagerorte für Inventar"""
+class Standort(models.Model):
+    """Standorte/Lagerorte für Items"""
     name = models.CharField(max_length=100)
     beschreibung = models.TextField(blank=True)
     adresse = models.TextField(blank=True)
@@ -42,172 +43,208 @@ class Lagerort(models.Model):
 
     class Meta:
         ordering = ['sortierung', 'name']
-        verbose_name = 'Lagerort'
-        verbose_name_plural = 'Lagerorte'
+        verbose_name = 'Standort'
+        verbose_name_plural = 'Standorte'
 
     def __str__(self):
         return self.name
 
 
+class Hersteller(models.Model):
+    """Hersteller von Equipment"""
+    name = models.CharField(max_length=100, unique=True)
+    website = models.URLField(blank=True)
+    notizen = models.TextField(blank=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Hersteller'
+        verbose_name_plural = 'Hersteller'
+
+    def __str__(self):
+        return self.name
+
+
+class Ausleiher(models.Model):
+    """Datenbank für häufige Ausleiher"""
+    name = models.CharField(max_length=200)
+    organisation = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
+    telefon = models.CharField(max_length=50, blank=True)
+    adresse = models.TextField(blank=True)
+    notizen = models.TextField(blank=True)
+    ist_aktiv = models.BooleanField(default=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Ausleiher'
+        verbose_name_plural = 'Ausleiher'
+
+    def __str__(self):
+        return f"{self.name}" + (f" ({self.organisation})" if self.organisation else "")
+
+
 class InventarItem(models.Model):
-    """Einzelnes Inventar-Item"""
-    ZUSTAND_CHOICES = [
-        ('neu', 'Neu'),
-        ('sehr_gut', 'Sehr gut'),
-        ('gut', 'Gut'),
-        ('verschleiss', 'Verschleiß'),
-        ('beschaedigt', 'Beschädigt'),
-        ('defekt', 'Defekt'),
-        ('ausgemustert', 'Ausgemustert'),
-    ]
-    
+    """Einzelnes Inventar-Item (vereinfacht)"""
     STATUS_CHOICES = [
         ('verfuegbar', 'Verfügbar'),
         ('ausgeliehen', 'Ausgeliehen'),
         ('reserviert', 'Reserviert'),
-        ('wartung', 'In Wartung'),
         ('defekt', 'Defekt'),
     ]
     
     # Basis-Infos
     name = models.CharField(max_length=200)
     beschreibung = models.TextField(blank=True)
+    
+    # Verknüpfungen
     kategorie = models.ForeignKey(InventarKategorie, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
+    standort = models.ForeignKey(Standort, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
+    hersteller = models.ForeignKey(Hersteller, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
     
     # Identifikation
-    inventar_nr = models.CharField(max_length=50, unique=True, blank=True, help_text="Interne Inventarnummer")
     seriennummer = models.CharField(max_length=100, blank=True)
-    qr_code = models.CharField(max_length=100, unique=True, blank=True, help_text="Eindeutiger QR-Code")
-    barcode = models.CharField(max_length=100, blank=True)
     
-    # Status & Zustand
+    # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='verfuegbar')
-    zustand = models.CharField(max_length=20, choices=ZUSTAND_CHOICES, default='gut')
-    zustand_notizen = models.TextField(blank=True, help_text="Notizen zum Zustand")
     
-    # Standort
-    lagerort = models.ForeignKey(Lagerort, on_delete=models.SET_NULL, null=True, blank=True, related_name='items')
-    lagerplatz = models.CharField(max_length=100, blank=True, help_text="z.B. Regal A3, Case 5")
-    
-    # Mengen (für Verbrauchsmaterial)
-    menge = models.IntegerField(default=1)
-    einheit = models.CharField(max_length=20, default='Stück')
-    mindestbestand = models.IntegerField(default=0, help_text="Warnung wenn Bestand unterschritten")
-    
-    # Kaufinfos
-    kaufdatum = models.DateField(null=True, blank=True)
-    kaufpreis = models.DecimalField(max_digits=10, decimal_places=2, default=0, validators=[MinValueValidator(Decimal('0'))])
-    lieferant = models.CharField(max_length=200, blank=True)
-    garantie_bis = models.DateField(null=True, blank=True)
-    
-    # Wert & Abschreibung
-    aktueller_wert = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    abschreibung_jahre = models.IntegerField(default=5)
-    
-    # Bilder (JSON Array von URLs)
+    # Bilder (JSON Array von URLs/Base64)
     bilder = models.JSONField(default=list, blank=True)
     
-    # Technische Details (flexibles JSON)
-    technische_daten = models.JSONField(default=dict, blank=True, help_text="z.B. Gewicht, Leistung, Anschlüsse")
-    
-    # Wartung
-    letzte_wartung = models.DateField(null=True, blank=True)
-    naechste_wartung = models.DateField(null=True, blank=True)
-    wartungsintervall_tage = models.IntegerField(default=365)
+    # Notizen
+    notizen = models.TextField(blank=True)
     
     # Meta
-    notizen = models.TextField(blank=True)
-    tags = models.JSONField(default=list, blank=True)
     ist_aktiv = models.BooleanField(default=True)
     erstellt_von = models.CharField(max_length=100, blank=True)
     erstellt_am = models.DateTimeField(auto_now_add=True)
     aktualisiert_am = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['kategorie', 'name']
-        verbose_name = 'Inventar-Item'
-        verbose_name_plural = 'Inventar-Items'
+        ordering = ['name']
+        verbose_name = 'Item'
+        verbose_name_plural = 'Items'
 
     def __str__(self):
-        return f"{self.name} ({self.inventar_nr})" if self.inventar_nr else self.name
-
-    def save(self, *args, **kwargs):
-        # QR-Code generieren wenn nicht vorhanden
-        if not self.qr_code:
-            self.qr_code = f"INV-{uuid.uuid4().hex[:12].upper()}"
-        
-        # Inventarnummer generieren wenn nicht vorhanden
-        if not self.inventar_nr:
-            prefix = "INV"
-            if self.kategorie:
-                prefix = self.kategorie.name[:3].upper()
-            # Nächste freie Nummer finden
-            last = InventarItem.objects.filter(inventar_nr__startswith=prefix).order_by('-inventar_nr').first()
-            if last and last.inventar_nr:
-                try:
-                    num = int(last.inventar_nr.split('-')[-1]) + 1
-                except:
-                    num = 1
-            else:
-                num = 1
-            self.inventar_nr = f"{prefix}-{num:05d}"
-        
-        super().save(*args, **kwargs)
+        return self.name
 
     @property
-    def ist_ausleihbar(self):
+    def ist_verfuegbar(self):
         return self.status == 'verfuegbar' and self.ist_aktiv
 
     @property
-    def braucht_wartung(self):
-        from datetime import date
-        if self.naechste_wartung:
-            return self.naechste_wartung <= date.today()
-        return False
+    def haupt_qr_code(self):
+        """Gibt den primären QR-Code zurück"""
+        qr = self.qr_codes.filter(ist_primaer=True).first()
+        if not qr:
+            qr = self.qr_codes.first()
+        return qr.code if qr else None
 
 
-class Ausleihe(models.Model):
-    """Ausleih-Vorgang (kann mehrere Items enthalten)"""
-    UNTERSCHRIFT_MODUS = [
-        ('keine', 'Keine Unterschrift'),
-        ('global', 'Eine Unterschrift für alle'),
-        ('individuell', 'Unterschrift pro Item'),
+class ItemQRCode(models.Model):
+    """Mehrere QR-Codes pro Item möglich"""
+    item = models.ForeignKey(InventarItem, on_delete=models.CASCADE, related_name='qr_codes')
+    code = models.CharField(max_length=100, unique=True)
+    bezeichnung = models.CharField(max_length=100, blank=True, help_text="z.B. 'Hauptaufkleber', 'Ersatz'")
+    ist_primaer = models.BooleanField(default=False)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'QR-Code'
+        verbose_name_plural = 'QR-Codes'
+
+    def __str__(self):
+        return f"{self.code} ({self.item.name})"
+
+    def save(self, *args, **kwargs):
+        # Wenn primär, alle anderen auf nicht-primär setzen
+        if self.ist_primaer:
+            ItemQRCode.objects.filter(item=self.item, ist_primaer=True).update(ist_primaer=False)
+        # Wenn erster QR-Code, automatisch primär machen
+        if not self.pk and not self.item.qr_codes.exists():
+            self.ist_primaer = True
+        super().save(*args, **kwargs)
+
+
+class ItemSet(models.Model):
+    """Vordefinierte Item-Sets"""
+    name = models.CharField(max_length=200)
+    beschreibung = models.TextField(blank=True)
+    farbe = models.CharField(max_length=7, default='#8B5CF6')
+    ist_aktiv = models.BooleanField(default=True)
+    erstellt_von = models.CharField(max_length=100, blank=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Item-Set'
+        verbose_name_plural = 'Item-Sets'
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def anzahl_items(self):
+        return self.positionen.count()
+
+
+class ItemSetPosition(models.Model):
+    """Items in einem Set"""
+    item_set = models.ForeignKey(ItemSet, on_delete=models.CASCADE, related_name='positionen')
+    item = models.ForeignKey(InventarItem, on_delete=models.CASCADE, related_name='set_positionen')
+    anzahl = models.IntegerField(default=1)
+    notizen = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = ['item_set', 'item']
+        verbose_name = 'Set-Position'
+        verbose_name_plural = 'Set-Positionen'
+
+    def __str__(self):
+        return f"{self.anzahl}x {self.item.name}"
+
+
+class Ausleihliste(models.Model):
+    """Ausleihliste - kann Global oder Individuell sein"""
+    MODUS_CHOICES = [
+        ('global', 'Global (eine Unterschrift)'),
+        ('individuell', 'Individuell (Unterschrift pro Item)'),
     ]
     
     STATUS_CHOICES = [
         ('offen', 'Offen'),
-        ('aktiv', 'Aktiv/Ausgeliehen'),
+        ('aktiv', 'Aktiv'),
         ('teilrueckgabe', 'Teilrückgabe'),
-        ('zurueckgegeben', 'Zurückgegeben'),
+        ('abgeschlossen', 'Abgeschlossen'),
         ('abgebrochen', 'Abgebrochen'),
     ]
     
     # Ausleiher
-    ausleiher_name = models.CharField(max_length=200)
-    ausleiher_email = models.EmailField(blank=True)
-    ausleiher_telefon = models.CharField(max_length=50, blank=True)
+    ausleiher = models.ForeignKey(Ausleiher, on_delete=models.SET_NULL, null=True, blank=True, related_name='ausleihen')
+    ausleiher_name = models.CharField(max_length=200, help_text="Falls nicht aus Datenbank")
     ausleiher_organisation = models.CharField(max_length=200, blank=True)
     
-    # Zweck (optional Event-Verknüpfung)
+    # Details
     zweck = models.CharField(max_length=300, blank=True)
-    event = models.ForeignKey('kalender.Event', on_delete=models.SET_NULL, null=True, blank=True, related_name='ausleihen')
+    frist = models.DateField(null=True, blank=True, help_text="Rückgabe-Frist")
     
-    # Zeitraum
-    ausleihe_von = models.DateTimeField()
-    ausleihe_bis = models.DateTimeField()
-    tatsaechliche_rueckgabe = models.DateTimeField(null=True, blank=True)
-    
-    # Unterschrift
-    unterschrift_modus = models.CharField(max_length=20, choices=UNTERSCHRIFT_MODUS, default='global')
-    unterschrift_ausleihe = models.TextField(blank=True, help_text="Base64-encoded Signatur bei Ausleihe")
-    unterschrift_rueckgabe = models.TextField(blank=True, help_text="Base64-encoded Signatur bei Rückgabe")
-    
-    # Status
+    # Modus & Status
+    modus = models.CharField(max_length=20, choices=MODUS_CHOICES, default='global')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offen')
     
+    # Globale Unterschrift (wenn Modus = global)
+    unterschrift_ausleihe = models.TextField(blank=True, help_text="Base64 Signatur")
+    unterschrift_rueckgabe = models.TextField(blank=True)
+    
     # Notizen
-    notizen_ausleihe = models.TextField(blank=True)
+    notizen = models.TextField(blank=True)
     notizen_rueckgabe = models.TextField(blank=True)
+    
+    # Rückgabe
+    rueckgabe_am = models.DateTimeField(null=True, blank=True)
+    rueckgabe_zustand = models.CharField(max_length=50, blank=True, help_text="OK, Beschädigt, etc.")
     
     # Meta
     erstellt_von = models.CharField(max_length=100, blank=True)
@@ -216,8 +253,8 @@ class Ausleihe(models.Model):
 
     class Meta:
         ordering = ['-erstellt_am']
-        verbose_name = 'Ausleihe'
-        verbose_name_plural = 'Ausleihen'
+        verbose_name = 'Ausleihliste'
+        verbose_name_plural = 'Ausleihlisten'
 
     def __str__(self):
         return f"Ausleihe #{self.id} - {self.ausleiher_name}"
@@ -229,75 +266,127 @@ class Ausleihe(models.Model):
     @property
     def ist_ueberfaellig(self):
         from django.utils import timezone
-        if self.status == 'aktiv' and self.ausleihe_bis:
-            return timezone.now() > self.ausleihe_bis
+        if self.status == 'aktiv' and self.frist:
+            return timezone.now().date() > self.frist
         return False
+
+    def send_mahnung(self):
+        """Sendet Mahnungs-E-Mail an Ausleiher"""
+        email = None
+        if self.ausleiher and self.ausleiher.email:
+            email = self.ausleiher.email
+        
+        if not email:
+            return False, "Keine E-Mail-Adresse vorhanden"
+        
+        items_text = "\n".join([f"- {p.item.name}" for p in self.positionen.all()])
+        
+        try:
+            send_mail(
+                subject=f"Mahnung: Rückgabe überfällig - Ausleihe #{self.id}",
+                message=f"""Hallo {self.ausleiher_name},
+
+die folgende Ausleihe ist überfällig:
+
+Ausleihe #{self.id}
+Frist: {self.frist.strftime('%d.%m.%Y') if self.frist else 'Nicht angegeben'}
+
+Ausgeliehene Items:
+{items_text}
+
+Bitte geben Sie die Items schnellstmöglich zurück.
+
+Mit freundlichen Grüßen,
+Stagedesk
+""",
+                from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@stagedesk.de',
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            return True, "E-Mail gesendet"
+        except Exception as e:
+            return False, str(e)
 
 
 class AusleihePosition(models.Model):
-    """Einzelne Position einer Ausleihe"""
-    ZUSTAND_CHOICES = InventarItem.ZUSTAND_CHOICES
+    """Position in einer Ausleihliste"""
+    ZUSTAND_CHOICES = [
+        ('ok', 'OK'),
+        ('verschleiss', 'Verschleiß'),
+        ('beschaedigt', 'Beschädigt'),
+        ('defekt', 'Defekt'),
+    ]
     
-    ausleihe = models.ForeignKey(Ausleihe, on_delete=models.CASCADE, related_name='positionen')
+    ausleihliste = models.ForeignKey(Ausleihliste, on_delete=models.CASCADE, related_name='positionen')
     item = models.ForeignKey(InventarItem, on_delete=models.PROTECT, related_name='ausleihe_positionen')
-    
-    # Menge (bei Verbrauchsmaterial)
-    menge = models.IntegerField(default=1)
-    
-    # Zustand bei Ausleihe/Rückgabe
-    zustand_ausleihe = models.CharField(max_length=20, choices=ZUSTAND_CHOICES, blank=True)
-    zustand_rueckgabe = models.CharField(max_length=20, choices=ZUSTAND_CHOICES, blank=True)
     
     # Individuelle Unterschrift (wenn Modus = individuell)
     unterschrift = models.TextField(blank=True)
     
-    # Notizen
-    notizen = models.TextField(blank=True)
+    # Zustand
+    zustand_ausleihe = models.CharField(max_length=20, choices=ZUSTAND_CHOICES, default='ok')
+    zustand_rueckgabe = models.CharField(max_length=20, choices=ZUSTAND_CHOICES, blank=True)
     
-    # Rückgabe-Status
+    # Fotos (Base64 oder URLs)
+    foto_ausleihe = models.TextField(blank=True)
+    foto_rueckgabe = models.TextField(blank=True)
+    
+    # Rückgabe
     ist_zurueckgegeben = models.BooleanField(default=False)
     rueckgabe_am = models.DateTimeField(null=True, blank=True)
+    rueckgabe_notizen = models.TextField(blank=True)
 
     class Meta:
         verbose_name = 'Ausleihe-Position'
         verbose_name_plural = 'Ausleihe-Positionen'
 
     def __str__(self):
-        return f"{self.item.name} ({self.menge}x)"
+        return f"{self.item.name}"
 
 
-class Wartung(models.Model):
-    """Wartungsprotokoll für Items"""
-    TYP_CHOICES = [
-        ('inspektion', 'Inspektion'),
-        ('reinigung', 'Reinigung'),
-        ('reparatur', 'Reparatur'),
-        ('pruefung', 'Prüfung (z.B. BGV)'),
-        ('update', 'Software/Firmware Update'),
-        ('sonstiges', 'Sonstiges'),
+class Reservierung(models.Model):
+    """Reservierung eines Items für ein bestimmtes Datum"""
+    STATUS_CHOICES = [
+        ('aktiv', 'Aktiv'),
+        ('bestaetigt', 'Bestätigt'),
+        ('storniert', 'Storniert'),
+        ('ausgeliehen', 'In Ausleihe umgewandelt'),
     ]
     
-    item = models.ForeignKey(InventarItem, on_delete=models.CASCADE, related_name='wartungen')
-    typ = models.CharField(max_length=20, choices=TYP_CHOICES, default='inspektion')
-    datum = models.DateField()
-    beschreibung = models.TextField()
+    item = models.ForeignKey(InventarItem, on_delete=models.CASCADE, related_name='reservierungen')
+    ausleiher = models.ForeignKey(Ausleiher, on_delete=models.SET_NULL, null=True, blank=True)
+    ausleiher_name = models.CharField(max_length=200)
     
-    # Kosten
-    kosten = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    dienstleister = models.CharField(max_length=200, blank=True)
+    datum_von = models.DateField()
+    datum_bis = models.DateField()
+    zweck = models.CharField(max_length=300, blank=True)
     
-    # Ergebnis
-    zustand_vorher = models.CharField(max_length=20, choices=InventarItem.ZUSTAND_CHOICES, blank=True)
-    zustand_nachher = models.CharField(max_length=20, choices=InventarItem.ZUSTAND_CHOICES, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='aktiv')
+    notizen = models.TextField(blank=True)
     
-    # Meta
     erstellt_von = models.CharField(max_length=100, blank=True)
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-datum']
-        verbose_name = 'Wartung'
-        verbose_name_plural = 'Wartungen'
+        ordering = ['datum_von']
+        verbose_name = 'Reservierung'
+        verbose_name_plural = 'Reservierungen'
 
     def __str__(self):
-        return f"Wartung {self.item.name} - {self.datum}"
+        return f"{self.item.name} - {self.ausleiher_name} ({self.datum_von} bis {self.datum_bis})"
+
+
+class GespeicherterFilter(models.Model):
+    """Gespeicherte Such-Filter"""
+    name = models.CharField(max_length=100)
+    filter_json = models.JSONField(default=dict, help_text="Filter als JSON")
+    benutzer_id = models.CharField(max_length=100, help_text="Keycloak User ID")
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Gespeicherter Filter'
+        verbose_name_plural = 'Gespeicherte Filter'
+
+    def __str__(self):
+        return self.name

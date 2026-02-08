@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -42,6 +43,7 @@ INSTALLED_APPS = [
     'users',
     'kalender',
     'inventar',
+    'veranstaltung',
 ]
 
 MIDDLEWARE = [
@@ -137,3 +139,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Zammad (Veranstaltungsplaner)
+ZAMMAD_URL = os.getenv('ZAMMAD_URL', '').rstrip('/')
+ZAMMAD_TOKEN = os.getenv('ZAMMAD_TOKEN', '')
