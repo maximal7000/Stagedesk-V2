@@ -26,6 +26,7 @@ import VeranstaltungDetailPage from './pages/VeranstaltungDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import DesignTestPage from './pages/DesignTestPage';
+import MonitorPage from './pages/MonitorPage';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -48,6 +49,7 @@ function AppContent() {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/design-test" element={<DesignTestPage />} />
+      <Route path="/monitor" element={<MonitorPage />} />
 
       {/* Protected Routes: Dashboard */}
       <Route

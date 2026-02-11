@@ -863,16 +863,16 @@ export default function AusleihePage() {
               {signatureStep === 'sign' && signatureMode === 'single' && (
                 <>
                   <h2 className="text-lg font-semibold text-white mb-4">Unterschrift</h2>
-                  <div className="rounded-lg mb-4 overflow-hidden dark:bg-gray-800 bg-gray-800">
+                  <div className="rounded-xl mb-4 overflow-hidden border-2 border-gray-600">
                     <SignatureCanvas ref={sigPadRef}
-                      canvasProps={{ className: 'w-full h-56', style: { width: '100%', height: '224px', background: '#1f2937' } }}
-                      penColor="white" backgroundColor="#1f2937" />
+                      canvasProps={{ className: 'w-full', style: { width: '100%', height: '320px', background: '#ffffff' } }}
+                      penColor="black" backgroundColor="#ffffff" />
                   </div>
                   {globalSignature && (
                     <div className="mb-4">
                       <p className="text-xs text-gray-400 mb-1">Vorschau:</p>
-                      <div className="bg-white rounded p-2 inline-block">
-                        <img src={globalSignature} alt="Unterschrift" className="h-12" />
+                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 inline-block">
+                        <img src={globalSignature} alt="Unterschrift" className="h-16 invert" />
                       </div>
                     </div>
                   )}
@@ -900,16 +900,16 @@ export default function AusleihePage() {
                           Unterschrift für: <span className="text-blue-400">{pos.item_name}</span>
                         </h2>
                         <p className="text-sm text-gray-400 mb-4">Artikel {currentSignItemIdx + 1} von {positions.length}</p>
-                        <div className="rounded-lg mb-4 overflow-hidden">
+                        <div className="rounded-xl mb-4 overflow-hidden border-2 border-gray-600">
                           <SignatureCanvas ref={sigPadRef}
-                            canvasProps={{ className: 'w-full h-56', style: { width: '100%', height: '224px', background: '#1f2937' } }}
-                            penColor="white" backgroundColor="#1f2937" />
+                            canvasProps={{ className: 'w-full', style: { width: '100%', height: '320px', background: '#ffffff' } }}
+                            penColor="black" backgroundColor="#ffffff" />
                         </div>
                         {itemSignatures[pos.item_id] && (
                           <div className="mb-4">
                             <p className="text-xs text-gray-400 mb-1">Vorschau:</p>
-                            <div className="bg-white rounded p-2 inline-block">
-                              <img src={itemSignatures[pos.item_id]} alt="Unterschrift" className="h-10" />
+                            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 inline-block">
+                              <img src={itemSignatures[pos.item_id]} alt="Unterschrift" className="h-14 invert" />
                             </div>
                           </div>
                         )}
@@ -946,10 +946,10 @@ export default function AusleihePage() {
               </p>
               <div className="mb-4">
                 <label className="block text-sm text-gray-400 mb-2">Unterschrift (optional)</label>
-                <div className="rounded-lg overflow-hidden">
+                <div className="rounded-xl overflow-hidden border-2 border-gray-600">
                   <SignatureCanvas ref={rueckgabeSigRef}
-                    canvasProps={{ className: 'w-full h-32', style: { width: '100%', height: '128px', background: '#1f2937' } }}
-                    penColor="white" backgroundColor="#1f2937" />
+                    canvasProps={{ className: 'w-full', style: { width: '100%', height: '200px', background: '#ffffff' } }}
+                    penColor="black" backgroundColor="#ffffff" />
                 </div>
               </div>
               <div className="flex gap-2">
