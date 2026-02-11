@@ -8,6 +8,7 @@ import {
   Loader2, X, Check, Trash2, Edit2, Package
 } from 'lucide-react';
 import apiClient from '../lib/api';
+import { toast } from 'sonner';
 
 export default function ItemSetsPage() {
   const navigate = useNavigate();
@@ -26,6 +27,17 @@ export default function ItemSetsPage() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [itemSearch, setItemSearch] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Ausleihen Modal State
+  const [showAusleihenModal, setShowAusleihenModal] = useState(false);
+  const [ausleihenSetId, setAusleihenSetId] = useState(null);
+  const [ausleihenForm, setAusleihenForm] = useState({
+    ausleiher_name: '',
+    ausleiher_organisation: '',
+    zweck: '',
+    frist: '',
+  });
+  const [ausleihenSaving, setAusleihenSaving] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -104,7 +116,7 @@ export default function ItemSetsPage() {
 
   const handleSave = async () => {
     if (!formData.name || selectedItems.length === 0) {
-      alert('Bitte Name eingeben und mindestens ein Item hinzufügen');
+      toast.error('Bitte Name eingeben und mindestens ein Item hinzufügen');
       return;
     }
 
@@ -131,7 +143,7 @@ export default function ItemSetsPage() {
       fetchData();
     } catch (err) {
       console.error('Fehler beim Speichern:', err);
-      alert('Set konnte nicht gespeichert werden');
+      toast.error('Set konnte nicht gespeichert werden');
     } finally {
       setSaving(false);
     }
@@ -145,11 +157,48 @@ export default function ItemSetsPage() {
       fetchData();
     } catch (err) {
       console.error('Fehler beim Löschen:', err);
-      alert('Set konnte nicht gelöscht werden');
+      toast.error('Set konnte nicht gelöscht werden');
     }
   };
 
-  const filteredItems = items.filter(item => 
+  const openAusleihenModal = (setId) => {
+    setAusleihenSetId(setId);
+    setAusleihenForm({
+      ausleiher_name: '',
+      ausleiher_organisation: '',
+      zweck: '',
+      frist: '',
+    });
+    setShowAusleihenModal(true);
+  };
+
+  const handleAusleihen = async () => {
+    if (!ausleihenForm.ausleiher_name || !ausleihenForm.frist) {
+      toast.error('Bitte Name und Frist angeben');
+      return;
+    }
+
+    setAusleihenSaving(true);
+    try {
+      const res = await apiClient.post(`/inventar/sets/${ausleihenSetId}/ausleihen`, {
+        ausleiher_name: ausleihenForm.ausleiher_name,
+        ausleiher_organisation: ausleihenForm.ausleiher_organisation,
+        zweck: ausleihenForm.zweck,
+        frist: ausleihenForm.frist,
+        modus: 'global',
+      });
+      toast.success('Set erfolgreich ausgeliehen');
+      setShowAusleihenModal(false);
+      navigate(`/ausleihen/${res.data.id}`);
+    } catch (err) {
+      console.error('Fehler beim Ausleihen:', err);
+      toast.error(err.response?.data?.detail || 'Set konnte nicht ausgeliehen werden');
+    } finally {
+      setAusleihenSaving(false);
+    }
+  };
+
+  const filteredItems = items.filter(item =>
     item.name.toLowerCase().includes(itemSearch.toLowerCase()) ||
     (item.seriennummer && item.seriennummer.toLowerCase().includes(itemSearch.toLowerCase()))
   );
@@ -256,8 +305,95 @@ export default function ItemSetsPage() {
                   </p>
                 )}
               </div>
+
+              <button
+                onClick={() => openAusleihenModal(set.id)}
+                className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+              >
+                <Package className="w-4 h-4" />
+                Set ausleihen
+              </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Ausleihen Modal */}
+      {showAusleihenModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md">
+            <div className="border-b border-gray-800 p-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-white">Set ausleihen</h2>
+              <button
+                onClick={() => setShowAusleihenModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Ausleiher Name *</label>
+                <input
+                  type="text"
+                  value={ausleihenForm.ausleiher_name}
+                  onChange={(e) => setAusleihenForm({ ...ausleihenForm, ausleiher_name: e.target.value })}
+                  placeholder="Name des Ausleihers"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Organisation</label>
+                <input
+                  type="text"
+                  value={ausleihenForm.ausleiher_organisation}
+                  onChange={(e) => setAusleihenForm({ ...ausleihenForm, ausleiher_organisation: e.target.value })}
+                  placeholder="Organisation / Firma"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Zweck</label>
+                <input
+                  type="text"
+                  value={ausleihenForm.zweck}
+                  onChange={(e) => setAusleihenForm({ ...ausleihenForm, zweck: e.target.value })}
+                  placeholder="Verwendungszweck"
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-400 mb-1">Frist *</label>
+                <input
+                  type="date"
+                  value={ausleihenForm.frist}
+                  onChange={(e) => setAusleihenForm({ ...ausleihenForm, frist: e.target.value })}
+                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-gray-800 p-4 flex justify-end gap-2">
+              <button
+                onClick={() => setShowAusleihenModal(false)}
+                className="px-4 py-2 text-gray-400 hover:text-white"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={handleAusleihen}
+                disabled={ausleihenSaving || !ausleihenForm.ausleiher_name || !ausleihenForm.frist}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg"
+              >
+                {ausleihenSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
+                Ausleihen
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

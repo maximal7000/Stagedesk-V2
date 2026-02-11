@@ -11,13 +11,17 @@ class ZuweisungSchema(Schema):
     user_keycloak_id: str
     user_username: str
     user_email: str
-    rolle: str
-    rolle_display: str
+    taetigkeit_id: Optional[int]
+    taetigkeit_name: str
     zugewiesen_am: datetime
 
     @staticmethod
-    def resolve_rolle_display(obj):
-        return obj.get_rolle_display()
+    def resolve_taetigkeit_id(obj):
+        return obj.taetigkeit_id
+
+    @staticmethod
+    def resolve_taetigkeit_name(obj):
+        return obj.taetigkeit.name if obj.taetigkeit else ''
 
 
 class ChecklisteItemSchema(Schema):
@@ -76,6 +80,8 @@ class VeranstaltungSchema(Schema):
     wiederholung: str
     wiederholung_ende: Optional[date]
     ausleihliste_id: Optional[int]
+    discord_event_id: str
+    discord_channel_id: str
     erstellt_von: str
     erstellt_am: datetime
     aktualisiert_am: datetime
@@ -92,7 +98,7 @@ class VeranstaltungSchema(Schema):
 
     @staticmethod
     def resolve_zuweisungen(obj):
-        return obj.zuweisungen.all()
+        return obj.zuweisungen.select_related('taetigkeit').all()
 
     @staticmethod
     def resolve_checkliste(obj):
@@ -174,7 +180,7 @@ class ZuweisungCreateSchema(Schema):
     user_keycloak_id: str
     user_username: str = ''
     user_email: str = ''
-    rolle: str = 'team'
+    taetigkeit_id: Optional[int] = None
 
 
 class ChecklisteItemCreateSchema(Schema):

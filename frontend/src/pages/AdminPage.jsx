@@ -19,6 +19,7 @@ export default function AdminPage() {
   // Data
   const [users, setUsers] = useState([]);
   const [permissions, setPermissions] = useState([]);
+  const [bereiche, setBereiche] = useState([]);
   
   // Edit States
   const [editingUser, setEditingUser] = useState(null);
@@ -29,13 +30,15 @@ export default function AdminPage() {
     
     setLoading(true);
     try {
-      const [usersRes, permsRes] = await Promise.all([
+      const [usersRes, permsRes, bereicheRes] = await Promise.all([
         apiClient.get('/users/users'),
         apiClient.get('/users/permissions'),
+        apiClient.get('/users/bereiche'),
       ]);
-      
+
       setUsers(usersRes.data);
       setPermissions(permsRes.data);
+      setBereiche(bereicheRes.data || []);
     } catch (err) {
       setError('Daten konnten nicht geladen werden.');
       console.error(err);
@@ -200,6 +203,8 @@ export default function AdminPage() {
                               permission_codes: editingUser.permission_codes,
                               forced_theme: editingUser.forced_theme,
                               theme_locked: editingUser.theme_locked,
+                              discord_id: editingUser.discord_id,
+                              bereich_ids: editingUser.bereich_ids,
                             })}
                             disabled={savingId === user.id}
                             className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
@@ -215,6 +220,50 @@ export default function AdminPage() {
                         </div>
                       </div>
                       
+                      {/* Discord-ID */}
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-1">Discord-ID</label>
+                        <input
+                          type="text"
+                          value={editingUser.discord_id || ''}
+                          onChange={(e) => setEditingUser({ ...editingUser, discord_id: e.target.value })}
+                          placeholder="z.B. 123456789012345678"
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm"
+                        />
+                      </div>
+
+                      {/* Bereiche (Badge Multi-Select) */}
+                      <div>
+                        <label className="block text-sm text-gray-400 mb-2">Bereich</label>
+                        <div className="flex flex-wrap gap-2">
+                          {bereiche.map((b) => {
+                            const isSelected = (editingUser.bereich_ids || []).includes(b.id);
+                            return (
+                              <button
+                                key={b.id}
+                                type="button"
+                                onClick={() => {
+                                  const ids = isSelected
+                                    ? editingUser.bereich_ids.filter(id => id !== b.id)
+                                    : [...(editingUser.bereich_ids || []), b.id];
+                                  setEditingUser({ ...editingUser, bereich_ids: ids });
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                                  isSelected
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                }`}
+                              >
+                                {b.name}
+                              </button>
+                            );
+                          })}
+                          {bereiche.length === 0 && (
+                            <span className="text-gray-500 text-sm">Keine Bereiche konfiguriert (Django Admin)</span>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Lokale Permissions */}
                       <div>
                         <label className="block text-sm text-gray-400 mb-2">
@@ -295,10 +344,27 @@ export default function AdminPage() {
                             )}
                           </div>
                           <div className="text-sm text-gray-400">{user.email}</div>
+                          {user.discord_id && (
+                            <div className="text-xs text-indigo-400">Discord: {user.discord_id}</div>
+                          )}
+                          {user.bereiche?.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {user.bereiche.map(b => (
+                                <span key={b.id} className="px-1.5 py-0.5 text-xs bg-blue-600/20 text-blue-400 rounded">
+                                  {b.name}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-4">
+                        {user.discord_id && (
+                          <span className="px-2 py-0.5 text-xs bg-indigo-600/20 text-indigo-400 rounded">
+                            Discord
+                          </span>
+                        )}
                         {user.forced_theme && (
                           <span className="px-2 py-0.5 text-xs bg-yellow-600/20 text-yellow-400 rounded flex items-center gap-1">
                             {user.forced_theme === 'dark' ? <Moon className="w-3 h-3" /> : <Sun className="w-3 h-3" />}
@@ -308,9 +374,11 @@ export default function AdminPage() {
                         <button
                           onClick={() => setEditingUser({
                             id: user.id,
-                            permission_codes: [], // User's current local permissions (would need to fetch)
+                            permission_codes: [],
                             forced_theme: user.forced_theme,
                             theme_locked: false,
+                            discord_id: user.discord_id || '',
+                            bereich_ids: (user.bereiche || []).map(b => b.id),
                           })}
                           className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
                         >

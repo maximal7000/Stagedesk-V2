@@ -7,6 +7,20 @@ from django.conf import settings
 from django.utils import timezone
 
 
+class TaetigkeitsRolle(models.Model):
+    """Konfigurierbare Tätigkeitsrollen für Veranstaltungs-Zuweisungen."""
+    name = models.CharField(max_length=100, unique=True)
+    sortierung = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['sortierung', 'name']
+        verbose_name = 'Tätigkeitsrolle'
+        verbose_name_plural = 'Tätigkeitsrollen'
+
+    def __str__(self):
+        return self.name
+
+
 class Veranstaltung(models.Model):
     STATUS_CHOICES = [
         ('planung', 'Planung'),
@@ -47,6 +61,10 @@ class Veranstaltung(models.Model):
         'inventar.Ausleihliste', on_delete=models.SET_NULL, null=True, blank=True, related_name='veranstaltungen'
     )
 
+    # Discord-Integration
+    discord_event_id = models.CharField(max_length=100, blank=True, help_text="Discord Scheduled Event ID")
+    discord_channel_id = models.CharField(max_length=100, blank=True, help_text="Discord Text-Channel ID")
+
     erstellt_von = models.CharField(max_length=100, blank=True)
     erstellt_am = models.DateTimeField(auto_now_add=True)
     aktualisiert_am = models.DateTimeField(auto_now=True)
@@ -61,17 +79,12 @@ class Veranstaltung(models.Model):
 
 
 class VeranstaltungZuweisung(models.Model):
-    ROLLEN = [
-        ('verantwortlich', 'Verantwortlich'),
-        ('team', 'Team'),
-        ('technik', 'Technik'),
-        ('sonstiges', 'Sonstiges'),
-    ]
     veranstaltung = models.ForeignKey(Veranstaltung, on_delete=models.CASCADE, related_name='zuweisungen')
     user_keycloak_id = models.CharField(max_length=100)
     user_username = models.CharField(max_length=150, blank=True)
     user_email = models.CharField(max_length=254, blank=True)
-    rolle = models.CharField(max_length=20, choices=ROLLEN, default='team')
+    taetigkeit = models.ForeignKey(TaetigkeitsRolle, on_delete=models.SET_NULL, null=True, blank=True,
+                                   help_text="Tätigkeitszuweisung bei Veranstaltung")
     zugewiesen_am = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -120,6 +133,8 @@ class VeranstaltungAnhang(models.Model):
     name = models.CharField(max_length=200)
     datei = models.FileField(upload_to='veranstaltung_anhaenge/%Y/%m/', blank=True, null=True)
     url = models.URLField(blank=True)
+    unique_key = models.CharField(max_length=64, blank=True, unique=True, null=True,
+                                  help_text="Eindeutiger Schlüssel um Duplikate zu verhindern")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

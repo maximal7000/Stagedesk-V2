@@ -1,8 +1,16 @@
 from django.contrib import admin
 from .models import (
+    TaetigkeitsRolle,
     Veranstaltung, VeranstaltungZuweisung, VeranstaltungChecklisteItem,
     VeranstaltungNotiz, VeranstaltungAnhang, VeranstaltungErinnerung
 )
+
+
+@admin.register(TaetigkeitsRolle)
+class TaetigkeitsRolleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'sortierung')
+    list_editable = ('sortierung',)
+    search_fields = ('name',)
 
 
 @admin.register(Veranstaltung)
@@ -14,7 +22,7 @@ class VeranstaltungAdmin(admin.ModelAdmin):
 
 @admin.register(VeranstaltungZuweisung)
 class VeranstaltungZuweisungAdmin(admin.ModelAdmin):
-    list_display = ('veranstaltung', 'user_username', 'rolle')
+    list_display = ('veranstaltung', 'user_username', 'taetigkeit')
 
 
 admin.site.register(VeranstaltungChecklisteItem)

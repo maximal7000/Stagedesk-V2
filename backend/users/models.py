@@ -5,6 +5,20 @@ Rollen kommen aus Keycloak, lokale Permissions für feinere Steuerung
 from django.db import models
 
 
+class Bereich(models.Model):
+    """Konfigurierbare Bereiche für Techniker-Profile (z.B. Licht, Ton, Video)."""
+    name = models.CharField(max_length=100, unique=True)
+    sortierung = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['sortierung', 'name']
+        verbose_name = 'Bereich'
+        verbose_name_plural = 'Bereiche'
+
+    def __str__(self):
+        return self.name
+
+
 class Permission(models.Model):
     """
     Lokale Permissions für feinere Steuerung (zusätzlich zu Keycloak-Rollen)
@@ -35,24 +49,31 @@ class UserProfile(models.Model):
         ('light', 'Light Mode'),
         ('system', 'System'),
     ]
-    
+
     keycloak_id = models.CharField(max_length=100, unique=True, help_text="Keycloak User Sub ID")
     username = models.CharField(max_length=150, blank=True)
     email = models.CharField(max_length=254, blank=True)
-    
+
+    # Discord-Verknüpfung
+    discord_id = models.CharField(max_length=100, blank=True, help_text="Discord User-ID für Event-Verknüpfung")
+
+    # Bereiche (ManyToMany, z.B. Licht, Ton, Video)
+    bereiche = models.ManyToManyField(Bereich, blank=True, related_name='users',
+                                      help_text="Bereiche des Technikers")
+
     # Lokale Permissions (direkt am User, für feinere Steuerung)
     permissions = models.ManyToManyField(Permission, blank=True, related_name='users',
                                          help_text="Lokale Permissions zusätzlich zu Keycloak-Rollen")
-    
+
     # Settings
     theme = models.CharField(max_length=20, choices=THEME_CHOICES, default='dark')
     theme_locked = models.BooleanField(default=False, help_text="Theme vom Admin festgelegt")
     forced_theme = models.CharField(max_length=20, choices=THEME_CHOICES, blank=True, null=True,
                                     help_text="Vom Admin erzwungenes Theme")
-    
+
     # 2FA Status (wird von Keycloak verwaltet, hier nur gecacht)
     two_factor_enabled = models.BooleanField(default=False)
-    
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

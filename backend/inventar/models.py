@@ -110,7 +110,11 @@ class InventarItem(models.Model):
     # Status
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='verfuegbar')
     
-    # Bilder (JSON Array von URLs/Base64)
+    # Mengen (für Verbrauchsmaterial)
+    menge_gesamt = models.IntegerField(default=1, help_text="Gesamtmenge (1 = Einzelstück)")
+    menge_verfuegbar = models.IntegerField(default=1, help_text="Aktuell verfügbare Menge")
+
+    # Bilder (JSON Array von URLs/Base64 — Legacy, neue Bilder über ItemBild)
     bilder = models.JSONField(default=list, blank=True)
     
     # Notizen
@@ -132,6 +136,8 @@ class InventarItem(models.Model):
 
     @property
     def ist_verfuegbar(self):
+        if self.menge_gesamt > 1:
+            return self.menge_verfuegbar > 0 and self.ist_aktiv
         return self.status == 'verfuegbar' and self.ist_aktiv
 
     @property
@@ -221,12 +227,16 @@ class Ausleihliste(models.Model):
         ('abgebrochen', 'Abgebrochen'),
     ]
     
-    # Ausleiher
+    # Titel
+    titel = models.CharField(max_length=200, blank=True, help_text="Titel der Ausleihliste")
+
+    # Ausleiher (bei Global-Modus auf Listenebene)
     ausleiher = models.ForeignKey(Ausleiher, on_delete=models.SET_NULL, null=True, blank=True, related_name='ausleihen')
-    ausleiher_name = models.CharField(max_length=200, help_text="Falls nicht aus Datenbank")
+    ausleiher_name = models.CharField(max_length=200, blank=True, help_text="Ausleiher Name (bei Global)")
     ausleiher_organisation = models.CharField(max_length=200, blank=True)
-    
-    # Details
+    ausleiher_ort = models.CharField(max_length=200, blank=True, help_text="Ausleiher Ort (bei Global)")
+
+    # Details (optional)
     zweck = models.CharField(max_length=300, blank=True)
     frist = models.DateField(null=True, blank=True, help_text="Rückgabe-Frist")
     
@@ -238,14 +248,23 @@ class Ausleihliste(models.Model):
     unterschrift_ausleihe = models.TextField(blank=True, help_text="Base64 Signatur")
     unterschrift_rueckgabe = models.TextField(blank=True)
     
+    # Veranstaltung-Verknüpfung
+    veranstaltung = models.ForeignKey(
+        'veranstaltung.Veranstaltung', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='ausleihlisten'
+    )
+
     # Notizen
     notizen = models.TextField(blank=True)
     notizen_rueckgabe = models.TextField(blank=True)
-    
+
     # Rückgabe
     rueckgabe_am = models.DateTimeField(null=True, blank=True)
     rueckgabe_zustand = models.CharField(max_length=50, blank=True, help_text="OK, Beschädigt, etc.")
     
+    # Mahnung
+    letzte_mahnung_am = models.DateTimeField(null=True, blank=True)
+
     # Meta
     erstellt_von = models.CharField(max_length=100, blank=True)
     erstellt_am = models.DateTimeField(auto_now_add=True)
@@ -271,20 +290,23 @@ class Ausleihliste(models.Model):
         return False
 
     def send_mahnung(self):
-        """Sendet Mahnungs-E-Mail an Ausleiher"""
+        """Sendet Mahnungs-E-Mail an Ausleiher (nutzt MahnungsTemplate falls vorhanden)"""
+        from django.utils import timezone as tz
         email = None
         if self.ausleiher and self.ausleiher.email:
             email = self.ausleiher.email
-        
+
         if not email:
             return False, "Keine E-Mail-Adresse vorhanden"
-        
-        items_text = "\n".join([f"- {p.item.name}" for p in self.positionen.all()])
-        
-        try:
-            send_mail(
-                subject=f"Mahnung: Rückgabe überfällig - Ausleihe #{self.id}",
-                message=f"""Hallo {self.ausleiher_name},
+
+        # Template laden oder Fallback
+        template = MahnungsTemplate.objects.filter(ist_standard=True).first()
+        if template:
+            subject, message = template.render(self)
+        else:
+            items_text = "\n".join([f"- {p.item.name}" for p in self.positionen.filter(ist_zurueckgegeben=False)])
+            subject = f"Mahnung: Rückgabe überfällig - Ausleihe #{self.id}"
+            message = f"""Hallo {self.ausleiher_name},
 
 die folgende Ausleihe ist überfällig:
 
@@ -297,12 +319,18 @@ Ausgeliehene Items:
 Bitte geben Sie die Items schnellstmöglich zurück.
 
 Mit freundlichen Grüßen,
-Stagedesk
-""",
-                from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else 'noreply@stagedesk.de',
+Stagedesk"""
+
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@stagedesk.de'),
                 recipient_list=[email],
                 fail_silently=False,
             )
+            self.letzte_mahnung_am = tz.now()
+            self.save(update_fields=['letzte_mahnung_am'])
             return True, "E-Mail gesendet"
         except Exception as e:
             return False, str(e)
@@ -319,7 +347,12 @@ class AusleihePosition(models.Model):
     
     ausleihliste = models.ForeignKey(Ausleihliste, on_delete=models.CASCADE, related_name='positionen')
     item = models.ForeignKey(InventarItem, on_delete=models.PROTECT, related_name='ausleihe_positionen')
-    
+    anzahl = models.IntegerField(default=1, help_text="Ausgeliehene Menge (für mengenbasierte Items)")
+
+    # Ausleiher pro Position (bei Individuell-Modus)
+    ausleiher_name = models.CharField(max_length=200, blank=True)
+    ausleiher_ort = models.CharField(max_length=200, blank=True)
+
     # Individuelle Unterschrift (wenn Modus = individuell)
     unterschrift = models.TextField(blank=True)
     
@@ -374,6 +407,138 @@ class Reservierung(models.Model):
 
     def __str__(self):
         return f"{self.item.name} - {self.ausleiher_name} ({self.datum_von} bis {self.datum_bis})"
+
+
+class AuditLog(models.Model):
+    """Vollständiges Aktivitätsprotokoll"""
+    AKTION_CHOICES = [
+        ('erstellt', 'Erstellt'),
+        ('aktualisiert', 'Aktualisiert'),
+        ('geloescht', 'Gelöscht'),
+        ('ausgeliehen', 'Ausgeliehen'),
+        ('zurueckgegeben', 'Zurückgegeben'),
+        ('aktiviert', 'Aktiviert'),
+        ('mahnung', 'Mahnung gesendet'),
+        ('importiert', 'Importiert'),
+        ('dupliziert', 'Dupliziert'),
+        ('status_geaendert', 'Status geändert'),
+    ]
+
+    aktion = models.CharField(max_length=30, choices=AKTION_CHOICES)
+    entity_type = models.CharField(max_length=50, help_text="z.B. item, ausleihliste, reservierung")
+    entity_id = models.IntegerField()
+    entity_name = models.CharField(max_length=300, blank=True)
+    details = models.JSONField(default=dict, blank=True)
+    user_keycloak_id = models.CharField(max_length=100, blank=True)
+    user_username = models.CharField(max_length=150, blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'Audit-Log'
+        verbose_name_plural = 'Audit-Logs'
+        indexes = [
+            models.Index(fields=['entity_type', 'entity_id']),
+            models.Index(fields=['-timestamp']),
+        ]
+
+    def __str__(self):
+        return f"{self.aktion} {self.entity_type}:{self.entity_id} von {self.user_username}"
+
+
+class ItemZustandsLog(models.Model):
+    """Zustandsveränderungen pro Item (Schadenshistorie)"""
+    TYP_CHOICES = [
+        ('ausleihe', 'Ausleihe'),
+        ('rueckgabe', 'Rückgabe'),
+        ('manuell', 'Manuell'),
+    ]
+
+    item = models.ForeignKey(InventarItem, on_delete=models.CASCADE, related_name='zustandslog')
+    zustand_vorher = models.CharField(max_length=20, blank=True)
+    zustand_nachher = models.CharField(max_length=20, blank=True)
+    typ = models.CharField(max_length=20, choices=TYP_CHOICES)
+    ausleihliste = models.ForeignKey('Ausleihliste', on_delete=models.SET_NULL, null=True, blank=True)
+    notizen = models.TextField(blank=True)
+    user_keycloak_id = models.CharField(max_length=100, blank=True)
+    user_username = models.CharField(max_length=150, blank=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-erstellt_am']
+        verbose_name = 'Zustandslog'
+        verbose_name_plural = 'Zustandslogs'
+
+    def __str__(self):
+        return f"{self.item.name}: {self.zustand_vorher} → {self.zustand_nachher}"
+
+
+class ItemBild(models.Model):
+    """Bilder für Items (echte Dateien statt Base64)"""
+    item = models.ForeignKey(InventarItem, on_delete=models.CASCADE, related_name='item_bilder')
+    bild = models.ImageField(upload_to='inventar_bilder/%Y/%m/')
+    ist_haupt = models.BooleanField(default=False)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-ist_haupt', '-erstellt_am']
+        verbose_name = 'Item-Bild'
+        verbose_name_plural = 'Item-Bilder'
+
+    def __str__(self):
+        return f"Bild: {self.item.name}"
+
+    def save(self, *args, **kwargs):
+        if self.ist_haupt:
+            ItemBild.objects.filter(item=self.item, ist_haupt=True).update(ist_haupt=False)
+        if not self.pk and not self.item.item_bilder.exists():
+            self.ist_haupt = True
+        super().save(*args, **kwargs)
+
+
+class MahnungsTemplate(models.Model):
+    """Konfigurierbare E-Mail-Vorlagen für Mahnungen"""
+    name = models.CharField(max_length=100)
+    betreff = models.CharField(max_length=300, default='Mahnung: Rückgabe überfällig - Ausleihe #{ausleihe_id}')
+    text = models.TextField(default="""Hallo {ausleiher_name},
+
+die folgende Ausleihe ist überfällig:
+
+Ausleihe #{ausleihe_id}
+Frist: {frist}
+Tage überfällig: {tage_ueberfaellig}
+
+Ausgeliehene Items:
+{items}
+
+Bitte geben Sie die Items schnellstmöglich zurück.
+
+Mit freundlichen Grüßen,
+Stagedesk""")
+    ist_standard = models.BooleanField(default=False)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Mahnungs-Template'
+        verbose_name_plural = 'Mahnungs-Templates'
+
+    def __str__(self):
+        return self.name
+
+    def render(self, ausleihliste):
+        from django.utils import timezone
+        items_text = "\n".join([f"- {p.item.name}" for p in ausleihliste.positionen.filter(ist_zurueckgegeben=False)])
+        tage = 0
+        if ausleihliste.frist:
+            tage = (timezone.now().date() - ausleihliste.frist).days
+        context = {
+            'ausleiher_name': ausleihliste.ausleiher_name,
+            'ausleihe_id': ausleihliste.id,
+            'frist': ausleihliste.frist.strftime('%d.%m.%Y') if ausleihliste.frist else 'Nicht angegeben',
+            'tage_ueberfaellig': max(0, tage),
+            'items': items_text,
+        }
+        return self.betreff.format(**context), self.text.format(**context)
 
 
 class GespeicherterFilter(models.Model):

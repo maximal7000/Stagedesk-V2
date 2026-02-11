@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
-import { Calendar, ChevronRight, Loader2 } from 'lucide-react';
+import { Calendar, ChevronRight, Loader2, AlertTriangle, Package, Boxes } from 'lucide-react';
 import apiClient from '../lib/api';
 
 function formatDatum(d) {
@@ -24,6 +24,8 @@ export default function DashboardPage() {
   const user = auth.user?.profile;
   const [meineVeranstaltungen, setMeineVeranstaltungen] = useState([]);
   const [loadingVeranstaltungen, setLoadingVeranstaltungen] = useState(true);
+  const [inventarStats, setInventarStats] = useState(null);
+  const [auditLog, setAuditLog] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +44,17 @@ export default function DashboardPage() {
       .finally(() => {
         if (!cancelled) setLoadingVeranstaltungen(false);
       });
+
+    // Inventar Stats laden
+    apiClient.get('/inventar/stats')
+      .then(res => { if (!cancelled) setInventarStats(res.data); })
+      .catch(() => {});
+
+    // Audit-Log laden
+    apiClient.get('/inventar/audit-log?limit=10')
+      .then(res => { if (!cancelled) setAuditLog(Array.isArray(res.data) ? res.data : []); })
+      .catch(() => {});
+
     return () => { cancelled = true; };
   }, []);
 
@@ -56,6 +69,61 @@ export default function DashboardPage() {
           Verwalte deine Haushalte und behalte den Überblick über deine Finanzen.
         </p>
       </div>
+
+      {/* Überfällige Ausleihen Warnung */}
+      {inventarStats?.ueberfaellige_ausleihen > 0 && (
+        <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 flex items-center gap-4">
+          <AlertTriangle className="w-8 h-8 text-red-400 flex-shrink-0" />
+          <div className="flex-1">
+            <h3 className="font-semibold text-red-300">
+              {inventarStats.ueberfaellige_ausleihen} überfällige Ausleihe{inventarStats.ueberfaellige_ausleihen > 1 ? 'n' : ''}
+            </h3>
+            <p className="text-sm text-red-400/80">
+              {inventarStats.ueberfaellige_liste?.slice(0, 3).map(a =>
+                `${a.ausleiher_name} (Frist: ${new Date(a.frist).toLocaleDateString('de-DE')})`
+              ).join(', ')}
+            </p>
+          </div>
+          <Link to="/ausleihen" className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg flex-shrink-0">
+            Anzeigen
+          </Link>
+        </div>
+      )}
+
+      {/* Inventar-Schnellübersicht */}
+      {inventarStats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-gray-400 mb-1">
+              <Boxes className="w-4 h-4" />
+              <span className="text-sm">Items gesamt</span>
+            </div>
+            <p className="text-2xl font-bold text-white">{inventarStats.total_items}</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-gray-400 mb-1">
+              <Package className="w-4 h-4" />
+              <span className="text-sm">Aktive Ausleihen</span>
+            </div>
+            <p className="text-2xl font-bold text-blue-400">{inventarStats.aktive_ausleihen}</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-gray-400 mb-1">
+              <span className="text-sm">Verfügbar</span>
+            </div>
+            <p className="text-2xl font-bold text-green-400">{inventarStats.status_counts?.verfuegbar || 0}</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+            <div className="flex items-center gap-2 text-gray-400 mb-1">
+              <AlertTriangle className="w-4 h-4" />
+              <span className="text-sm">Überfällig</span>
+            </div>
+            <p className={`text-2xl font-bold ${inventarStats.ueberfaellige_ausleihen > 0 ? 'text-red-400' : 'text-gray-500'}`}>
+              {inventarStats.ueberfaellige_ausleihen}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Meine Veranstaltungen */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
@@ -146,13 +214,35 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Recent Activity (Platzhalter) */}
+      {/* Letzte Aktivitäten (Audit-Log) */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="text-xl font-bold text-white mb-4">Letzte Aktivitäten</h2>
-        <div className="text-center py-8 text-gray-500">
-          <p>Noch keine Aktivitäten vorhanden</p>
-          <p className="text-sm mt-2">Erstelle deinen ersten Haushalt, um loszulegen!</p>
-        </div>
+        {auditLog.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>Noch keine Aktivitäten vorhanden</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {auditLog.map(log => (
+              <li key={log.id} className="flex items-start gap-3 text-sm">
+                <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                  log.aktion === 'erstellt' ? 'bg-green-500' :
+                  log.aktion === 'zurueckgegeben' ? 'bg-blue-500' :
+                  log.aktion === 'geloescht' ? 'bg-red-500' :
+                  log.aktion === 'mahnung' ? 'bg-orange-500' :
+                  'bg-gray-500'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <span className="text-white">{log.aktion_display}</span>
+                  <span className="text-gray-400"> – {log.entity_name || `${log.entity_type} #${log.entity_id}`}</span>
+                  <p className="text-gray-500 text-xs mt-0.5">
+                    {log.user_username} · {new Date(log.timestamp).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

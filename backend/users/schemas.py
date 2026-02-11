@@ -7,6 +7,11 @@ from datetime import datetime
 from ninja import Schema
 
 
+class BereichSchema(Schema):
+    id: int
+    name: str
+
+
 # Permission Schemas
 class PermissionSchema(Schema):
     id: int
@@ -29,6 +34,8 @@ class UserProfileSchema(Schema):
     keycloak_id: str
     username: str
     email: str
+    discord_id: str
+    bereiche: List[BereichSchema]
     theme: str
     theme_locked: bool
     forced_theme: Optional[str]
@@ -39,6 +46,10 @@ class UserProfileSchema(Schema):
     permissions: List[str]
     created_at: datetime
     last_login: Optional[datetime]
+
+    @staticmethod
+    def resolve_bereiche(obj):
+        return obj.bereiche.all()
 
     @staticmethod
     def resolve_effective_theme(obj):
@@ -70,6 +81,8 @@ class UserProfileUpdateSchema(Schema):
 class UserProfileAdminUpdateSchema(Schema):
     forced_theme: Optional[str] = None
     theme_locked: Optional[bool] = None
+    discord_id: Optional[str] = None
+    bereich_ids: Optional[List[int]] = None
     # permission_codes für lokale Permissions (nicht Keycloak-Rollen)
     permission_codes: Optional[List[str]] = None
 
@@ -104,6 +117,8 @@ class UserListSchema(Schema):
     keycloak_id: str
     username: str
     email: str
+    discord_id: str
+    bereiche: List[BereichSchema]
     theme: str
     forced_theme: Optional[str]
     two_factor_enabled: bool
@@ -112,9 +127,13 @@ class UserListSchema(Schema):
     last_login: Optional[datetime]
 
     @staticmethod
+    def resolve_bereiche(obj):
+        return obj.bereiche.all()
+
+    @staticmethod
     def resolve_is_admin(obj):
         return getattr(obj, '_is_admin', False)
-    
+
     @staticmethod
     def resolve_keycloak_roles(obj):
         return getattr(obj, '_keycloak_roles', [])

@@ -19,11 +19,14 @@ import InventarPage from './pages/InventarPage';
 import ItemDetailPage from './pages/ItemDetailPage';
 import ItemSetsPage from './pages/ItemSetsPage';
 import AusleihePage from './pages/AusleihePage';
+import AusleiheDashboardPage from './pages/AusleiheDashboardPage';
+import AusleiheKalenderPage from './pages/AusleiheKalenderPage';
 import VeranstaltungenPage from './pages/VeranstaltungenPage';
 import VeranstaltungDetailPage from './pages/VeranstaltungDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import DesignTestPage from './pages/DesignTestPage';
+import { Toaster } from 'sonner';
 import './App.css';
 
 function AppContent() {
@@ -65,6 +68,8 @@ function AppContent() {
                   <Route path="/inventar/sets" element={<ItemSetsPage />} />
                   <Route path="/inventar/:id" element={<ItemDetailPage />} />
                   <Route path="/ausleihen" element={<AusleihePage />} />
+                  <Route path="/ausleihen/dashboard" element={<AusleiheDashboardPage />} />
+                  <Route path="/ausleihen/kalender" element={<AusleiheKalenderPage />} />
                   <Route path="/ausleihen/:id" element={<AusleihePage />} />
                   <Route path="/veranstaltung" element={<VeranstaltungenPage />} />
                   <Route path="/veranstaltung/neu" element={<VeranstaltungDetailPage />} />
@@ -83,7 +88,19 @@ function AppContent() {
 }
 
 function App() {
-  return <AppContent />;
+  return (
+    <>
+      <AppContent />
+      <Toaster
+        theme="dark"
+        position="bottom-right"
+        richColors
+        toastOptions={{
+          className: 'border border-gray-800',
+        }}
+      />
+    </>
+  );
 }
 
 export default App;

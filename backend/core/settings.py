@@ -12,9 +12,12 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 import os
 from pathlib import Path
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+load_dotenv(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
@@ -128,6 +131,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files (Uploads)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
@@ -140,6 +147,21 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 
+# Email
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@wirklauendeinedaten.de')
+
 # Zammad (Veranstaltungsplaner)
 ZAMMAD_URL = os.getenv('ZAMMAD_URL', '').rstrip('/')
 ZAMMAD_TOKEN = os.getenv('ZAMMAD_TOKEN', '')
+
+# Discord (Veranstaltungsplaner)
+DISCORD_BOT_TOKEN = os.getenv('DISCORD_BOT_TOKEN', '')
+DISCORD_GUILD_ID = os.getenv('DISCORD_GUILD_ID', '')
+DISCORD_CATEGORY_ID = os.getenv('DISCORD_CATEGORY_ID', '')

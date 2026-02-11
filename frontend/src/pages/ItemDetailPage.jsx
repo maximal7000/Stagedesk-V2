@@ -4,12 +4,15 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { 
+import {
   ArrowLeft, Edit, Trash2, Save, Loader2, Package,
-  QrCode, MapPin, Building, Plus, X
+  QrCode, MapPin, Building, Plus, X,
+  Upload, Copy, History, AlertCircle, ImageIcon
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { toast } from 'sonner';
 import apiClient from '../lib/api';
+import { useUser } from '../contexts/UserContext';
 import AutocompleteInput from '../components/AutocompleteInput';
 
 const STATUS_FARBEN = {
@@ -29,8 +32,9 @@ const STATUS_LABELS = {
 export default function ItemDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useUser();
   const isNew = id === 'neu' || !id;
-  
+
   const [item, setItem] = useState(null);
   const [kategorien, setKategorien] = useState([]);
   const [standorte, setStandorte] = useState([]);
@@ -38,11 +42,26 @@ export default function ItemDetailPage() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(isNew);
-  
+
   // QR-Code Modal
   const [showQrModal, setShowQrModal] = useState(false);
   const [newQrCode, setNewQrCode] = useState('');
   const [newQrBezeichnung, setNewQrBezeichnung] = useState('');
+
+  // Zustandslog
+  const [zustandslog, setZustandslog] = useState([]);
+  const [zustandslogOpen, setZustandslogOpen] = useState(false);
+  const [zustandslogLoading, setZustandslogLoading] = useState(false);
+
+  // Item-Bilder
+  const [bilderUploading, setBilderUploading] = useState(false);
+
+  // Verfuegbarkeit
+  const [verfuegbarkeit, setVerfuegbarkeit] = useState([]);
+  const [verfuegbarkeitLoading, setVerfuegbarkeitLoading] = useState(false);
+
+  // Duplizieren
+  const [duplicating, setDuplicating] = useState(false);
   
   // Form Data
   const [formData, setFormData] = useState({
@@ -117,7 +136,7 @@ export default function ItemDetailPage() {
 
   const handleSave = async () => {
     if (!formData.name) {
-      alert('Bitte einen Namen eingeben');
+      toast.error('Bitte einen Namen eingeben');
       return;
     }
     
@@ -146,7 +165,7 @@ export default function ItemDetailPage() {
       }
     } catch (err) {
       console.error('Speichern fehlgeschlagen:', err);
-      alert('Speichern fehlgeschlagen');
+      toast.error('Speichern fehlgeschlagen');
     } finally {
       setSaving(false);
     }
@@ -158,7 +177,7 @@ export default function ItemDetailPage() {
       await apiClient.delete(`/inventar/items/${id}`);
       navigate('/inventar');
     } catch (err) {
-      alert('Löschen fehlgeschlagen');
+      toast.error('Löschen fehlgeschlagen');
     }
   };
 
@@ -181,7 +200,7 @@ export default function ItemDetailPage() {
         });
         fetchData();
       } catch (err) {
-        alert('QR-Code konnte nicht hinzugefügt werden');
+        toast.error('QR-Code konnte nicht hinzugefügt werden');
         return;
       }
     }
@@ -204,10 +223,102 @@ export default function ItemDetailPage() {
         await apiClient.delete(`/inventar/items/${id}/qr/${qrId}`);
         fetchData();
       } catch (err) {
-        alert('QR-Code konnte nicht gelöscht werden');
+        toast.error('QR-Code konnte nicht gelöscht werden');
       }
     }
   };
+
+  // --- Duplizieren ---
+  const handleDuplicate = async () => {
+    setDuplicating(true);
+    try {
+      const res = await apiClient.post(`/inventar/items/${id}/duplizieren`);
+      toast.success('Item dupliziert');
+      navigate(`/inventar/${res.data.id}`);
+    } catch (err) {
+      console.error('Duplizieren fehlgeschlagen:', err);
+      toast.error('Duplizieren fehlgeschlagen');
+    } finally {
+      setDuplicating(false);
+    }
+  };
+
+  // --- Zustandslog ---
+  const fetchZustandslog = async () => {
+    if (isNew) return;
+    setZustandslogLoading(true);
+    try {
+      const res = await apiClient.get(`/inventar/items/${id}/zustandslog`);
+      setZustandslog(res.data);
+    } catch (err) {
+      console.error('Zustandslog laden fehlgeschlagen:', err);
+    } finally {
+      setZustandslogLoading(false);
+    }
+  };
+
+  const handleToggleZustandslog = () => {
+    const next = !zustandslogOpen;
+    setZustandslogOpen(next);
+    if (next && zustandslog.length === 0) {
+      fetchZustandslog();
+    }
+  };
+
+  // --- Item-Bilder ---
+  const handleBildUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setBilderUploading(true);
+    try {
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        await apiClient.post(`/inventar/items/${id}/bilder`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+      toast.success('Bild(er) hochgeladen');
+      fetchData();
+    } catch (err) {
+      console.error('Bild-Upload fehlgeschlagen:', err);
+      toast.error('Bild-Upload fehlgeschlagen');
+    } finally {
+      setBilderUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleDeleteBild = async (bildId) => {
+    if (!confirm('Bild wirklich löschen?')) return;
+    try {
+      await apiClient.delete(`/inventar/items/${id}/bilder/${bildId}`);
+      toast.success('Bild gelöscht');
+      fetchData();
+    } catch (err) {
+      toast.error('Bild löschen fehlgeschlagen');
+    }
+  };
+
+  // --- Verfuegbarkeit ---
+  const fetchVerfuegbarkeit = useCallback(async () => {
+    if (isNew) return;
+    setVerfuegbarkeitLoading(true);
+    try {
+      const res = await apiClient.get(`/inventar/items/${id}/verfuegbarkeit?tage=30`);
+      setVerfuegbarkeit(res.data);
+    } catch (err) {
+      console.error('Verfügbarkeit laden fehlgeschlagen:', err);
+    } finally {
+      setVerfuegbarkeitLoading(false);
+    }
+  }, [id, isNew]);
+
+  useEffect(() => {
+    if (!isNew && id) {
+      fetchVerfuegbarkeit();
+    }
+  }, [fetchVerfuegbarkeit, isNew, id]);
 
   const getDisplayName = (list, id) => list.find((o) => o.id === id)?.name || '';
 
@@ -257,6 +368,14 @@ export default function ItemDetailPage() {
 
         {!isNew && !editing && (
           <div className="flex gap-2">
+            <button
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+            >
+              {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+              Duplizieren
+            </button>
             <button
               onClick={() => setEditing(true)}
               className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
@@ -466,6 +585,17 @@ export default function ItemDetailPage() {
                     {item.status_display || STATUS_LABELS[item.status] || item.status}
                   </span>
                 </div>
+                {item.menge_gesamt > 1 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-400">Menge</span>
+                    <span className="text-white font-semibold text-lg">
+                      <span className="text-green-400">{item.menge_verfuegbar ?? '?'}</span>
+                      <span className="text-gray-500 mx-1">/</span>
+                      <span>{item.menge_gesamt}</span>
+                      <span className="text-sm text-gray-400 ml-1 font-normal">verfügbar</span>
+                    </span>
+                  </div>
+                )}
                 {item.kategorie_name && (
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400">Kategorie</span>
@@ -505,6 +635,214 @@ export default function ItemDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Item-Bilder Upload */}
+      {!isNew && item && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium text-white flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-gray-400" />
+              Bilder
+            </h3>
+            <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg cursor-pointer">
+              {bilderUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              Bild hochladen
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleBildUpload}
+                disabled={bilderUploading}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {item.item_bilder && item.item_bilder.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {item.item_bilder.map((bild) => (
+                <div key={bild.id} className="relative group">
+                  <img
+                    src={bild.bild_url}
+                    alt="Item Bild"
+                    className="w-full h-32 object-cover rounded-lg border border-gray-700"
+                  />
+                  <button
+                    onClick={() => handleDeleteBild(bild.id)}
+                    className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-center py-6">Keine Bilder vorhanden</p>
+          )}
+        </div>
+      )}
+
+      {/* Zustandshistorie */}
+      {!isNew && item && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <button
+            onClick={handleToggleZustandslog}
+            className="w-full flex items-center justify-between p-6 text-left"
+          >
+            <h3 className="text-lg font-medium text-white flex items-center gap-2">
+              <History className="w-5 h-5 text-gray-400" />
+              Zustandshistorie
+            </h3>
+            <span className={`text-gray-400 transition-transform ${zustandslogOpen ? 'rotate-180' : ''}`}>
+              &#9660;
+            </span>
+          </button>
+
+          {zustandslogOpen && (
+            <div className="px-6 pb-6">
+              {zustandslogLoading ? (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                </div>
+              ) : zustandslog.length === 0 ? (
+                <p className="text-gray-400 text-center py-4">Keine Einträge vorhanden</p>
+              ) : (
+                <div className="relative ml-4">
+                  {/* Vertical line */}
+                  <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gray-700" />
+
+                  <div className="space-y-4">
+                    {zustandslog.map((entry, idx) => {
+                      const dotColor =
+                        entry.typ === 'rueckgabe' ? 'bg-green-500' :
+                        entry.typ === 'ausleihe' ? 'bg-blue-500' :
+                        'bg-gray-500';
+                      const typLabel =
+                        entry.typ === 'rueckgabe' ? 'Rückgabe' :
+                        entry.typ === 'ausleihe' ? 'Ausleihe' :
+                        'Manuell';
+
+                      return (
+                        <div key={idx} className="relative flex items-start gap-4 pl-6">
+                          {/* Dot */}
+                          <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-gray-900 ${dotColor}`} />
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-white">{typLabel}</span>
+                              {entry.zustand_vorher && entry.zustand_nachher && (
+                                <span className="text-xs text-gray-400">
+                                  {entry.zustand_vorher} &rarr; {entry.zustand_nachher}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs text-gray-500">
+                                {new Date(entry.erstellt_am || entry.datum).toLocaleDateString('de-DE', {
+                                  day: '2-digit', month: '2-digit', year: 'numeric',
+                                  hour: '2-digit', minute: '2-digit',
+                                })}
+                              </span>
+                              {entry.benutzer_name && (
+                                <span className="text-xs text-gray-500">
+                                  &mdash; {entry.benutzer_name}
+                                </span>
+                              )}
+                            </div>
+                            {entry.bemerkung && (
+                              <p className="text-sm text-gray-400 mt-1">{entry.bemerkung}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Verfügbarkeit (30 Tage) */}
+      {!isNew && item && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <h3 className="text-lg font-medium text-white mb-4">Verfügbarkeit (30 Tage)</h3>
+
+          {verfuegbarkeitLoading ? (
+            <div className="flex justify-center py-6">
+              <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+            </div>
+          ) : verfuegbarkeit.length === 0 ? (
+            <div className="flex items-center gap-2 text-gray-400 py-4 justify-center">
+              <AlertCircle className="w-4 h-4" />
+              <span>Keine Verfügbarkeitsdaten vorhanden</span>
+            </div>
+          ) : (
+            <div>
+              {/* Legend */}
+              <div className="flex items-center gap-4 mb-3 text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm bg-green-500 inline-block" />
+                  Verfügbar
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />
+                  Ausgeliehen
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-sm bg-yellow-500 inline-block" />
+                  Reserviert
+                </span>
+              </div>
+
+              {/* Timeline bar */}
+              <div className="flex gap-0.5 rounded-lg overflow-hidden">
+                {verfuegbarkeit.map((tag, idx) => {
+                  const farbe =
+                    tag.status === 'ausgeliehen' ? 'bg-blue-500' :
+                    tag.status === 'reserviert' ? 'bg-yellow-500' :
+                    'bg-green-500';
+                  const datum = new Date(tag.datum);
+                  const label = datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+
+                  return (
+                    <div
+                      key={idx}
+                      className="flex-1 group relative"
+                    >
+                      <div className={`h-8 ${farbe} hover:opacity-80 transition-opacity`} />
+                      {/* Tooltip */}
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
+                        <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap border border-gray-700">
+                          {label} - {tag.status === 'ausgeliehen' ? 'Ausgeliehen' : tag.status === 'reserviert' ? 'Reserviert' : 'Verfügbar'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Day indicators */}
+              <div className="flex gap-0.5 mt-1">
+                {verfuegbarkeit.map((tag, idx) => {
+                  const datum = new Date(tag.datum);
+                  const showLabel = idx === 0 || idx === Math.floor(verfuegbarkeit.length / 2) || idx === verfuegbarkeit.length - 1;
+                  return (
+                    <div key={idx} className="flex-1 text-center">
+                      {showLabel && (
+                        <span className="text-[10px] text-gray-500">
+                          {datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* QR-Code Modal */}
       {showQrModal && (

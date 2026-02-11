@@ -127,6 +127,17 @@ class QRCodeCreateSchema(Schema):
 
 # ========== Item ==========
 
+class ItemBildSchema(Schema):
+    id: int
+    bild_url: str
+    ist_haupt: bool
+    erstellt_am: datetime
+
+    @staticmethod
+    def resolve_bild_url(obj):
+        return obj.bild.url if obj.bild else ''
+
+
 class ItemListSchema(Schema):
     """Kompakte Liste"""
     id: int
@@ -144,6 +155,8 @@ class ItemListSchema(Schema):
     seriennummer: str
     haupt_qr_code: Optional[str]
     bild_url: Optional[str]
+    menge_gesamt: int
+    menge_verfuegbar: int
 
     @staticmethod
     def resolve_kategorie_name(obj):
@@ -189,7 +202,10 @@ class ItemSchema(Schema):
     notizen: str
     ist_aktiv: bool
     ist_verfuegbar: bool
+    menge_gesamt: int
+    menge_verfuegbar: int
     qr_codes: List[QRCodeSchema]
+    item_bilder: List[ItemBildSchema]
     haupt_qr_code: Optional[str]
     erstellt_am: datetime
 
@@ -217,6 +233,10 @@ class ItemSchema(Schema):
     def resolve_qr_codes(obj):
         return obj.qr_codes.all()
 
+    @staticmethod
+    def resolve_item_bilder(obj):
+        return obj.item_bilder.all()
+
 
 class ItemCreateSchema(Schema):
     name: str
@@ -227,6 +247,7 @@ class ItemCreateSchema(Schema):
     seriennummer: str = ''
     bilder: List[str] = []
     notizen: str = ''
+    menge_gesamt: int = 1
     qr_codes: List[QRCodeCreateSchema] = []
 
 
@@ -241,6 +262,7 @@ class ItemUpdateSchema(Schema):
     bilder: Optional[List[str]] = None
     notizen: Optional[str] = None
     ist_aktiv: Optional[bool] = None
+    menge_gesamt: Optional[int] = None
 
 
 # ========== Item-Sets ==========
@@ -298,6 +320,9 @@ class AusleihePositionSchema(Schema):
     item_id: int
     item_name: str
     item_qr_code: Optional[str]
+    anzahl: int
+    ausleiher_name: str
+    ausleiher_ort: str
     unterschrift: str
     zustand_ausleihe: str
     zustand_rueckgabe: str
@@ -318,9 +343,11 @@ class AusleihePositionSchema(Schema):
 
 class AusleiheListeSchema(Schema):
     id: int
+    titel: str
     ausleiher_id: Optional[int]
     ausleiher_name: str
     ausleiher_organisation: str
+    ausleiher_ort: str
     ausleiher_email: Optional[str]
     zweck: str
     frist: Optional[date]
@@ -336,6 +363,8 @@ class AusleiheListeSchema(Schema):
     rueckgabe_zustand: str
     anzahl_items: int
     ist_ueberfaellig: bool
+    letzte_mahnung_am: Optional[datetime]
+    veranstaltung_id: Optional[int]
     positionen: List[AusleihePositionSchema]
     erstellt_am: datetime
 
@@ -359,8 +388,10 @@ class AusleiheListeSchema(Schema):
 class AusleiheListeListSchema(Schema):
     """Kompakt für Listen"""
     id: int
+    titel: str
     ausleiher_name: str
     ausleiher_organisation: str
+    ausleiher_ort: str
     zweck: str
     frist: Optional[date]
     modus: str
@@ -369,6 +400,7 @@ class AusleiheListeListSchema(Schema):
     anzahl_items: int
     ist_ueberfaellig: bool
     erstellt_am: datetime
+    veranstaltung_id: Optional[int]
 
     @staticmethod
     def resolve_status_display(obj):
@@ -377,20 +409,25 @@ class AusleiheListeListSchema(Schema):
 
 class AusleihePositionCreateSchema(Schema):
     item_id: int
+    anzahl: int = 1
+    ausleiher_name: str = ''
+    ausleiher_ort: str = ''
     unterschrift: str = ''
     zustand_ausleihe: str = 'ok'
     foto_ausleihe: str = ''
 
 
 class AusleiheListeCreateSchema(Schema):
+    titel: str = ''
     ausleiher_id: Optional[int] = None
     ausleiher_name: str = ''
-    ausleiher_organisation: str = ''
+    ausleiher_ort: str = ''
     zweck: str = ''
     frist: Optional[date] = None
     modus: str = 'global'
     unterschrift_ausleihe: str = ''
     notizen: str = ''
+    veranstaltung_id: Optional[int] = None
     positionen: List[AusleihePositionCreateSchema] = []  # leer = Liste "offen", Items später hinzufügen
 
 
@@ -476,3 +513,55 @@ class AusleiheFilterSchema(Schema):
     status: Optional[str] = None
     ausleiher: Optional[str] = None
     nur_ueberfaellig: bool = False
+
+
+# ========== Audit-Log ==========
+
+class AuditLogSchema(Schema):
+    id: int
+    aktion: str
+    aktion_display: str
+    entity_type: str
+    entity_id: int
+    entity_name: str
+    details: dict
+    user_username: str
+    timestamp: datetime
+
+    @staticmethod
+    def resolve_aktion_display(obj):
+        return obj.get_aktion_display()
+
+
+# ========== Zustandslog ==========
+
+class ZustandsLogSchema(Schema):
+    id: int
+    zustand_vorher: str
+    zustand_nachher: str
+    typ: str
+    typ_display: str
+    ausleihliste_id: Optional[int]
+    notizen: str
+    user_username: str
+    erstellt_am: datetime
+
+    @staticmethod
+    def resolve_typ_display(obj):
+        return obj.get_typ_display()
+
+
+# ========== Mahnungs-Templates ==========
+
+class MahnungsTemplateSchema(Schema):
+    id: int
+    name: str
+    betreff: str
+    text: str
+    ist_standard: bool
+
+class MahnungsTemplateCreateSchema(Schema):
+    name: str
+    betreff: str = 'Mahnung: Rückgabe überfällig - Ausleihe #{ausleihe_id}'
+    text: str = ''
+    ist_standard: bool = False

@@ -15,6 +15,7 @@ import {
   Filter,
   ChevronRight,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import apiClient from '../lib/api';
 
 const STATUS_LABELS = {
@@ -102,7 +103,7 @@ export default function VeranstaltungenPage() {
       window.location.href = `/veranstaltung/${res.data.id}`;
     } catch (err) {
       console.error('Erstellen aus Ticket:', err);
-      alert(err.response?.data?.error || 'Fehler beim Erstellen');
+      toast.error(err.response?.data?.error || 'Fehler beim Erstellen');
     } finally {
       setCreatingFromTicket(null);
     }
@@ -124,7 +125,7 @@ export default function VeranstaltungenPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export:', err);
-      alert('Export fehlgeschlagen');
+      toast.error('Export fehlgeschlagen');
     }
   };
 

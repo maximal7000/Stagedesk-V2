@@ -1,5 +1,12 @@
 from django.contrib import admin
-from .models import Permission, UserProfile, UserSession, GlobalSettings
+from .models import Bereich, Permission, UserProfile, UserSession, GlobalSettings
+
+
+@admin.register(Bereich)
+class BereichAdmin(admin.ModelAdmin):
+    list_display = ['name', 'sortierung']
+    list_editable = ['sortierung']
+    search_fields = ['name']
 
 
 @admin.register(Permission)
@@ -14,7 +21,7 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ['username', 'email', 'theme', 'two_factor_enabled', 'created_at']
     list_filter = ['theme', 'two_factor_enabled']
     search_fields = ['username', 'email', 'keycloak_id']
-    filter_horizontal = ['permissions']
+    filter_horizontal = ['permissions', 'bereiche']
 
 
 @admin.register(UserSession)

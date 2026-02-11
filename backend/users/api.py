@@ -191,6 +191,15 @@ def revoke_session(request, session_id: int):
     return {"status": "revoked"}
 
 
+# ========== Bereiche ==========
+
+@users_router.get("/bereiche", response=List[dict], auth=keycloak_auth)
+def list_bereiche(request):
+    """Alle verfügbaren Bereiche auflisten."""
+    from .models import Bereich
+    return list(Bereich.objects.values('id', 'name'))
+
+
 # ========== Permissions (Admin) ==========
 
 @users_router.get("/permissions", response=List[PermissionSchema], auth=keycloak_auth)
@@ -228,7 +237,7 @@ def list_users(request):
     if not is_admin(request):
         return {"error": "Keine Berechtigung"}, 403
     
-    users = UserProfile.objects.prefetch_related('permissions').all()
+    users = UserProfile.objects.prefetch_related('permissions', 'bereiche').all()
     
     # Hinweis: Wir können die Keycloak-Rollen nicht für alle User abrufen
     # ohne deren Token zu haben. Daher sind keycloak_roles leer in der Liste.
@@ -264,6 +273,14 @@ def update_user(request, user_id: int, payload: UserProfileAdminUpdateSchema):
         perms = Permission.objects.filter(code__in=payload.permission_codes)
         user.permissions.set(perms)
     
+    # Discord-ID und Bereiche
+    if payload.discord_id is not None:
+        user.discord_id = payload.discord_id
+    if payload.bereich_ids is not None:
+        from .models import Bereich
+        bereiche = Bereich.objects.filter(id__in=payload.bereich_ids)
+        user.bereiche.set(bereiche)
+
     # forced_theme: Leerer String oder "none" = keine Erzwingung
     if payload.forced_theme is not None:
         if payload.forced_theme in ('', 'none', None):
@@ -272,7 +289,7 @@ def update_user(request, user_id: int, payload: UserProfileAdminUpdateSchema):
             user.forced_theme = payload.forced_theme
     if payload.theme_locked is not None:
         user.theme_locked = payload.theme_locked
-    
+
     user.save()
     
     user._keycloak_roles = []  # Unbekannt
@@ -346,8 +363,21 @@ def initialize_system(request):
          'description': 'Erlaubt das Bearbeiten von Items', 'category': 'inventar'},
         {'code': 'inventar.delete', 'name': 'Items löschen', 
          'description': 'Erlaubt das Löschen von Items', 'category': 'inventar'},
-        {'code': 'inventar.ausleihe', 'name': 'Ausleihen verwalten', 
+        {'code': 'inventar.ausleihe', 'name': 'Ausleihen verwalten',
          'description': 'Erlaubt das Verwalten von Ausleihen', 'category': 'inventar'},
+        # Veranstaltung
+        {'code': 'veranstaltung.view', 'name': 'Veranstaltungen anzeigen',
+         'description': 'Erlaubt das Anzeigen von Veranstaltungen', 'category': 'veranstaltung'},
+        {'code': 'veranstaltung.create', 'name': 'Veranstaltungen erstellen',
+         'description': 'Erlaubt das Erstellen von Veranstaltungen', 'category': 'veranstaltung'},
+        {'code': 'veranstaltung.edit', 'name': 'Veranstaltungen bearbeiten',
+         'description': 'Erlaubt das Bearbeiten von Veranstaltungen', 'category': 'veranstaltung'},
+        {'code': 'veranstaltung.delete', 'name': 'Veranstaltungen löschen',
+         'description': 'Erlaubt das Löschen von Veranstaltungen', 'category': 'veranstaltung'},
+        {'code': 'veranstaltung.zuweisungen', 'name': 'Zuweisungen verwalten',
+         'description': 'Erlaubt das Zuweisen von Personen zu Veranstaltungen', 'category': 'veranstaltung'},
+        {'code': 'veranstaltung.discord', 'name': 'Discord verwalten',
+         'description': 'Erlaubt das Synchronisieren mit Discord', 'category': 'veranstaltung'},
     ]
     
     created_permissions = []

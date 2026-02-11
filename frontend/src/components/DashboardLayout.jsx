@@ -1,14 +1,14 @@
 /**
  * Dashboard Layout mit Sidebar-Navigation
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { 
-  Home, 
-  Wallet, 
-  LogOut, 
-  User, 
-  Menu, 
+import {
+  Home,
+  Wallet,
+  LogOut,
+  User,
+  Menu,
   X,
   ChevronDown,
   Settings,
@@ -18,11 +18,15 @@ import {
   Calendar,
   CalendarCheck,
   Package,
-  Boxes
+  Boxes,
+  BarChart3,
+  CalendarDays,
+  AlertTriangle,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
+import apiClient from '../lib/api';
 
 export default function DashboardLayout({ children }) {
   const auth = useAuth();
@@ -31,8 +35,16 @@ export default function DashboardLayout({ children }) {
   const { isAdmin, hasPermission } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [ueberfaelligeCount, setUeberfaelligeCount] = useState(0);
 
   const user = auth.user?.profile;
+
+  // Überfällige Ausleihen zählen
+  useEffect(() => {
+    apiClient.get('/inventar/stats')
+      .then(res => setUeberfaelligeCount(res.data?.ueberfaellige_ausleihen || 0))
+      .catch(() => {});
+  }, [location.pathname]);
 
   // Navigation mit Permission-Check
   const navigation = [
@@ -45,7 +57,9 @@ export default function DashboardLayout({ children }) {
 
   // Inventar-Unternavigation
   const inventarSubNav = hasPermission('inventar.view') ? [
-    { name: 'Ausleihen', href: '/ausleihen', icon: Package },
+    { name: 'Ausleihen', href: '/ausleihen', icon: Package, badge: ueberfaelligeCount > 0 ? ueberfaelligeCount : null },
+    { name: 'Ausleihe-Dashboard', href: '/ausleihen/dashboard', icon: BarChart3 },
+    { name: 'Ausleihe-Kalender', href: '/ausleihen/kalender', icon: CalendarDays },
     { name: 'Item-Sets', href: '/inventar/sets', icon: Boxes },
   ] : [];
 
@@ -137,7 +151,12 @@ export default function DashboardLayout({ children }) {
                           }`}
                         >
                           <SubIcon className="w-4 h-4" />
-                          <span>{sub.name}</span>
+                          <span className="flex-1">{sub.name}</span>
+                          {sub.badge && (
+                            <span className="px-1.5 py-0.5 text-xs bg-red-600 text-white rounded-full min-w-[20px] text-center">
+                              {sub.badge}
+                            </span>
+                          )}
                         </Link>
                       );
                     })}
