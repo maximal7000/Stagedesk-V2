@@ -27,6 +27,7 @@ import SettingsPage from './pages/SettingsPage';
 import AdminPage from './pages/AdminPage';
 import DesignTestPage from './pages/DesignTestPage';
 import MonitorPage from './pages/MonitorPage';
+import MonitorAdminPage from './pages/MonitorAdminPage';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -78,6 +79,7 @@ function AppContent() {
                   <Route path="/veranstaltung/:id" element={<VeranstaltungDetailPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/admin" element={<AdminPage />} />
+                  <Route path="/monitor-admin" element={<MonitorAdminPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </DashboardLayout>

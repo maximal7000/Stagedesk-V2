@@ -378,6 +378,15 @@ def initialize_system(request):
          'description': 'Erlaubt das Zuweisen von Personen zu Veranstaltungen', 'category': 'veranstaltung'},
         {'code': 'veranstaltung.discord', 'name': 'Discord verwalten',
          'description': 'Erlaubt das Synchronisieren mit Discord', 'category': 'veranstaltung'},
+        # Monitor
+        {'code': 'monitor.view', 'name': 'Monitor anzeigen',
+         'description': 'Erlaubt den Zugriff auf die Monitor-Konfiguration', 'category': 'monitor'},
+        {'code': 'monitor.edit', 'name': 'Monitor bearbeiten',
+         'description': 'Erlaubt das Bearbeiten der Monitor-Konfiguration', 'category': 'monitor'},
+        {'code': 'monitor.onair', 'name': 'ON AIR steuern',
+         'description': 'Erlaubt das Aktivieren/Deaktivieren von ON AIR', 'category': 'monitor'},
+        {'code': 'monitor.notfall', 'name': 'Notfall-Meldung verwalten',
+         'description': 'Erlaubt das Aktivieren/Deaktivieren der Notfall-Meldung', 'category': 'monitor'},
     ]
     
     created_permissions = []

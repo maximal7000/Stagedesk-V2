@@ -1,35 +1,177 @@
 """
-Monitor API — öffentliche + Admin-Endpunkte
+Monitor API — öffentliche + Admin-Endpunkte (Multi-Profil)
 """
-from ninja import Router
+import json
+import uuid
+import urllib.request
+import urllib.parse
+import http.cookiejar
+from datetime import datetime as dt
+from ninja import Router, File, Form
+from ninja.files import UploadedFile
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+from django.utils.text import slugify
 
 from core.auth import keycloak_auth
 from users.api import is_admin
-from .models import MonitorConfig, Ankuendigung
+from .models import MonitorConfig, Ankuendigung, MonitorDatei
 from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
+    MonitorProfileListSchema, MonitorProfileCreateSchema,
     AnkuendigungSchema, AnkuendigungCreateSchema,
-    VeranstaltungDisplaySchema, MonitorDisplaySchema,
-    OnAirSchema,
+    MonitorDateiSchema, OnAirSchema, NotfallSchema,
 )
 
 monitor_router = Router(tags=["Monitor"])
 
 
-def require_admin(request):
-    if not is_admin(request):
-        from django.http import JsonResponse
-        raise Exception("Admin required")
+def _fetch_weather(config):
+    """Wetter von OpenWeatherMap holen und cachen (15 Min)"""
+    if not config.zeige_wetter or not config.wetter_stadt or not config.wetter_api_key:
+        return None
+
+    # Cache noch gültig?
+    if config.wetter_cache and config.wetter_cache_zeit:
+        age = (timezone.now() - config.wetter_cache_zeit).total_seconds()
+        if age < 900:
+            return config.wetter_cache
+
+    try:
+        url = (
+            f"https://api.openweathermap.org/data/2.5/weather"
+            f"?q={urllib.parse.quote(config.wetter_stadt)}"
+            f"&appid={config.wetter_api_key}"
+            f"&units=metric&lang=de"
+        )
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read())
+
+        wetter = {
+            'temperatur': round(data['main']['temp'], 1),
+            'feels_like': round(data['main']['feels_like'], 1),
+            'beschreibung': data['weather'][0]['description'].capitalize(),
+            'icon': data['weather'][0]['icon'],
+            'luftfeuchtigkeit': data['main']['humidity'],
+            'stadt': data['name'],
+        }
+        config.wetter_cache = wetter
+        config.wetter_cache_zeit = timezone.now()
+        config.save(update_fields=['wetter_cache', 'wetter_cache_zeit', 'aktualisiert_am'])
+        return wetter
+    except Exception:
+        return config.wetter_cache or None
+
+
+def _fetch_raumplan(config):
+    """Raumplan von WebUntis JSONRPC API holen und cachen (15 Min)"""
+    if not config.zeige_raumplan or not config.raumplan_server or not config.raumplan_schule:
+        return None
+
+    # Cache noch gültig?
+    if config.raumplan_cache and config.raumplan_cache_zeit:
+        age = (timezone.now() - config.raumplan_cache_zeit).total_seconds()
+        if age < 900:
+            return config.raumplan_cache
+
+    base_url = f"https://{config.raumplan_server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(config.raumplan_schule)}"
+
+    def _rpc(method, params=None, cookie_jar=None):
+        body = json.dumps({
+            "id": "1", "method": method,
+            "params": params or {}, "jsonrpc": "2.0"
+        }).encode()
+        req = urllib.request.Request(base_url, data=body,
+            headers={"Content-Type": "application/json"})
+        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
+        with opener.open(req, timeout=5) as resp:
+            return json.loads(resp.read())
+
+    try:
+        jar = http.cookiejar.CookieJar()
+
+        # 1. Authentifizieren (anonym oder mit Credentials)
+        user = config.raumplan_benutzername or "#anonymous#"
+        pwd = config.raumplan_passwort or ""
+        auth_resp = _rpc("authenticate", {"user": user, "password": pwd, "client": "stagedesk"}, jar)
+        if "error" in auth_resp:
+            return config.raumplan_cache or None
+
+        # 2. Räume holen und Zielraum finden
+        rooms_resp = _rpc("getRooms", {}, jar)
+        rooms = rooms_resp.get("result", [])
+        target_room = None
+        raum_kuerzel = config.raumplan_raum.lower()
+        for r in rooms:
+            if r.get("name", "").lower() == raum_kuerzel or r.get("longName", "").lower() == raum_kuerzel:
+                target_room = r
+                break
+
+        if not target_room:
+            _rpc("logout", {}, jar)
+            return config.raumplan_cache or None
+
+        # 3. Stundenplan für heute holen
+        today = dt.now().strftime("%Y%m%d")
+        today_int = int(today)
+        tt_resp = _rpc("getTimetable", {
+            "options": {
+                "element": {"id": target_room["id"], "type": 4},
+                "startDate": today_int,
+                "endDate": today_int,
+                "showInfo": True,
+                "showSubstText": True,
+                "showLsText": True,
+                "showStudentgroup": True,
+            }
+        }, jar)
+
+        # 4. Logout
+        _rpc("logout", {}, jar)
+
+        # 5. Daten aufbereiten
+        entries = []
+        for lesson in tt_resp.get("result", []):
+            start = str(lesson.get("startTime", "")).zfill(4)
+            end = str(lesson.get("endTime", "")).zfill(4)
+            subjects = [s.get("longname", s.get("name", "")) for s in lesson.get("su", [])]
+            teachers = [t.get("longname", t.get("name", "")) for t in lesson.get("te", [])]
+            classes = [k.get("name", "") for k in lesson.get("kl", [])]
+            entries.append({
+                'von': f"{start[:2]}:{start[2:]}",
+                'bis': f"{end[:2]}:{end[2:]}",
+                'fach': ", ".join(subjects) or "—",
+                'lehrer': ", ".join(teachers) or "",
+                'klassen': ", ".join(classes) or "",
+                'info': lesson.get("info", "") or lesson.get("substText", "") or "",
+            })
+
+        entries.sort(key=lambda x: x['von'])
+
+        raumplan = {
+            'raum': target_room.get("longName", target_room.get("name", "")),
+            'raum_kurz': target_room.get("name", ""),
+            'eintraege': entries,
+            'datum': dt.now().strftime("%d.%m.%Y"),
+        }
+
+        config.raumplan_cache = raumplan
+        config.raumplan_cache_zeit = timezone.now()
+        config.save(update_fields=['raumplan_cache', 'raumplan_cache_zeit', 'aktualisiert_am'])
+        return raumplan
+
+    except Exception as e:
+        print(f"Raumplan-Fehler: {e}")
+        return config.raumplan_cache or None
 
 
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
-@monitor_router.get("/display", response=MonitorDisplaySchema)
-def get_display_data(request):
+@monitor_router.get("/display")
+def get_display_data(request, profil: str = None):
     """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display"""
-    config = MonitorConfig.get()
+    config = MonitorConfig.get(slug=profil)
     now = timezone.now()
 
     # Ankündigungen: nur aktive + im Zeitfenster
@@ -39,14 +181,18 @@ def get_display_data(request):
             continue
         if a.aktiv_bis and now > a.aktiv_bis:
             continue
-        ankuendigungen.append(a)
+        ankuendigungen.append({
+            'id': a.id, 'titel': a.titel, 'text': a.text,
+            'prioritaet': a.prioritaet, 'ist_aktiv': a.ist_aktiv,
+            'aktiv_von': a.aktiv_von, 'aktiv_bis': a.aktiv_bis,
+            'erstellt_am': a.erstellt_am,
+        })
 
     # Veranstaltungen: nächste 7 Tage + aktuell laufende
     veranstaltungen = []
     if config.zeige_veranstaltungen:
         from veranstaltung.models import Veranstaltung
         sieben_tage = now + timezone.timedelta(days=7)
-
         events = Veranstaltung.objects.filter(
             status__in=['bestaetigt', 'laufend'],
             datum_bis__gte=now,
@@ -58,23 +204,43 @@ def get_display_data(request):
                 v.datum_von and v.datum_bis and v.datum_von <= now <= v.datum_bis
             )
             veranstaltungen.append({
-                'id': v.id,
-                'name': v.titel,
-                'ort': v.ort or '',
-                'datum_von': v.datum_von,
-                'datum_bis': v.datum_bis,
-                'status': v.status,
-                'ist_laufend': ist_laufend,
+                'id': v.id, 'name': v.titel, 'ort': v.ort or '',
+                'datum_von': v.datum_von, 'datum_bis': v.datum_bis,
+                'status': v.status, 'ist_laufend': ist_laufend,
             })
 
-    # Config ohne api_token im public endpoint
+    # Dateien
+    dateien = []
+    for d in MonitorDatei.objects.all():
+        dateien.append({
+            'id': d.id, 'name': d.name, 'typ': d.typ,
+            'datei_url': d.datei.url if d.datei else '',
+            'reihenfolge': d.reihenfolge,
+        })
+
+    # Wetter
+    wetter = _fetch_weather(config)
+
+    # Raumplan
+    raumplan = _fetch_raumplan(config)
+
+    # Config (sensitive Felder entfernen)
     config_data = MonitorConfigSchema.from_orm(config).dict()
-    config_data['api_token'] = ''  # Token nicht öffentlich zeigen
+    config_data['api_token'] = ''
+    config_data['wetter_api_key'] = ''
+    config_data['raumplan_benutzername'] = ''
+    config_data['raumplan_passwort'] = ''
+    config_data['logo_url_resolved'] = config.get_logo_url()
+    config_data['pdf_url_resolved'] = config.get_pdf_url()
+    config_data['hintergrundbild_url_resolved'] = config.get_hintergrundbild_url()
 
     return {
         'config': config_data,
         'ankuendigungen': ankuendigungen,
         'veranstaltungen': veranstaltungen,
+        'dateien': dateien,
+        'wetter': wetter,
+        'raumplan': raumplan,
     }
 
 
@@ -82,39 +248,140 @@ def get_display_data(request):
 
 @monitor_router.post("/onair", response={200: dict, 401: dict, 403: dict})
 def toggle_on_air(request, payload: OnAirSchema):
-    """ON AIR Status ändern — Auth per Token-Header oder Admin"""
-    config = MonitorConfig.get()
-
-    # Auth: entweder per Token-Header oder per Keycloak-Admin
+    """ON AIR Status ändern — betrifft ALLE Profile"""
+    # Erst per Token prüfen
     token = request.headers.get('X-Monitor-Token', '')
-    if token and token == config.api_token:
-        config.set_on_air(payload.on_air)
-        return 200, {"success": True, "on_air": config.ist_on_air}
+    if token:
+        config = MonitorConfig.objects.filter(api_token=token).first()
+        if config:
+            # Alle Profile updaten
+            MonitorConfig.objects.all().update(
+                ist_on_air=payload.on_air,
+                on_air_seit=timezone.now() if payload.on_air else None,
+            )
+            return 200, {"success": True, "on_air": payload.on_air}
+        return 401, {"success": False, "message": "Ungültiges Token"}
 
-    # Fallback: Keycloak-Auth prüfen
-    try:
-        keycloak_auth(request)
-        if not is_admin(request):
-            return 403, {"success": False, "message": "Kein Admin"}
-        config.set_on_air(payload.on_air)
-        return 200, {"success": True, "on_air": config.ist_on_air}
-    except Exception:
+    auth_result = keycloak_auth(request)
+    if not auth_result:
         return 401, {"success": False, "message": "Nicht autorisiert"}
+    request.auth = auth_result
+    if not is_admin(request):
+        return 403, {"success": False, "message": "Kein Admin"}
+    MonitorConfig.objects.all().update(
+        ist_on_air=payload.on_air,
+        on_air_seit=timezone.now() if payload.on_air else None,
+    )
+    return 200, {"success": True, "on_air": payload.on_air}
+
+
+# ═══ Notfall Endpunkt (Token-Auth) ═══════════════════════════════
+
+@monitor_router.post("/notfall", response={200: dict, 401: dict, 403: dict})
+def toggle_notfall(request, payload: NotfallSchema):
+    """Notfall-Meldung aktivieren/deaktivieren — betrifft ALLE Profile"""
+    token = request.headers.get('X-Monitor-Token', '')
+    if token:
+        config = MonitorConfig.objects.filter(api_token=token).first()
+        if config:
+            MonitorConfig.objects.all().update(
+                notfall_aktiv=payload.aktiv,
+                notfall_text=payload.text,
+            )
+            return 200, {"success": True}
+        return 401, {"success": False, "message": "Ungültiges Token"}
+
+    auth_result = keycloak_auth(request)
+    if not auth_result:
+        return 401, {"success": False, "message": "Nicht autorisiert"}
+    request.auth = auth_result
+    if not is_admin(request):
+        return 403, {"success": False, "message": "Kein Admin"}
+    MonitorConfig.objects.all().update(
+        notfall_aktiv=payload.aktiv,
+        notfall_text=payload.text,
+    )
+    return 200, {"success": True}
+
+
+# ═══ Admin: Profile ══════════════════════════════════════════════
+
+@monitor_router.get("/profile", response=list[MonitorProfileListSchema], auth=keycloak_auth)
+def list_profiles(request):
+    return MonitorConfig.objects.all()
+
+
+@monitor_router.post("/profile", auth=keycloak_auth)
+def create_profile(request, payload: MonitorProfileCreateSchema):
+    slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
+
+    # Slug-Kollision vermeiden
+    base_slug = slug
+    counter = 1
+    while MonitorConfig.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    if payload.clone_from_id:
+        # Von bestehendem Profil klonen
+        source = get_object_or_404(MonitorConfig, id=payload.clone_from_id)
+        source.pk = None
+        source.name = payload.name
+        source.slug = slug
+        source.ist_standard = False
+        source.layout_modus = payload.layout_modus
+        source.api_token = uuid.uuid4().hex
+        source.save()
+        return {'id': source.id, 'name': source.name, 'slug': source.slug}
+    else:
+        config = MonitorConfig(
+            name=payload.name,
+            slug=slug,
+            ist_standard=False,
+            layout_modus=payload.layout_modus,
+        )
+        config.save()
+        return {'id': config.id, 'name': config.name, 'slug': config.slug}
+
+
+@monitor_router.delete("/profile/{id}", auth=keycloak_auth)
+def delete_profile(request, id: int):
+    config = get_object_or_404(MonitorConfig, id=id)
+    if config.ist_standard:
+        return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
+    config.delete()
+    return {"success": True}
 
 
 # ═══ Admin: Config ════════════════════════════════════════════════
 
 @monitor_router.get("/config", response=MonitorConfigSchema, auth=keycloak_auth)
-def get_config(request):
-    """Admin: Monitor-Konfiguration abrufen"""
+def get_config(request, profil_id: int = None):
+    if profil_id:
+        return get_object_or_404(MonitorConfig, id=profil_id)
     return MonitorConfig.get()
 
 
 @monitor_router.put("/config", response=MonitorConfigSchema, auth=keycloak_auth)
-def update_config(request, payload: MonitorConfigUpdateSchema):
-    """Admin: Monitor-Konfiguration ändern"""
-    config = MonitorConfig.get()
+def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = None):
+    if profil_id:
+        config = get_object_or_404(MonitorConfig, id=profil_id)
+    else:
+        config = MonitorConfig.get()
+
     data = payload.dict(exclude_unset=True)
+
+    # FK-Felder separat behandeln
+    if 'aktives_logo_id' in data:
+        val = data.pop('aktives_logo_id')
+        config.aktives_logo_id = val if val else None
+    if 'aktive_pdf_id' in data:
+        val = data.pop('aktive_pdf_id')
+        config.aktive_pdf_id = val if val else None
+    if 'aktives_hintergrundbild_id' in data:
+        val = data.pop('aktives_hintergrundbild_id')
+        config.aktives_hintergrundbild_id = val if val else None
+
     for key, value in data.items():
         setattr(config, key, value)
     config.save()
@@ -122,13 +389,47 @@ def update_config(request, payload: MonitorConfigUpdateSchema):
 
 
 @monitor_router.post("/config/regenerate-token", auth=keycloak_auth)
-def regenerate_token(request):
-    """Admin: Neues API-Token generieren"""
-    import uuid
-    config = MonitorConfig.get()
+def regenerate_token(request, profil_id: int = None):
+    if profil_id:
+        config = get_object_or_404(MonitorConfig, id=profil_id)
+    else:
+        config = MonitorConfig.get()
     config.api_token = uuid.uuid4().hex
     config.save(update_fields=['api_token', 'aktualisiert_am'])
     return {"api_token": config.api_token}
+
+
+# ═══ Admin: Dateien (Upload/Manage) ══════════════════════════════
+
+@monitor_router.get("/dateien", response=list[MonitorDateiSchema], auth=keycloak_auth)
+def list_dateien(request, typ: str = None):
+    qs = MonitorDatei.objects.all()
+    if typ:
+        qs = qs.filter(typ=typ)
+    return qs
+
+
+@monitor_router.post("/dateien", auth=keycloak_auth)
+def upload_datei(request, datei: UploadedFile = File(...), name: str = Form(""), typ: str = Form("bild")):
+    obj = MonitorDatei.objects.create(
+        name=name or datei.name,
+        datei=datei,
+        typ=typ,
+    )
+    return {
+        'id': obj.id, 'name': obj.name, 'typ': obj.typ,
+        'datei_url': obj.datei.url, 'reihenfolge': obj.reihenfolge,
+    }
+
+
+@monitor_router.delete("/dateien/{id}", auth=keycloak_auth)
+def delete_datei(request, id: int):
+    d = get_object_or_404(MonitorDatei, id=id)
+    # Datei vom Dateisystem entfernen
+    if d.datei:
+        d.datei.delete(save=False)
+    d.delete()
+    return {"success": True}
 
 
 # ═══ Admin: Ankündigungen ═════════════════════════════════════════

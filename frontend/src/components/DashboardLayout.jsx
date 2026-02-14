@@ -22,6 +22,7 @@ import {
   BarChart3,
   CalendarDays,
   AlertTriangle,
+  Monitor,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -64,9 +65,10 @@ export default function DashboardLayout({ children }) {
   ] : [];
 
   // Admin-Navigation
-  const adminNavigation = isAdmin ? [
-    { name: 'Admin', href: '/admin', icon: Shield },
-  ] : [];
+  const adminNavigation = [
+    ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Shield }] : []),
+    ...(isAdmin || hasPermission('monitor.view') ? [{ name: 'Monitor', href: '/monitor-admin', icon: Monitor }] : []),
+  ];
 
   const handleLogout = () => {
     auth.signoutRedirect();
