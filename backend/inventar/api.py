@@ -623,24 +623,23 @@ def create_ausleihliste(request, payload: AusleiheListeCreateSchema):
 
 @inventar_router.post("/ausleihlisten/{id}/positionen", response=AusleiheListeSchema, auth=keycloak_auth)
 def add_position_ausleihliste(request, id: int, payload: AusleihePositionCreateSchema):
-    """Item zu einer offenen Ausleihliste hinzufügen."""
+    """Item zu einer Ausleihliste hinzufügen (offen, aktiv oder teilrueckgabe)."""
     require_permission(request, 'inventar.ausleihe')
     liste = get_object_or_404(Ausleihliste, id=id)
-    if liste.status != 'offen':
-        return {"error": "Nur bei offenen Listen können Items hinzugefügt werden"}, 400
+    if liste.status not in ('offen', 'aktiv', 'teilrueckgabe'):
+        return {"error": "Items können nur zu offenen oder aktiven Listen hinzugefügt werden"}, 400
 
     item = get_object_or_404(InventarItem, id=payload.item_id)
     if not item.ist_verfuegbar:
         return {"error": f"Item '{item.name}' nicht verfügbar"}, 400
 
-    # Bei mengenbasierten Items: Menge statt Unique-Check
     if item.menge_gesamt > 1:
         if payload.anzahl > item.menge_verfuegbar:
             return {"error": f"Nur {item.menge_verfuegbar} verfügbar"}, 400
     elif liste.positionen.filter(item_id=item.id).exists():
         return {"error": "Item ist bereits in der Liste"}, 400
 
-    AusleihePosition.objects.create(
+    position = AusleihePosition.objects.create(
         ausleihliste=liste,
         item=item,
         anzahl=payload.anzahl,
@@ -650,16 +649,36 @@ def add_position_ausleihliste(request, id: int, payload: AusleihePositionCreateS
         zustand_ausleihe=payload.zustand_ausleihe,
         foto_ausleihe=payload.foto_ausleihe,
     )
+
+    # Auto-Aktivierung: Bei offen → aktiv setzen; bei aktiv/teilrueckgabe → Item sofort als ausgeliehen
+    was_offen = liste.status == 'offen'
+    if was_offen:
+        liste.status = 'aktiv'
+        liste.save(update_fields=['status'])
+
+    # Item als ausgeliehen markieren
+    old_status = item.status
+    if item.menge_gesamt > 1:
+        item.menge_verfuegbar = max(0, item.menge_verfuegbar - position.anzahl)
+        if item.menge_verfuegbar == 0:
+            item.status = 'ausgeliehen'
+    else:
+        item.status = 'ausgeliehen'
+    item.save()
+    log_zustand(request, item, old_status, item.status, 'ausleihe', liste)
+
     return get_ausleihliste(request, liste.id)
 
 
 @inventar_router.post("/ausleihlisten/{id}/positionen/batch", response=AusleiheListeSchema, auth=keycloak_auth)
 def batch_add_positionen(request, id: int, payload: BatchPositionenSchema):
-    """Mehrere Items gleichzeitig mit Signaturen zu einer offenen Ausleihliste hinzufügen."""
+    """Mehrere Items gleichzeitig hinzufügen + auto-aktivieren."""
     require_permission(request, 'inventar.ausleihe')
     liste = get_object_or_404(Ausleihliste, id=id)
-    if liste.status != 'offen':
-        return {"error": "Nur bei offenen Listen können Items hinzugefügt werden"}, 400
+    if liste.status not in ('offen', 'aktiv', 'teilrueckgabe'):
+        return {"error": "Items können nur zu offenen oder aktiven Listen hinzugefügt werden"}, 400
+
+    was_offen = liste.status == 'offen'
 
     # Globale Signatur setzen
     if payload.unterschrift_ausleihe:
@@ -667,6 +686,7 @@ def batch_add_positionen(request, id: int, payload: BatchPositionenSchema):
         liste.save(update_fields=['unterschrift_ausleihe'])
 
     added = 0
+    new_positions = []
     for pos in payload.positionen:
         item = InventarItem.objects.filter(id=pos.item_id, ist_aktiv=True).first()
         if not item or not item.ist_verfuegbar:
@@ -677,7 +697,7 @@ def batch_add_positionen(request, id: int, payload: BatchPositionenSchema):
         elif liste.positionen.filter(item_id=item.id).exists():
             continue
 
-        AusleihePosition.objects.create(
+        position = AusleihePosition.objects.create(
             ausleihliste=liste,
             item=item,
             anzahl=pos.anzahl,
@@ -687,10 +707,42 @@ def batch_add_positionen(request, id: int, payload: BatchPositionenSchema):
             zustand_ausleihe=pos.zustand_ausleihe,
             foto_ausleihe=pos.foto_ausleihe,
         )
+        new_positions.append(position)
         added += 1
 
+    # Auto-Aktivierung + Items als ausgeliehen markieren
+    if added > 0:
+        if was_offen:
+            liste.status = 'aktiv'
+            liste.save(update_fields=['status'])
+            # Bei Auto-Aktivierung: ALLE Positionen als ausgeliehen markieren (auch vorher hinzugefuegte)
+            for pos in liste.positionen.select_related('item').all():
+                item = pos.item
+                old_status = item.status
+                if item.menge_gesamt > 1:
+                    item.menge_verfuegbar = max(0, item.menge_verfuegbar - pos.anzahl)
+                    if item.menge_verfuegbar == 0:
+                        item.status = 'ausgeliehen'
+                else:
+                    item.status = 'ausgeliehen'
+                item.save()
+                log_zustand(request, item, old_status, item.status, 'ausleihe', liste)
+        else:
+            # Bereits aktive Liste: nur neue Positionen als ausgeliehen markieren
+            for pos in new_positions:
+                item = pos.item
+                old_status = item.status
+                if item.menge_gesamt > 1:
+                    item.menge_verfuegbar = max(0, item.menge_verfuegbar - pos.anzahl)
+                    if item.menge_verfuegbar == 0:
+                        item.status = 'ausgeliehen'
+                else:
+                    item.status = 'ausgeliehen'
+                item.save()
+                log_zustand(request, item, old_status, item.status, 'ausleihe', liste)
+
     log_action(request, 'aktualisiert', 'ausleihliste', liste.id,
-               f'{added} Positionen per Batch hinzugefügt')
+               f'{added} Positionen hinzugefügt' + (' (auto-aktiviert)' if was_offen and added > 0 else ''))
     return get_ausleihliste(request, liste.id)
 
 
@@ -798,9 +850,7 @@ def rueckgabe(request, id: int, payload: RueckgabeSchema):
             alle_zurueck = False
             break
 
-    liste.status = 'abgeschlossen' if alle_zurueck else 'teilrueckgabe'
-    if alle_zurueck:
-        liste.rueckgabe_am = timezone.now()
+    liste.status = 'teilrueckgabe'
     liste.save()
 
     log_action(request, 'zurueckgegeben', 'ausleihliste', liste.id, f'Rückgabe von {liste.ausleiher_name}',
@@ -861,11 +911,7 @@ def schnell_rueckgabe(request, payload: SchnellRueckgabeSchema):
     liste = position.ausleihliste
     alle_zurueck = not liste.positionen.filter(ist_zurueckgegeben=False).exists()
     
-    if alle_zurueck:
-        liste.status = 'abgeschlossen'
-        liste.rueckgabe_am = timezone.now()
-    else:
-        liste.status = 'teilrueckgabe'
+    liste.status = 'teilrueckgabe'
     liste.save()
     
     return {
@@ -885,6 +931,28 @@ def send_mahnung_endpoint(request, id: int):
     if success:
         log_action(request, 'mahnung', 'ausleihliste', liste.id, f'Mahnung an {liste.ausleiher_name}')
     return {"success": success, "message": message}
+
+
+@inventar_router.post("/ausleihlisten/{id}/abschliessen", response=AusleiheListeSchema, auth=keycloak_auth)
+def liste_abschliessen(request, id: int):
+    """Liste manuell abschließen – nur wenn alle Positionen zurückgegeben sind."""
+    require_permission(request, 'inventar.ausleihe')
+    liste = get_object_or_404(Ausleihliste, id=id)
+
+    if liste.status not in ('aktiv', 'teilrueckgabe'):
+        return {"error": "Nur aktive Listen können abgeschlossen werden"}, 400
+
+    offene = liste.positionen.filter(ist_zurueckgegeben=False).count()
+    if offene > 0:
+        return {"error": f"Es sind noch {offene} Positionen nicht zurückgegeben"}, 400
+
+    liste.status = 'abgeschlossen'
+    liste.rueckgabe_am = timezone.now()
+    liste.save()
+
+    log_action(request, 'abgeschlossen', 'ausleihliste', liste.id,
+               f'Liste abgeschlossen: {liste.ausleiher_name or liste.titel}')
+    return get_ausleihliste(request, liste.id)
 
 
 class LeihscheinEmailSchema(Schema):

@@ -7,7 +7,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   Plus, Search, Package, ArrowLeft,
   Loader2, AlertTriangle, Clock, User, Calendar,
-  X, Check, Pen, Mail, RefreshCw, Play,
+  X, Check, Pen, Mail, RefreshCw,
   ScanLine, FileDown, ExternalLink, Layers,
   ChevronDown, ChevronRight, MapPin, Send,
   Trash2, PlusCircle
@@ -15,7 +15,7 @@ import {
 import SignatureModal from '../components/SignatureModal';
 import apiClient from '../lib/api';
 import QRScanner from '../components/QRScanner';
-import { downloadLeihschein, generateLeihscheinPdf } from '../lib/pdfGenerator';
+import { downloadLeihschein, generateLeihscheinPdf, generateGroupedLeihscheinPdf } from '../lib/pdfGenerator';
 
 // ─── Hilfs-Komponenten ────────────────────────────────────────────
 
@@ -138,7 +138,9 @@ export default function AusleihePage() {
 
   // ─── Item-Modal State ────
   const [itemSearch, setItemSearch] = useState('');
-  const [selectedItems, setSelectedItems] = useState([]); // [{item, anzahl, ausleiher_name, ausleiher_ort}]
+  const [selectedItems, setSelectedItems] = useState([]); // [{item, anzahl}]
+  const [modalAusleiherName, setModalAusleiherName] = useState('');
+  const [modalAusleiherOrt, setModalAusleiherOrt] = useState('');
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddName, setQuickAddName] = useState('');
   const [addingItems, setAddingItems] = useState(false);
@@ -150,7 +152,6 @@ export default function AusleihePage() {
   const [itemSignatures, setItemSignatures] = useState({});
   const [currentSignItemIdx, setCurrentSignItemIdx] = useState(0);
   const [showSignatureModal, setShowSignatureModal] = useState(false);
-  const [activating, setActivating] = useState(false);
 
   // ─── Rückgabe State ────
   const [rueckgabeAusleihe, setRueckgabeAusleihe] = useState(null);
@@ -167,8 +168,11 @@ export default function AusleihePage() {
   const [itemSets, setItemSets] = useState([]);
   const [showSetDropdown, setShowSetDropdown] = useState(false);
 
+  // ─── PDF Dropdown ────
+  const [showPdfDropdown, setShowPdfDropdown] = useState(false);
+
   // ─── Email State ────
-  const [emailForm, setEmailForm] = useState({ email: '', betreff: '', nachricht: '' });
+  const [emailForm, setEmailForm] = useState({ email: '', betreff: '', nachricht: '', pdfMode: 'gesamt' });
   const [sendingEmail, setSendingEmail] = useState(false);
 
   // ─── Gruppierung (Individuelle Ausleihen) ────
@@ -226,8 +230,8 @@ export default function AusleihePage() {
       toast.error('Bitte Titel angeben');
       return;
     }
-    if (createForm.modus === 'global' && !createForm.ausleiher_name) {
-      toast.error('Bitte Ausleiher-Name angeben');
+    if (createForm.modus === 'global' && !createForm.ausleiher_name && !createForm.ausleiher_ort) {
+      toast.error('Bitte Name oder Ort angeben');
       return;
     }
     setSaving(true);
@@ -259,7 +263,8 @@ export default function AusleihePage() {
     setSelectedItems([]);
     setItemSearch('');
     setShowQuickAdd(false);
-    // Items laden falls noch nicht geladen
+    setModalAusleiherName('');
+    setModalAusleiherOrt('');
     if (items.length === 0) {
       try {
         const res = await apiClient.get('/inventar/items');
@@ -273,14 +278,8 @@ export default function AusleihePage() {
     setSelectedItems(prev => {
       const exists = prev.find(s => s.item.id === item.id);
       if (exists) return prev.filter(s => s.item.id !== item.id);
-      return [...prev, { item, anzahl: 1, ausleiher_name: '', ausleiher_ort: '' }];
+      return [...prev, { item, anzahl: 1 }];
     });
-  };
-
-  const updateSelectedItem = (itemId, field, value) => {
-    setSelectedItems(prev => prev.map(s =>
-      s.item.id === itemId ? { ...s, [field]: value } : s
-    ));
   };
 
   const handleQuickAddItem = async () => {
@@ -298,16 +297,15 @@ export default function AusleihePage() {
   };
 
   const handleAddSelectedItems = () => {
-    if (!detailListe || detailListe.status !== 'offen' || selectedItems.length === 0) return;
+    if (!detailListe || selectedItems.length === 0) return;
+    if (detailListe.status === 'abgeschlossen' || detailListe.status === 'abgebrochen') return;
     setPendingSignatureItems([...selectedItems]);
     setShowItemModal(false);
 
     if (detailListe.modus === 'global') {
-      // Global: Direkt Signatur sammeln
       setSignaturePhase('sign-global');
       setShowSignatureModal(true);
     } else {
-      // Individuell: Modus wählen lassen
       setSignaturePhase('choose');
     }
   };
@@ -362,8 +360,8 @@ export default function AusleihePage() {
       .map(sel => ({
         item_id: sel.item.id,
         anzahl: sel.anzahl || 1,
-        ausleiher_name: sel.ausleiher_name || '',
-        ausleiher_ort: sel.ausleiher_ort || '',
+        ausleiher_name: detailListe.modus === 'individuell' ? modalAusleiherName : '',
+        ausleiher_ort: detailListe.modus === 'individuell' ? modalAusleiherOrt : '',
         zustand_ausleihe: 'ok',
         unterschrift: perItemSigs[sel.item.id] || globalSig || '',
         foto_ausleihe: '',
@@ -385,12 +383,14 @@ export default function AusleihePage() {
     setGlobalSignature('');
     setItemSignatures({});
     setCurrentSignItemIdx(0);
+    setModalAusleiherName('');
+    setModalAusleiherOrt('');
     fetchDetailListe();
   };
 
   // ─── Set hinzufügen ────
   const handleAddSetToList = async (set) => {
-    if (!detailListe || detailListe.status !== 'offen') return;
+    if (!detailListe || detailListe.status === 'abgeschlossen' || detailListe.status === 'abgebrochen') return;
     if (!set.positionen || set.positionen.length === 0) {
       toast.error('Dieses Set enthält keine Items');
       return;
@@ -413,25 +413,6 @@ export default function AusleihePage() {
     if (added > 0) toast.success(`${added} Item(s) aus "${set.name}" hinzugefügt`);
     if (errors > 0) toast.error(`${errors} konnten nicht hinzugefügt werden`);
     fetchDetailListe();
-  };
-
-  // ═══ Aktivieren (ohne Signatur — Signaturen werden beim Hinzufügen gesammelt) ═══
-
-  const handleAktivieren = async () => {
-    if (!detailListe) return;
-    setActivating(true);
-    try {
-      await apiClient.post(`/inventar/ausleihlisten/${listId}/aktivieren`, {
-        unterschrift_ausleihe: '',
-        positionen_unterschriften: [],
-      });
-      toast.success('Ausleihe aktiviert');
-      fetchDetailListe();
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Aktivieren fehlgeschlagen');
-    } finally {
-      setActivating(false);
-    }
   };
 
   // ═══ Rückgabe ═══
@@ -477,6 +458,17 @@ export default function AusleihePage() {
     } catch { toast.error('Entfernen fehlgeschlagen'); }
   };
 
+  const handleAbschliessen = async () => {
+    if (!detailListe) return;
+    try {
+      await apiClient.post(`/inventar/ausleihlisten/${detailListe.id}/abschliessen`);
+      toast.success('Liste abgeschlossen');
+      fetchDetailListe();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Abschließen fehlgeschlagen');
+    }
+  };
+
   const handleSendMahnung = async (ausleihId) => {
     try {
       const res = await apiClient.post(`/inventar/ausleihlisten/${ausleihId}/mahnung`);
@@ -488,7 +480,7 @@ export default function AusleihePage() {
   // ═══ QR-Scanner ═══
 
   const handleQRScan = async (code) => {
-    if (scanMode === 'add' && detailListe?.status === 'offen') {
+    if (scanMode === 'add' && detailListe && detailListe.status !== 'abgeschlossen' && detailListe.status !== 'abgebrochen') {
       try {
         const res = await apiClient.get(`/inventar/items/qr/${encodeURIComponent(code)}`);
         await apiClient.post(`/inventar/ausleihlisten/${listId}/positionen`, {
@@ -508,15 +500,21 @@ export default function AusleihePage() {
 
   // ═══ PDF & Email ═══
 
-  const handleDownloadPdf = () => {
-    if (detailListe) { downloadLeihschein(detailListe); toast.success('PDF erstellt'); }
+  const handleDownloadPdf = (groupBy = null) => {
+    if (detailListe) {
+      downloadLeihschein(detailListe, groupBy);
+      setShowPdfDropdown(false);
+      toast.success('PDF erstellt');
+    }
   };
 
   const handleSendEmail = async () => {
     if (!emailForm.email || !detailListe) return;
     setSendingEmail(true);
     try {
-      const doc = generateLeihscheinPdf(detailListe);
+      const pdfMode = emailForm.pdfMode || 'gesamt';
+      const groupBy = pdfMode === 'person' ? 'person' : pdfMode === 'ort' ? 'ort' : null;
+      const doc = groupBy ? generateGroupedLeihscheinPdf(detailListe, groupBy) : generateLeihscheinPdf(detailListe);
       const pdfBlob = doc.output('arraybuffer');
       const base64 = btoa(new Uint8Array(pdfBlob).reduce((data, byte) => data + String.fromCharCode(byte), ''));
       await apiClient.post(`/inventar/ausleihlisten/${detailListe.id}/email`, {
@@ -527,7 +525,7 @@ export default function AusleihePage() {
       });
       toast.success(`E-Mail an ${emailForm.email} gesendet`);
       setShowEmailModal(false);
-      setEmailForm({ email: '', betreff: '', nachricht: '' });
+      setEmailForm({ email: '', betreff: '', nachricht: '', pdfMode: 'gesamt' });
     } catch (err) {
       toast.error(err.response?.data?.message || 'E-Mail konnte nicht gesendet werden');
     } finally { setSendingEmail(false); }
@@ -624,25 +622,50 @@ export default function AusleihePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {isOffen && (
+            <button onClick={() => { setScanMode('add'); setShowQRScanner(true); }}
+              className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
+              <ScanLine className="w-4 h-4" /> QR
+            </button>
+            {(detailListe.positionen?.length || 0) > 0 && (
               <>
-                <button onClick={() => { setScanMode('add'); setShowQRScanner(true); }}
-                  className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  <ScanLine className="w-4 h-4" /> QR
-                </button>
-              </>
-            )}
-            {!isOffen && (
-              <>
-                <button onClick={handleDownloadPdf}
-                  className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  <FileDown className="w-4 h-4" /> PDF
-                </button>
+                {detailListe.modus === 'individuell' ? (
+                  <div className="relative">
+                    <button onClick={() => setShowPdfDropdown(!showPdfDropdown)}
+                      className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
+                      <FileDown className="w-4 h-4" /> PDF <ChevronDown className="w-3 h-3 ml-0.5" />
+                    </button>
+                    {showPdfDropdown && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowPdfDropdown(false)} />
+                        <div className="absolute right-0 mt-1 py-1 bg-gray-800 border border-gray-700 rounded-lg z-20 min-w-[180px] shadow-xl">
+                          <button onClick={() => handleDownloadPdf(null)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white text-sm">
+                            Gesamt-PDF
+                          </button>
+                          <button onClick={() => handleDownloadPdf('person')}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white text-sm">
+                            <User className="w-3.5 h-3.5 inline mr-1.5" />Pro Person
+                          </button>
+                          <button onClick={() => handleDownloadPdf('ort')}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white text-sm">
+                            <MapPin className="w-3.5 h-3.5 inline mr-1.5" />Pro Ort
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <button onClick={() => handleDownloadPdf()}
+                    className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
+                    <FileDown className="w-4 h-4" /> PDF
+                  </button>
+                )}
                 <button onClick={() => {
                   setEmailForm({
                     email: detailListe.ausleiher_email || '',
                     betreff: `Leihschein #${detailListe.id} – ${detailListe.titel || detailListe.ausleiher_name}`,
                     nachricht: `Anbei der Leihschein für Ihre Ausleihe #${detailListe.id}.\n\nMit freundlichen Grüßen,\nStagedesk`,
+                    pdfMode: 'gesamt',
                   });
                   setShowEmailModal(true);
                 }}
@@ -669,8 +692,8 @@ export default function AusleihePage() {
             )}
           </div>
 
-          {/* Items hinzufügen (nur bei offener Liste) */}
-          {isOffen && (
+          {/* Items hinzufügen (immer sichtbar ausser bei abgeschlossen/abgebrochen) */}
+          {detailListe.status !== 'abgeschlossen' && detailListe.status !== 'abgebrochen' && (
             <div className="flex items-center gap-2">
               <button onClick={openItemModal}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
@@ -682,17 +705,20 @@ export default function AusleihePage() {
                   <Layers className="w-4 h-4" /> Set
                 </button>
                 {showSetDropdown && (
-                  <ul className="absolute right-0 mt-1 py-1 bg-gray-800 border border-gray-700 rounded-lg max-h-60 overflow-y-auto z-10 min-w-[220px]">
-                    {itemSets.length > 0 ? itemSets.map(set => (
-                      <li key={set.id}>
-                        <button type="button" onClick={() => handleAddSetToList(set)}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white">
-                          <span className="font-medium">{set.name}</span>
-                          <span className="text-gray-400 text-xs ml-2">({set.positionen?.length || 0} Items)</span>
-                        </button>
-                      </li>
-                    )) : <li className="px-3 py-2 text-gray-400 text-sm">Keine Sets</li>}
-                  </ul>
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowSetDropdown(false)} />
+                    <ul className="absolute right-0 mt-1 py-1 bg-gray-800 border border-gray-700 rounded-lg max-h-60 overflow-y-auto z-20 min-w-[220px]">
+                      {itemSets.length > 0 ? itemSets.map(set => (
+                        <li key={set.id}>
+                          <button type="button" onClick={() => handleAddSetToList(set)}
+                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white">
+                            <span className="font-medium">{set.name}</span>
+                            <span className="text-gray-400 text-xs ml-2">({set.positionen?.length || 0} Items)</span>
+                          </button>
+                        </li>
+                      )) : <li className="px-3 py-2 text-gray-400 text-sm">Keine Sets</li>}
+                    </ul>
+                  </>
                 )}
               </div>
             </div>
@@ -760,31 +786,38 @@ export default function AusleihePage() {
             )}
           </div>
 
-          {/* Aktionen */}
-          {isOffen && (
-            <div className="pt-4 border-t border-gray-700">
-              <button onClick={handleAktivieren}
-                disabled={activating || (detailListe.positionen?.length || 0) === 0}
-                className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg">
-                {activating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                Ausleihe aktivieren
-              </button>
-            </div>
-          )}
-
-          {isAktiv && (
-            <div className="pt-4 border-t border-gray-700 flex items-center gap-3">
-              <button onClick={() => { setRueckgabeAusleihe(detailListe); setShowRueckgabeModal(true); }}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
-                <RefreshCw className="w-4 h-4" /> Alles zurückgeben
-              </button>
-              {detailListe.status === 'teilrueckgabe' && (
-                <span className="text-sm text-yellow-400">
-                  {(detailListe.positionen || []).filter(p => !p.ist_zurueckgegeben).length} von {(detailListe.positionen || []).length} noch ausgeliehen
-                </span>
-              )}
-            </div>
-          )}
+          {/* Rückgabe-Aktionen */}
+          {isAktiv && (() => {
+            const positionen = detailListe.positionen || [];
+            const nochOffen = positionen.filter(p => !p.ist_zurueckgegeben).length;
+            const alleZurueck = positionen.length > 0 && nochOffen === 0;
+            return (
+              <div className="pt-4 border-t border-gray-700 flex items-center gap-3 flex-wrap">
+                {!alleZurueck && (
+                  <button onClick={() => { setRueckgabeAusleihe(detailListe); setShowRueckgabeModal(true); }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+                    <RefreshCw className="w-4 h-4" /> Alles zurückgeben
+                  </button>
+                )}
+                {alleZurueck && (
+                  <button onClick={handleAbschliessen}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+                    <Check className="w-4 h-4" /> Liste abschließen
+                  </button>
+                )}
+                {nochOffen > 0 && (
+                  <span className="text-sm text-yellow-400">
+                    {nochOffen} von {positionen.length} noch ausgeliehen
+                  </span>
+                )}
+                {alleZurueck && (
+                  <span className="text-sm text-green-400">
+                    Alle Artikel zurückgegeben
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* ─── Item-Auswahl Modal ───────────────────────────── */}
@@ -792,110 +825,142 @@ export default function AusleihePage() {
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
-                <h2 className="text-lg font-semibold text-white">Artikel auswählen</h2>
+                <h2 className="text-lg font-semibold text-white">Artikel zur Ausleihe hinzufügen</h2>
                 <button onClick={() => setShowItemModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
 
-              {/* Ausgewählte Artikel */}
-              {selectedItems.length > 0 && (
-                <div className="px-6 pt-4">
-                  <h3 className="text-sm font-medium text-gray-400 mb-2">Ausgewählte Artikel ({selectedItems.length})</h3>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {selectedItems.map(sel => (
-                      <div key={sel.item.id} className="flex items-center gap-3 p-2 bg-blue-900/20 border border-blue-800/30 rounded-lg">
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-white">{sel.item.name}</span>
-                          {detailListe?.modus === 'individuell' && (
-                            <div className="flex gap-2 mt-1">
-                              <input type="text" value={sel.ausleiher_name} onChange={e => updateSelectedItem(sel.item.id, 'ausleiher_name', e.target.value)}
-                                placeholder="Ausleiher Name" className="flex-1 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500" />
-                              <input type="text" value={sel.ausleiher_ort} onChange={e => updateSelectedItem(sel.item.id, 'ausleiher_ort', e.target.value)}
-                                placeholder="Ort" className="flex-1 px-2 py-1 text-xs bg-gray-800 border border-gray-700 rounded text-white placeholder-gray-500" />
-                            </div>
-                          )}
-                        </div>
-                        <button onClick={() => toggleItemSelection(sel.item)} className="p-1 text-red-400 hover:bg-red-900/20 rounded">
-                          <X className="w-4 h-4" />
-                        </button>
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {/* Ausleiher-Information (nur bei individuell) */}
+                {detailListe?.modus === 'individuell' && (
+                  <div className="mx-6 mt-4 p-4 border border-gray-700 rounded-lg">
+                    <h3 className="text-sm font-semibold text-white mb-3">Ausleiher-Information</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Name</label>
+                        <input type="text" value={modalAusleiherName} onChange={e => setModalAusleiherName(e.target.value)}
+                          placeholder="z.B. Max Mustermann" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500" />
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Suche & Schnell-Hinzufügen */}
-              <div className="px-6 pt-4 space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input type="text" value={itemSearch} onChange={e => setItemSearch(e.target.value)}
-                    placeholder="Artikel suchen..." className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
-                </div>
-                <button onClick={() => setShowQuickAdd(!showQuickAdd)}
-                  className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300">
-                  <PlusCircle className="w-3.5 h-3.5" /> Neuen Artikel zum Inventar hinzufügen
-                </button>
-                {showQuickAdd && (
-                  <div className="flex gap-2">
-                    <input type="text" value={quickAddName} onChange={e => setQuickAddName(e.target.value)}
-                      placeholder="Name des neuen Artikels" className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white"
-                      onKeyDown={e => e.key === 'Enter' && handleQuickAddItem()} />
-                    <button onClick={handleQuickAddItem} disabled={!quickAddName.trim()}
-                      className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
-                      Hinzufügen
-                    </button>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Ort/Raum</label>
+                        <input type="text" value={modalAusleiherOrt} onChange={e => setModalAusleiherOrt(e.target.value)}
+                          placeholder="z.B. Büro 201" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500" />
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {/* Items-Liste */}
-              <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
-                <ul className="space-y-1">
-                  {filteredItems.slice(0, 50).map(item => {
-                    const isSelected = selectedItems.some(s => s.item.id === item.id);
-                    const isInList = existingPositionIds.has(item.id);
-                    return (
-                      <li key={item.id}>
-                        <button type="button" onClick={() => !isInList && toggleItemSelection(item)} disabled={isInList}
-                          className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
-                            isInList ? 'opacity-40 cursor-not-allowed' :
-                            isSelected ? 'bg-blue-900/30 border border-blue-700' :
-                            'hover:bg-gray-800'
-                          }`}>
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                            isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-600'
-                          }`}>
-                            {isSelected && <Check className="w-3 h-3 text-white" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-white font-medium">{item.name}</span>
-                            {item.seriennummer && <span className="text-gray-500 text-xs ml-2">{item.seriennummer}</span>}
-                            {item.kategorie_name && <span className="text-gray-500 text-xs ml-2">• {item.kategorie_name}</span>}
-                          </div>
-                          {isInList && <span className="text-xs text-gray-500">Bereits enthalten</span>}
-                          <span className={`text-xs px-1.5 py-0.5 rounded ${
-                            item.status === 'verfuegbar' ? 'bg-green-900/30 text-green-400' :
-                            item.status === 'ausgeliehen' ? 'bg-blue-900/30 text-blue-400' :
-                            'bg-gray-700 text-gray-400'
-                          }`}>{item.status_display || item.status}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                  {filteredItems.length === 0 && <li className="text-gray-400 py-4 text-center">Keine Artikel gefunden</li>}
-                </ul>
+                {/* Ausgewählte Artikel als Chips */}
+                {selectedItems.length > 0 && (
+                  <div className="mx-6 mt-4 p-4 border border-gray-700 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-white">Ausgewählte Artikel ({selectedItems.length})</h3>
+                      <button onClick={() => setSelectedItems([])} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
+                        <X className="w-3 h-3" /> ALLE ENTFERNEN
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedItems.map(sel => (
+                        <span key={sel.item.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white">
+                          {sel.item.name}
+                          <button onClick={() => toggleItemSelection(sel.item)} className="text-gray-400 hover:text-red-400">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Suche */}
+                <div className="px-6 pt-4 space-y-2">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input type="text" value={itemSearch} onChange={e => setItemSearch(e.target.value)}
+                      placeholder="Artikel suchen..." className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => { setScanMode('add'); setShowQRScanner(true); setShowItemModal(false); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                      <ScanLine className="w-3.5 h-3.5" /> SCAN-MODUS
+                    </button>
+                    <button onClick={() => setShowQuickAdd(!showQuickAdd)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                      <PlusCircle className="w-3.5 h-3.5" /> QUICK-ADD
+                    </button>
+                    <button onClick={() => {
+                      const available = filteredItems.filter(i => !existingPositionIds.has(i.id) && i.status === 'verfuegbar');
+                      setSelectedItems(available.slice(0, 50).map(item => ({ item, anzahl: 1 })));
+                    }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                      <Check className="w-3.5 h-3.5" /> ALLE AUSWÄHLEN
+                    </button>
+                  </div>
+                  {showQuickAdd && (
+                    <div className="flex gap-2">
+                      <input type="text" value={quickAddName} onChange={e => setQuickAddName(e.target.value)}
+                        placeholder="Name des neuen Artikels" className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white"
+                        onKeyDown={e => e.key === 'Enter' && handleQuickAddItem()} />
+                      <button onClick={handleQuickAddItem} disabled={!quickAddName.trim()}
+                        className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
+                        Hinzufügen
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Items-Liste */}
+                <div className="px-6 py-4">
+                  <ul className="space-y-1">
+                    {filteredItems.slice(0, 50).map(item => {
+                      const isSelected = selectedItems.some(s => s.item.id === item.id);
+                      const isInList = existingPositionIds.has(item.id);
+                      return (
+                        <li key={item.id}>
+                          <button type="button" onClick={() => !isInList && toggleItemSelection(item)} disabled={isInList}
+                            className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
+                              isInList ? 'opacity-40 cursor-not-allowed' :
+                              isSelected ? 'bg-blue-900/30 border-l-2 border-l-blue-500' :
+                              'hover:bg-gray-800'
+                            }`}>
+                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-600'
+                            }`}>
+                              {isSelected && <Check className="w-3 h-3 text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-white font-medium">{item.name}</span>
+                              {item.seriennummer && <span className="text-gray-500 text-xs ml-2">{item.seriennummer}</span>}
+                              {item.kategorie_name && <span className="text-gray-500 text-xs ml-2">• {item.kategorie_name}</span>}
+                            </div>
+                            {isInList && <span className="text-xs text-gray-500">Bereits enthalten</span>}
+                            <span className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${
+                              item.status === 'verfuegbar' ? 'bg-green-900/30 text-green-400' :
+                              item.status === 'ausgeliehen' ? 'bg-blue-900/30 text-blue-400' :
+                              'bg-gray-700 text-gray-400'
+                            }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${
+                                item.status === 'verfuegbar' ? 'bg-green-400' :
+                                item.status === 'ausgeliehen' ? 'bg-blue-400' : 'bg-gray-400'
+                              }`} />
+                              {item.status_display || item.status}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                    {filteredItems.length === 0 && <li className="text-gray-400 py-4 text-center">Keine Artikel gefunden</li>}
+                  </ul>
+                </div>
               </div>
 
               {/* Footer */}
               <div className="flex items-center justify-between p-6 pt-4 border-t border-gray-800">
-                <span className="text-sm text-gray-400">{selectedItems.length} ausgewählt</span>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowItemModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                  <button onClick={handleAddSelectedItems} disabled={selectedItems.length === 0 || addingItems}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
-                    {addingItems ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Artikel hinzufügen
-                  </button>
-                </div>
+                <button onClick={() => setShowItemModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">ABBRECHEN</button>
+                <button onClick={handleAddSelectedItems} disabled={selectedItems.length === 0 || addingItems}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                  {addingItems ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {selectedItems.length} Artikel hinzufügen
+                </button>
               </div>
             </div>
           </div>
@@ -1044,6 +1109,28 @@ export default function AusleihePage() {
                   <input type="text" value={emailForm.betreff} onChange={e => setEmailForm({ ...emailForm, betreff: e.target.value })}
                     className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
                 </div>
+                {detailListe?.modus === 'individuell' && (
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">PDF-Variante</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: 'gesamt', label: 'Gesamt', icon: FileDown },
+                        { value: 'person', label: 'Pro Person', icon: User },
+                        { value: 'ort', label: 'Pro Ort', icon: MapPin },
+                      ].map(opt => (
+                        <button key={opt.value} onClick={() => setEmailForm({ ...emailForm, pdfMode: opt.value })}
+                          className={`flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-lg border transition-colors ${
+                            emailForm.pdfMode === opt.value
+                              ? 'border-blue-500 bg-blue-900/20 text-blue-400'
+                              : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                          }`}>
+                          <opt.icon className="w-3.5 h-3.5" />
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Nachricht</label>
                   <textarea value={emailForm.nachricht} onChange={e => setEmailForm({ ...emailForm, nachricht: e.target.value })}
@@ -1133,7 +1220,7 @@ export default function AusleihePage() {
               {createForm.modus === 'global' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Ausleiher (Name) *</label>
+                    <label className="block text-sm text-gray-400 mb-1">Ausleiher (Name)</label>
                     <input type="text" value={createForm.ausleiher_name} onChange={e => setCreateForm({ ...createForm, ausleiher_name: e.target.value })}
                       className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
                   </div>
@@ -1167,7 +1254,7 @@ export default function AusleihePage() {
 
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleCreateListe} disabled={saving || !createForm.titel || (createForm.modus === 'global' && !createForm.ausleiher_name)}
+              <button onClick={handleCreateListe} disabled={saving || !createForm.titel || (createForm.modus === 'global' && !createForm.ausleiher_name && !createForm.ausleiher_ort)}
                 className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Liste erstellen

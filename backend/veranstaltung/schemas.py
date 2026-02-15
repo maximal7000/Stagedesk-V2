@@ -80,6 +80,8 @@ class VeranstaltungSchema(Schema):
     wiederholung: str
     wiederholung_ende: Optional[date]
     ausleihliste_id: Optional[int]
+    anwesenheitsliste_id: Optional[int]
+    anwesenheitsliste_titel: Optional[str]
     discord_event_id: str
     discord_channel_id: str
     erstellt_von: str
@@ -119,6 +121,14 @@ class VeranstaltungSchema(Schema):
     @staticmethod
     def resolve_ausleihliste_id(obj):
         return obj.ausleihliste_id if obj.ausleihliste_id else None
+
+    @staticmethod
+    def resolve_anwesenheitsliste_id(obj):
+        return obj.anwesenheitsliste_id if obj.anwesenheitsliste_id else None
+
+    @staticmethod
+    def resolve_anwesenheitsliste_titel(obj):
+        return obj.anwesenheitsliste.titel if obj.anwesenheitsliste_id and obj.anwesenheitsliste else None
 
 
 class VeranstaltungListSchema(Schema):

@@ -228,6 +228,30 @@ def delete_veranstaltung(request, id: int):
     return {"status": "deleted"}
 
 
+# ========== Anwesenheit ==========
+
+@veranstaltung_router.post("/{id}/anwesenheit/{liste_id}", auth=keycloak_auth)
+def link_anwesenheit(request, id: int, liste_id: int):
+    """Anwesenheitsliste mit Veranstaltung verknüpfen."""
+    require_permission(request, 'veranstaltung.edit')
+    from anwesenheit.models import AnwesenheitsListe
+    v = get_object_or_404(Veranstaltung, id=id)
+    liste = get_object_or_404(AnwesenheitsListe, id=liste_id)
+    v.anwesenheitsliste = liste
+    v.save(update_fields=['anwesenheitsliste'])
+    return {"status": "linked", "liste_id": liste.id, "titel": liste.titel}
+
+
+@veranstaltung_router.delete("/{id}/anwesenheit", auth=keycloak_auth)
+def unlink_anwesenheit(request, id: int):
+    """Anwesenheitsliste von Veranstaltung trennen."""
+    require_permission(request, 'veranstaltung.edit')
+    v = get_object_or_404(Veranstaltung, id=id)
+    v.anwesenheitsliste = None
+    v.save(update_fields=['anwesenheitsliste'])
+    return {"status": "unlinked"}
+
+
 # ========== Zuweisungen ==========
 
 @veranstaltung_router.post("/{id}/zuweisungen", response=VeranstaltungSchema, auth=keycloak_auth)

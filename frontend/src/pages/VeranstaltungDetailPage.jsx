@@ -27,6 +27,7 @@ import {
   Download,
   Hash,
   AlertTriangle,
+  ClipboardList,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../lib/api';
@@ -97,6 +98,11 @@ export default function VeranstaltungDetailPage() {
   const [alleAusleihlisten, setAlleAusleihlisten] = useState([]);
   const [showLinkAusleihe, setShowLinkAusleihe] = useState(false);
   const [selectedAusleiheId, setSelectedAusleiheId] = useState('');
+
+  // Anwesenheit
+  const [alleAnwesenheit, setAlleAnwesenheit] = useState([]);
+  const [showLinkAnwesenheit, setShowLinkAnwesenheit] = useState(false);
+  const [selectedAnwesenheitId, setSelectedAnwesenheitId] = useState('');
 
   const fetchDetail = useCallback(async () => {
     if (isNew) return;
@@ -183,6 +189,39 @@ export default function VeranstaltungDetailPage() {
     try {
       await apiClient.delete(`/inventar/ausleihlisten/${ausleiheId}/veranstaltung`);
       fetchAusleihlisten();
+      toast.success('Verknüpfung entfernt');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Entfernen fehlgeschlagen');
+    }
+  };
+
+  // Anwesenheit
+  const fetchAlleAnwesenheit = async () => {
+    try {
+      const res = await apiClient.get('/anwesenheit');
+      setAlleAnwesenheit(res.data || []);
+    } catch {
+      setAlleAnwesenheit([]);
+    }
+  };
+
+  const linkAnwesenheit = async () => {
+    if (!selectedAnwesenheitId) return;
+    try {
+      await apiClient.post(`/veranstaltung/${id}/anwesenheit/${selectedAnwesenheitId}`);
+      setSelectedAnwesenheitId('');
+      setShowLinkAnwesenheit(false);
+      refetch();
+      toast.success('Anwesenheitsliste verknüpft');
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Verknüpfung fehlgeschlagen');
+    }
+  };
+
+  const unlinkAnwesenheit = async () => {
+    try {
+      await apiClient.delete(`/veranstaltung/${id}/anwesenheit`);
+      refetch();
       toast.success('Verknüpfung entfernt');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Entfernen fehlgeschlagen');
@@ -947,6 +986,82 @@ export default function VeranstaltungDetailPage() {
           </div>
         ) : (
           <p className="text-gray-500 text-sm">Keine Ausleihlisten verknüpft</p>
+        )}
+      </section>
+
+      {/* Anwesenheit */}
+      <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <ClipboardList className="w-5 h-5" />
+            Anwesenheit
+          </h2>
+          {!data?.anwesenheitsliste_id && (
+            <button
+              type="button"
+              onClick={() => { setShowLinkAnwesenheit(true); fetchAlleAnwesenheit(); }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+            >
+              <Plus className="w-4 h-4" />
+              Verknüpfen
+            </button>
+          )}
+        </div>
+
+        {showLinkAnwesenheit && (
+          <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-800/50 rounded-lg">
+            <select
+              value={selectedAnwesenheitId}
+              onChange={(e) => setSelectedAnwesenheitId(e.target.value)}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white min-w-[200px]"
+            >
+              <option value="">Anwesenheitsliste wählen…</option>
+              {alleAnwesenheit.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.titel} {a.ort ? `(${a.ort})` : ''} – {a.status === 'aktiv' ? 'Aktiv' : 'Abgeschlossen'}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={linkAnwesenheit}
+              disabled={!selectedAnwesenheitId}
+              className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm"
+            >
+              Verknüpfen
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLinkAnwesenheit(false)}
+              className="px-3 py-2 text-gray-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {data?.anwesenheitsliste_id ? (
+          <div className="flex items-center justify-between py-3 px-4 bg-gray-800 rounded-lg">
+            <div className="flex-1 min-w-0">
+              <Link
+                to={`/anwesenheit/${data.anwesenheitsliste_id}`}
+                className="text-white hover:text-blue-400 font-medium flex items-center gap-2"
+              >
+                <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
+                {data.anwesenheitsliste_titel || `Anwesenheitsliste #${data.anwesenheitsliste_id}`}
+              </Link>
+            </div>
+            <button
+              type="button"
+              onClick={unlinkAnwesenheit}
+              title="Verknüpfung entfernen"
+              className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"
+            >
+              <Unlink className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <p className="text-gray-500 text-sm">Keine Anwesenheitsliste verknüpft</p>
         )}
       </section>
 

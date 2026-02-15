@@ -61,6 +61,11 @@ class Veranstaltung(models.Model):
         'inventar.Ausleihliste', on_delete=models.SET_NULL, null=True, blank=True, related_name='veranstaltungen'
     )
 
+    # Verknüpfung Anwesenheit (optional)
+    anwesenheitsliste = models.ForeignKey(
+        'anwesenheit.AnwesenheitsListe', on_delete=models.SET_NULL, null=True, blank=True, related_name='veranstaltungen'
+    )
+
     # Discord-Integration
     discord_event_id = models.CharField(max_length=100, blank=True, help_text="Discord Scheduled Event ID")
     discord_channel_id = models.CharField(max_length=100, blank=True, help_text="Discord Text-Channel ID")
