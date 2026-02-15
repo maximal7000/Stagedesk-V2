@@ -387,6 +387,15 @@ def initialize_system(request):
          'description': 'Erlaubt das Aktivieren/Deaktivieren von ON AIR', 'category': 'monitor'},
         {'code': 'monitor.notfall', 'name': 'Notfall-Meldung verwalten',
          'description': 'Erlaubt das Aktivieren/Deaktivieren der Notfall-Meldung', 'category': 'monitor'},
+        # Anwesenheit
+        {'code': 'anwesenheit.view', 'name': 'Anwesenheit anzeigen',
+         'description': 'Erlaubt das Anzeigen von Anwesenheitslisten', 'category': 'anwesenheit'},
+        {'code': 'anwesenheit.create', 'name': 'Anwesenheit erstellen',
+         'description': 'Erlaubt das Erstellen von Anwesenheitslisten', 'category': 'anwesenheit'},
+        {'code': 'anwesenheit.edit', 'name': 'Anwesenheit bearbeiten',
+         'description': 'Erlaubt das Bearbeiten von Anwesenheitseintraegen', 'category': 'anwesenheit'},
+        {'code': 'anwesenheit.delete', 'name': 'Anwesenheit loeschen',
+         'description': 'Erlaubt das Loeschen von Anwesenheitslisten', 'category': 'anwesenheit'},
     ]
     
     created_permissions = []

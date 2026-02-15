@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronRight, MapPin, Send,
   Trash2, PlusCircle
 } from 'lucide-react';
-import SignatureCanvas from 'react-signature-canvas';
+import SignatureModal from '../components/SignatureModal';
 import apiClient from '../lib/api';
 import QRScanner from '../components/QRScanner';
 import { downloadLeihschein, generateLeihscheinPdf } from '../lib/pdfGenerator';
@@ -58,6 +58,51 @@ function StatusBadge({ status, statusDisplay, istUeberfaellig }) {
   );
 }
 
+function PositionItem({ pos, isOffen, isAktiv, showBorrower, onRemove, onReturn }) {
+  return (
+    <li className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+      <div className="flex-1 min-w-0">
+        <span className="font-medium text-white">{pos.item_name}</span>
+        {pos.anzahl > 1 && <span className="text-gray-400 ml-2">&times;{pos.anzahl}</span>}
+        {showBorrower && pos.ausleiher_name && (
+          <div className="text-xs text-gray-400 mt-0.5">
+            <User className="w-3 h-3 inline mr-1" />{pos.ausleiher_name}
+            {pos.ausleiher_ort && <><MapPin className="w-3 h-3 inline ml-2 mr-1" />{pos.ausleiher_ort}</>}
+          </div>
+        )}
+        {!isOffen && (
+          <div className="flex items-center gap-2 mt-1">
+            {pos.ist_zurueckgegeben ? (
+              <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+                <Check className="w-3 h-3" /> Zurückgegeben
+                {pos.zustand_rueckgabe && pos.zustand_rueckgabe !== 'ok' && (
+                  <span className="text-yellow-400 ml-1">({pos.zustand_rueckgabe})</span>
+                )}
+              </span>
+            ) : isAktiv ? (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Ausgeliehen</span>
+            ) : null}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center gap-2 ml-2">
+        {isOffen && (
+          <button onClick={() => onRemove(pos.id)}
+            className="p-1.5 text-red-400 hover:bg-red-900/20 rounded">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+        {isAktiv && !pos.ist_zurueckgegeben && (
+          <button onClick={() => onReturn(pos)}
+            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded">
+            <RefreshCw className="w-3 h-3" /> Zurückgeben
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
 // ─── Hauptkomponente ──────────────────────────────────────────────
 
 export default function AusleihePage() {
@@ -74,7 +119,6 @@ export default function AusleihePage() {
   // ─── Modale ────
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
-  const [showSignatureFlow, setShowSignatureFlow] = useState(false);
   const [showRueckgabeModal, setShowRueckgabeModal] = useState(false);
   const [showEinzelrueckgabe, setShowEinzelrueckgabe] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -99,18 +143,19 @@ export default function AusleihePage() {
   const [quickAddName, setQuickAddName] = useState('');
   const [addingItems, setAddingItems] = useState(false);
 
-  // ─── Signatur-Flow State ────
-  const [signatureMode, setSignatureMode] = useState(null); // null | 'none' | 'single' | 'per_item'
-  const [signatureStep, setSignatureStep] = useState('choose'); // 'choose' | 'sign'
+  // ─── Signatur-Flow (beim Hinzufügen) ────
+  const [signaturePhase, setSignaturePhase] = useState(null); // null | 'choose' | 'sign-global' | 'sign-single' | 'sign-per-item'
+  const [pendingSignatureItems, setPendingSignatureItems] = useState([]);
   const [globalSignature, setGlobalSignature] = useState('');
-  const [itemSignatures, setItemSignatures] = useState({}); // {item_id: base64}
+  const [itemSignatures, setItemSignatures] = useState({});
   const [currentSignItemIdx, setCurrentSignItemIdx] = useState(0);
-  const sigPadRef = useRef(null);
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
   const [activating, setActivating] = useState(false);
 
   // ─── Rückgabe State ────
   const [rueckgabeAusleihe, setRueckgabeAusleihe] = useState(null);
-  const rueckgabeSigRef = useRef(null);
+  const [showRueckgabeSigModal, setShowRueckgabeSigModal] = useState(false);
+  const [rueckgabeSignature, setRueckgabeSignature] = useState('');
   const [einzelrueckgabePos, setEinzelrueckgabePos] = useState(null);
   const [einzelZustand, setEinzelZustand] = useState('ok');
   const [einzelNotizen, setEinzelNotizen] = useState('');
@@ -125,6 +170,10 @@ export default function AusleihePage() {
   // ─── Email State ────
   const [emailForm, setEmailForm] = useState({ email: '', betreff: '', nachricht: '' });
   const [sendingEmail, setSendingEmail] = useState(false);
+
+  // ─── Gruppierung (Individuelle Ausleihen) ────
+  const [groupBy, setGroupBy] = useState('none'); // 'none' | 'borrower' | 'location'
+  const [expandedGroups, setExpandedGroups] = useState({});
 
   // ═══ Daten laden ═══
 
@@ -248,34 +297,94 @@ export default function AusleihePage() {
     }
   };
 
-  const handleAddSelectedItems = async () => {
+  const handleAddSelectedItems = () => {
     if (!detailListe || detailListe.status !== 'offen' || selectedItems.length === 0) return;
-    setAddingItems(true);
-    const existingIds = new Set((detailListe.positionen || []).map(p => p.item_id));
-    let added = 0, errors = 0;
+    setPendingSignatureItems([...selectedItems]);
+    setShowItemModal(false);
 
-    for (const sel of selectedItems) {
-      if (existingIds.has(sel.item.id)) continue;
-      try {
-        await apiClient.post(`/inventar/ausleihlisten/${listId}/positionen`, {
-          item_id: sel.item.id,
-          anzahl: sel.anzahl,
-          ausleiher_name: sel.ausleiher_name,
-          ausleiher_ort: sel.ausleiher_ort,
-          zustand_ausleihe: 'ok',
-          unterschrift: '',
-          foto_ausleihe: '',
-        });
-        added++;
-      } catch {
-        errors++;
+    if (detailListe.modus === 'global') {
+      // Global: Direkt Signatur sammeln
+      setSignaturePhase('sign-global');
+      setShowSignatureModal(true);
+    } else {
+      // Individuell: Modus wählen lassen
+      setSignaturePhase('choose');
+    }
+  };
+
+  const handleSignatureChoice = (mode) => {
+    if (mode === 'none') {
+      submitItemsWithSignatures('', {});
+      setSignaturePhase(null);
+    } else if (mode === 'single') {
+      setSignaturePhase('sign-single');
+      setShowSignatureModal(true);
+    } else if (mode === 'per_item') {
+      setCurrentSignItemIdx(0);
+      setItemSignatures({});
+      setSignaturePhase('sign-per-item');
+      setShowSignatureModal(true);
+    }
+  };
+
+  const handleSignatureSaved = (dataUrl) => {
+    if (signaturePhase === 'sign-global') {
+      setShowSignatureModal(false);
+      submitItemsWithSignatures(dataUrl, {});
+
+    } else if (signaturePhase === 'sign-single') {
+      setShowSignatureModal(false);
+      const sigs = {};
+      pendingSignatureItems.forEach(sel => { sigs[sel.item.id] = dataUrl; });
+      submitItemsWithSignatures('', sigs);
+
+    } else if (signaturePhase === 'sign-per-item') {
+      const currentItem = pendingSignatureItems[currentSignItemIdx];
+      const newSigs = { ...itemSignatures, [currentItem.item.id]: dataUrl };
+      setItemSignatures(newSigs);
+
+      if (currentSignItemIdx < pendingSignatureItems.length - 1) {
+        setCurrentSignItemIdx(currentSignItemIdx + 1);
+        // Modal bleibt offen für nächstes Item
+      } else {
+        setShowSignatureModal(false);
+        submitItemsWithSignatures('', newSigs);
       }
     }
+  };
 
-    setShowItemModal(false);
+  const submitItemsWithSignatures = async (globalSig, perItemSigs) => {
+    setAddingItems(true);
+    const existingIds = new Set((detailListe.positionen || []).map(p => p.item_id));
+
+    const positionen = pendingSignatureItems
+      .filter(sel => !existingIds.has(sel.item.id))
+      .map(sel => ({
+        item_id: sel.item.id,
+        anzahl: sel.anzahl || 1,
+        ausleiher_name: sel.ausleiher_name || '',
+        ausleiher_ort: sel.ausleiher_ort || '',
+        zustand_ausleihe: 'ok',
+        unterschrift: perItemSigs[sel.item.id] || globalSig || '',
+        foto_ausleihe: '',
+      }));
+
+    try {
+      await apiClient.post(`/inventar/ausleihlisten/${listId}/positionen/batch`, {
+        positionen,
+        unterschrift_ausleihe: detailListe.modus === 'global' ? globalSig : '',
+      });
+      toast.success(`${positionen.length} Artikel hinzugefügt`);
+    } catch {
+      toast.error('Fehler beim Hinzufügen');
+    }
+
     setAddingItems(false);
-    if (added > 0) toast.success(`${added} Artikel hinzugefügt`);
-    if (errors > 0) toast.error(`${errors} Artikel konnten nicht hinzugefügt werden`);
+    setSignaturePhase(null);
+    setPendingSignatureItems([]);
+    setGlobalSignature('');
+    setItemSignatures({});
+    setCurrentSignItemIdx(0);
     fetchDetailListe();
   };
 
@@ -306,76 +415,16 @@ export default function AusleihePage() {
     fetchDetailListe();
   };
 
-  // ═══ Signatur-Flow ═══
+  // ═══ Aktivieren (ohne Signatur — Signaturen werden beim Hinzufügen gesammelt) ═══
 
-  const openSignatureFlow = () => {
-    setSignatureMode(null);
-    setSignatureStep('choose');
-    setGlobalSignature('');
-    setItemSignatures({});
-    setCurrentSignItemIdx(0);
-    setShowSignatureFlow(true);
-  };
-
-  const handleSignatureChoiceDone = () => {
-    if (signatureMode === 'none') {
-      handleAktivieren('');
-    } else {
-      setSignatureStep('sign');
-    }
-  };
-
-  const handleSaveGlobalSignature = () => {
-    if (!sigPadRef.current || sigPadRef.current.isEmpty()) {
-      toast.error('Bitte unterschreiben');
-      return;
-    }
-    const sig = sigPadRef.current.toDataURL('image/png');
-    setGlobalSignature(sig);
-  };
-
-  const handleSaveItemSignature = () => {
-    if (!sigPadRef.current || sigPadRef.current.isEmpty()) {
-      toast.error('Bitte unterschreiben');
-      return;
-    }
-    const positions = detailListe.positionen || [];
-    const pos = positions[currentSignItemIdx];
-    const sig = sigPadRef.current.toDataURL('image/png');
-    setItemSignatures(prev => ({ ...prev, [pos.item_id]: sig }));
-
-    // Nächstes Item oder fertig
-    if (currentSignItemIdx < positions.length - 1) {
-      setCurrentSignItemIdx(currentSignItemIdx + 1);
-      sigPadRef.current.clear();
-    }
-  };
-
-  const allItemsSigned = () => {
-    const positions = detailListe?.positionen || [];
-    return positions.every(p => itemSignatures[p.item_id]);
-  };
-
-  const handleAktivieren = async (signature) => {
+  const handleAktivieren = async () => {
     if (!detailListe) return;
     setActivating(true);
     try {
-      const payload = {
+      await apiClient.post(`/inventar/ausleihlisten/${listId}/aktivieren`, {
         unterschrift_ausleihe: '',
         positionen_unterschriften: [],
-      };
-
-      if (signatureMode === 'single') {
-        payload.unterschrift_ausleihe = signature || globalSignature;
-      } else if (signatureMode === 'per_item') {
-        payload.positionen_unterschriften = Object.entries(itemSignatures).map(([itemId, sig]) => ({
-          item_id: parseInt(itemId),
-          unterschrift: sig,
-        }));
-      }
-
-      await apiClient.post(`/inventar/ausleihlisten/${listId}/aktivieren`, payload);
-      setShowSignatureFlow(false);
+      });
       toast.success('Ausleihe aktiviert');
       fetchDetailListe();
     } catch (err) {
@@ -389,13 +438,9 @@ export default function AusleihePage() {
 
   const handleRueckgabe = async () => {
     if (!rueckgabeAusleihe) return;
-    let sigData = '';
-    if (rueckgabeSigRef.current && !rueckgabeSigRef.current.isEmpty()) {
-      sigData = rueckgabeSigRef.current.toDataURL('image/png');
-    }
     try {
       await apiClient.post(`/inventar/ausleihen/${rueckgabeAusleihe.id}/rueckgabe`, {
-        unterschrift_rueckgabe: sigData,
+        unterschrift_rueckgabe: rueckgabeSignature,
         notizen_rueckgabe: '',
         rueckgabe_zustand: 'ok',
         positionen: rueckgabeAusleihe.positionen?.map(p => ({
@@ -498,6 +543,24 @@ export default function AusleihePage() {
   });
 
   const existingPositionIds = new Set((detailListe?.positionen || []).map(p => p.item_id));
+
+  // Gruppierung für Items in individuellen Ausleihen
+  const groupPositions = useCallback((positionen) => {
+    if (!positionen || positionen.length === 0) return [];
+    const groups = {};
+    for (const pos of positionen) {
+      const key = groupBy === 'borrower'
+        ? (pos.ausleiher_name || 'Kein Ausleiher')
+        : (pos.ausleiher_ort || 'Kein Ort');
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(pos);
+    }
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [groupBy]);
+
+  const toggleGroup = (groupKey) => {
+    setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
+  };
 
   // Gruppierung für Übersicht
   const sections = [
@@ -637,60 +700,70 @@ export default function AusleihePage() {
 
           {/* Items-Liste */}
           <div>
-            <h3 className="font-medium text-white mb-2">Enthaltene Artikel ({detailListe.positionen?.length || 0})</h3>
-            <ul className="space-y-2">
-              {(detailListe.positionen || []).map(pos => (
-                <li key={pos.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium text-white">{pos.item_name}</span>
-                    {pos.anzahl > 1 && <span className="text-gray-400 ml-2">×{pos.anzahl}</span>}
-                    {detailListe.modus === 'individuell' && pos.ausleiher_name && (
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        <User className="w-3 h-3 inline mr-1" />{pos.ausleiher_name}
-                        {pos.ausleiher_ort && <><MapPin className="w-3 h-3 inline ml-2 mr-1" />{pos.ausleiher_ort}</>}
-                      </div>
-                    )}
-                    {!isOffen && (
-                      <div className="flex items-center gap-2 mt-1">
-                        {pos.ist_zurueckgegeben ? (
-                          <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                            <Check className="w-3 h-3" /> Zurückgegeben
-                            {pos.zustand_rueckgabe && pos.zustand_rueckgabe !== 'ok' && (
-                              <span className="text-yellow-400 ml-1">({pos.zustand_rueckgabe})</span>
-                            )}
-                          </span>
-                        ) : isAktiv ? (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Ausgeliehen</span>
-                        ) : null}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 ml-2">
-                    {isOffen && (
-                      <button onClick={() => handleRemovePosition(pos.id)}
-                        className="p-1.5 text-red-400 hover:bg-red-900/20 rounded">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                    {isAktiv && !pos.ist_zurueckgegeben && (
-                      <button onClick={() => { setEinzelrueckgabePos(pos); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded">
-                        <RefreshCw className="w-3 h-3" /> Zurückgeben
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-              {(!detailListe.positionen || detailListe.positionen.length === 0) && (
-                <li className="text-gray-400 py-8 text-center">Noch keine Artikel in der Liste</li>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium text-white">Enthaltene Artikel ({detailListe.positionen?.length || 0})</h3>
+              {detailListe.modus === 'individuell' && (detailListe.positionen?.length || 0) > 0 && (
+                <select value={groupBy} onChange={e => { setGroupBy(e.target.value); setExpandedGroups({}); }}
+                  className="text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300">
+                  <option value="none">Keine Gruppierung</option>
+                  <option value="borrower">Nach Person</option>
+                  <option value="location">Nach Ort</option>
+                </select>
               )}
-            </ul>
+            </div>
+
+            {/* Gruppierte Ansicht */}
+            {detailListe.modus === 'individuell' && groupBy !== 'none' && (detailListe.positionen?.length || 0) > 0 ? (
+              <div className="space-y-3">
+                {groupPositions(detailListe.positionen).map(([groupKey, groupItems]) => {
+                  const isExpanded = expandedGroups[groupKey] !== false; // default open
+                  const returned = groupItems.filter(p => p.ist_zurueckgegeben).length;
+                  return (
+                    <div key={groupKey} className="border border-gray-700 rounded-lg overflow-hidden">
+                      <button onClick={() => toggleGroup(groupKey)}
+                        className="w-full flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 text-left">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                          {groupBy === 'borrower' ? <User className="w-4 h-4 text-gray-400" /> : <MapPin className="w-4 h-4 text-gray-400" />}
+                          <span className="font-medium text-white">{groupKey}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <span>{groupItems.length} Artikel</span>
+                          {!isOffen && returned > 0 && (
+                            <span className="text-green-400">{returned}/{groupItems.length} zurück</span>
+                          )}
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <ul className="divide-y divide-gray-800">
+                          {groupItems.map(pos => (
+                            <PositionItem key={pos.id} pos={pos} isOffen={isOffen} isAktiv={isAktiv} showBorrower={groupBy !== 'borrower'}
+                              onRemove={handleRemovePosition} onReturn={(p) => { setEinzelrueckgabePos(p); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }} />
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Flache Ansicht */
+              <ul className="space-y-2">
+                {(detailListe.positionen || []).map(pos => (
+                  <PositionItem key={pos.id} pos={pos} isOffen={isOffen} isAktiv={isAktiv} showBorrower={detailListe.modus === 'individuell'}
+                    onRemove={handleRemovePosition} onReturn={(p) => { setEinzelrueckgabePos(p); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }} />
+                ))}
+                {(!detailListe.positionen || detailListe.positionen.length === 0) && (
+                  <li className="text-gray-400 py-8 text-center">Noch keine Artikel in der Liste</li>
+                )}
+              </ul>
+            )}
           </div>
 
           {/* Aktionen */}
           {isOffen && (
             <div className="pt-4 border-t border-gray-700">
-              <button onClick={openSignatureFlow}
+              <button onClick={handleAktivieren}
                 disabled={activating || (detailListe.positionen?.length || 0) === 0}
                 className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg">
                 {activating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -828,110 +901,54 @@ export default function AusleihePage() {
           </div>
         )}
 
-        {/* ─── Signatur-Flow Modal ──────────────────────────── */}
-        {showSignatureFlow && (
+        {/* ─── Signatur-Auswahl (individueller Modus) ──────── */}
+        {signaturePhase === 'choose' && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
-              {signatureStep === 'choose' && (
-                <>
-                  <h2 className="text-lg font-semibold text-white mb-4">Unterschrift wählen</h2>
-                  <div className="space-y-3">
-                    {[
-                      { value: 'none', label: 'Ohne Unterschrift', desc: 'Direkt aktivieren' },
-                      { value: 'single', label: 'Eine Unterschrift', desc: 'Eine Unterschrift für die gesamte Ausleihe' },
-                      { value: 'per_item', label: 'Pro Artikel unterschreiben', desc: 'Jeder Artikel wird einzeln unterschrieben' },
-                    ].map(opt => (
-                      <button key={opt.value} onClick={() => setSignatureMode(opt.value)}
-                        className={`w-full text-left p-4 rounded-lg border transition-colors ${
-                          signatureMode === opt.value ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'
-                        }`}>
-                        <div className="font-medium text-white">{opt.label}</div>
-                        <div className="text-sm text-gray-400">{opt.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 mt-6">
-                    <button onClick={() => setShowSignatureFlow(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                    <button onClick={handleSignatureChoiceDone} disabled={!signatureMode || activating}
-                      className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg">
-                      {activating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : signatureMode === 'none' ? 'Aktivieren' : 'Weiter'}
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {signatureStep === 'sign' && signatureMode === 'single' && (
-                <>
-                  <h2 className="text-lg font-semibold text-white mb-4">Unterschrift</h2>
-                  <div className="rounded-xl mb-4 overflow-hidden border-2 border-gray-600">
-                    <SignatureCanvas ref={sigPadRef}
-                      canvasProps={{ className: 'w-full', style: { width: '100%', height: '320px', background: '#ffffff' } }}
-                      penColor="black" backgroundColor="#ffffff" />
-                  </div>
-                  {globalSignature && (
-                    <div className="mb-4">
-                      <p className="text-xs text-gray-400 mb-1">Vorschau:</p>
-                      <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 inline-block">
-                        <img src={globalSignature} alt="Unterschrift" className="h-16 invert" />
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <button onClick={() => sigPadRef.current?.clear()} className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700">Löschen</button>
-                    <button onClick={() => { handleSaveGlobalSignature(); }}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Übernehmen</button>
-                    <button onClick={() => handleAktivieren(globalSignature)} disabled={!globalSignature || activating}
-                      className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg">
-                      {activating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Aktivieren'}
-                    </button>
-                  </div>
-                </>
-              )}
-
-              {signatureStep === 'sign' && signatureMode === 'per_item' && (
-                <>
-                  {(() => {
-                    const positions = detailListe?.positionen || [];
-                    const pos = positions[currentSignItemIdx];
-                    if (!pos) return null;
-                    return (
-                      <>
-                        <h2 className="text-lg font-semibold text-white mb-1">
-                          Unterschrift für: <span className="text-blue-400">{pos.item_name}</span>
-                        </h2>
-                        <p className="text-sm text-gray-400 mb-4">Artikel {currentSignItemIdx + 1} von {positions.length}</p>
-                        <div className="rounded-xl mb-4 overflow-hidden border-2 border-gray-600">
-                          <SignatureCanvas ref={sigPadRef}
-                            canvasProps={{ className: 'w-full', style: { width: '100%', height: '320px', background: '#ffffff' } }}
-                            penColor="black" backgroundColor="#ffffff" />
-                        </div>
-                        {itemSignatures[pos.item_id] && (
-                          <div className="mb-4">
-                            <p className="text-xs text-gray-400 mb-1">Vorschau:</p>
-                            <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 inline-block">
-                              <img src={itemSignatures[pos.item_id]} alt="Unterschrift" className="h-14 invert" />
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex gap-2">
-                          <button onClick={() => sigPadRef.current?.clear()} className="px-3 py-2 bg-gray-800 text-white rounded-lg text-sm">Löschen</button>
-                          <button onClick={handleSaveItemSignature}
-                            className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm">
-                            {currentSignItemIdx < positions.length - 1 ? 'Nächster' : 'Übernehmen'}
-                          </button>
-                          <button onClick={() => handleAktivieren('')} disabled={!allItemsSigned() || activating}
-                            className="flex-1 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg text-sm">
-                            {activating ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : `Aktivieren (${Object.keys(itemSignatures).length}/${positions.length})`}
-                          </button>
-                        </div>
-                      </>
-                    );
-                  })()}
-                </>
-              )}
+              <h2 className="text-lg font-semibold text-white mb-4">Unterschrift wählen</h2>
+              <div className="space-y-3">
+                {[
+                  { value: 'none', label: 'Ohne Unterschrift', desc: 'Artikel direkt hinzufügen' },
+                  { value: 'single', label: 'Eine Unterschrift', desc: 'Eine Unterschrift für alle Artikel' },
+                  { value: 'per_item', label: 'Pro Artikel unterschreiben', desc: 'Jeder Artikel wird einzeln unterschrieben' },
+                ].map(opt => (
+                  <button key={opt.value} onClick={() => handleSignatureChoice(opt.value)}
+                    className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                    <div className="font-medium text-white">{opt.label}</div>
+                    <div className="text-sm text-gray-400">{opt.desc}</div>
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => { setSignaturePhase(null); setPendingSignatureItems([]); }}
+                className="mt-4 w-full py-2 text-gray-400 hover:text-white">Abbrechen</button>
             </div>
           </div>
         )}
+
+        {/* ─── Signatur-Modal ────────────────────────────────── */}
+        <SignatureModal
+          isOpen={showSignatureModal}
+          onClose={() => {
+            setShowSignatureModal(false);
+            setSignaturePhase(null);
+            setPendingSignatureItems([]);
+          }}
+          onSave={handleSignatureSaved}
+          title={
+            signaturePhase === 'sign-global' ? 'Unterschrift für Ausleihe' :
+            signaturePhase === 'sign-single' ? 'Unterschrift für alle Artikel' :
+            signaturePhase === 'sign-per-item' ? `Unterschrift: ${pendingSignatureItems[currentSignItemIdx]?.item?.name || ''}` :
+            'Unterschrift'
+          }
+          subtitle={
+            signaturePhase === 'sign-global' ? `${pendingSignatureItems.length} Artikel an ${detailListe?.ausleiher_name || ''}` :
+            signaturePhase === 'sign-per-item' ? `Artikel ${currentSignItemIdx + 1} von ${pendingSignatureItems.length}` :
+            null
+          }
+          progress={
+            signaturePhase === 'sign-per-item' ? `${currentSignItemIdx + 1} / ${pendingSignatureItems.length}` : null
+          }
+        />
 
         {/* ─── Rückgabe Modal ────────────────────────────────── */}
         {showRueckgabeModal && rueckgabeAusleihe && (
@@ -939,26 +956,40 @@ export default function AusleihePage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Rückgabe bestätigen</h2>
-                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <p className="text-gray-400 mb-4">
                 Alle Items von <strong className="text-white">{rueckgabeAusleihe.ausleiher_name || rueckgabeAusleihe.titel}</strong> werden zurückgegeben.
               </p>
-              <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-2">Unterschrift (optional)</label>
-                <div className="rounded-xl overflow-hidden border-2 border-gray-600">
-                  <SignatureCanvas ref={rueckgabeSigRef}
-                    canvasProps={{ className: 'w-full', style: { width: '100%', height: '200px', background: '#ffffff' } }}
-                    penColor="black" backgroundColor="#ffffff" />
+              {rueckgabeSignature ? (
+                <div className="mb-4">
+                  <label className="block text-sm text-gray-400 mb-2">Unterschrift</label>
+                  <div className="bg-white rounded-lg p-3 border border-gray-600 inline-block">
+                    <img src={rueckgabeSignature} alt="Unterschrift" className="h-16" />
+                  </div>
+                  <button onClick={() => setRueckgabeSignature('')} className="block text-xs text-red-400 mt-1 hover:text-red-300">Entfernen</button>
                 </div>
-              </div>
+              ) : (
+                <button onClick={() => setShowRueckgabeSigModal(true)}
+                  className="flex items-center gap-2 px-3 py-2 mb-4 text-sm border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                  <Pen className="w-4 h-4" /> Unterschrift hinzufügen (optional)
+                </button>
+              )}
               <div className="flex gap-2">
-                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); }} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
+                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
                 <button onClick={handleRueckgabe} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Rückgabe bestätigen</button>
               </div>
             </div>
           </div>
         )}
+
+        {/* Rückgabe Signatur Modal */}
+        <SignatureModal
+          isOpen={showRueckgabeSigModal}
+          onClose={() => setShowRueckgabeSigModal(false)}
+          onSave={(sig) => { setRueckgabeSignature(sig); setShowRueckgabeSigModal(false); }}
+          title="Rückgabe-Unterschrift"
+        />
 
         {/* ─── Einzelrückgabe Modal ──────────────────────────── */}
         {showEinzelrueckgabe && einzelrueckgabePos && (
@@ -1230,26 +1261,40 @@ export default function AusleihePage() {
           <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Rückgabe bestätigen</h2>
-              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <p className="text-gray-400 mb-4">
               Ausleihe von <strong className="text-white">{rueckgabeAusleihe.ausleiher_name || rueckgabeAusleihe.titel}</strong> wird zurückgegeben.
             </p>
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">Unterschrift (optional)</label>
-              <div className="rounded-lg overflow-hidden">
-                <SignatureCanvas ref={rueckgabeSigRef}
-                  canvasProps={{ className: 'w-full h-32', style: { width: '100%', height: '128px', background: '#1f2937' } }}
-                  penColor="white" backgroundColor="#1f2937" />
+            {rueckgabeSignature ? (
+              <div className="mb-4">
+                <label className="block text-sm text-gray-400 mb-2">Unterschrift</label>
+                <div className="bg-white rounded-lg p-3 border border-gray-600 inline-block">
+                  <img src={rueckgabeSignature} alt="Unterschrift" className="h-16" />
+                </div>
+                <button onClick={() => setRueckgabeSignature('')} className="block text-xs text-red-400 mt-1 hover:text-red-300">Entfernen</button>
               </div>
-            </div>
+            ) : (
+              <button onClick={() => setShowRueckgabeSigModal(true)}
+                className="flex items-center gap-2 px-3 py-2 mb-4 text-sm border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                <Pen className="w-4 h-4" /> Unterschrift hinzufügen (optional)
+              </button>
+            )}
             <div className="flex gap-2">
-              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); }} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
+              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
               <button onClick={handleRueckgabe} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Rückgabe bestätigen</button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Rückgabe Signatur Modal (Übersicht) */}
+      <SignatureModal
+        isOpen={showRueckgabeSigModal}
+        onClose={() => setShowRueckgabeSigModal(false)}
+        onSave={(sig) => { setRueckgabeSignature(sig); setShowRueckgabeSigModal(false); }}
+        title="Rückgabe-Unterschrift"
+      />
     </div>
   );
 }

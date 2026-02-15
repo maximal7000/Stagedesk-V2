@@ -28,6 +28,7 @@ import AdminPage from './pages/AdminPage';
 import DesignTestPage from './pages/DesignTestPage';
 import MonitorPage from './pages/MonitorPage';
 import MonitorAdminPage from './pages/MonitorAdminPage';
+import AnwesenheitPage from './pages/AnwesenheitPage';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -74,6 +75,8 @@ function AppContent() {
                   <Route path="/ausleihen/dashboard" element={<AusleiheDashboardPage />} />
                   <Route path="/ausleihen/kalender" element={<AusleiheKalenderPage />} />
                   <Route path="/ausleihen/:id" element={<AusleihePage />} />
+                  <Route path="/anwesenheit" element={<AnwesenheitPage />} />
+                  <Route path="/anwesenheit/:id" element={<AnwesenheitPage />} />
                   <Route path="/veranstaltung" element={<VeranstaltungenPage />} />
                   <Route path="/veranstaltung/neu" element={<VeranstaltungDetailPage />} />
                   <Route path="/veranstaltung/:id" element={<VeranstaltungDetailPage />} />

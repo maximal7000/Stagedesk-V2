@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'inventar',
     'veranstaltung',
     'monitor',
+    'anwesenheit',
 ]
 
 MIDDLEWARE = [

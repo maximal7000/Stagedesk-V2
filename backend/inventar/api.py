@@ -33,7 +33,7 @@ from .schemas import (
     ItemBildSchema,
     ItemSetSchema, ItemSetCreateSchema, ItemSetUpdateSchema,
     AusleiheListeSchema, AusleiheListeListSchema, AusleiheListeCreateSchema,
-    AusleihePositionCreateSchema, AktivierenSchema,
+    AusleihePositionCreateSchema, BatchPositionenSchema, AktivierenSchema,
     RueckgabeSchema, SchnellRueckgabeSchema, AusleiheFilterSchema,
     ReservierungSchema, ReservierungCreateSchema,
     GespeicherterFilterSchema, GespeicherterFilterCreateSchema,
@@ -650,6 +650,47 @@ def add_position_ausleihliste(request, id: int, payload: AusleihePositionCreateS
         zustand_ausleihe=payload.zustand_ausleihe,
         foto_ausleihe=payload.foto_ausleihe,
     )
+    return get_ausleihliste(request, liste.id)
+
+
+@inventar_router.post("/ausleihlisten/{id}/positionen/batch", response=AusleiheListeSchema, auth=keycloak_auth)
+def batch_add_positionen(request, id: int, payload: BatchPositionenSchema):
+    """Mehrere Items gleichzeitig mit Signaturen zu einer offenen Ausleihliste hinzufügen."""
+    require_permission(request, 'inventar.ausleihe')
+    liste = get_object_or_404(Ausleihliste, id=id)
+    if liste.status != 'offen':
+        return {"error": "Nur bei offenen Listen können Items hinzugefügt werden"}, 400
+
+    # Globale Signatur setzen
+    if payload.unterschrift_ausleihe:
+        liste.unterschrift_ausleihe = payload.unterschrift_ausleihe
+        liste.save(update_fields=['unterschrift_ausleihe'])
+
+    added = 0
+    for pos in payload.positionen:
+        item = InventarItem.objects.filter(id=pos.item_id, ist_aktiv=True).first()
+        if not item or not item.ist_verfuegbar:
+            continue
+        if item.menge_gesamt > 1:
+            if pos.anzahl > item.menge_verfuegbar:
+                continue
+        elif liste.positionen.filter(item_id=item.id).exists():
+            continue
+
+        AusleihePosition.objects.create(
+            ausleihliste=liste,
+            item=item,
+            anzahl=pos.anzahl,
+            ausleiher_name=pos.ausleiher_name,
+            ausleiher_ort=pos.ausleiher_ort,
+            unterschrift=pos.unterschrift,
+            zustand_ausleihe=pos.zustand_ausleihe,
+            foto_ausleihe=pos.foto_ausleihe,
+        )
+        added += 1
+
+    log_action(request, 'aktualisiert', 'ausleihliste', liste.id,
+               f'{added} Positionen per Batch hinzugefügt')
     return get_ausleihliste(request, liste.id)
 
 

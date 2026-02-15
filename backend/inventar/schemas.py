@@ -417,6 +417,12 @@ class AusleihePositionCreateSchema(Schema):
     foto_ausleihe: str = ''
 
 
+class BatchPositionenSchema(Schema):
+    """Batch-Hinzufügen von Positionen mit optionaler globaler Signatur."""
+    positionen: List[AusleihePositionCreateSchema]
+    unterschrift_ausleihe: str = ''
+
+
 class AusleiheListeCreateSchema(Schema):
     titel: str = ''
     ausleiher_id: Optional[int] = None
