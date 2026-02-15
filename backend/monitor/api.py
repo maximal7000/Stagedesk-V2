@@ -22,6 +22,7 @@ from .schemas import (
     AnkuendigungSchema, AnkuendigungCreateSchema,
     MonitorDateiSchema, OnAirSchema, NotfallSchema,
 )
+from . import oepnv
 
 monitor_router = Router(tags=["Monitor"])
 
@@ -166,6 +167,46 @@ def _fetch_raumplan(config):
         return config.raumplan_cache or None
 
 
+def _fetch_oepnv(config):
+    """ÖPNV-Abfahrten holen und cachen (2 Min, bei Fehler 1 Min Pause)"""
+    # Immer laden wenn Layout 'abfahrten', sonst nur wenn Widget aktiv
+    if config.layout_modus != 'abfahrten' and not config.zeige_oepnv:
+        return None
+    if not config.oepnv_stationen:
+        return None
+
+    # Cache noch gültig? (1 Minute, bei Fehler auch 1 Min Pause)
+    if config.oepnv_cache_zeit:
+        age = (timezone.now() - config.oepnv_cache_zeit).total_seconds()
+        if config.oepnv_cache and age < 60:
+            return config.oepnv_cache
+        # Auch bei leerem Cache: min. 60s warten (verhindert API-Spam bei Fehlern)
+        if age < 60:
+            return config.oepnv_cache
+
+    try:
+        result = oepnv.fetch_departures(
+            stationen=config.oepnv_stationen,
+            dauer=config.oepnv_dauer,
+            max_pro_station=config.oepnv_max_abfahrten,
+            zeige_bus=config.oepnv_zeige_bus,
+            zeige_bahn=config.oepnv_zeige_bahn,
+            zeige_fernverkehr=config.oepnv_zeige_fernverkehr,
+            use_db=config.oepnv_api_db,
+            use_nahsh=config.oepnv_api_nahsh,
+        )
+        config.oepnv_cache = result
+        config.oepnv_cache_zeit = timezone.now()
+        config.save(update_fields=['oepnv_cache', 'oepnv_cache_zeit', 'aktualisiert_am'])
+        return result
+    except Exception as e:
+        print(f"ÖPNV-Fehler: {e}")
+        # Auch bei Fehler Timestamp setzen → nächster Retry frühestens in 60s
+        config.oepnv_cache_zeit = timezone.now()
+        config.save(update_fields=['oepnv_cache_zeit', 'aktualisiert_am'])
+        return config.oepnv_cache or None
+
+
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
 @monitor_router.get("/display")
@@ -224,6 +265,9 @@ def get_display_data(request, profil: str = None):
     # Raumplan
     raumplan = _fetch_raumplan(config)
 
+    # ÖPNV Abfahrten
+    abfahrten = _fetch_oepnv(config)
+
     # Config (sensitive Felder entfernen)
     config_data = MonitorConfigSchema.from_orm(config).dict()
     config_data['api_token'] = ''
@@ -234,6 +278,20 @@ def get_display_data(request, profil: str = None):
     config_data['pdf_url_resolved'] = config.get_pdf_url()
     config_data['hintergrundbild_url_resolved'] = config.get_hintergrundbild_url()
 
+    # Wenn on_air_vollbild aktiv → ON AIR Display Profil-Config mitliefern
+    on_air_profil = None
+    if config.on_air_vollbild:
+        onair_config = MonitorConfig.objects.filter(layout_modus='onair').exclude(pk=config.pk).first()
+        if onair_config:
+            on_air_profil = {
+                'on_air_farbe': onair_config.on_air_farbe,
+                'on_air_text': onair_config.on_air_text,
+                'on_air_groesse': onair_config.on_air_groesse,
+                'on_air_position': onair_config.on_air_position,
+                'on_air_blinken': onair_config.on_air_blinken,
+                'zeige_uhr': onair_config.zeige_uhr,
+            }
+
     return {
         'config': config_data,
         'ankuendigungen': ankuendigungen,
@@ -241,6 +299,8 @@ def get_display_data(request, profil: str = None):
         'dateien': dateien,
         'wetter': wetter,
         'raumplan': raumplan,
+        'abfahrten': abfahrten,
+        'on_air_profil': on_air_profil,
     }
 
 
@@ -458,3 +518,15 @@ def delete_ankuendigung(request, id: int):
     a = get_object_or_404(Ankuendigung, id=id)
     a.delete()
     return {"success": True}
+
+
+# ═══ Admin: ÖPNV Stationssuche ═══════════════════════════════════
+
+@monitor_router.get("/oepnv/suche", auth=keycloak_auth)
+def search_oepnv_stations(request, q: str = "", results: int = 10,
+                           use_db: bool = True, use_nahsh: bool = True):
+    """Stationen für ÖPNV-Abfahrtsmonitor suchen"""
+    if len(q) < 2:
+        return []
+    return oepnv.search_stations(q, results=min(results, 20),
+                                  use_db=use_db, use_nahsh=use_nahsh)

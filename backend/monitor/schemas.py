@@ -90,6 +90,15 @@ class MonitorConfigSchema(Schema):
     zeige_seitenrotation: bool
     seitenrotation_intervall: int
     seitenrotation_seiten: list = []
+    zeige_oepnv: bool
+    oepnv_stationen: list = []
+    oepnv_dauer: int
+    oepnv_max_abfahrten: int
+    oepnv_zeige_bus: bool
+    oepnv_zeige_bahn: bool
+    oepnv_zeige_fernverkehr: bool
+    oepnv_api_db: bool
+    oepnv_api_nahsh: bool
     ist_on_air: bool
     on_air_text: str
     on_air_seit: Optional[datetime] = None
@@ -97,6 +106,7 @@ class MonitorConfigSchema(Schema):
     on_air_position: str
     on_air_blinken: bool
     on_air_farbe: str
+    on_air_vollbild: bool
     api_token: str
     refresh_intervall: int
 
@@ -158,11 +168,21 @@ class MonitorConfigUpdateSchema(Schema):
     zeige_seitenrotation: Optional[bool] = None
     seitenrotation_intervall: Optional[int] = None
     seitenrotation_seiten: Optional[list] = None
+    zeige_oepnv: Optional[bool] = None
+    oepnv_stationen: Optional[list] = None
+    oepnv_dauer: Optional[int] = None
+    oepnv_max_abfahrten: Optional[int] = None
+    oepnv_zeige_bus: Optional[bool] = None
+    oepnv_zeige_bahn: Optional[bool] = None
+    oepnv_zeige_fernverkehr: Optional[bool] = None
+    oepnv_api_db: Optional[bool] = None
+    oepnv_api_nahsh: Optional[bool] = None
     on_air_text: Optional[str] = None
     on_air_groesse: Optional[str] = None
     on_air_position: Optional[str] = None
     on_air_blinken: Optional[bool] = None
     on_air_farbe: Optional[str] = None
+    on_air_vollbild: Optional[bool] = None
     refresh_intervall: Optional[int] = None
 
 

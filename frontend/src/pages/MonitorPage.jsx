@@ -9,7 +9,7 @@ import {
   Radio, Calendar, Clock, MapPin, AlertTriangle, Info, Megaphone,
   Sun, Moon, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog,
   Thermometer, Droplets, Timer, FileText, QrCode, AlignLeft,
-  LayoutGrid,
+  LayoutGrid, Train, Bus, TramFront, Ship,
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -341,6 +341,43 @@ export default function MonitorPage() {
   );
 
   // ═══════════════════════════════════════════════════════════════════
+  // ═══ ON AIR VOLLBILD OVERRIDE ═══════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════
+  // Wenn on_air_vollbild aktiv und ON AIR eingeschaltet → ON AIR Display Layout zeigen
+  // Greift für ALLE Layouts (standard, stundenplan, abfahrten) — überspringt layout_modus='onair' (hat es schon)
+  // Übernimmt Config vom ON AIR Display Profil (falls vorhanden)
+  if (config?.on_air_vollbild && config?.ist_on_air && config?.layout_modus !== 'onair') {
+    const oaCfg = data?.on_air_profil || {};
+    const onAirFarbe = oaCfg.on_air_farbe || config.on_air_farbe || '#da1f3d';
+    const onAirText = oaCfg.on_air_text || config.on_air_text || 'ON AIR';
+    const zeigeUhr = oaCfg.zeige_uhr ?? config.zeige_uhr;
+
+    return (
+      <div className="fixed inset-0 overflow-hidden select-none flex items-center justify-center"
+        style={{ background: `radial-gradient(ellipse at center, ${onAirFarbe}08 0%, #000 70%)` }}>
+        {overlays}
+        <div className="text-center relative">
+          <h1 className="text-[12rem] font-black uppercase tracking-[0.5em] leading-none select-none animate-on-air-pulse"
+            style={{
+              color: onAirFarbe,
+              textShadow: `0 0 60px ${onAirFarbe}50, 0 0 120px ${onAirFarbe}25, 0 4px 0 ${onAirFarbe}30`,
+              textIndent: '0.5em',
+              '--on-air-color': onAirFarbe,
+            }}>
+            {onAirText}
+          </h1>
+          {zeigeUhr && (
+            <div className="font-mono text-3xl mt-14 tabular-nums tracking-[0.3em]"
+              style={{ color: `${onAirFarbe}40`, textIndent: '0.3em' }}>
+              {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
   // ═══ STUNDENPLAN-VOLLBILD LAYOUT ═══════════════════════════════════
   // ═══════════════════════════════════════════════════════════════════
   if (config?.layout_modus === 'stundenplan') {
@@ -349,47 +386,20 @@ export default function MonitorPage() {
     return (
       <div className="fixed inset-0 overflow-hidden select-none flex flex-col" style={{ background: bgColor }}>
         {overlays}
-
-        {/* ON AIR */}
         <OnAirIndicator config={config} accent={accent} />
 
-        {/* Mini-Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 shrink-0"
-          style={{ background: `${bgColor}ee` }}>
-          <div className="flex items-center gap-3">
-            {config?.zeige_logo && logoUrl && (
-              <img src={logoUrl} alt="" className="h-8 object-contain" />
-            )}
-            <span className="text-white/60 text-sm font-medium">{config?.titel || 'Stagedesk'}</span>
+        {/* Uhr — floating oben rechts */}
+        {config?.zeige_uhr && (
+          <div className="absolute top-4 right-3 z-30 font-mono text-2xl font-bold tabular-nums tracking-wider"
+            style={{ color: '#da1f3d' }}>
+            {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
           </div>
-
-          <div className="flex items-center gap-6">
-            {/* Wetter (kompakt) */}
-            {config?.zeige_wetter && wetter && (
-              <div className="flex items-center gap-2 text-white/50 text-sm">
-                {(() => { const WI = wetter?.icon ? (weatherIcons[wetter.icon] || Cloud) : Cloud; return <WI className="w-5 h-5" />; })()}
-                <span className="font-medium text-white/70">{wetter.temperatur}°C</span>
-              </div>
-            )}
-
-            {/* Uhr */}
-            {config?.zeige_uhr && (
-              <div className="text-white font-mono text-2xl font-bold tracking-wider">
-                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </div>
-            )}
-
-            {/* Datum */}
-            <div className="text-white/30 text-xs">
-              {time.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Hauptbereich: WebUntis + optionaler Raumplan */}
         <div className="flex-1 flex overflow-hidden min-h-0">
 
-          {/* WebUntis Iframe — so groß wie möglich */}
+          {/* WebUntis Iframe — Vollbild */}
           {config?.zeige_webuntis && config?.webuntis_url ? (
             <div className="flex-1 min-w-0">
               <iframe
@@ -416,7 +426,7 @@ export default function MonitorPage() {
             </div>
           )}
 
-          {/* Raumplan Sidebar (vertikal/hochkant) */}
+          {/* Raumplan Sidebar */}
           {hasRaumplan && (
             <div className="w-80 border-l border-white/10 bg-white/[0.02] flex flex-col shrink-0 overflow-hidden">
               <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
@@ -457,12 +467,210 @@ export default function MonitorPage() {
             </div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ═══ ON AIR DISPLAY LAYOUT ════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════
+  if (config?.layout_modus === 'onair') {
+    const onAirFarbe = config.on_air_farbe || '#da1f3d';
+    const isLive = config.ist_on_air;
+    const onAirText = config.on_air_text || 'ON AIR';
+
+    return (
+      <div className="fixed inset-0 overflow-hidden select-none flex items-center justify-center"
+        style={{ background: `radial-gradient(ellipse at center, ${isLive ? onAirFarbe + '08' : '#0a0a0a'} 0%, #000 70%)` }}>
+        {overlays}
+
+        {isLive ? (
+          <div className="text-center relative">
+            {/* Main text — pulsating glow, textIndent balances trailing letter-spacing */}
+            <h1 className="text-[12rem] font-black uppercase tracking-[0.5em] leading-none select-none animate-on-air-pulse"
+              style={{
+                color: onAirFarbe,
+                textShadow: `0 0 60px ${onAirFarbe}50, 0 0 120px ${onAirFarbe}25, 0 4px 0 ${onAirFarbe}30`,
+                textIndent: '0.5em',
+                '--on-air-color': onAirFarbe,
+              }}>
+              {onAirText}
+            </h1>
+
+            {/* Clock */}
+            {config?.zeige_uhr && (
+              <div className="font-mono text-3xl mt-14 tabular-nums tracking-[0.3em]"
+                style={{ color: `${onAirFarbe}40`, textIndent: '0.3em' }}>
+                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </div>
+            )}
+
+            {/* Logo */}
+            {config?.zeige_logo && logoUrl && (
+              <img src={logoUrl} alt="" className="h-10 mx-auto mt-8 opacity-10" />
+            )}
+          </div>
+        ) : (
+          <div className="text-center">
+            {config?.zeige_logo && logoUrl && (
+              <img src={logoUrl} alt="" className="h-20 mx-auto mb-10 opacity-10" />
+            )}
+            <div className="text-white/[0.06] text-5xl font-black tracking-[0.5em] uppercase">
+              {onAirText}
+            </div>
+            <div className="w-20 h-px mx-auto mt-6 bg-white/[0.04]" />
+            <div className="text-white/[0.04] text-xs mt-4 uppercase tracking-[0.3em]">Standby</div>
+            {config?.zeige_uhr && (
+              <div className="text-white/[0.08] font-mono text-xl mt-10 tabular-nums tracking-[0.2em]">
+                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ═══ ABFAHRTSMONITOR LAYOUT ═══════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════
+  if (config?.layout_modus === 'abfahrten') {
+    const abfahrten = data?.abfahrten || [];
+    const useColumns = abfahrten.length >= 2;
+
+    const typIcons = {
+      ice: Train, ic: Train, re: Train, rb: Train,
+      sbahn: TramFront, ubahn: TramFront, tram: TramFront,
+      bus: Bus, faehre: Ship, taxi: Bus, zug: Train,
+    };
+    const typColors = {
+      ice: '#ff0404', ic: '#808080', re: '#1a73e8', rb: '#1a73e8',
+      sbahn: '#008d4f', ubahn: '#1455a3', tram: '#c2185b',
+      bus: '#9c27b0', faehre: '#00838f', taxi: '#ffc107', zug: '#607d8b',
+    };
+
+    const StationBlock = ({ station }) => (
+      <div className="flex flex-col min-w-0">
+        {/* Stationsname */}
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+          <h2 className="text-white/60 text-[11px] font-bold uppercase tracking-[0.2em] truncate">{station.station_name}</h2>
+          {station.fehler && <span className="text-red-400/50 text-[9px] shrink-0">Fehler</span>}
+        </div>
+
+        {station.abfahrten?.length > 0 ? (
+          <div className="rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] flex-1">
+            {station.abfahrten.map((dep, i) => {
+              const TypIcon = typIcons[dep.typ_icon] || Train;
+              const typColor = typColors[dep.typ_icon] || '#607d8b';
+              const hasDelay = dep.verspaetung > 0;
+
+              return (
+                <div key={i} className={`flex items-center px-3 py-[6px] ${dep.ausfall ? 'opacity-30' : ''} ${i > 0 ? 'border-t border-white/[0.04]' : ''} ${i % 2 === 1 ? 'bg-white/[0.015]' : ''}`}>
+
+                  {/* Abfahrtszeit */}
+                  <div className="w-[88px] shrink-0 flex items-baseline gap-1.5">
+                    <span className={`font-mono text-[15px] font-bold tabular-nums ${dep.ausfall ? 'line-through text-white/30' : 'text-white'}`}>
+                      {dep.abfahrt || '—'}
+                    </span>
+                    {hasDelay && (
+                      <span className="text-red-400 text-[11px] font-bold tabular-nums">+{dep.verspaetung}</span>
+                    )}
+                  </div>
+
+                  {/* Linien-Badge */}
+                  <div className="w-[110px] shrink-0 flex items-center gap-1.5">
+                    <div className="w-5 h-5 rounded flex items-center justify-center shrink-0" style={{ background: typColor }}>
+                      <TypIcon className="w-3 h-3 text-white" />
+                    </div>
+                    <span className="text-white text-[13px] font-semibold truncate leading-none">{dep.linie}</span>
+                  </div>
+
+                  {/* Richtung */}
+                  <div className="flex-1 min-w-0 px-2">
+                    <span className={`text-white/70 text-[13px] truncate block ${dep.ausfall ? 'line-through' : ''}`}>
+                      {dep.richtung}
+                    </span>
+                  </div>
+
+                  {/* Status */}
+                  <div className="shrink-0 flex items-center justify-end gap-1.5">
+                    {dep.ausfall && (
+                      <span className="text-red-400 text-[10px] font-bold bg-red-400/10 px-1.5 py-0.5 rounded">Ausfall</span>
+                    )}
+                    {dep.bemerkungen?.length > 0 && !dep.ausfall && (
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400/60 shrink-0" title={dep.bemerkungen.join(', ')} />
+                    )}
+                    {dep.gleis && (
+                      <span className="text-white/40 font-mono text-[12px] bg-white/[0.05] px-1.5 py-0.5 rounded min-w-[28px] text-center">
+                        {dep.gleis}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-white/15 text-xs px-3 py-4 text-center border border-white/[0.04] rounded-lg">
+            Keine Abfahrten
+          </div>
+        )}
+      </div>
+    );
+
+    return (
+      <div className="fixed inset-0 overflow-hidden select-none flex flex-col" style={{ background: '#0a0e17' }}>
+        {overlays}
+        <OnAirIndicator config={config} accent={accent} />
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-3 shrink-0 border-b border-white/[0.06]" style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(10,14,23,0.9) 100%)' }}>
+          <div className="flex items-center gap-4">
+            {config?.zeige_logo && logoUrl && (
+              <img src={logoUrl} alt="" className="h-9 object-contain" />
+            )}
+            <h1 className="text-white text-lg font-semibold tracking-wide">{config?.name || config?.titel || 'Abfahrten'}</h1>
+          </div>
+          <div className="flex items-center gap-5">
+            {config?.zeige_wetter && wetter && (
+              <div className="flex items-center gap-2 text-white/40 text-sm">
+                {(() => { const WI = wetter?.icon ? (weatherIcons[wetter.icon] || Cloud) : Cloud; return <WI className="w-5 h-5" />; })()}
+                <span className="text-white/60 font-medium">{wetter.temperatur}°C</span>
+              </div>
+            )}
+            <div className="text-white font-mono text-4xl font-bold tabular-nums tracking-tight">
+              {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </div>
+          </div>
+        </div>
+
+        {/* Stationen */}
+        <div className="flex-1 overflow-y-auto px-5 py-3" style={{ scrollbarWidth: 'none' }}>
+          {abfahrten.length > 0 ? (
+            useColumns ? (
+              <div className="grid gap-4 h-full" style={{ gridTemplateColumns: `repeat(${Math.min(abfahrten.length, 3)}, 1fr)` }}>
+                {abfahrten.map(station => (
+                  <StationBlock key={station.station_id} station={station} />
+                ))}
+              </div>
+            ) : (
+              <StationBlock station={abfahrten[0]} />
+            )
+          ) : (
+            <div className="flex-1 flex items-center justify-center py-20">
+              <div className="text-center text-white/15">
+                <Train className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <div>Keine Stationen konfiguriert</div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Footer */}
-        <div className="px-4 py-1 flex items-center justify-between text-white/15 text-[10px] border-t border-white/5 shrink-0">
-          <span>Stagedesk Monitor — {config?.name || 'Stundenplan'}</span>
-          {error && <span className="text-red-400/60">Verbindungsfehler</span>}
-          <span>Auto-Refresh {config?.refresh_intervall || 30}s</span>
+        <div className="px-6 py-1 flex items-center justify-between text-white/[0.08] text-[9px] shrink-0">
+          <span>{abfahrten.reduce((s, st) => s + (st.abfahrten?.length || 0), 0)} Verbindungen</span>
+          {error && <span className="text-red-400/40">Verbindungsfehler</span>}
         </div>
       </div>
     );

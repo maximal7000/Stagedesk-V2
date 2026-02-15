@@ -77,6 +77,10 @@ export default function MonitorAdminPage() {
   const [cloneFromId, setCloneFromId] = useState(null);
   const fileInputRef = useRef(null);
   const [uploadTyp, setUploadTyp] = useState('logo');
+  const [oepnvSuche, setOepnvSuche] = useState('');
+  const [oepnvErgebnisse, setOepnvErgebnisse] = useState([]);
+  const [oepnvSuching, setOepnvSuching] = useState(false);
+  const oepnvTimerRef = useRef(null);
 
   // Sections
   const [openSections, setOpenSections] = useState({
@@ -84,6 +88,7 @@ export default function MonitorAdminPage() {
     allgemein: false,
     widgets: true,
     onair: false,
+    oepnv: false,
     theme: false,
     medien: false,
     ankuendigungen: false,
@@ -166,16 +171,46 @@ export default function MonitorAdminPage() {
   }
 
   // ═══ Handler ═══
+  // Nur diese Felder werden an PUT /monitor/config gesendet (muss MonitorConfigUpdateSchema entsprechen)
+  const UPDATE_FIELDS = [
+    'name','slug','ist_standard','zeitplan','layout_modus','titel','untertitel',
+    'hintergrund_farbe','akzent_farbe','zeige_logo','logo_url','aktives_logo_id',
+    'zeige_uhr','zeige_veranstaltungen','zeige_ankuendigungen','zeige_onair',
+    'zeige_countdown','zeige_ticker','ticker_text','ticker_geschwindigkeit',
+    'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
+    'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
+    'zeige_webuntis','webuntis_url','webuntis_zoom','webuntis_dark_mode',
+    'zeige_hintergrundbild','aktives_hintergrundbild_id',
+    'zeige_qr_code','qr_code_url','qr_code_label',
+    'zeige_freitext','freitext_titel','freitext_inhalt',
+    'zeige_raumplan','raumplan_server','raumplan_schule','raumplan_raum','raumplan_benutzername','raumplan_passwort',
+    'zeige_eigener_countdown','eigener_countdown_name','eigener_countdown_datum',
+    'zeige_bildschirmschoner','bildschirmschoner_timeout',
+    'zeige_seitenrotation','seitenrotation_intervall','seitenrotation_seiten',
+    'zeige_oepnv','oepnv_stationen','oepnv_dauer','oepnv_max_abfahrten',
+    'oepnv_zeige_bus','oepnv_zeige_bahn','oepnv_zeige_fernverkehr','oepnv_api_db','oepnv_api_nahsh',
+    'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild',
+    'refresh_intervall',
+  ];
+
   const handleSaveMonitorConfig = async () => {
     if (!monitorConfig || !canEdit) return;
     setMonitorSaving(true);
     try {
-      const res = await apiClient.put(`/monitor/config?profil_id=${activeProfileId}`, monitorConfig);
+      // Nur Schema-konforme Felder senden
+      const updateData = {};
+      for (const key of UPDATE_FIELDS) {
+        if (key in monitorConfig) updateData[key] = monitorConfig[key];
+      }
+      const res = await apiClient.put(`/monitor/config?profil_id=${activeProfileId}`, updateData);
       setMonitorConfig(res.data);
       setOriginalConfig(res.data);
       fetchProfiles();
       toast.success('Konfiguration gespeichert');
-    } catch { toast.error('Speichern fehlgeschlagen'); }
+    } catch (e) {
+      console.error('Monitor save error:', e.response?.data || e.message);
+      toast.error('Speichern fehlgeschlagen');
+    }
     finally { setMonitorSaving(false); }
   };
 
@@ -561,6 +596,8 @@ export default function MonitorAdminPage() {
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
                       <option value="standard">Standard-Layout</option>
                       <option value="stundenplan">Stundenplan-Vollbild</option>
+                      <option value="onair">ON AIR Display</option>
+                      <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
                     </select>
                   </div>
                 </div>
@@ -626,7 +663,7 @@ export default function MonitorAdminPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Layout</p>
-                  <p className="text-sm font-bold text-white">{monitorConfig.layout_modus === 'stundenplan' ? 'Stundenplan' : 'Standard'}</p>
+                  <p className="text-sm font-bold text-white">{{ standard: 'Standard', stundenplan: 'Stundenplan', onair: 'ON AIR', abfahrten: 'Abfahrten' }[monitorConfig.layout_modus] || 'Standard'}</p>
                 </div>
                 <Layers className="w-5 h-5 text-purple-500" />
               </div>
@@ -723,6 +760,8 @@ export default function MonitorAdminPage() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
                   <option value="standard">Standard-Layout</option>
                   <option value="stundenplan">Stundenplan-Vollbild</option>
+                  <option value="onair">ON AIR Display</option>
+                  <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
                 </select>
               </div>
             </div>
@@ -732,6 +771,22 @@ export default function MonitorAdminPage() {
                 <p className="text-xs text-purple-300">
                   <Sparkles className="w-3.5 h-3.5 inline mr-1" />
                   Stundenplan-Vollbild: WebUntis-iFrame so groß wie möglich, mit optionalem Raumplan als Sidebar, Uhr und ON AIR.
+                </p>
+              </div>
+            )}
+            {monitorConfig.layout_modus === 'onair' && (
+              <div className="p-3 bg-red-900/10 border border-red-500/20 rounded-lg">
+                <p className="text-xs text-red-300">
+                  <Radio className="w-3.5 h-3.5 inline mr-1" />
+                  ON AIR Display: Zeigt nur den ON AIR Status zentriert auf schwarzem Hintergrund. Perfekt für einen dedizierten ON AIR Monitor.
+                </p>
+              </div>
+            )}
+            {monitorConfig.layout_modus === 'abfahrten' && (
+              <div className="p-3 bg-blue-900/10 border border-blue-500/20 rounded-lg">
+                <p className="text-xs text-blue-300">
+                  <Activity className="w-3.5 h-3.5 inline mr-1" />
+                  Abfahrtsmonitor: Zeigt Bus- und Bahnabfahrten in Echtzeit. Stationen und Filter unter &quot;ÖPNV Abfahrten&quot; konfigurieren.
                 </p>
               </div>
             )}
@@ -893,58 +948,132 @@ export default function MonitorAdminPage() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Größe</label>
-                <div className="flex gap-2">
-                  {[
-                    { v: 'klein', l: 'Klein' },
-                    { v: 'mittel', l: 'Mittel' },
-                    { v: 'gross', l: 'Groß' },
-                  ].map(s => (
-                    <button key={s.v} onClick={() => canEdit && updateConfig('on_air_groesse', s.v)}
-                      disabled={!canEdit}
-                      className={`flex-1 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
-                        monitorConfig.on_air_groesse === s.v
-                          ? 'bg-red-600/20 border-red-500/40 text-red-300'
-                          : 'bg-gray-800 border-gray-700 text-gray-400'
-                      }`}>{s.l}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Position</label>
-                <select value={monitorConfig.on_air_position} onChange={e => updateConfig('on_air_position', e.target.value)}
-                  disabled={!canEdit}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
-                  <option value="oben-rechts">Oben rechts</option>
-                  <option value="oben-links">Oben links</option>
-                  <option value="oben-mitte">Oben Mitte</option>
-                  <option value="unten-rechts">Unten rechts</option>
-                  <option value="unten-links">Unten links</option>
-                </select>
-              </div>
-              <div className="flex items-end">
-                <div className="flex items-center gap-3">
-                  <Toggle checked={monitorConfig.on_air_blinken} onChange={v => updateConfig('on_air_blinken', v)} disabled={!canEdit} />
-                  <span className="text-sm text-white">Blinken</span>
-                </div>
+
+            {/* Größe */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Größe</label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { v: 'klein', l: 'Klein', desc: 'Dezent' },
+                  { v: 'mittel', l: 'Mittel', desc: 'Standard' },
+                  { v: 'gross', l: 'Groß', desc: 'Auffällig' },
+                  { v: 'riesig', l: 'Riesig', desc: 'Maximum' },
+                ].map(s => (
+                  <button key={s.v} onClick={() => canEdit && updateConfig('on_air_groesse', s.v)}
+                    disabled={!canEdit}
+                    className={`py-2.5 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
+                      monitorConfig.on_air_groesse === s.v
+                        ? 'bg-red-600/20 border-red-500/40 text-red-300'
+                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-800/80'
+                    }`}>
+                    <div className="font-medium">{s.l}</div>
+                    <div className="text-[10px] opacity-60">{s.desc}</div>
+                  </button>
+                ))}
               </div>
             </div>
-            {/* Preview */}
-            <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 flex items-center justify-center">
-              <div className={`rounded-lg font-black tracking-wider text-center ${
-                monitorConfig.on_air_blinken ? 'animate-pulse' : ''
-              } ${
-                monitorConfig.on_air_groesse === 'klein' ? 'text-sm px-3 py-1.5' :
-                monitorConfig.on_air_groesse === 'gross' ? 'text-3xl px-8 py-4' :
-                'text-xl px-6 py-3'
-              }`} style={{
-                background: `${monitorConfig.on_air_farbe || monitorConfig.akzent_farbe || '#da1f3d'}20`,
-                color: monitorConfig.on_air_farbe || monitorConfig.akzent_farbe || '#da1f3d',
-                border: `2px solid ${monitorConfig.on_air_farbe || monitorConfig.akzent_farbe || '#da1f3d'}40`,
-              }}>
-                {monitorConfig.on_air_text || 'ON AIR'}
+
+            {/* Position */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2 font-medium">Position</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { v: 'banner-oben', l: 'Banner oben', desc: 'Volle Breite oben', icon: '▬' },
+                  { v: 'banner-unten', l: 'Banner unten', desc: 'Volle Breite unten', icon: '▬' },
+                  { v: 'mitte', l: 'Mitte', desc: 'Overlay zentriert', icon: '◉' },
+                  { v: 'oben-links', l: 'Oben links', desc: 'Ecke oben links', icon: '◤' },
+                  { v: 'oben-mitte', l: 'Oben Mitte', desc: 'Oben zentriert', icon: '▲' },
+                  { v: 'oben-rechts', l: 'Oben rechts', desc: 'Ecke oben rechts', icon: '◥' },
+                  { v: 'unten-links', l: 'Unten links', desc: 'Ecke unten links', icon: '◣' },
+                  { v: 'unten-mitte', l: 'Unten Mitte', desc: 'Unten zentriert', icon: '▼' },
+                  { v: 'unten-rechts', l: 'Unten rechts', desc: 'Ecke unten rechts', icon: '◢' },
+                ].map(p => (
+                  <button key={p.v} onClick={() => canEdit && updateConfig('on_air_position', p.v)}
+                    disabled={!canEdit}
+                    className={`py-2.5 px-3 rounded-lg text-sm border transition-colors disabled:opacity-50 text-left ${
+                      monitorConfig.on_air_position === p.v
+                        ? 'bg-red-600/20 border-red-500/40 text-red-300'
+                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-800/80'
+                    }`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{p.icon}</span>
+                      <div>
+                        <div className="font-medium text-xs">{p.l}</div>
+                        <div className="text-[10px] opacity-60">{p.desc}</div>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Blinken */}
+            <div className="flex items-center gap-3">
+              <Toggle checked={monitorConfig.on_air_blinken} onChange={v => updateConfig('on_air_blinken', v)} disabled={!canEdit} />
+              <span className="text-sm text-white">Blinken / Pulsieren</span>
+            </div>
+
+            {/* Vollbild Override */}
+            <div className="flex items-center gap-3">
+              <Toggle checked={monitorConfig.on_air_vollbild} onChange={v => updateConfig('on_air_vollbild', v)} disabled={!canEdit} />
+              <div>
+                <span className="text-sm text-white">Bei ON AIR automatisch Vollbild</span>
+                <p className="text-xs text-gray-500 mt-0.5">Überschreibt das aktuelle Layout und zeigt die ON AIR Vollbild-Anzeige</p>
+              </div>
+            </div>
+
+            {/* Live-Vorschau mit Position */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Vorschau</label>
+              <div className="relative bg-gray-950 rounded-xl border border-gray-700/40 overflow-hidden" style={{ height: '200px' }}>
+                {/* Mini-Monitor Hintergrund */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-white/5 text-xs">Monitor</div>
+                </div>
+                {(() => {
+                  const f = monitorConfig.on_air_farbe || monitorConfig.akzent_farbe || '#da1f3d';
+                  const blink = monitorConfig.on_air_blinken ? 'animate-pulse' : '';
+                  const sizeClasses = {
+                    klein: 'text-xs px-2 py-1',
+                    mittel: 'text-sm px-3 py-1.5',
+                    gross: 'text-lg px-5 py-2.5',
+                    riesig: 'text-2xl px-7 py-3',
+                  };
+                  const sc = sizeClasses[monitorConfig.on_air_groesse] || sizeClasses.gross;
+                  const pos = monitorConfig.on_air_position || 'banner-oben';
+
+                  const badge = (
+                    <div className={`${blink} rounded-lg font-black tracking-wider whitespace-nowrap ${sc}`}
+                      style={{ background: f, color: '#fff', boxShadow: `0 4px 20px ${f}60` }}>
+                      {monitorConfig.on_air_text || 'ON AIR'}
+                    </div>
+                  );
+
+                  if (pos === 'banner-oben') return (
+                    <div className="absolute top-0 left-0 right-0">
+                      <div className={`${blink} flex items-center justify-center ${sc}`}
+                        style={{ background: f, color: '#fff' }}>
+                        <span className="font-black tracking-wider">{monitorConfig.on_air_text || 'ON AIR'}</span>
+                      </div>
+                    </div>
+                  );
+                  if (pos === 'banner-unten') return (
+                    <div className="absolute bottom-0 left-0 right-0">
+                      <div className={`${blink} flex items-center justify-center ${sc}`}
+                        style={{ background: f, color: '#fff' }}>
+                        <span className="font-black tracking-wider">{monitorConfig.on_air_text || 'ON AIR'}</span>
+                      </div>
+                    </div>
+                  );
+                  if (pos === 'mitte') return <div className="absolute inset-0 flex items-center justify-center">{badge}</div>;
+                  if (pos === 'oben-links') return <div className="absolute top-3 left-3">{badge}</div>;
+                  if (pos === 'oben-mitte') return <div className="absolute top-3 left-1/2 -translate-x-1/2">{badge}</div>;
+                  if (pos === 'oben-rechts') return <div className="absolute top-3 right-3">{badge}</div>;
+                  if (pos === 'unten-links') return <div className="absolute bottom-3 left-3">{badge}</div>;
+                  if (pos === 'unten-mitte') return <div className="absolute bottom-3 left-1/2 -translate-x-1/2">{badge}</div>;
+                  if (pos === 'unten-rechts') return <div className="absolute bottom-3 right-3">{badge}</div>;
+                  return <div className="absolute top-3 right-3">{badge}</div>;
+                })()}
               </div>
             </div>
           </Section>
@@ -1446,6 +1575,278 @@ export default function MonitorAdminPage() {
               )}
             </div>
           </Section>
+
+          {/* ═══ ÖPNV Abfahrten (nur bei Abfahrtsmonitor-Layout) ═══ */}
+          {monitorConfig.layout_modus === 'abfahrten' && (
+          <Section id="oepnv" title="ÖPNV Abfahrten" description="Stationen und Filter für den Abfahrtsmonitor"
+            icon={Activity} iconColor="bg-blue-600/30" open={openSections.oepnv} onToggle={toggleSection}
+            badge={monitorConfig.oepnv_stationen?.length || 0}>
+
+            {/* API-Auswahl */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Datenquellen</label>
+              <div className="flex gap-4">
+                <div className="flex items-center gap-2">
+                  <Toggle checked={monitorConfig.oepnv_api_db !== false} onChange={v => updateConfig('oepnv_api_db', v)} disabled={!canEdit} />
+                  <span className="text-xs text-white">DB (ganz Deutschland)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Toggle checked={monitorConfig.oepnv_api_nahsh !== false} onChange={v => updateConfig('oepnv_api_nahsh', v)} disabled={!canEdit} />
+                  <span className="text-xs text-white">NAH.SH (Schleswig-Holstein)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stationssuche */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Station hinzufügen</label>
+              <div className="relative">
+                <input type="text" value={oepnvSuche}
+                  onChange={e => {
+                    setOepnvSuche(e.target.value);
+                    clearTimeout(oepnvTimerRef.current);
+                    if (e.target.value.length >= 2) {
+                      setOepnvSuching(true);
+                      oepnvTimerRef.current = setTimeout(async () => {
+                        try {
+                          const useDb = monitorConfig.oepnv_api_db !== false;
+                          const useNahsh = monitorConfig.oepnv_api_nahsh !== false;
+                          const res = await apiClient.get(`/monitor/oepnv/suche?q=${encodeURIComponent(e.target.value)}&results=12&use_db=${useDb}&use_nahsh=${useNahsh}`);
+                          setOepnvErgebnisse(res.data || res || []);
+                        } catch { setOepnvErgebnisse([]); }
+                        setOepnvSuching(false);
+                      }, 400);
+                    } else {
+                      setOepnvErgebnisse([]);
+                    }
+                  }}
+                  disabled={!canEdit}
+                  placeholder="Station suchen (z.B. Hamburg Hbf, Kiel ZOB...)"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                {oepnvSuching && <Loader2 className="absolute right-3 top-2.5 w-4 h-4 text-gray-500 animate-spin" />}
+              </div>
+
+              {/* Suchergebnisse */}
+              {oepnvErgebnisse.length > 0 && (
+                <div className="mt-2 border border-gray-700 rounded-lg bg-gray-800 overflow-hidden max-h-64 overflow-y-auto">
+                  {oepnvErgebnisse.map(s => {
+                    const already = (monitorConfig.oepnv_stationen || []).some(st => st.id === s.id);
+                    return (
+                      <button key={s.id} disabled={already || !canEdit}
+                        onClick={() => {
+                          const stationen = [...(monitorConfig.oepnv_stationen || []), {
+                            id: s.id, name: s.name, quelle: s.quelle || 'db',
+                            filter_linien: [], filter_richtung: '', filter_via: '',
+                            zeige_bus: true, zeige_bahn: true, zeige_fernverkehr: true,
+                          }];
+                          updateConfig('oepnv_stationen', stationen);
+                          setOepnvSuche(''); setOepnvErgebnisse([]);
+                          toast.success(`${s.name} hinzugefügt`);
+                        }}
+                        className={`w-full px-3 py-2.5 text-left text-sm flex items-center justify-between hover:bg-gray-700/50 border-b border-gray-700/50 last:border-0 transition-colors ${already ? 'opacity-40' : ''}`}>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-medium">{s.name}</span>
+                            {s.quelle && (
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                                s.quelle === 'db+nahsh' ? 'bg-green-500/20 text-green-400' :
+                                s.quelle === 'nahsh' ? 'bg-blue-500/20 text-blue-400' :
+                                'bg-gray-500/20 text-gray-400'
+                              }`}>
+                                {s.quelle === 'db+nahsh' ? 'DB + NAH.SH' : s.quelle === 'nahsh' ? 'NAH.SH' : 'DB'}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-0.5">
+                            {s.produkte?.join(', ') || s.typ}
+                          </div>
+                        </div>
+                        {already
+                          ? <Check className="w-4 h-4 text-green-500" />
+                          : <Plus className="w-4 h-4 text-gray-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Konfigurierte Stationen */}
+            {(monitorConfig.oepnv_stationen || []).length > 0 && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Konfigurierte Stationen</label>
+                <div className="space-y-2">
+                  {(monitorConfig.oepnv_stationen || []).map((station, idx) => (
+                    <div key={station.id} className="p-3 bg-gray-800/60 border border-gray-700 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white text-sm font-medium">{station.name}</span>
+                          {station.quelle && (
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
+                              station.quelle === 'db+nahsh' ? 'bg-green-500/20 text-green-400' :
+                              station.quelle === 'nahsh' ? 'bg-blue-500/20 text-blue-400' :
+                              'bg-gray-500/20 text-gray-400'
+                            }`}>
+                              {station.quelle === 'db+nahsh' ? 'DB + NAH.SH' : station.quelle === 'nahsh' ? 'NAH.SH' : 'DB'}
+                            </span>
+                          )}
+                        </div>
+                        <button onClick={() => {
+                          const stationen = monitorConfig.oepnv_stationen.filter((_, i) => i !== idx);
+                          updateConfig('oepnv_stationen', stationen);
+                        }} disabled={!canEdit} className="text-gray-500 hover:text-red-400 disabled:opacity-50">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Per-Station Produktfilter */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[10px] text-gray-500">Zeige:</span>
+                        {[
+                          { key: 'zeige_bus', label: 'Bus' },
+                          { key: 'zeige_bahn', label: 'Nahverkehr' },
+                          { key: 'zeige_fernverkehr', label: 'Fernverkehr' },
+                        ].map(p => (
+                          <label key={p.key} className="flex items-center gap-1 cursor-pointer">
+                            <input type="checkbox"
+                              checked={station[p.key] !== false}
+                              onChange={e => {
+                                const stationen = [...monitorConfig.oepnv_stationen];
+                                stationen[idx] = { ...stationen[idx], [p.key]: e.target.checked };
+                                updateConfig('oepnv_stationen', stationen);
+                              }}
+                              disabled={!canEdit}
+                              className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                            <span className="text-[10px] text-white/70">{p.label}</span>
+                          </label>
+                        ))}
+                      </div>
+
+                      {/* Filter — Linien (Badge-Eingabe) + Richtung + Via */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] text-gray-500 mb-1">Linienfilter (Komma/Enter = trennen, leer = alle)</label>
+                          <div className="flex flex-wrap gap-1 items-center bg-gray-900 border border-gray-700 rounded px-2 py-1 min-h-[30px]">
+                            {(station.filter_linien || []).map((linie, li) => (
+                              <span key={li} className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                                {linie}
+                                <button type="button" onClick={() => {
+                                  const stationen = [...monitorConfig.oepnv_stationen];
+                                  const linien = [...(stationen[idx].filter_linien || [])];
+                                  linien.splice(li, 1);
+                                  stationen[idx] = { ...stationen[idx], filter_linien: linien };
+                                  updateConfig('oepnv_stationen', stationen);
+                                }} disabled={!canEdit} className="hover:text-red-400 disabled:opacity-50">
+                                  <X className="w-2.5 h-2.5" />
+                                </button>
+                              </span>
+                            ))}
+                            <input type="text"
+                              placeholder={station.filter_linien?.length ? '' : 'z.B. RE7, Bus 11'}
+                              disabled={!canEdit}
+                              className="flex-1 min-w-[60px] bg-transparent text-white text-xs outline-none py-0.5 disabled:opacity-50"
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' || e.key === ',') {
+                                  e.preventDefault();
+                                  const val = e.target.value.trim().replace(/,+$/, '').trim();
+                                  if (val) {
+                                    const stationen = [...monitorConfig.oepnv_stationen];
+                                    const linien = [...(stationen[idx].filter_linien || [])];
+                                    // Komma-getrennte Eingabe aufsplitten
+                                    val.split(',').map(s => s.trim()).filter(Boolean).forEach(v => {
+                                      if (!linien.includes(v)) linien.push(v);
+                                    });
+                                    stationen[idx] = { ...stationen[idx], filter_linien: linien };
+                                    updateConfig('oepnv_stationen', stationen);
+                                    e.target.value = '';
+                                  }
+                                }
+                                if (e.key === 'Backspace' && !e.target.value) {
+                                  const stationen = [...monitorConfig.oepnv_stationen];
+                                  const linien = [...(stationen[idx].filter_linien || [])];
+                                  if (linien.length > 0) {
+                                    linien.pop();
+                                    stationen[idx] = { ...stationen[idx], filter_linien: linien };
+                                    updateConfig('oepnv_stationen', stationen);
+                                  }
+                                }
+                              }}
+                              onBlur={e => {
+                                const val = e.target.value.trim().replace(/,+$/, '').trim();
+                                if (val) {
+                                  const stationen = [...monitorConfig.oepnv_stationen];
+                                  const linien = [...(stationen[idx].filter_linien || [])];
+                                  val.split(',').map(s => s.trim()).filter(Boolean).forEach(v => {
+                                    if (!linien.includes(v)) linien.push(v);
+                                  });
+                                  stationen[idx] = { ...stationen[idx], filter_linien: linien };
+                                  updateConfig('oepnv_stationen', stationen);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] text-gray-500 mb-1">Richtungsfilter (leer = alle)</label>
+                          <input type="text"
+                            defaultValue={station.filter_richtung || ''}
+                            onBlur={e => {
+                              const stationen = [...monitorConfig.oepnv_stationen];
+                              stationen[idx] = { ...stationen[idx], filter_richtung: e.target.value };
+                              updateConfig('oepnv_stationen', stationen);
+                            }}
+                            onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                            disabled={!canEdit}
+                            placeholder="z.B. Hamburg"
+                            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-white text-xs disabled:opacity-50" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-500 mb-1">Via-Station (nur Abfahrten die dort halten)</label>
+                        <input type="text"
+                          defaultValue={station.filter_via || ''}
+                          onBlur={e => {
+                            const stationen = [...monitorConfig.oepnv_stationen];
+                            stationen[idx] = { ...stationen[idx], filter_via: e.target.value };
+                            updateConfig('oepnv_stationen', stationen);
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                          disabled={!canEdit}
+                          placeholder="z.B. Hamburg Hbf"
+                          className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1.5 text-white text-xs disabled:opacity-50" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Einstellungen */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Vorausschau (Min.)</label>
+                <input type="number" value={monitorConfig.oepnv_dauer} onChange={e => updateConfig('oepnv_dauer', parseInt(e.target.value) || 60)}
+                  min={10} max={180} disabled={!canEdit}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Max. Abfahrten pro Station</label>
+                <input type="number" value={monitorConfig.oepnv_max_abfahrten} onChange={e => updateConfig('oepnv_max_abfahrten', parseInt(e.target.value) || 20)}
+                  min={5} max={50} disabled={!canEdit}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+              </div>
+            </div>
+
+            {(monitorConfig.oepnv_stationen || []).length === 0 && (
+              <div className="p-6 text-center text-gray-500">
+                <Activity className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-sm">Noch keine Stationen konfiguriert</p>
+                <p className="text-xs mt-1">Oben nach einer Haltestelle oder einem Bahnhof suchen</p>
+              </div>
+            )}
+          </Section>
+          )}
 
           {/* ═══ API & Token ═══ */}
           <Section id="api" title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."

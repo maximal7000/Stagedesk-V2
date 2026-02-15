@@ -48,6 +48,8 @@ class MonitorConfig(models.Model):
     LAYOUT_CHOICES = [
         ('standard', 'Standard-Layout'),
         ('stundenplan', 'Stundenplan-Vollbild'),
+        ('onair', 'ON AIR Display'),
+        ('abfahrten', 'Abfahrtsmonitor (ÖPNV)'),
     ]
     layout_modus = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='standard')
 
@@ -155,6 +157,20 @@ class MonitorConfig(models.Model):
     seitenrotation_intervall = models.IntegerField(default=30, help_text="Sekunden pro Seite")
     seitenrotation_seiten = models.JSONField(default=list, blank=True)
 
+    # ─── ÖPNV / Abfahrten ──────────────────
+    zeige_oepnv = models.BooleanField(default=False)
+    oepnv_stationen = models.JSONField(default=list, blank=True,
+        help_text='[{"id": "...", "name": "...", "filter_linien": [], "filter_richtung": "", "zeige_bus": true, "zeige_bahn": true, "zeige_fernverkehr": true}]')
+    oepnv_dauer = models.IntegerField(default=60, help_text="Minuten vorausschauen")
+    oepnv_max_abfahrten = models.IntegerField(default=20, help_text="Max Abfahrten pro Station")
+    oepnv_zeige_bus = models.BooleanField(default=True)
+    oepnv_zeige_bahn = models.BooleanField(default=True)
+    oepnv_zeige_fernverkehr = models.BooleanField(default=True)
+    oepnv_api_db = models.BooleanField(default=True)
+    oepnv_api_nahsh = models.BooleanField(default=True)
+    oepnv_cache = models.JSONField(null=True, blank=True)
+    oepnv_cache_zeit = models.DateTimeField(null=True, blank=True)
+
     # ─── ON AIR ────────────────────────────
     ist_on_air = models.BooleanField(default=False)
     on_air_text = models.CharField(max_length=100, default='ON AIR')
@@ -182,6 +198,7 @@ class MonitorConfig(models.Model):
     on_air_position = models.CharField(max_length=20, choices=ON_AIR_POSITION_CHOICES, default='banner-oben')
     on_air_blinken = models.BooleanField(default=True)
     on_air_farbe = models.CharField(max_length=7, blank=True, help_text="Leer = Akzentfarbe")
+    on_air_vollbild = models.BooleanField(default=False, help_text="Bei ON AIR automatisch Vollbild-Anzeige")
 
     # ─── API ───────────────────────────────
     api_token = models.CharField(max_length=64, unique=True, blank=True,
@@ -210,7 +227,7 @@ class MonitorConfig(models.Model):
 
     @classmethod
     def get(cls, slug=None):
-        """Get active profile: by slug, by schedule, or standard"""
+        """Get active profile: by slug, by schedule, or standard fallback"""
         if slug:
             try:
                 return cls.objects.get(slug=slug)
@@ -222,12 +239,18 @@ class MonitorConfig(models.Model):
         wochentag = now.weekday()
         zeit = now.strftime('%H:%M')
 
-        for config in cls.objects.exclude(zeitplan=[]).order_by('-ist_standard'):
-            for entry in (config.zeitplan or []):
+        # Alle Profile laden, NICHT-Standard zuerst prüfen
+        for config in cls.objects.order_by('ist_standard', 'name'):
+            zeitplan = config.zeitplan
+            if not zeitplan or not isinstance(zeitplan, list) or len(zeitplan) == 0:
+                continue
+            for entry in zeitplan:
+                if not isinstance(entry, dict):
+                    continue
                 tage = entry.get('tage', [])
                 von = entry.get('von', '00:00')
                 bis = entry.get('bis', '23:59')
-                if wochentag in tage and von <= zeit <= bis:
+                if isinstance(tage, list) and wochentag in tage and von <= zeit <= bis:
                     return config
 
         standard = cls.objects.filter(ist_standard=True).first()
