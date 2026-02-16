@@ -58,48 +58,80 @@ function StatusBadge({ status, statusDisplay, istUeberfaellig }) {
   );
 }
 
-function PositionItem({ pos, isOffen, isAktiv, showBorrower, onRemove, onReturn }) {
+function PositionStatusBadge({ pos, isOffen, isAktiv }) {
+  if (isOffen) return null;
+  if (pos.ist_zurueckgegeben) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+        <Check className="w-3 h-3" /> Zurück
+        {pos.zustand_rueckgabe && pos.zustand_rueckgabe !== 'ok' && (
+          <span className="text-yellow-400 ml-1">({pos.zustand_rueckgabe})</span>
+        )}
+      </span>
+    );
+  }
+  if (isAktiv) return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Ausgeliehen</span>;
+  return null;
+}
+
+function PositionsTable({ positionen, isOffen, isAktiv, showBorrower, onRemove, onReturn }) {
+  if (!positionen || positionen.length === 0) {
+    return <p className="text-gray-400 py-8 text-center">Noch keine Artikel in der Liste</p>;
+  }
   return (
-    <li className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-      <div className="flex-1 min-w-0">
-        <span className="font-medium text-white">{pos.item_name}</span>
-        {pos.anzahl > 1 && <span className="text-gray-400 ml-2">&times;{pos.anzahl}</span>}
-        {showBorrower && pos.ausleiher_name && (
-          <div className="text-xs text-gray-400 mt-0.5">
-            <User className="w-3 h-3 inline mr-1" />{pos.ausleiher_name}
-            {pos.ausleiher_ort && <><MapPin className="w-3 h-3 inline ml-2 mr-1" />{pos.ausleiher_ort}</>}
-          </div>
-        )}
-        {!isOffen && (
-          <div className="flex items-center gap-2 mt-1">
-            {pos.ist_zurueckgegeben ? (
-              <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
-                <Check className="w-3 h-3" /> Zurückgegeben
-                {pos.zustand_rueckgabe && pos.zustand_rueckgabe !== 'ok' && (
-                  <span className="text-yellow-400 ml-1">({pos.zustand_rueckgabe})</span>
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-gray-700 text-left text-xs text-gray-400 uppercase tracking-wider">
+            <th className="pb-2 pr-3 font-medium">Artikel</th>
+            <th className="pb-2 pr-3 font-medium w-16 text-center">Anz.</th>
+            {showBorrower && <th className="pb-2 pr-3 font-medium">Ausleiher</th>}
+            {showBorrower && <th className="pb-2 pr-3 font-medium">Ort</th>}
+            {!isOffen && <th className="pb-2 pr-3 font-medium">Status</th>}
+            <th className="pb-2 font-medium w-24 text-right">Aktion</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-800">
+          {positionen.map(pos => (
+            <tr key={pos.id} className={`hover:bg-gray-800/50 ${pos.ist_zurueckgegeben ? 'opacity-60' : ''}`}>
+              <td className="py-2.5 pr-3">
+                <span className="font-medium text-white">{pos.item_name}</span>
+              </td>
+              <td className="py-2.5 pr-3 text-center text-gray-300">{pos.anzahl}</td>
+              {showBorrower && (
+                <td className="py-2.5 pr-3 text-gray-300 text-xs">
+                  {pos.ausleiher_name || <span className="text-gray-600">–</span>}
+                </td>
+              )}
+              {showBorrower && (
+                <td className="py-2.5 pr-3 text-gray-300 text-xs">
+                  {pos.ausleiher_ort || <span className="text-gray-600">–</span>}
+                </td>
+              )}
+              {!isOffen && (
+                <td className="py-2.5 pr-3">
+                  <PositionStatusBadge pos={pos} isOffen={isOffen} isAktiv={isAktiv} />
+                </td>
+              )}
+              <td className="py-2.5 text-right">
+                {isOffen && (
+                  <button onClick={() => onRemove(pos.id)}
+                    className="p-1.5 text-red-400 hover:bg-red-900/20 rounded">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 )}
-              </span>
-            ) : isAktiv ? (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Ausgeliehen</span>
-            ) : null}
-          </div>
-        )}
-      </div>
-      <div className="flex items-center gap-2 ml-2">
-        {isOffen && (
-          <button onClick={() => onRemove(pos.id)}
-            className="p-1.5 text-red-400 hover:bg-red-900/20 rounded">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        )}
-        {isAktiv && !pos.ist_zurueckgegeben && (
-          <button onClick={() => onReturn(pos)}
-            className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded">
-            <RefreshCw className="w-3 h-3" /> Zurückgeben
-          </button>
-        )}
-      </div>
-    </li>
+                {isAktiv && !pos.ist_zurueckgegeben && (
+                  <button onClick={() => onReturn(pos)}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded">
+                    <RefreshCw className="w-3 h-3" /> Zurückgeben
+                  </button>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -742,7 +774,7 @@ export default function AusleihePage() {
             {detailListe.modus === 'individuell' && groupBy !== 'none' && (detailListe.positionen?.length || 0) > 0 ? (
               <div className="space-y-3">
                 {groupPositions(detailListe.positionen).map(([groupKey, groupItems]) => {
-                  const isExpanded = expandedGroups[groupKey] !== false; // default open
+                  const isExpanded = expandedGroups[groupKey] !== false;
                   const returned = groupItems.filter(p => p.ist_zurueckgegeben).length;
                   return (
                     <div key={groupKey} className="border border-gray-700 rounded-lg overflow-hidden">
@@ -761,28 +793,23 @@ export default function AusleihePage() {
                         </div>
                       </button>
                       {isExpanded && (
-                        <ul className="divide-y divide-gray-800">
-                          {groupItems.map(pos => (
-                            <PositionItem key={pos.id} pos={pos} isOffen={isOffen} isAktiv={isAktiv} showBorrower={groupBy !== 'borrower'}
-                              onRemove={handleRemovePosition} onReturn={(p) => { setEinzelrueckgabePos(p); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }} />
-                          ))}
-                        </ul>
+                        <div className="p-3 pt-0">
+                          <PositionsTable positionen={groupItems} isOffen={isOffen} isAktiv={isAktiv}
+                            showBorrower={groupBy !== 'borrower'}
+                            onRemove={handleRemovePosition}
+                            onReturn={(p) => { setEinzelrueckgabePos(p); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }} />
+                        </div>
                       )}
                     </div>
                   );
                 })}
               </div>
             ) : (
-              /* Flache Ansicht */
-              <ul className="space-y-2">
-                {(detailListe.positionen || []).map(pos => (
-                  <PositionItem key={pos.id} pos={pos} isOffen={isOffen} isAktiv={isAktiv} showBorrower={detailListe.modus === 'individuell'}
-                    onRemove={handleRemovePosition} onReturn={(p) => { setEinzelrueckgabePos(p); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }} />
-                ))}
-                {(!detailListe.positionen || detailListe.positionen.length === 0) && (
-                  <li className="text-gray-400 py-8 text-center">Noch keine Artikel in der Liste</li>
-                )}
-              </ul>
+              /* Flache Tabellen-Ansicht */
+              <PositionsTable positionen={detailListe.positionen} isOffen={isOffen} isAktiv={isAktiv}
+                showBorrower={detailListe.modus === 'individuell'}
+                onRemove={handleRemovePosition}
+                onReturn={(p) => { setEinzelrueckgabePos(p); setEinzelZustand('ok'); setEinzelNotizen(''); setShowEinzelrueckgabe(true); }} />
             )}
           </div>
 
