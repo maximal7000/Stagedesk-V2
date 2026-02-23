@@ -16,8 +16,8 @@ import {
   differenceInMinutes, startOfDay, endOfDay
 } from 'date-fns';
 import { de } from 'date-fns/locale';
-import apiClient from '../lib/api';
-import EventModal from '../components/kalender/EventModal';
+import apiClient from '../../lib/api';
+import EventModal from '../../components/kalender/EventModal';
 
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const STUNDEN = Array.from({ length: 24 }, (_, i) => i);

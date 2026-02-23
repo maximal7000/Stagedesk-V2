@@ -6,6 +6,22 @@ from datetime import datetime, date
 from ninja import Schema
 
 
+class VeranstaltungTerminSchema(Schema):
+    id: int
+    titel: str
+    datum: date
+    beginn: Optional[str]
+    ende: Optional[str]
+
+    @staticmethod
+    def resolve_beginn(obj):
+        return obj.beginn.strftime('%H:%M') if obj.beginn else None
+
+    @staticmethod
+    def resolve_ende(obj):
+        return obj.ende.strftime('%H:%M') if obj.ende else None
+
+
 class ZuweisungSchema(Schema):
     id: int
     user_keycloak_id: str
@@ -87,6 +103,7 @@ class VeranstaltungSchema(Schema):
     erstellt_von: str
     erstellt_am: datetime
     aktualisiert_am: datetime
+    termine: List[VeranstaltungTerminSchema]
     zuweisungen: List[ZuweisungSchema]
     checkliste: List[ChecklisteItemSchema]
     notizen: List[NotizSchema]
@@ -97,6 +114,10 @@ class VeranstaltungSchema(Schema):
     @staticmethod
     def resolve_status_display(obj):
         return obj.get_status_display()
+
+    @staticmethod
+    def resolve_termine(obj):
+        return obj.termine.all()
 
     @staticmethod
     def resolve_zuweisungen(obj):
@@ -141,6 +162,7 @@ class VeranstaltungListSchema(Schema):
     status_display: str
     zammad_ticket_number: str
     anzahl_zuweisungen: int
+    anzahl_termine: int
     ist_zugewiesen: bool = False
 
     @staticmethod
@@ -150,6 +172,10 @@ class VeranstaltungListSchema(Schema):
     @staticmethod
     def resolve_anzahl_zuweisungen(obj):
         return obj.zuweisungen.count()
+
+    @staticmethod
+    def resolve_anzahl_termine(obj):
+        return obj.termine.count()
 
 
 class VeranstaltungCreateSchema(Schema):
@@ -211,6 +237,18 @@ class NotizCreateSchema(Schema):
 class ErinnerungCreateSchema(Schema):
     zeit_vorher: int = 1
     einheit: str = 'tage'
+
+
+class VeranstaltungTerminCreateSchema(Schema):
+    id: Optional[int] = None
+    titel: str = ''
+    datum: date
+    beginn: Optional[str] = None
+    ende: Optional[str] = None
+
+
+class VeranstaltungTermineSaveSchema(Schema):
+    termine: List[VeranstaltungTerminCreateSchema]
 
 
 class VeranstaltungFilterSchema(Schema):

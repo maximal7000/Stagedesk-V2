@@ -10,9 +10,10 @@ from django.conf import settings
 from django.db import transaction
 
 from core.auth import keycloak_auth
-from .models import Permission, UserProfile, UserSession, GlobalSettings
+from .models import Permission, PermissionGroup, UserProfile, UserSession, GlobalSettings
 from .schemas import (
     PermissionSchema, PermissionCreateSchema,
+    PermissionGroupSchema, PermissionGroupCreateSchema, PermissionGroupUpdateSchema,
     UserProfileSchema, UserProfileUpdateSchema, UserProfileAdminUpdateSchema,
     SessionSchema, GlobalSettingSchema, GlobalSettingUpdateSchema,
     UserListSchema
@@ -58,7 +59,13 @@ def get_or_create_profile(request) -> UserProfile:
         keycloak_id=keycloak_id,
         defaults={'username': username, 'email': email}
     )
-    
+
+    # Neue User bekommen Standard-Gruppen
+    if created:
+        default_groups = PermissionGroup.objects.filter(is_default=True)
+        if default_groups.exists():
+            profile.permission_groups.set(default_groups)
+
     # Update profile wenn sich was geändert hat
     if not created:
         updated = False
@@ -237,7 +244,7 @@ def list_users(request):
     if not is_admin(request):
         return {"error": "Keine Berechtigung"}, 403
     
-    users = UserProfile.objects.prefetch_related('permissions', 'bereiche').all()
+    users = UserProfile.objects.prefetch_related('permissions', 'bereiche', 'permission_groups').all()
     
     # Hinweis: Wir können die Keycloak-Rollen nicht für alle User abrufen
     # ohne deren Token zu haben. Daher sind keycloak_roles leer in der Liste.
@@ -281,6 +288,11 @@ def update_user(request, user_id: int, payload: UserProfileAdminUpdateSchema):
         bereiche = Bereich.objects.filter(id__in=payload.bereich_ids)
         user.bereiche.set(bereiche)
 
+    # Berechtigungsgruppen
+    if payload.group_ids is not None:
+        groups = PermissionGroup.objects.filter(id__in=payload.group_ids)
+        user.permission_groups.set(groups)
+
     # forced_theme: Leerer String oder "none" = keine Erzwingung
     if payload.forced_theme is not None:
         if payload.forced_theme in ('', 'none', None):
@@ -295,6 +307,65 @@ def update_user(request, user_id: int, payload: UserProfileAdminUpdateSchema):
     user._keycloak_roles = []  # Unbekannt
     user._is_admin = False  # Unbekannt
     return user
+
+
+# ========== Permission Groups (Admin) ==========
+
+@users_router.get("/groups", response=List[PermissionGroupSchema], auth=keycloak_auth)
+def list_groups(request):
+    """Alle Berechtigungsgruppen auflisten"""
+    if not is_admin(request):
+        from ninja.errors import HttpError
+        raise HttpError(403, "Keine Berechtigung")
+    return PermissionGroup.objects.prefetch_related('permissions').all()
+
+
+@users_router.post("/groups", response=PermissionGroupSchema, auth=keycloak_auth)
+def create_group(request, payload: PermissionGroupCreateSchema):
+    """Berechtigungsgruppe erstellen"""
+    if not is_admin(request):
+        from ninja.errors import HttpError
+        raise HttpError(403, "Keine Berechtigung")
+    group = PermissionGroup.objects.create(
+        name=payload.name,
+        description=payload.description,
+        is_default=payload.is_default,
+    )
+    if payload.permission_codes:
+        perms = Permission.objects.filter(code__in=payload.permission_codes)
+        group.permissions.set(perms)
+    return group
+
+
+@users_router.put("/groups/{group_id}", response=PermissionGroupSchema, auth=keycloak_auth)
+def update_group(request, group_id: int, payload: PermissionGroupUpdateSchema):
+    """Berechtigungsgruppe aktualisieren"""
+    if not is_admin(request):
+        from ninja.errors import HttpError
+        raise HttpError(403, "Keine Berechtigung")
+    group = get_object_or_404(PermissionGroup, id=group_id)
+    if payload.name is not None:
+        group.name = payload.name
+    if payload.description is not None:
+        group.description = payload.description
+    if payload.is_default is not None:
+        group.is_default = payload.is_default
+    group.save()
+    if payload.permission_codes is not None:
+        perms = Permission.objects.filter(code__in=payload.permission_codes)
+        group.permissions.set(perms)
+    return group
+
+
+@users_router.delete("/groups/{group_id}", auth=keycloak_auth)
+def delete_group(request, group_id: int):
+    """Berechtigungsgruppe löschen"""
+    if not is_admin(request):
+        from ninja.errors import HttpError
+        raise HttpError(403, "Keine Berechtigung")
+    group = get_object_or_404(PermissionGroup, id=group_id)
+    group.delete()
+    return {"status": "deleted"}
 
 
 # ========== Global Settings (Admin) ==========
@@ -396,6 +467,12 @@ def initialize_system(request):
          'description': 'Erlaubt das Bearbeiten von Anwesenheitseintraegen', 'category': 'anwesenheit'},
         {'code': 'anwesenheit.delete', 'name': 'Anwesenheit loeschen',
          'description': 'Erlaubt das Loeschen von Anwesenheitslisten', 'category': 'anwesenheit'},
+        {'code': 'anwesenheit.statistik', 'name': 'Anwesenheit Statistik',
+         'description': 'Erlaubt das Anzeigen der Anwesenheitsstatistik', 'category': 'anwesenheit'},
+        {'code': 'anwesenheit.export', 'name': 'Anwesenheit Export',
+         'description': 'Erlaubt den Export von Anwesenheitslisten', 'category': 'anwesenheit'},
+        {'code': 'anwesenheit.view_all', 'name': 'Alle Anwesenheitslisten anzeigen',
+         'description': 'Erlaubt das Anzeigen aller Listen (ohne diese Permission: nur eigene Listen)', 'category': 'anwesenheit'},
     ]
     
     created_permissions = []

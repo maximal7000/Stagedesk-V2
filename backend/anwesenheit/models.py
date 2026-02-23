@@ -7,6 +7,7 @@ from django.utils import timezone
 
 STATUS_CHOICES = [
     ('anwesend', 'Anwesend'),
+    ('teilweise', 'Teilweise'),
     ('abwesend', 'Abwesend'),
     ('krank', 'Krank'),
     ('ausstehend', 'Ausstehend'),
@@ -84,6 +85,7 @@ class Teilnehmer(models.Model):
     keycloak_id = models.CharField(max_length=100)
     name = models.CharField(max_length=200)
     email = models.CharField(max_length=254, blank=True)
+    aufgabe = models.CharField(max_length=200, blank=True, help_text="Zugewiesene Aufgabe/Rolle")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='ausstehend')
     markiert_am = models.DateTimeField(null=True, blank=True)
     markiert_von = models.CharField(max_length=150, blank=True)

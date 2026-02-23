@@ -6,7 +6,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import apiClient from '../lib/api';
+import apiClient from '../../lib/api';
 
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 

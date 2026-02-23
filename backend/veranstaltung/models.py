@@ -83,6 +83,26 @@ class Veranstaltung(models.Model):
         return f"{self.titel} ({self.datum_von.strftime('%d.%m.%Y')})"
 
 
+class VeranstaltungTermin(models.Model):
+    """Einzeltermin einer Veranstaltung (z.B. mehrere Probentage)."""
+    veranstaltung = models.ForeignKey(Veranstaltung, on_delete=models.CASCADE, related_name='termine')
+    titel = models.CharField(max_length=255, blank=True)
+    datum = models.DateField()
+    beginn = models.TimeField(null=True, blank=True)
+    ende = models.TimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['datum', 'beginn']
+        verbose_name = 'Veranstaltungstermin'
+        verbose_name_plural = 'Veranstaltungstermine'
+
+    def __str__(self):
+        label = self.titel or self.datum.strftime('%d.%m.%Y')
+        if self.beginn:
+            label += f' {self.beginn.strftime("%H:%M")}'
+        return label
+
+
 class VeranstaltungZuweisung(models.Model):
     veranstaltung = models.ForeignKey(Veranstaltung, on_delete=models.CASCADE, related_name='zuweisungen')
     user_keycloak_id = models.CharField(max_length=100)

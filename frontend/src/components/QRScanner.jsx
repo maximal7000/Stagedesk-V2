@@ -1,15 +1,27 @@
 /**
- * QR-Scanner Komponente mit Kamera-Unterstützung
- * Verwendet html5-qrcode für die QR-Code-Erkennung
+ * QR-Code & Barcode Scanner mit Kamera-Unterstützung
+ * Verwendet html5-qrcode für QR-Code und Barcode-Erkennung
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Camera, X, ScanLine } from 'lucide-react';
 
-export default function QRScanner({ onScan, onClose, continuous = false, label = 'QR-Code scannen' }) {
+const SUPPORTED_FORMATS = [
+  Html5QrcodeSupportedFormats.QR_CODE,
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.CODE_39,
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+  Html5QrcodeSupportedFormats.DATA_MATRIX,
+];
+
+export default function QRScanner({ onScan, onClose, continuous = false, label = 'Code scannen' }) {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState('');
   const [manualCode, setManualCode] = useState('');
+  const [lastFormat, setLastFormat] = useState('');
   const scannerRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -18,19 +30,21 @@ export default function QRScanner({ onScan, onClose, continuous = false, label =
     setError('');
 
     try {
-      const scanner = new Html5Qrcode('qr-reader');
+      const scanner = new Html5Qrcode('qr-reader', { formatsToSupport: SUPPORTED_FORMATS });
       scannerRef.current = scanner;
 
       await scanner.start(
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
+        { fps: 10, qrbox: { width: 300, height: 150 }, aspectRatio: 1.5 },
+        (decodedText, result) => {
+          const format = result?.result?.format?.formatName || 'QR';
+          setLastFormat(format);
           onScan(decodedText);
           if (!continuous) {
             stopScanner();
           }
         },
-        () => {} // ignore errors during scan
+        () => {}
       );
       setScanning(true);
     } catch (err) {
@@ -89,8 +103,9 @@ export default function QRScanner({ onScan, onClose, continuous = false, label =
         <div className="p-4 space-y-4">
           {!scanning ? (
             <div className="text-center space-y-4">
-              <div className="w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center">
+              <div className="w-full h-48 bg-gray-800 rounded-lg flex items-center justify-center flex-col gap-2">
                 <ScanLine className="w-16 h-16 text-gray-600" />
+                <p className="text-xs text-gray-500">QR-Codes & Barcodes</p>
               </div>
               <button
                 onClick={startScanner}
@@ -106,14 +121,19 @@ export default function QRScanner({ onScan, onClose, continuous = false, label =
           ) : (
             <div className="space-y-2">
               <div id="qr-reader" ref={containerRef} className="rounded-lg overflow-hidden" />
-              <button
-                onClick={stopScanner}
-                className="w-full py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm"
-              >
-                Kamera stoppen
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={stopScanner}
+                  className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg text-sm"
+                >
+                  Kamera stoppen
+                </button>
+              </div>
               {continuous && (
                 <p className="text-gray-400 text-sm text-center">Fortlaufendes Scannen aktiv</p>
+              )}
+              {lastFormat && (
+                <p className="text-gray-500 text-xs text-center">Erkannt: {lastFormat}</p>
               )}
             </div>
           )}
@@ -126,7 +146,7 @@ export default function QRScanner({ onScan, onClose, continuous = false, label =
                 type="text"
                 value={manualCode}
                 onChange={(e) => setManualCode(e.target.value)}
-                placeholder="QR-Code / Seriennummer"
+                placeholder="QR-Code / Barcode / Seriennummer"
                 className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
               />
               <button

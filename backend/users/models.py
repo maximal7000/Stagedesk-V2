@@ -39,6 +39,23 @@ class Permission(models.Model):
         return f"{self.name} ({self.code})"
 
 
+class PermissionGroup(models.Model):
+    """Gruppen für Berechtigungen (z.B. 'Techniker', 'Leitung', 'Gast')."""
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+    permissions = models.ManyToManyField(Permission, blank=True, related_name='groups')
+    is_default = models.BooleanField(default=False, help_text="Neue User bekommen diese Gruppe automatisch")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Berechtigungsgruppe'
+        verbose_name_plural = 'Berechtigungsgruppen'
+
+    def __str__(self):
+        return self.name
+
+
 class UserProfile(models.Model):
     """
     Benutzerprofil - verknüpft mit Keycloak User-ID
@@ -64,6 +81,10 @@ class UserProfile(models.Model):
     # Lokale Permissions (direkt am User, für feinere Steuerung)
     permissions = models.ManyToManyField(Permission, blank=True, related_name='users',
                                          help_text="Lokale Permissions zusätzlich zu Keycloak-Rollen")
+
+    # Berechtigungsgruppen
+    permission_groups = models.ManyToManyField(PermissionGroup, blank=True, related_name='users',
+                                                help_text="Gruppen für gebündelte Berechtigungen")
 
     # Settings
     theme = models.CharField(max_length=20, choices=THEME_CHOICES, default='dark')
@@ -102,12 +123,21 @@ class UserProfile(models.Model):
             is_admin = getattr(self, '_is_admin', False)
         if is_admin:
             return True
-        # Prüfe lokale Permissions
-        return self.permissions.filter(code=permission_code).exists()
+        # Prüfe direkte Permissions
+        if self.permissions.filter(code=permission_code).exists():
+            return True
+        # Prüfe Gruppen-Permissions
+        return Permission.objects.filter(
+            code=permission_code, groups__users=self
+        ).exists()
     
     def get_all_permissions(self):
-        """Gibt alle lokalen Permission-Codes des Users zurück"""
-        return list(self.permissions.values_list('code', flat=True))
+        """Gibt alle Permission-Codes des Users zurück (direkt + aus Gruppen)"""
+        direct = set(self.permissions.values_list('code', flat=True))
+        from_groups = set(
+            Permission.objects.filter(groups__users=self).values_list('code', flat=True)
+        )
+        return list(direct | from_groups)
 
 
 class UserSession(models.Model):

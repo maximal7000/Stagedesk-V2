@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import apiClient from '../lib/api';
+import apiClient from '../../lib/api';
 
 const STATUS_COLORS = {
   verfuegbar: '#22C55E',

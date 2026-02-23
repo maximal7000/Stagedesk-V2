@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Plus, Edit, Trash2, Save, X, Loader2, Tag, GripVertical } from 'lucide-react';
-import apiClient from '../lib/api';
+import apiClient from '../../lib/api';
 
 const FARBEN = [
   '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444',

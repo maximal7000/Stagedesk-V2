@@ -20,6 +20,7 @@ from .schemas import (
     TermineSaveSchema,
     TeilnehmerBulkAddSchema,
     StatusUpdateSchema, TerminStatusUpdateSchema, BulkStatusUpdateSchema,
+    SelfStatusUpdateSchema, AufgabeUpdateSchema,
     KlonSchema,
 )
 
@@ -52,10 +53,27 @@ def require_permission(request, code: str):
 
 # ─── Listen CRUD ──────────────────────────────────────────────────
 
+def _has_permission(request, code: str) -> bool:
+    """Prüft Permission ohne Exception zu werfen."""
+    if is_admin(request):
+        return True
+    keycloak_id = get_user_id(request)
+    try:
+        profile = UserProfile.objects.get(keycloak_id=keycloak_id)
+        return profile.has_permission(code, False)
+    except UserProfile.DoesNotExist:
+        return False
+
+
 @anwesenheit_router.get("", response=List[AnwesenheitsListeListSchema], auth=keycloak_auth)
 def list_listen(request):
     require_permission(request, 'anwesenheit.view')
-    return AnwesenheitsListe.objects.prefetch_related('teilnehmer', 'termine').all()
+    qs = AnwesenheitsListe.objects.prefetch_related('teilnehmer', 'termine')
+    # Ohne view_all: nur Listen anzeigen, bei denen der User Teilnehmer ist
+    if not _has_permission(request, 'anwesenheit.view_all'):
+        kid = get_user_id(request)
+        qs = qs.filter(teilnehmer__keycloak_id=kid).distinct()
+    return qs
 
 
 @anwesenheit_router.post("", response=AnwesenheitsListeSchema, auth=keycloak_auth)
@@ -246,13 +264,84 @@ def bulk_update_status(request, id: int, payload: BulkStatusUpdateSchema):
     for upd in payload.updates:
         try:
             teilnehmer = Teilnehmer.objects.get(id=upd.teilnehmer_id, liste=liste)
-            teilnehmer.status = upd.status
-            teilnehmer.markiert_von = username
-            if upd.notizen:
-                teilnehmer.notizen = upd.notizen
-            teilnehmer.save()
-        except Teilnehmer.DoesNotExist:
+            if upd.termin_id:
+                # Termin-spezifisches Status-Update
+                termin = Termin.objects.get(id=upd.termin_id, liste=liste)
+                ta, _ = TerminAnwesenheit.objects.get_or_create(
+                    teilnehmer=teilnehmer,
+                    termin=termin,
+                )
+                ta.status = upd.status
+                ta.markiert_von = username
+                ta.markiert_am = timezone.now()
+                if upd.notizen:
+                    ta.notizen = upd.notizen
+                ta.save()
+            else:
+                # Allgemeines Teilnehmer-Status-Update
+                teilnehmer.status = upd.status
+                teilnehmer.markiert_von = username
+                if upd.notizen:
+                    teilnehmer.notizen = upd.notizen
+                teilnehmer.save()
+        except (Teilnehmer.DoesNotExist, Termin.DoesNotExist):
             continue
+
+    return get_object_or_404(
+        AnwesenheitsListe.objects.prefetch_related(
+            'teilnehmer__termin_anwesenheiten', 'termine'
+        ), id=id
+    )
+
+
+# ─── Self-Service Status (Teilnehmer setzt eigenen Status) ──────
+
+@anwesenheit_router.post("/{id}/self-status", response=AnwesenheitsListeSchema, auth=keycloak_auth)
+def self_update_status(request, id: int, payload: SelfStatusUpdateSchema):
+    """Teilnehmer setzt eigenen Status für einen Termin (kein edit-Permission nötig)"""
+    liste = get_object_or_404(AnwesenheitsListe, id=id)
+    if liste.status != 'aktiv':
+        from ninja.errors import HttpError
+        raise HttpError(400, "Liste ist abgeschlossen")
+
+    keycloak_id = get_user_id(request)
+    teilnehmer = Teilnehmer.objects.filter(liste=liste, keycloak_id=keycloak_id).first()
+    if not teilnehmer:
+        from ninja.errors import HttpError
+        raise HttpError(403, "Du bist kein Teilnehmer dieser Liste")
+
+    termin = get_object_or_404(Termin, id=payload.termin_id, liste=liste)
+    if termin.ist_vergangen:
+        from ninja.errors import HttpError
+        raise HttpError(400, "Termin liegt in der Vergangenheit")
+
+    ta, _ = TerminAnwesenheit.objects.get_or_create(
+        teilnehmer=teilnehmer,
+        termin=termin,
+    )
+    ta.status = payload.status
+    ta.markiert_von = get_username(request)
+    ta.markiert_am = timezone.now()
+    ta.notizen = payload.notizen
+    ta.save()
+
+    return get_object_or_404(
+        AnwesenheitsListe.objects.prefetch_related(
+            'teilnehmer__termin_anwesenheiten', 'termine'
+        ), id=id
+    )
+
+
+# ─── Aufgabe zuweisen ───────────────────────────────────────────
+
+@anwesenheit_router.post("/{id}/aufgabe", response=AnwesenheitsListeSchema, auth=keycloak_auth)
+def update_aufgabe(request, id: int, payload: AufgabeUpdateSchema):
+    """Aufgabe einem Teilnehmer zuweisen"""
+    require_permission(request, 'anwesenheit.edit')
+    liste = get_object_or_404(AnwesenheitsListe, id=id)
+    teilnehmer = get_object_or_404(Teilnehmer, id=payload.teilnehmer_id, liste=liste)
+    teilnehmer.aufgabe = payload.aufgabe
+    teilnehmer.save(update_fields=['aufgabe'])
 
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
@@ -323,7 +412,7 @@ def klonen(request, id: int, payload: KlonSchema):
 
 @anwesenheit_router.get("/{id}/statistik", auth=keycloak_auth)
 def statistik(request, id: int):
-    require_permission(request, 'anwesenheit.view')
+    require_permission(request, 'anwesenheit.statistik')
     liste = get_object_or_404(AnwesenheitsListe, id=id)
     teilnehmer = liste.teilnehmer.all()
     termine = liste.termine.all()
@@ -333,28 +422,30 @@ def statistik(request, id: int):
     gesamt = {
         'gesamt': total,
         'anwesend': teilnehmer.filter(status='anwesend').count(),
+        'teilweise': teilnehmer.filter(status='teilweise').count(),
         'abwesend': teilnehmer.filter(status='abwesend').count(),
         'krank': teilnehmer.filter(status='krank').count(),
         'ausstehend': teilnehmer.filter(status='ausstehend').count(),
     }
-    gesamt['quote'] = round(gesamt['anwesend'] / total * 100) if total > 0 else 0
+    gesamt['quote'] = round((gesamt['anwesend'] + gesamt['teilweise']) / total * 100) if total > 0 else 0
 
     # Pro Termin
     termin_stats = []
     for termin in termine:
         anw = TerminAnwesenheit.objects.filter(termin=termin)
-        t_total = anw.count()
         t_anwesend = anw.filter(status='anwesend').count()
+        t_teilweise = anw.filter(status='teilweise').count()
         termin_stats.append({
             'termin_id': termin.id,
             'titel': str(termin),
             'datum': termin.datum.isoformat(),
-            'gesamt': t_total,
+            'gesamt': total,
             'anwesend': t_anwesend,
+            'teilweise': t_teilweise,
             'abwesend': anw.filter(status='abwesend').count(),
             'krank': anw.filter(status='krank').count(),
-            'ausstehend': max(0, total - t_total) + anw.filter(status='ausstehend').count(),
-            'quote': round(t_anwesend / total * 100) if total > 0 else 0,
+            'ausstehend': total - anw.exclude(status='ausstehend').count(),
+            'quote': round((t_anwesend + t_teilweise) / total * 100) if total > 0 else 0,
         })
 
     return {'gesamt': gesamt, 'termine': termin_stats}
@@ -364,7 +455,7 @@ def statistik(request, id: int):
 
 @anwesenheit_router.get("/{id}/export", auth=keycloak_auth)
 def export_liste(request, id: int, format: str = 'csv'):
-    require_permission(request, 'anwesenheit.view')
+    require_permission(request, 'anwesenheit.export')
     liste = get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'

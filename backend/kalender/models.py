@@ -117,7 +117,10 @@ class Event(models.Model):
     verantwortlicher = models.CharField(max_length=200, blank=True)
     teilnehmer_anzahl = models.IntegerField(default=0)
     notizen = models.TextField(blank=True)
-    
+
+    # Verknüpfung zu Veranstaltung (auto-generierte Events)
+    veranstaltung_id = models.IntegerField(null=True, blank=True, help_text="Veranstaltungs-ID (auto-erstellt)")
+
     # Meta
     erstellt_von = models.CharField(max_length=100, blank=True, help_text="Keycloak User ID")
     erstellt_am = models.DateTimeField(auto_now_add=True)

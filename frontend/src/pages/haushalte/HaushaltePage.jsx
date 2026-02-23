@@ -5,10 +5,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Wallet, TrendingUp, TrendingDown, Edit, Trash2, Loader2, Eye, RefreshCw } from 'lucide-react';
-import CreateHaushaltModal from '../components/CreateHaushaltModal';
-import EditHaushaltModal from '../components/EditHaushaltModal';
-import ArtikelModal from '../components/ArtikelModal';
-import apiClient from '../lib/api';
+import CreateHaushaltModal from '../../components/CreateHaushaltModal';
+import EditHaushaltModal from '../../components/EditHaushaltModal';
+import ArtikelModal from '../../components/ArtikelModal';
+import apiClient from '../../lib/api';
 
 // Polling-Intervall in Millisekunden (5 Sekunden)
 const POLL_INTERVAL = 5000;

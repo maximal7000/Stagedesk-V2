@@ -12,8 +12,8 @@ import {
   Timer, RotateCw, LayoutGrid, MonitorOff, Activity, Zap, X, Maximize2,
   Download, UploadCloud, Layers, CalendarClock, Move, Sparkles,
 } from 'lucide-react';
-import { useUser } from '../contexts/UserContext';
-import apiClient from '../lib/api';
+import { useUser } from '../../contexts/UserContext';
+import apiClient from '../../lib/api';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');

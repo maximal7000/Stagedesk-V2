@@ -12,10 +12,10 @@ import {
   ChevronDown, ChevronRight, MapPin, Send,
   Trash2, PlusCircle
 } from 'lucide-react';
-import SignatureModal from '../components/SignatureModal';
-import apiClient from '../lib/api';
-import QRScanner from '../components/QRScanner';
-import { downloadLeihschein, generateLeihscheinPdf, generateGroupedLeihscheinPdf } from '../lib/pdfGenerator';
+import SignatureModal from '../../components/SignatureModal';
+import apiClient from '../../lib/api';
+import QRScanner from '../../components/QRScanner';
+import { downloadLeihschein, generateLeihscheinPdf, generateGroupedLeihscheinPdf } from '../../lib/pdfGenerator';
 
 // ─── Hilfs-Komponenten ────────────────────────────────────────────
 

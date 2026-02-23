@@ -18,6 +18,7 @@ from users.api import get_or_create_profile, is_admin
 from .models import (
     TaetigkeitsRolle,
     Veranstaltung,
+    VeranstaltungTermin,
     VeranstaltungZuweisung,
     VeranstaltungChecklisteItem,
     VeranstaltungNotiz,
@@ -31,6 +32,7 @@ from .schemas import (
     CreateVeranstaltungResponseSchema,
     VeranstaltungUpdateSchema,
     VeranstaltungFilterSchema,
+    VeranstaltungTermineSaveSchema,
     ZuweisungCreateSchema,
     ChecklisteItemCreateSchema,
     ChecklisteItemUpdateSchema,
@@ -60,6 +62,76 @@ def require_permission(request, code: str):
         pass
     from ninja.errors import HttpError
     raise HttpError(403, "Keine Berechtigung")
+
+
+def _sync_kalender_events(v):
+    """
+    Synchronisiert Kalender-Events für eine Veranstaltung (ein Event pro Termin).
+    Löscht alte auto-generierte Events und erstellt neue mit aktuellen Daten.
+    Zugewiesene User werden in der Beschreibung aufgelistet.
+    """
+    try:
+        from kalender.models import Event as KalenderEvent
+        from django.utils import timezone as tz
+        import datetime as dt_module
+
+        # Zugewiesene Personen für Beschreibung sammeln
+        zuweisungen = list(v.zuweisungen.select_related('taetigkeit').all()) if hasattr(v, '_prefetched_objects_cache') or v.pk else []
+        if not zuweisungen:
+            try:
+                zuweisungen = list(v.zuweisungen.select_related('taetigkeit').all())
+            except Exception:
+                zuweisungen = []
+
+        personen_lines = []
+        for z in zuweisungen:
+            line = z.user_username or z.user_keycloak_id
+            if z.taetigkeit:
+                line += f' ({z.taetigkeit.name})'
+            personen_lines.append(line)
+
+        beschreibung_parts = []
+        if v.beschreibung:
+            beschreibung_parts.append(v.beschreibung)
+        if personen_lines:
+            beschreibung_parts.append('Besetzung:\n' + '\n'.join(f'• {p}' for p in personen_lines))
+        beschreibung = '\n\n'.join(beschreibung_parts)
+
+        kalender_status = 'bestaetigt' if v.status in ('bestaetigt', 'laufend') else 'geplant'
+
+        # Alte auto-erstellte Events löschen
+        KalenderEvent.objects.filter(veranstaltung_id=v.id).delete()
+
+        termine_qs = list(v.termine.all())
+        if termine_qs:
+            for t in termine_qs:
+                start = dt_module.datetime.combine(t.datum, t.beginn or dt_module.time(0, 0))
+                ende = dt_module.datetime.combine(t.datum, t.ende or dt_module.time(23, 59))
+                start = tz.make_aware(start) if tz.is_naive(start) else start
+                ende = tz.make_aware(ende) if tz.is_naive(ende) else ende
+                KalenderEvent.objects.create(
+                    titel=f"{v.titel}{(' – ' + t.titel) if t.titel else ''}",
+                    beschreibung=beschreibung,
+                    start=start,
+                    ende=ende,
+                    ort=v.ort or '',
+                    status=kalender_status,
+                    veranstaltung_id=v.id,
+                    erstellt_von='system',
+                )
+        elif v.datum_von:
+            KalenderEvent.objects.create(
+                titel=v.titel,
+                beschreibung=beschreibung,
+                start=v.datum_von,
+                ende=v.datum_bis or v.datum_von,
+                ort=v.ort or '',
+                status=kalender_status,
+                veranstaltung_id=v.id,
+                erstellt_von='system',
+            )
+    except Exception:
+        pass  # Kalender-Sync ist best-effort
 
 
 def _set_ist_zugewiesen(veranstaltung, keycloak_id: str):
@@ -156,7 +228,7 @@ def get_veranstaltung(request, id: int):
     require_permission(request, 'veranstaltung.view')
     v = get_object_or_404(
         Veranstaltung.objects.prefetch_related(
-            'zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
+            'termine', 'zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
         ),
         id=id
     )
@@ -187,7 +259,7 @@ def create_veranstaltung(request, payload: VeranstaltungCreateSchema):
     data = payload.dict()
     data['erstellt_von'] = profile.keycloak_id
     data['datum_von'] = _parse_datetime(data.get('datum_von')) or timezone.now()
-    data['datum_bis'] = _parse_datetime(data.get('datum_bis')) or timezone.now()
+    data['datum_bis'] = _parse_datetime(data.get('datum_bis')) or data['datum_von']
     ausleihliste_id = data.pop('ausleihliste_id', None)
     if ausleihliste_id:
         from inventar.models import Ausleihliste
@@ -217,6 +289,8 @@ def update_veranstaltung(request, id: int, payload: VeranstaltungUpdateSchema):
     for k, val in data.items():
         setattr(v, k, val)
     v.save()
+    # Kalender-Events synchronisieren wenn vorhanden (Name/Status/Ort können sich geändert haben)
+    _sync_kalender_events(v)
     _set_ist_zugewiesen(v, get_user_id(request))
     return v
 
@@ -224,11 +298,251 @@ def update_veranstaltung(request, id: int, payload: VeranstaltungUpdateSchema):
 @veranstaltung_router.delete("/{id}", auth=keycloak_auth)
 def delete_veranstaltung(request, id: int):
     require_permission(request, 'veranstaltung.delete')
-    get_object_or_404(Veranstaltung, id=id).delete()
+    v = get_object_or_404(Veranstaltung, id=id)
+    # Kalender-Events auch löschen
+    try:
+        from kalender.models import Event as KalenderEvent
+        KalenderEvent.objects.filter(veranstaltung_id=v.id).delete()
+    except Exception:
+        pass
+    v.delete()
     return {"status": "deleted"}
 
 
+# ========== Termine ==========
+
+@veranstaltung_router.post("/{id}/termine", response=VeranstaltungSchema, auth=keycloak_auth)
+def save_termine(request, id: int, payload: VeranstaltungTermineSaveSchema):
+    """Termine einer Veranstaltung speichern (vollständige Ersetzung)."""
+    require_permission(request, 'veranstaltung.edit')
+    v = get_object_or_404(
+        Veranstaltung.objects.prefetch_related(
+            'termine', 'zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
+        ),
+        id=id
+    )
+    from datetime import time as time_type
+    import datetime as dt_module
+
+    def parse_time(s):
+        if not s:
+            return None
+        try:
+            parts = s.split(':')
+            return time_type(int(parts[0]), int(parts[1]))
+        except Exception:
+            return None
+
+    incoming_ids = {t.id for t in payload.termine if t.id}
+    # Lösche entfernte Termine
+    v.termine.exclude(id__in=incoming_ids).delete()
+
+    for termin_data in payload.termine:
+        beginn = parse_time(termin_data.beginn)
+        ende = parse_time(termin_data.ende)
+        if termin_data.id:
+            VeranstaltungTermin.objects.filter(id=termin_data.id, veranstaltung=v).update(
+                titel=termin_data.titel,
+                datum=termin_data.datum,
+                beginn=beginn,
+                ende=ende,
+            )
+        else:
+            VeranstaltungTermin.objects.create(
+                veranstaltung=v,
+                titel=termin_data.titel,
+                datum=termin_data.datum,
+                beginn=beginn,
+                ende=ende,
+            )
+
+    v.refresh_from_db()
+    # Kalender-Events synchronisieren
+    _sync_kalender_events(v)
+    _set_ist_zugewiesen(v, get_user_id(request))
+    return v
+
+
 # ========== Anwesenheit ==========
+
+@veranstaltung_router.post("/{id}/anwesenheit-erstellen", auth=keycloak_auth)
+def anwesenheit_erstellen(request, id: int):
+    """
+    Erstellt automatisch eine Anwesenheitsliste aus der Veranstaltung:
+    - Zugewiesene User → Teilnehmer (TaetigkeitsRolle als Aufgabe)
+    - VeranstaltungTermine → Anwesenheits-Termine
+    Verknüpft die neue Liste mit der Veranstaltung.
+    """
+    require_permission(request, 'veranstaltung.edit')
+    profile = get_or_create_profile(request)
+    v = get_object_or_404(
+        Veranstaltung.objects.prefetch_related('zuweisungen__taetigkeit', 'termine'),
+        id=id
+    )
+
+    from anwesenheit.models import AnwesenheitsListe, Termin as AnwesenheitsTermin, Teilnehmer
+
+    # Neue Anwesenheitsliste erstellen
+    liste = AnwesenheitsListe.objects.create(
+        titel=v.titel,
+        beschreibung=v.beschreibung or '',
+        ort=v.ort or '',
+        erstellt_von_keycloak_id=profile.keycloak_id,
+        erstellt_von_username=profile.username or '',
+    )
+
+    # Termine übernehmen: erst explizite Termine, dann Von-Bis als Fallback
+    termine_qs = list(v.termine.all())
+    if termine_qs:
+        for vt in termine_qs:
+            AnwesenheitsTermin.objects.get_or_create(
+                liste=liste,
+                datum=vt.datum,
+                beginn=vt.beginn,
+                defaults={
+                    'titel': vt.titel or '',
+                    'ende': vt.ende,
+                }
+            )
+    elif v.datum_von:
+        # Fallback: datum_von/datum_bis als einzelnen Termin
+        from datetime import time as time_type
+        beginn = v.datum_von.time() if v.datum_von else None
+        ende = v.datum_bis.time() if v.datum_bis else None
+        datum = v.datum_von.date()
+        AnwesenheitsTermin.objects.get_or_create(
+            liste=liste,
+            datum=datum,
+            beginn=beginn,
+            defaults={
+                'titel': '',
+                'ende': ende,
+            }
+        )
+
+    # Zugewiesene User als Teilnehmer hinzufügen
+    for zuw in v.zuweisungen.all():
+        aufgabe = zuw.taetigkeit.name if zuw.taetigkeit else ''
+        Teilnehmer.objects.get_or_create(
+            liste=liste,
+            keycloak_id=zuw.user_keycloak_id,
+            defaults={
+                'name': zuw.user_username or zuw.user_keycloak_id,
+                'email': zuw.user_email or '',
+                'aufgabe': aufgabe,
+            }
+        )
+
+    # Liste mit Veranstaltung verknüpfen
+    v.anwesenheitsliste = liste
+    v.save(update_fields=['anwesenheitsliste'])
+
+    return {
+        "status": "created",
+        "liste_id": liste.id,
+        "titel": liste.titel,
+        "teilnehmer": liste.teilnehmer.count(),
+        "termine": liste.termine.count(),
+    }
+
+
+@veranstaltung_router.post("/{id}/anwesenheit-sync", auth=keycloak_auth)
+def anwesenheit_sync(request, id: int):
+    """
+    Synchronisiert die verknüpfte Anwesenheitsliste:
+    - Termine: neue hinzufügen, veraltete löschen (TerminAnwesenheit bleibt erhalten)
+    - Teilnehmer: neue Zuweisungen hinzufügen, entfernte Zuweisungen aus Liste entfernen
+    """
+    require_permission(request, 'veranstaltung.edit')
+    v = get_object_or_404(
+        Veranstaltung.objects.prefetch_related('termine', 'zuweisungen__taetigkeit'),
+        id=id
+    )
+    if not v.anwesenheitsliste_id:
+        from ninja.errors import HttpError
+        raise HttpError(400, "Keine Anwesenheitsliste verknüpft")
+
+    from anwesenheit.models import Termin as AnwesenheitsTermin, Teilnehmer
+
+    liste = v.anwesenheitsliste
+    termine_qs = list(v.termine.all())
+
+    termine_added = 0
+    termine_deleted = 0
+    teilnehmer_added = 0
+    teilnehmer_removed = 0
+
+    # ─── Termine synchronisieren ───────────────────────────────
+    if termine_qs:
+        for vt in termine_qs:
+            _, created = AnwesenheitsTermin.objects.get_or_create(
+                liste=liste,
+                datum=vt.datum,
+                beginn=vt.beginn,
+                defaults={'titel': vt.titel or '', 'ende': vt.ende}
+            )
+            if created:
+                termine_added += 1
+
+        # Veraltete Termine löschen
+        expected_keys = {(vt.datum, vt.beginn) for vt in termine_qs}
+        for at in AnwesenheitsTermin.objects.filter(liste=liste):
+            if (at.datum, at.beginn) not in expected_keys:
+                at.delete()
+                termine_deleted += 1
+    elif v.datum_von:
+        _, created = AnwesenheitsTermin.objects.get_or_create(
+            liste=liste,
+            datum=v.datum_von.date(),
+            beginn=v.datum_von.time(),
+            defaults={'titel': '', 'ende': v.datum_bis.time() if v.datum_bis else None}
+        )
+        if created:
+            termine_added += 1
+
+    # ─── Teilnehmer synchronisieren ────────────────────────────
+    # Zuweisungen → Soll-Stand
+    zuweisungen = list(v.zuweisungen.all())
+    soll_keycloak_ids = {z.user_keycloak_id for z in zuweisungen}
+
+    # Ist-Stand der Teilnehmer
+    ist_teilnehmer = {t.keycloak_id: t for t in Teilnehmer.objects.filter(liste=liste) if t.keycloak_id}
+
+    # Neue hinzufügen / Aufgabe aktualisieren
+    for zuw in zuweisungen:
+        aufgabe = zuw.taetigkeit.name if zuw.taetigkeit else ''
+        if zuw.user_keycloak_id in ist_teilnehmer:
+            # Aufgabe aktualisieren falls nötig
+            tn = ist_teilnehmer[zuw.user_keycloak_id]
+            if aufgabe and tn.aufgabe != aufgabe:
+                tn.aufgabe = aufgabe
+                tn.save(update_fields=['aufgabe'])
+        else:
+            Teilnehmer.objects.create(
+                liste=liste,
+                keycloak_id=zuw.user_keycloak_id,
+                name=zuw.user_username or zuw.user_keycloak_id,
+                email=zuw.user_email or '',
+                aufgabe=aufgabe,
+            )
+            teilnehmer_added += 1
+
+    # Entfernte Zuweisungen aus Teilnehmerliste nehmen
+    for kid, tn in ist_teilnehmer.items():
+        if kid not in soll_keycloak_ids:
+            tn.delete()
+            teilnehmer_removed += 1
+
+    return {
+        "status": "synced",
+        "termine_added": termine_added,
+        "termine_deleted": termine_deleted,
+        "teilnehmer_added": teilnehmer_added,
+        "teilnehmer_removed": teilnehmer_removed,
+        "termine_gesamt": AnwesenheitsTermin.objects.filter(liste=liste).count(),
+        "teilnehmer_gesamt": Teilnehmer.objects.filter(liste=liste).count(),
+    }
+
 
 @veranstaltung_router.post("/{id}/anwesenheit/{liste_id}", auth=keycloak_auth)
 def link_anwesenheit(request, id: int, liste_id: int):
@@ -283,6 +597,8 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
             pass
 
     v.refresh_from_db()
+    # Kalender-Events synchronisieren (Besetzung in Beschreibung aktualisieren)
+    _sync_kalender_events(v)
     _set_ist_zugewiesen(v, get_user_id(request))
     return v
 
@@ -304,6 +620,8 @@ def remove_zuweisung(request, id: int, user_keycloak_id: str):
 
     VeranstaltungZuweisung.objects.filter(veranstaltung=v, user_keycloak_id=user_keycloak_id).delete()
     v.refresh_from_db()
+    # Kalender-Events aktualisieren (Besetzung in Beschreibung)
+    _sync_kalender_events(v)
     _set_ist_zugewiesen(v, get_user_id(request))
     return v
 

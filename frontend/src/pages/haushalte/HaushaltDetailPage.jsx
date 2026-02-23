@@ -9,8 +9,8 @@ import {
   Trash2, Edit, ExternalLink, Loader2, Package, RefreshCw,
   Wand2, Save, X, LayoutGrid, List, Columns
 } from 'lucide-react';
-import apiClient from '../lib/api';
-import EditHaushaltModal from '../components/EditHaushaltModal';
+import apiClient from '../../lib/api';
+import EditHaushaltModal from '../../components/EditHaushaltModal';
 
 const POLL_INTERVAL = 5000;
 

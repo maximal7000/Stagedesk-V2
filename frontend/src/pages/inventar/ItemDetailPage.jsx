@@ -10,10 +10,11 @@ import {
   Upload, Copy, History, AlertCircle, ImageIcon
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import Barcode from 'react-barcode';
 import { toast } from 'sonner';
-import apiClient from '../lib/api';
-import { useUser } from '../contexts/UserContext';
-import AutocompleteInput from '../components/AutocompleteInput';
+import apiClient from '../../lib/api';
+import { useUser } from '../../contexts/UserContext';
+import AutocompleteInput from '../../components/AutocompleteInput';
 
 const STATUS_FARBEN = {
   verfuegbar: 'bg-green-500',
@@ -559,17 +560,29 @@ export default function ItemDetailPage() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* QR Code Display */}
+          {/* QR Code & Barcode Display */}
           {!isNew && item && item.haupt_qr_code && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center">
-              <QRCodeSVG
-                value={item.haupt_qr_code}
-                size={180}
-                bgColor="transparent"
-                fgColor="#ffffff"
-                className="mx-auto"
-              />
-              <p className="mt-4 text-sm text-gray-400 font-mono">{item.haupt_qr_code}</p>
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+              <div className="text-center">
+                <QRCodeSVG
+                  value={item.haupt_qr_code}
+                  size={150}
+                  bgColor="transparent"
+                  fgColor="#ffffff"
+                  className="mx-auto"
+                />
+              </div>
+              <div className="text-center bg-white rounded-lg p-2">
+                <Barcode
+                  value={item.haupt_qr_code}
+                  width={1.5}
+                  height={40}
+                  fontSize={11}
+                  margin={2}
+                  displayValue={true}
+                />
+              </div>
+              <p className="text-xs text-gray-500 text-center font-mono">{item.haupt_qr_code}</p>
             </div>
           )}
 

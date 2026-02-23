@@ -28,9 +28,14 @@ import {
   Hash,
   AlertTriangle,
   ClipboardList,
+  CalendarPlus,
+  ChevronDown,
+  ChevronRight,
+  Wand2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import apiClient from '../lib/api';
+import apiClient from '../../lib/api';
+import { useUser } from '../../contexts/UserContext';
 
 const STATUS_LABELS = {
   planung: 'Planung',
@@ -57,6 +62,7 @@ export default function VeranstaltungDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = !id;
+  const { hasPermission } = useUser();
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(!isNew);
@@ -103,6 +109,13 @@ export default function VeranstaltungDetailPage() {
   const [alleAnwesenheit, setAlleAnwesenheit] = useState([]);
   const [showLinkAnwesenheit, setShowLinkAnwesenheit] = useState(false);
   const [selectedAnwesenheitId, setSelectedAnwesenheitId] = useState('');
+  const [creatingAnwesenheit, setCreatingAnwesenheit] = useState(false);
+  const [syncingAnwesenheit, setSyncingAnwesenheit] = useState(false);
+
+  // Termine
+  const [showTermineModal, setShowTermineModal] = useState(false);
+  const [termineForm, setTermineForm] = useState([]);
+  const [savingTermine, setSavingTermine] = useState(false);
 
   const fetchDetail = useCallback(async () => {
     if (isNew) return;
@@ -225,6 +238,68 @@ export default function VeranstaltungDetailPage() {
       toast.success('Verknüpfung entfernt');
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Entfernen fehlgeschlagen');
+    }
+  };
+
+  const handleAnwesenheitSync = async () => {
+    setSyncingAnwesenheit(true);
+    try {
+      const res = await apiClient.post(`/veranstaltung/${id}/anwesenheit-sync`);
+      const d = res.data;
+      const parts = [];
+      if (d.termine_added || d.termine_deleted)
+        parts.push(`Termine: +${d.termine_added}/-${d.termine_deleted}`);
+      if (d.teilnehmer_added || d.teilnehmer_removed)
+        parts.push(`Personen: +${d.teilnehmer_added}/-${d.teilnehmer_removed}`);
+      toast.success(parts.length ? `Sync: ${parts.join(', ')}` : 'Alles bereits aktuell');
+      refetch();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Synchronisierung fehlgeschlagen');
+    } finally {
+      setSyncingAnwesenheit(false);
+    }
+  };
+
+  const handleAnwesenheitErstellen = async () => {
+    if (!confirm('Anwesenheitsliste automatisch aus Veranstaltung erstellen? Zugewiesene Personen und Termine werden übernommen.')) return;
+    setCreatingAnwesenheit(true);
+    try {
+      const res = await apiClient.post(`/veranstaltung/${id}/anwesenheit-erstellen`);
+      refetch();
+      toast.success(`Anwesenheitsliste erstellt (${res.data.teilnehmer} Personen, ${res.data.termine} Termine)`);
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Erstellen fehlgeschlagen');
+    } finally {
+      setCreatingAnwesenheit(false);
+    }
+  };
+
+  const openTermineModal = () => {
+    setTermineForm((data?.termine || []).map(t => ({
+      id: t.id, titel: t.titel || '', datum: t.datum, beginn: t.beginn || '', ende: t.ende || '',
+    })));
+    setShowTermineModal(true);
+  };
+
+  const handleSaveTermine = async () => {
+    setSavingTermine(true);
+    try {
+      await apiClient.post(`/veranstaltung/${id}/termine`, {
+        termine: termineForm.filter(t => t.datum).map(t => ({
+          id: t.id || undefined,
+          titel: t.titel,
+          datum: t.datum,
+          beginn: t.beginn || null,
+          ende: t.ende || null,
+        })),
+      });
+      setShowTermineModal(false);
+      refetch();
+      toast.success('Termine gespeichert');
+    } catch (err) {
+      toast.error('Termine konnten nicht gespeichert werden');
+    } finally {
+      setSavingTermine(false);
     }
   };
 
@@ -516,7 +591,7 @@ export default function VeranstaltungDetailPage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Von *</label>
+                <label className="block text-sm text-gray-400 mb-1">Start *</label>
                 <input
                   type="datetime-local"
                   required
@@ -526,10 +601,9 @@ export default function VeranstaltungDetailPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Bis *</label>
+                <label className="block text-sm text-gray-400 mb-1">Ende <span className="text-gray-600 text-xs">(optional)</span></label>
                 <input
                   type="datetime-local"
-                  required
                   value={form.datum_bis}
                   onChange={(e) => setForm((f) => ({ ...f, datum_bis: e.target.value }))}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white"
@@ -692,7 +766,7 @@ export default function VeranstaltungDetailPage() {
             >
               {STATUS_LABELS[data.status] || data.status}
             </span>
-            {!editMode ? (
+            {hasPermission('veranstaltung.edit') && !editMode ? (
               <button
                 type="button"
                 onClick={() => setEditMode(true)}
@@ -700,7 +774,7 @@ export default function VeranstaltungDetailPage() {
               >
                 <Pen className="w-4 h-4" />
               </button>
-            ) : (
+            ) : editMode ? (
               <>
                 <button
                   type="button"
@@ -719,7 +793,7 @@ export default function VeranstaltungDetailPage() {
                   <X className="w-4 h-4" />
                 </button>
               </>
-            )}
+            ) : null}
           </div>
         </div>
         {data.beschreibung && (
@@ -727,6 +801,55 @@ export default function VeranstaltungDetailPage() {
         )}
       </div>
 
+      {/* ─── Termine ──────────────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || (data.termine?.length > 0)) && (
+        <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+              <CalendarPlus className="w-5 h-5" />
+              Termine
+              {data.termine?.length > 0 && (
+                <span className="text-sm font-normal text-gray-400">({data.termine.length})</span>
+              )}
+            </h2>
+            {hasPermission('veranstaltung.edit') && (
+              <button
+                type="button"
+                onClick={openTermineModal}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Bearbeiten
+              </button>
+            )}
+          </div>
+          {(data.termine?.length ?? 0) > 0 ? (
+            <div className="space-y-2">
+              {data.termine.map((t) => (
+                <div key={t.id} className="flex items-center gap-3 py-2.5 px-4 bg-gray-800 rounded-lg text-sm">
+                  <Calendar className="w-4 h-4 text-gray-500 shrink-0" />
+                  <span className="text-white font-medium">
+                    {new Date(t.datum).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </span>
+                  {(t.beginn || t.ende) && (
+                    <span className="text-gray-400">
+                      {t.beginn && t.beginn.slice(0, 5)}{t.ende ? `–${t.ende.slice(0, 5)}` : ''}
+                    </span>
+                  )}
+                  {t.titel && (
+                    <span className="text-blue-400 ml-auto">{t.titel}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-sm">Keine Termine eingetragen</p>
+          )}
+        </section>
+      )}
+
+      {/* ─── Zuweisungen ──────────────────────────────────── */}
+      {(hasPermission('veranstaltung.zuweisungen') || (data.zuweisungen?.length > 0)) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
@@ -736,14 +859,16 @@ export default function VeranstaltungDetailPage() {
               <span className="text-sm font-normal text-gray-400">({data.zuweisungen.length})</span>
             )}
           </h2>
-          <button
-            type="button"
-            onClick={() => setShowAddUsers(!showAddUsers)}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
-          >
-            <UserPlus className="w-4 h-4" />
-            Hinzufügen
-          </button>
+          {hasPermission('veranstaltung.zuweisungen') && (
+            <button
+              type="button"
+              onClick={() => setShowAddUsers(!showAddUsers)}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+            >
+              <UserPlus className="w-4 h-4" />
+              Hinzufügen
+            </button>
+          )}
         </div>
 
         {showAddUsers && (() => {
@@ -840,29 +965,32 @@ export default function VeranstaltungDetailPage() {
                   <span className="text-white font-medium truncate">
                     {z.user_username || z.user_keycloak_id?.slice(0, 8)}
                   </span>
-                  <select
-                    value={z.taetigkeit_id || ''}
-                    onChange={(e) => updateZuweisung(z, e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 cursor-pointer"
-                  >
-                    <option value="">Keine Tätigkeit</option>
-                    {taetigkeitsrollen.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                  {z.taetigkeit_name && (
+                  {hasPermission('veranstaltung.zuweisungen') ? (
+                    <select
+                      value={z.taetigkeit_id || ''}
+                      onChange={(e) => updateZuweisung(z, e.target.value)}
+                      className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 cursor-pointer"
+                    >
+                      <option value="">Keine Tätigkeit</option>
+                      {taetigkeitsrollen.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  ) : z.taetigkeit_name ? (
                     <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-purple-600/20 text-purple-400">
                       {z.taetigkeit_name}
                     </span>
-                  )}
+                  ) : null}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeZuweisung(z.user_keycloak_id)}
-                  className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                {hasPermission('veranstaltung.zuweisungen') && (
+                  <button
+                    type="button"
+                    onClick={() => removeZuweisung(z.user_keycloak_id)}
+                    className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -870,8 +998,10 @@ export default function VeranstaltungDetailPage() {
           <p className="text-gray-500 text-sm">Keine Zuweisungen</p>
         )}
       </section>
+      )}
 
-      {/* Ausleihlisten */}
+      {/* ─── Ausleihlisten ──────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || ausleihlisten.length > 0) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
@@ -988,23 +1118,51 @@ export default function VeranstaltungDetailPage() {
           <p className="text-gray-500 text-sm">Keine Ausleihlisten verknüpft</p>
         )}
       </section>
+      )}
 
-      {/* Anwesenheit */}
+      {/* ─── Anwesenheit ────────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || data?.anwesenheitsliste_id) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
             <ClipboardList className="w-5 h-5" />
             Anwesenheit
           </h2>
-          {!data?.anwesenheitsliste_id && (
-            <button
-              type="button"
-              onClick={() => { setShowLinkAnwesenheit(true); fetchAlleAnwesenheit(); }}
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Verknüpfen
-            </button>
+          {hasPermission('veranstaltung.edit') && (
+            <div className="flex gap-2">
+              {data?.anwesenheitsliste_id ? (
+                <button
+                  type="button"
+                  onClick={handleAnwesenheitSync}
+                  disabled={syncingAnwesenheit}
+                  title="Termine aus Veranstaltung in Anwesenheitsliste synchronisieren"
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg text-sm"
+                >
+                  {syncingAnwesenheit ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />}
+                  Termine sync
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleAnwesenheitErstellen}
+                    disabled={creatingAnwesenheit}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    Auto-Erstellen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowLinkAnwesenheit(true); fetchAlleAnwesenheit(); }}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Verknüpfen
+                  </button>
+                </>
+              )}
+            </div>
           )}
         </div>
 
@@ -1064,12 +1222,21 @@ export default function VeranstaltungDetailPage() {
           <p className="text-gray-500 text-sm">Keine Anwesenheitsliste verknüpft</p>
         )}
       </section>
+      )}
 
+      {/* ─── Checkliste ─────────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || (data.checkliste?.length > 0)) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-white mb-4">
           <CheckSquare className="w-5 h-5" />
           Checkliste
+          {data.checkliste?.length > 0 && (
+            <span className="text-sm font-normal text-gray-400">
+              ({data.checkliste.filter(i => i.erledigt).length}/{data.checkliste.length})
+            </span>
+          )}
         </h2>
+        {hasPermission('veranstaltung.edit') && (
         <div className="flex gap-2 mb-4">
           <input
             type="text"
@@ -1087,33 +1254,23 @@ export default function VeranstaltungDetailPage() {
             <Plus className="w-4 h-4" />
           </button>
         </div>
+        )}
         <ul className="space-y-2">
           {(data.checkliste || []).map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center gap-3 py-2 px-3 bg-gray-800 rounded-lg"
-            >
-              <button
-                type="button"
-                onClick={() => toggleCheckItem(item.id, !item.erledigt)}
-                className="flex-shrink-0"
-              >
-                <CheckSquare
-                  className={`w-5 h-5 ${item.erledigt ? 'text-green-500' : 'text-gray-500'}`}
-                />
-              </button>
-              <span
-                className={`flex-1 ${item.erledigt ? 'text-gray-500 line-through' : 'text-white'}`}
-              >
-                {item.titel}
-              </span>
-              <button
-                type="button"
-                onClick={() => deleteCheckItem(item.id)}
-                className="text-gray-400 hover:text-red-400"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+            <li key={item.id} className="flex items-center gap-3 py-2 px-3 bg-gray-800 rounded-lg">
+              {hasPermission('veranstaltung.edit') ? (
+                <button type="button" onClick={() => toggleCheckItem(item.id, !item.erledigt)} className="flex-shrink-0">
+                  <CheckSquare className={`w-5 h-5 ${item.erledigt ? 'text-green-500' : 'text-gray-500'}`} />
+                </button>
+              ) : (
+                <CheckSquare className={`w-5 h-5 flex-shrink-0 ${item.erledigt ? 'text-green-500' : 'text-gray-500'}`} />
+              )}
+              <span className={`flex-1 ${item.erledigt ? 'text-gray-500 line-through' : 'text-white'}`}>{item.titel}</span>
+              {hasPermission('veranstaltung.edit') && (
+                <button type="button" onClick={() => deleteCheckItem(item.id)} className="text-gray-400 hover:text-red-400">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </li>
           ))}
           {(!data.checkliste || data.checkliste.length === 0) && (
@@ -1121,12 +1278,16 @@ export default function VeranstaltungDetailPage() {
           )}
         </ul>
       </section>
+      )}
 
+      {/* ─── Notizen ────────────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || (data.notizen?.length > 0)) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-white mb-4">
           <MessageSquare className="w-5 h-5" />
           Notizen
         </h2>
+        {hasPermission('veranstaltung.edit') && (
         <div className="flex gap-2 mb-4">
           <textarea
             placeholder="Notiz hinzufügen…"
@@ -1144,6 +1305,7 @@ export default function VeranstaltungDetailPage() {
             <Plus className="w-4 h-4" />
           </button>
         </div>
+        )}
         <ul className="space-y-3">
           {(data.notizen || []).map((n) => (
             <li key={n.id} className="py-2 px-3 bg-gray-800 rounded-lg">
@@ -1158,12 +1320,16 @@ export default function VeranstaltungDetailPage() {
           )}
         </ul>
       </section>
+      )}
 
+      {/* ─── Anhänge ────────────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || (data.anhaenge?.length > 0)) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-white mb-4">
           <Paperclip className="w-5 h-5" />
           Anhänge
         </h2>
+        {hasPermission('veranstaltung.edit') && (
         <form onSubmit={addAnhang} className="flex flex-wrap gap-2 mb-4">
           <input
             type="text"
@@ -1192,12 +1358,10 @@ export default function VeranstaltungDetailPage() {
             {addingAnhang ? '…' : (<><Plus className="w-4 h-4 inline mr-1" /><span>Hinzufügen</span></>)}
           </button>
         </form>
+        )}
         <ul className="space-y-2">
           {(data.anhaenge || []).map((a) => (
-            <li
-              key={a.id}
-              className="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-lg"
-            >
+            <li key={a.id} className="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-lg">
               <button
                 type="button"
                 onClick={() => downloadAnhang(a)}
@@ -1206,13 +1370,11 @@ export default function VeranstaltungDetailPage() {
                 <Download className="w-3.5 h-3.5 flex-shrink-0" />
                 {a.name}
               </button>
-              <button
-                type="button"
-                onClick={() => deleteAnhang(a.id)}
-                className="text-gray-400 hover:text-red-400"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {hasPermission('veranstaltung.edit') && (
+                <button type="button" onClick={() => deleteAnhang(a.id)} className="text-gray-400 hover:text-red-400">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </li>
           ))}
           {(!data.anhaenge || data.anhaenge.length === 0) && (
@@ -1220,12 +1382,16 @@ export default function VeranstaltungDetailPage() {
           )}
         </ul>
       </section>
+      )}
 
+      {/* ─── Erinnerungen ───────────────────────────────── */}
+      {(hasPermission('veranstaltung.edit') || (data.erinnerungen?.length > 0)) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-white mb-4">
           <Bell className="w-5 h-5" />
           Erinnerungen
         </h2>
+        {hasPermission('veranstaltung.edit') && (
         <div className="flex flex-wrap gap-2 mb-4">
           <input
             type="number"
@@ -1257,6 +1423,7 @@ export default function VeranstaltungDetailPage() {
             Hinzufügen
           </button>
         </div>
+        )}
         <ul className="space-y-2">
           {(data.erinnerungen || []).map((er) => (
             <li
@@ -1283,8 +1450,10 @@ export default function VeranstaltungDetailPage() {
           )}
         </ul>
       </section>
+      )}
 
-      {/* Discord-Integration */}
+      {/* ─── Discord ────────────────────────────────────── */}
+      {(hasPermission('veranstaltung.discord') || data.discord_event_id || data.discord_channel_id) && (
       <section className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold text-white mb-4">
           <Hash className="w-5 h-5" />
@@ -1347,6 +1516,83 @@ export default function VeranstaltungDetailPage() {
           )}
         </div>
       </section>
+      )}
+
+      {/* ─── Termine-Modal ──────────────────────────────── */}
+      {showTermineModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
+              <h2 className="text-lg font-semibold text-white">Termine verwalten</h2>
+              <button onClick={() => setShowTermineModal(false)} className="text-gray-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {termineForm.map((t, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 bg-gray-800 rounded-lg">
+                  <div className="flex-1 grid grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      value={t.titel}
+                      onChange={e => { const f = [...termineForm]; f[i].titel = e.target.value; setTermineForm(f); }}
+                      placeholder="Titel (optional)"
+                      className="col-span-2 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white"
+                    />
+                    <input
+                      type="date"
+                      value={t.datum}
+                      onChange={e => { const f = [...termineForm]; f[i].datum = e.target.value; setTermineForm(f); }}
+                      className="px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white"
+                    />
+                    <div className="flex gap-1">
+                      <input
+                        type="time"
+                        value={t.beginn}
+                        onChange={e => { const f = [...termineForm]; f[i].beginn = e.target.value; setTermineForm(f); }}
+                        placeholder="Beginn"
+                        className="flex-1 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white"
+                      />
+                      <input
+                        type="time"
+                        value={t.ende}
+                        onChange={e => { const f = [...termineForm]; f[i].ende = e.target.value; setTermineForm(f); }}
+                        placeholder="Ende"
+                        className="flex-1 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setTermineForm(termineForm.filter((_, j) => j !== i))}
+                    className="p-1.5 text-red-400 hover:bg-red-900/20 rounded mt-1"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setTermineForm([...termineForm, { id: null, titel: '', datum: '', beginn: '', ende: '' }])}
+                className="flex items-center gap-2 w-full p-3 text-sm text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded-lg border border-dashed border-gray-700"
+              >
+                <Plus className="w-4 h-4" /> Termin hinzufügen
+              </button>
+            </div>
+            <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
+              <button onClick={() => setShowTermineModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">
+                Abbrechen
+              </button>
+              <button
+                onClick={handleSaveTermine}
+                disabled={savingTermine}
+                className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg"
+              >
+                {savingTermine ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Speichern
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

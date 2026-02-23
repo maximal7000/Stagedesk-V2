@@ -8,7 +8,7 @@ import {
   Package, Building, Users, Truck, HelpCircle,
   DollarSign, AlertCircle
 } from 'lucide-react';
-import apiClient from '../lib/api';
+import apiClient from '../../lib/api';
 
 const RESSOURCE_TYPEN = [
   { value: 'equipment', label: 'Equipment', icon: Package, color: 'text-blue-400' },

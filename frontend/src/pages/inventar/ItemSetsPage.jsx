@@ -7,7 +7,7 @@ import {
   Plus, Search, Layers, ArrowLeft, 
   Loader2, X, Check, Trash2, Edit2, Package
 } from 'lucide-react';
-import apiClient from '../lib/api';
+import apiClient from '../../lib/api';
 import { toast } from 'sonner';
 
 export default function ItemSetsPage() {

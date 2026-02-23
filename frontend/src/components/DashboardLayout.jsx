@@ -1,7 +1,7 @@
 /**
  * Dashboard Layout mit Sidebar-Navigation
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from 'react-oidc-context';
 import {
   Home,
@@ -16,19 +16,15 @@ import {
   Sun,
   Moon,
   Calendar,
-  CalendarCheck,
-  Package,
+  Ticket,
   Boxes,
-  BarChart3,
   CalendarDays,
-  AlertTriangle,
   Monitor,
   ClipboardList,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
-import apiClient from '../lib/api';
 
 export default function DashboardLayout({ children }) {
   const auth = useAuth();
@@ -37,21 +33,13 @@ export default function DashboardLayout({ children }) {
   const { isAdmin, hasPermission } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [ueberfaelligeCount, setUeberfaelligeCount] = useState(0);
 
   const user = auth.user?.profile;
-
-  // Überfällige Ausleihen zählen
-  useEffect(() => {
-    apiClient.get('/inventar/stats')
-      .then(res => setUeberfaelligeCount(res.data?.ueberfaellige_ausleihen || 0))
-      .catch(() => {});
-  }, [location.pathname]);
 
   // Navigation mit Permission-Check
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, permission: null },
-    { name: 'Veranstaltungsplaner', href: '/veranstaltung', icon: CalendarCheck, permission: null },
+    { name: 'Veranstaltungen', href: '/veranstaltung', icon: Ticket, permission: null },
     { name: 'Kalender', href: '/kalender', icon: Calendar, permission: 'kalender.view' },
     { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Anwesenheit', href: '/anwesenheit', icon: ClipboardList, permission: 'anwesenheit.view' },
@@ -60,10 +48,7 @@ export default function DashboardLayout({ children }) {
 
   // Inventar-Unternavigation
   const inventarSubNav = hasPermission('inventar.view') ? [
-    { name: 'Ausleihen', href: '/ausleihen', icon: Package, badge: ueberfaelligeCount > 0 ? ueberfaelligeCount : null },
-    { name: 'Ausleihe-Dashboard', href: '/ausleihen/dashboard', icon: BarChart3 },
     { name: 'Ausleihe-Kalender', href: '/ausleihen/kalender', icon: CalendarDays },
-    { name: 'Item-Sets', href: '/inventar/sets', icon: Boxes },
   ] : [];
 
   // Admin-Navigation

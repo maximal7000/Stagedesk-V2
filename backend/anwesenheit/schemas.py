@@ -6,6 +6,43 @@ from datetime import date, time, datetime
 from ninja import Schema
 
 
+def _compute_statistik(obj):
+    """Statistik über ALLE Termine aggregiert (nicht nur nächster Termin)."""
+    termine = list(obj.termine.all())
+    teilnehmer = list(obj.teilnehmer.all())
+    gesamt = len(teilnehmer)
+
+    if not termine:
+        # Keine Termine → nutze den Teilnehmer-Generalstatus
+        counts = {'anwesend': 0, 'teilweise': 0, 'abwesend': 0, 'krank': 0, 'ausstehend': 0}
+        for tn in teilnehmer:
+            s = tn.status or 'ausstehend'
+            if s in counts:
+                counts[s] += 1
+        quote = (counts['anwesend'] + counts['teilweise']) / gesamt * 100 if gesamt else 0
+        return {**counts, 'gesamt': gesamt, 'quote': round(quote, 1)}
+
+    # Aggregation über alle Termine
+    from anwesenheit.models import TerminAnwesenheit
+    records = TerminAnwesenheit.objects.filter(
+        termin__in=termine,
+        teilnehmer__in=teilnehmer,
+    ).values_list('status', flat=True)
+
+    counts = {'anwesend': 0, 'teilweise': 0, 'abwesend': 0, 'krank': 0, 'ausstehend': 0}
+    for s in records:
+        if s in counts:
+            counts[s] += 1
+
+    # Fehlende Einträge = ausstehend
+    total_slots = gesamt * len(termine)
+    erfasst = sum(counts.values())
+    counts['ausstehend'] += total_slots - erfasst
+
+    quote = (counts['anwesend'] + counts['teilweise']) / total_slots * 100 if total_slots else 0
+    return {**counts, 'gesamt': total_slots, 'quote': round(quote, 1)}
+
+
 # ─── Response Schemas ─────────────────────────────────────────────
 
 class TerminSchema(Schema):
@@ -32,6 +69,7 @@ class TeilnehmerSchema(Schema):
     keycloak_id: str
     name: str
     email: str
+    aufgabe: str
     status: str
     markiert_am: Optional[datetime]
     markiert_von: str
@@ -65,22 +103,7 @@ class AnwesenheitsListeSchema(Schema):
 
     @staticmethod
     def resolve_statistik(obj):
-        teilnehmer = obj.teilnehmer.all()
-        total = teilnehmer.count()
-        if total == 0:
-            return {'gesamt': 0, 'anwesend': 0, 'abwesend': 0, 'krank': 0, 'ausstehend': 0, 'quote': 0}
-        anwesend = teilnehmer.filter(status='anwesend').count()
-        abwesend = teilnehmer.filter(status='abwesend').count()
-        krank = teilnehmer.filter(status='krank').count()
-        ausstehend = teilnehmer.filter(status='ausstehend').count()
-        return {
-            'gesamt': total,
-            'anwesend': anwesend,
-            'abwesend': abwesend,
-            'krank': krank,
-            'ausstehend': ausstehend,
-            'quote': round(anwesend / total * 100) if total > 0 else 0,
-        }
+        return _compute_statistik(obj)
 
 
 class AnwesenheitsListeListSchema(Schema):
@@ -109,19 +132,7 @@ class AnwesenheitsListeListSchema(Schema):
 
     @staticmethod
     def resolve_statistik(obj):
-        teilnehmer = obj.teilnehmer.all()
-        total = teilnehmer.count()
-        if total == 0:
-            return {'gesamt': 0, 'anwesend': 0, 'abwesend': 0, 'krank': 0, 'ausstehend': 0, 'quote': 0}
-        anwesend = teilnehmer.filter(status='anwesend').count()
-        return {
-            'gesamt': total,
-            'anwesend': anwesend,
-            'abwesend': teilnehmer.filter(status='abwesend').count(),
-            'krank': teilnehmer.filter(status='krank').count(),
-            'ausstehend': teilnehmer.filter(status='ausstehend').count(),
-            'quote': round(anwesend / total * 100) if total > 0 else 0,
-        }
+        return _compute_statistik(obj)
 
 
 # ─── Create / Update Schemas ─────────────────────────────────────
@@ -175,8 +186,26 @@ class TerminStatusUpdateSchema(Schema):
     notizen: str = ''
 
 
+class BulkStatusItemSchema(Schema):
+    teilnehmer_id: int
+    status: str
+    notizen: str = ''
+    termin_id: Optional[int] = None
+
+
 class BulkStatusUpdateSchema(Schema):
-    updates: List[StatusUpdateSchema]
+    updates: List[BulkStatusItemSchema]
+
+
+class SelfStatusUpdateSchema(Schema):
+    termin_id: int
+    status: str
+    notizen: str = ''
+
+
+class AufgabeUpdateSchema(Schema):
+    teilnehmer_id: int
+    aufgabe: str
 
 
 class KlonSchema(Schema):
