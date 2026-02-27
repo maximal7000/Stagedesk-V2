@@ -99,6 +99,18 @@ class MonitorConfigSchema(Schema):
     oepnv_zeige_fernverkehr: bool
     oepnv_api_db: bool
     oepnv_api_nahsh: bool
+    oepnv_zeige_via: bool
+    oepnv_zeige_relativ: bool
+    oepnv_farbcodierung: bool
+    oepnv_highlight_naechste: bool
+    oepnv_auto_scroll: bool
+    oepnv_stoerungsbanner: bool
+    oepnv_schriftgroesse: str
+    oepnv_layout_spalten: int
+    oepnv_streik_aktiv: bool
+    oepnv_streik_text: str
+    oepnv_streik_linien: list = []
+    oepnv_streik_typen: list = []
     ist_on_air: bool
     on_air_text: str
     on_air_seit: Optional[datetime] = None
@@ -177,6 +189,18 @@ class MonitorConfigUpdateSchema(Schema):
     oepnv_zeige_fernverkehr: Optional[bool] = None
     oepnv_api_db: Optional[bool] = None
     oepnv_api_nahsh: Optional[bool] = None
+    oepnv_zeige_via: Optional[bool] = None
+    oepnv_zeige_relativ: Optional[bool] = None
+    oepnv_farbcodierung: Optional[bool] = None
+    oepnv_highlight_naechste: Optional[bool] = None
+    oepnv_auto_scroll: Optional[bool] = None
+    oepnv_stoerungsbanner: Optional[bool] = None
+    oepnv_schriftgroesse: Optional[str] = None
+    oepnv_layout_spalten: Optional[int] = None
+    oepnv_streik_aktiv: Optional[bool] = None
+    oepnv_streik_text: Optional[str] = None
+    oepnv_streik_linien: Optional[list] = None
+    oepnv_streik_typen: Optional[list] = None
     on_air_text: Optional[str] = None
     on_air_groesse: Optional[str] = None
     on_air_position: Optional[str] = None

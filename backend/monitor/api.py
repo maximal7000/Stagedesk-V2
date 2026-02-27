@@ -194,6 +194,9 @@ def _fetch_oepnv(config):
             zeige_fernverkehr=config.oepnv_zeige_fernverkehr,
             use_db=config.oepnv_api_db,
             use_nahsh=config.oepnv_api_nahsh,
+            zeige_via=config.oepnv_zeige_via,
+            streik_linien=config.oepnv_streik_linien if config.oepnv_streik_aktiv else None,
+            streik_typen=config.oepnv_streik_typen if config.oepnv_streik_aktiv else None,
         )
         config.oepnv_cache = result
         config.oepnv_cache_zeit = timezone.now()

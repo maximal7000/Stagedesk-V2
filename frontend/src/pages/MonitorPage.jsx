@@ -125,6 +125,7 @@ export default function MonitorPage() {
   const [data, setData] = useState(null);
   const [time, setTime] = useState(new Date());
   const [error, setError] = useState(false);
+  const [lastFetchTime, setLastFetchTime] = useState(null);
   const [slideshowIdx, setSlideshowIdx] = useState(0);
   const [screensaverActive, setScreensaverActive] = useState(false);
   const [rotationIdx, setRotationIdx] = useState(0);
@@ -145,6 +146,7 @@ export default function MonitorPage() {
       if (!res.ok) throw new Error();
       const json = await res.json();
       setData(json);
+      setLastFetchTime(new Date());
       setError(false);
     } catch {
       setError(true);
@@ -536,101 +538,321 @@ export default function MonitorPage() {
   // ═══════════════════════════════════════════════════════════════════
   if (config?.layout_modus === 'abfahrten') {
     const abfahrten = data?.abfahrten || [];
-    const useColumns = abfahrten.length >= 2;
+
+    // Feature-Flags aus Config
+    const zeigeVia = config?.oepnv_zeige_via ?? false;
+    const zeigeRelativ = config?.oepnv_zeige_relativ ?? true;
+    const farbcodierung = config?.oepnv_farbcodierung ?? true;
+    const highlightNaechste = config?.oepnv_highlight_naechste ?? true;
+    const autoScroll = config?.oepnv_auto_scroll ?? false;
+    const stoerungsbanner = config?.oepnv_stoerungsbanner ?? true;
+    const schrift = config?.oepnv_schriftgroesse || 'gross';
+    const layoutSpalten = config?.oepnv_layout_spalten || 3;
+
+    // Schriftgrößen — kompakt: alles einzeilig, via inline
+    const sizes = {
+      normal: { time: 'text-[14px]', delay: 'text-[10px]', linie: 'text-[12px]', dir: 'text-[13px]', via: 'text-[10px]', gleis: 'text-[11px]', station: 'text-[11px]', relativ: 'text-[10px]', badge: 'text-[9px]', icon: 'w-4 h-4', iconInner: 'w-2.5 h-2.5', row: 'px-2 py-[4px]', lineW: 'w-[90px]', timeW: 'w-[72px]', relativW: 'w-[42px]', header: 'text-lg', clock: 'text-4xl', wegzeit: 'text-[9px]' },
+      gross:  { time: 'text-[17px]', delay: 'text-[12px]', linie: 'text-[14px]', dir: 'text-[16px]', via: 'text-[11px]', gleis: 'text-[13px]', station: 'text-[12px]', relativ: 'text-[12px]', badge: 'text-[10px]', icon: 'w-5 h-5', iconInner: 'w-3 h-3', row: 'px-3 py-[5px]', lineW: 'w-[110px]', timeW: 'w-[82px]', relativW: 'w-[50px]', header: 'text-xl', clock: 'text-5xl', wegzeit: 'text-[10px]' },
+      '4k':   { time: 'text-[22px]', delay: 'text-[14px]', linie: 'text-[18px]', dir: 'text-[20px]', via: 'text-[13px]', gleis: 'text-[16px]', station: 'text-[14px]', relativ: 'text-[14px]', badge: 'text-[12px]', icon: 'w-6 h-6', iconInner: 'w-3.5 h-3.5', row: 'px-4 py-[6px]', lineW: 'w-[140px]', timeW: 'w-[100px]', relativW: 'w-[58px]', header: 'text-2xl', clock: 'text-6xl', wegzeit: 'text-[12px]' },
+    };
+    const s = sizes[schrift] || sizes.gross;
 
     const typIcons = {
       ice: Train, ic: Train, re: Train, rb: Train,
       sbahn: TramFront, ubahn: TramFront, tram: TramFront,
       bus: Bus, faehre: Ship, taxi: Bus, zug: Train,
     };
+    // DB Navigator Farbschema: S-Bahn grün, U-Bahn blau, Bus purpur, Züge grau, ICE rot
     const typColors = {
-      ice: '#ff0404', ic: '#808080', re: '#1a73e8', rb: '#1a73e8',
-      sbahn: '#008d4f', ubahn: '#1455a3', tram: '#c2185b',
-      bus: '#9c27b0', faehre: '#00838f', taxi: '#ffc107', zug: '#607d8b',
+      ice: '#ec0016', ic: '#78858b', re: '#78858b', rb: '#78858b',
+      sbahn: '#408335', ubahn: '#1455a3', tram: '#b4001e',
+      bus: '#a0137e', faehre: '#00838f', taxi: '#ffc107', zug: '#78858b',
+    };
+    // Linienfarbe ermitteln: API-Farbe > Typ-Farbe
+    const getLinienFarbe = (dep) => {
+      if (dep.linien_farbe) return dep.linien_farbe;
+      return typColors[dep.typ_icon] || '#78858b';
     };
 
-    const StationBlock = ({ station }) => (
-      <div className="flex flex-col min-w-0">
-        {/* Stationsname */}
-        <div className="flex items-center gap-2 mb-2 px-1">
-          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
-          <h2 className="text-white/60 text-[11px] font-bold uppercase tracking-[0.2em] truncate">{station.station_name}</h2>
-          {station.fehler && <span className="text-red-400/50 text-[9px] shrink-0">Fehler</span>}
-        </div>
+    // Minuten bis tatsächlicher Abfahrt berechnen (geplant + Verspätung)
+    const getMinUntil = (depTime, verspaetung = 0) => {
+      if (!depTime) return null;
+      try {
+        const [h, m] = depTime.split(':').map(Number);
+        const depMin = h * 60 + m + (verspaetung || 0);
+        const nowMin = time.getHours() * 60 + time.getMinutes();
+        let diff = depMin - nowMin;
+        if (diff < -60) diff += 1440;
+        return diff;
+      } catch { return null; }
+    };
 
-        {station.abfahrten?.length > 0 ? (
-          <div className="rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] flex-1">
-            {station.abfahrten.map((dep, i) => {
-              const TypIcon = typIcons[dep.typ_icon] || Train;
-              const typColor = typColors[dep.typ_icon] || '#607d8b';
-              const hasDelay = dep.verspaetung > 0;
+    // Farbcodierung — KEIN Blinken
+    const getTimeColor = (min) => {
+      if (!farbcodierung || min === null) return 'text-white';
+      if (min <= 0) return 'text-green-400';
+      if (min <= 5) return 'text-green-400';
+      if (min <= 15) return 'text-white';
+      if (min <= 30) return 'text-white/80';
+      return 'text-white/50';
+    };
 
+    // Störungen sammeln
+    const stoerungen = [];
+    if (stoerungsbanner) {
+      abfahrten.forEach(st => {
+        const ausfaelle = (st.abfahrten || []).filter(d => d.ausfall);
+        if (ausfaelle.length >= 3) stoerungen.push(`${st.station_name}: ${ausfaelle.length} Ausfälle`);
+        (st.abfahrten || []).forEach(d => {
+          if (d.bemerkungen?.length > 0 && !d.ausfall) {
+            d.bemerkungen.forEach(b => { if (b.length > 10 && !stoerungen.includes(b)) stoerungen.push(b); });
+          }
+        });
+      });
+    }
+
+    // ─── Layout-Designer: Stationen in Spalten gruppieren ───
+    // Jede Station hat ein optionales `spalte` Feld (0-indexed).
+    // Stationen ohne Spalte werden automatisch verteilt.
+    const spaltenMap = {};
+    const stationenMitSpalte = [];
+    const stationenOhne = [];
+    abfahrten.forEach((st, idx) => {
+      // Station-Config aus oepnv_stationen holen (gleiche ID matchen)
+      const stConfig = (config?.oepnv_stationen || []).find(s => s.id === st.station_id);
+      const spalte = stConfig?.spalte;
+      const maxProStation = stConfig?.max_abfahrten;
+      // Max Abfahrten pro Station begrenzen wenn konfiguriert
+      const limitedSt = (maxProStation && maxProStation > 0 && st.abfahrten?.length > maxProStation)
+        ? { ...st, abfahrten: st.abfahrten.slice(0, maxProStation) }
+        : st;
+      if (spalte !== undefined && spalte !== null && spalte >= 0) {
+        stationenMitSpalte.push({ ...limitedSt, _spalte: spalte, _idx: idx });
+      } else {
+        stationenOhne.push({ ...limitedSt, _idx: idx });
+      }
+    });
+
+    // Auto-Verteilen der Stationen ohne Spalte
+    let nextAutoCol = 0;
+    const usedCols = new Set(stationenMitSpalte.map(s => s._spalte));
+    stationenOhne.forEach(st => {
+      while (usedCols.has(nextAutoCol) && nextAutoCol < layoutSpalten) nextAutoCol++;
+      if (nextAutoCol >= layoutSpalten) nextAutoCol = 0;
+      stationenMitSpalte.push({ ...st, _spalte: nextAutoCol });
+      nextAutoCol++;
+    });
+
+    // Spalten aufbauen
+    for (let i = 0; i < layoutSpalten; i++) spaltenMap[i] = [];
+    stationenMitSpalte.sort((a, b) => a._spalte - b._spalte || a._idx - b._idx).forEach(st => {
+      const col = Math.min(st._spalte, layoutSpalten - 1);
+      if (!spaltenMap[col]) spaltenMap[col] = [];
+      spaltenMap[col].push(st);
+    });
+    const spalten = Object.values(spaltenMap).filter(col => col.length > 0);
+
+    // Einzelne Abfahrtszeile rendern
+    const DepRow = ({ dep, i, isHighlight, useCompact }) => {
+      const cs = useCompact ? (sizes.normal || s) : s;
+      const TypIcon = typIcons[dep.typ_icon] || Train;
+      const badgeColor = getLinienFarbe(dep);
+      const hasDelay = dep.verspaetung > 0;
+      const minUntil = getMinUntil(dep.abfahrt, dep.verspaetung);
+      const via = zeigeVia ? (dep.stopovers?.slice(0, 3).join(', ') || '') : '';
+
+      return (
+        <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${dep.ausfall ? 'opacity-25' : ''} ${i > 0 ? 'border-t border-white/[0.03]' : ''} ${i % 2 === 1 ? 'bg-white/[0.01]' : ''} ${isHighlight ? 'bg-white/[0.04] border-l-2' : ''}`}
+          style={isHighlight ? { borderLeftColor: accent } : undefined}>
+          <div className={`${useCompact ? cs.timeW : s.timeW} shrink-0 flex items-baseline gap-1`}>
+            <span className={`font-mono ${useCompact ? cs.time : s.time} font-bold tabular-nums leading-none ${dep.ausfall ? 'line-through text-white/20' : getTimeColor(minUntil)}`}>
+              {dep.abfahrt || '—'}
+            </span>
+            {hasDelay && <span className={`text-red-400 ${useCompact ? cs.delay : s.delay} font-bold tabular-nums`}>+{dep.verspaetung}</span>}
+          </div>
+          {zeigeRelativ && (
+            <div className={`${useCompact ? cs.relativW : s.relativW} shrink-0 text-right pr-2`}>
+              {minUntil !== null && !dep.ausfall && (
+                <span className={`${useCompact ? cs.relativ : s.relativ} tabular-nums ${minUntil <= 0 ? 'text-green-400 font-semibold' : 'text-white/25'}`}>
+                  {minUntil <= 0 ? 'jetzt' : `${minUntil}′`}
+                </span>
+              )}
+            </div>
+          )}
+          <div className={`${useCompact ? cs.lineW : s.lineW} shrink-0 flex items-center gap-1.5`}>
+            <div className={`${useCompact ? cs.icon : s.icon} rounded flex items-center justify-center shrink-0`} style={{ background: badgeColor }}>
+              <TypIcon className={`${useCompact ? cs.iconInner : s.iconInner} text-white`} />
+            </div>
+            <span className={`text-white ${useCompact ? cs.linie : s.linie} font-semibold truncate leading-none`}>{dep.linie}</span>
+          </div>
+          <div className="flex-1 min-w-0 px-1.5 truncate">
+            <span className={`text-white ${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through opacity-40' : ''}`}>
+              {dep.richtung}
+            </span>
+            {via && <span className={`${useCompact ? cs.via : s.via} text-white/20 italic ml-1.5`}>{via}</span>}
+          </div>
+          <div className="shrink-0 flex items-center gap-1.5">
+            {dep.ausfall && <span className={`text-red-400 ${useCompact ? cs.badge : s.badge} font-bold bg-red-400/10 px-1.5 py-0.5 rounded`}>Ausfall</span>}
+            {dep.bemerkungen?.length > 0 && !dep.ausfall && (
+              <AlertTriangle className="w-3.5 h-3.5 text-amber-400/50 shrink-0" title={dep.bemerkungen.join(', ')} />
+            )}
+            {dep.auslastung && !dep.ausfall && (() => {
+              const load = { 'low-to-medium': { bars: 1, color: 'text-green-400' }, 'high': { bars: 2, color: 'text-yellow-400' }, 'very-high': { bars: 3, color: 'text-orange-400' }, 'exceptionally-high': { bars: 3, color: 'text-red-400' } };
+              const l = load[dep.auslastung] || load['low-to-medium'];
               return (
-                <div key={i} className={`flex items-center px-3 py-[6px] ${dep.ausfall ? 'opacity-30' : ''} ${i > 0 ? 'border-t border-white/[0.04]' : ''} ${i % 2 === 1 ? 'bg-white/[0.015]' : ''}`}>
-
-                  {/* Abfahrtszeit */}
-                  <div className="w-[88px] shrink-0 flex items-baseline gap-1.5">
-                    <span className={`font-mono text-[15px] font-bold tabular-nums ${dep.ausfall ? 'line-through text-white/30' : 'text-white'}`}>
-                      {dep.abfahrt || '—'}
-                    </span>
-                    {hasDelay && (
-                      <span className="text-red-400 text-[11px] font-bold tabular-nums">+{dep.verspaetung}</span>
-                    )}
-                  </div>
-
-                  {/* Linien-Badge */}
-                  <div className="w-[110px] shrink-0 flex items-center gap-1.5">
-                    <div className="w-5 h-5 rounded flex items-center justify-center shrink-0" style={{ background: typColor }}>
-                      <TypIcon className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-white text-[13px] font-semibold truncate leading-none">{dep.linie}</span>
-                  </div>
-
-                  {/* Richtung */}
-                  <div className="flex-1 min-w-0 px-2">
-                    <span className={`text-white/70 text-[13px] truncate block ${dep.ausfall ? 'line-through' : ''}`}>
-                      {dep.richtung}
-                    </span>
-                  </div>
-
-                  {/* Status */}
-                  <div className="shrink-0 flex items-center justify-end gap-1.5">
-                    {dep.ausfall && (
-                      <span className="text-red-400 text-[10px] font-bold bg-red-400/10 px-1.5 py-0.5 rounded">Ausfall</span>
-                    )}
-                    {dep.bemerkungen?.length > 0 && !dep.ausfall && (
-                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400/60 shrink-0" title={dep.bemerkungen.join(', ')} />
-                    )}
-                    {dep.gleis && (
-                      <span className="text-white/40 font-mono text-[12px] bg-white/[0.05] px-1.5 py-0.5 rounded min-w-[28px] text-center">
-                        {dep.gleis}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                <span className={`${l.color} flex items-end gap-px shrink-0`}>
+                  {[1,2,3].map(n => <span key={n} className={`inline-block w-[3px] rounded-sm ${n <= l.bars ? 'bg-current' : 'bg-white/10'}`} style={{ height: `${6 + n * 2}px` }} />)}
+                </span>
               );
-            })}
+            })()}
+            {dep.gleis && (
+              <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[26px] text-center ${
+                dep.gleis_geplant ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/[0.05] text-white/35'
+              }`}>
+                {dep.gleis_geplant && <span className="line-through text-white/15 mr-0.5 text-[0.8em]">{dep.gleis_geplant}</span>}
+                {dep.gleis}
+              </span>
+            )}
           </div>
-        ) : (
-          <div className="text-white/15 text-xs px-3 py-4 text-center border border-white/[0.04] rounded-lg">
-            Keine Abfahrten
+        </div>
+      );
+    };
+
+    const StationBlock = ({ station, compact }) => {
+      const scrollRef = useRef(null);
+      // Per-Station config für Trennung und Kompaktmodus
+      const stConfig = (config?.oepnv_stationen || []).find(sc => sc.id === station.station_id);
+      const trennungAktiv = stConfig?.trennung || false;  // "bus_zug" Trennung
+      const useCompact = stConfig?.kompakt || compact || false;
+
+      useEffect(() => {
+        if (!autoScroll || !scrollRef.current) return;
+        const el = scrollRef.current;
+        if (el.scrollHeight <= el.clientHeight) return;
+        let dir = 1;
+        const interval = setInterval(() => {
+          el.scrollTop += dir * 1;
+          if (el.scrollTop >= el.scrollHeight - el.clientHeight) dir = -1;
+          if (el.scrollTop <= 0) dir = 1;
+        }, 50);
+        return () => clearInterval(interval);
+      }, [station.abfahrten?.length]);
+
+      // Abfahrten in Gruppen teilen wenn Trennung aktiv
+      const busTypen = ['bus', 'faehre', 'taxi'];
+      const deps = station.abfahrten || [];
+
+      // Max pro Verkehrsmittel aus Config
+      const maxBus = stConfig?.max_bus || 0;
+      const maxZug = stConfig?.max_zug || 0;
+
+      if (trennungAktiv && deps.length > 0) {
+        let busse = deps.filter(d => busTypen.includes(d.typ_icon));
+        let zuege = deps.filter(d => !busTypen.includes(d.typ_icon));
+        // Max pro Typ anwenden
+        if (maxBus > 0) busse = busse.slice(0, maxBus);
+        if (maxZug > 0) zuege = zuege.slice(0, maxZug);
+        // Platzverteilung: proportional zur Anzahl, Züge haben Vorrang
+        // Wenn Züge wachsen, schrumpfen Busse (nicht überlagern)
+        const bCount = busse.length;
+        const zCount = zuege.length;
+        const total = bCount + zCount;
+        // Züge bekommen ihren Anteil, Busse den Rest
+        const zuegeAnteil = total > 0 ? Math.max(zCount / total, 0.15) : 0.5;
+        const busseAnteil = total > 0 ? Math.max(bCount / total, 0.15) : 0.5;
+
+        return (
+          <div className="flex flex-col min-w-0 flex-1 gap-1">
+            <div className="flex items-center gap-1.5 px-1">
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+              <h2 className={`text-white/50 ${useCompact ? sizes.normal.station : s.station} font-bold uppercase tracking-[0.15em] truncate`}>{station.station_name}</h2>
+              {station.wegzeit_minuten > 0 && <span className={`${s.wegzeit} text-amber-400/50 shrink-0`}>~{station.wegzeit_minuten}′</span>}
+              {station.fehler && <span className="text-red-400/40 text-[8px] shrink-0">!</span>}
+            </div>
+            {/* Busse oben */}
+            {busse.length > 0 && (
+              <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: `${busseAnteil} 1 0%` }}>
+                <div className="rounded overflow-hidden border border-white/[0.05] bg-white/[0.015] flex-1 min-h-0" style={{ scrollbarWidth: 'none' }}>
+                  {busse.map((dep, i) => <DepRow key={i} dep={dep} i={i} isHighlight={highlightNaechste && i === 0 && !dep.ausfall} useCompact={useCompact} />)}
+                </div>
+              </div>
+            )}
+            {/* Trenner */}
+            {busse.length > 0 && zuege.length > 0 && (
+              <div className="border-t border-white/[0.08] mx-1" />
+            )}
+            {/* Züge unten */}
+            {zuege.length > 0 && (
+              <div className="flex flex-col min-h-0 overflow-hidden" style={{ flex: `${zuegeAnteil} 1 0%` }}>
+                <div ref={scrollRef} className="rounded overflow-hidden overflow-y-auto border border-white/[0.05] bg-white/[0.015] flex-1 min-h-0" style={{ scrollbarWidth: 'none' }}>
+                  {zuege.map((dep, i) => <DepRow key={i} dep={dep} i={i} isHighlight={highlightNaechste && i === 0 && !dep.ausfall} useCompact={useCompact} />)}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    );
+        );
+      }
+
+      return (
+        <div className="flex flex-col min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 mb-1 px-1">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+            <h2 className={`text-white/50 ${useCompact ? sizes.normal.station : s.station} font-bold uppercase tracking-[0.15em] truncate`}>{station.station_name}</h2>
+            {station.wegzeit_minuten > 0 && (
+              <span className={`${s.wegzeit} text-amber-400/50 shrink-0`}>~{station.wegzeit_minuten}′</span>
+            )}
+            {station.fehler && <span className="text-red-400/40 text-[8px] shrink-0">!</span>}
+          </div>
+
+          {deps.length > 0 ? (
+            <div ref={scrollRef} className="rounded overflow-hidden overflow-y-auto border border-white/[0.05] bg-white/[0.015] flex-1" style={{ scrollbarWidth: 'none' }}>
+              {deps.map((dep, i) => <DepRow key={i} dep={dep} i={i} isHighlight={highlightNaechste && i === 0 && !dep.ausfall} useCompact={useCompact} />)}
+            </div>
+          ) : (
+            <div className="text-white/10 text-xs px-2 py-3 text-center border border-white/[0.03] rounded flex-1 flex items-center justify-center">
+              Keine Abfahrten
+            </div>
+          )}
+        </div>
+      );
+    };
 
     return (
-      <div className="fixed inset-0 overflow-hidden select-none flex flex-col" style={{ background: '#0a0e17' }}>
+      <div className="fixed inset-0 overflow-hidden select-none cursor-none flex flex-col" style={{ background: '#0a0e17' }}>
         {overlays}
         <OnAirIndicator config={config} accent={accent} />
 
+        {/* Streik-Banner */}
+        {config?.oepnv_streik_aktiv && config?.oepnv_streik_text && (
+          <div className="shrink-0 bg-gradient-to-r from-red-900/50 via-red-800/40 to-red-900/50 border-b border-red-500/30 px-6 py-2 flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
+              <AlertTriangle className="w-4 h-4 text-red-400" />
+              <span className="text-red-400 text-xs font-bold uppercase tracking-wider">Streik</span>
+            </div>
+            <span className={`text-red-200 ${s.station} font-medium`}>{config.oepnv_streik_text}</span>
+          </div>
+        )}
+
+        {/* Störungsbanner */}
+        {stoerungen.length > 0 && (
+          <div className="shrink-0 bg-red-900/30 border-b border-red-500/15 px-6 py-1 flex items-center gap-3 overflow-hidden">
+            <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <div className="overflow-hidden whitespace-nowrap">
+              <span className={`text-red-300 ${s.wegzeit} font-medium inline-block`}
+                style={{ animation: stoerungen.join(' — ').length > 80 ? 'marquee 30s linear infinite' : 'none' }}>
+                {stoerungen.join(' — ')}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 shrink-0 border-b border-white/[0.06]" style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(10,14,23,0.9) 100%)' }}>
+        <div className="flex items-center justify-between px-6 py-2 shrink-0 border-b border-white/[0.06]" style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(10,14,23,0.9) 100%)' }}>
           <div className="flex items-center gap-4">
             {config?.zeige_logo && logoUrl && (
-              <img src={logoUrl} alt="" className="h-9 object-contain" />
+              <img src={logoUrl} alt="" className="h-8 object-contain" />
             )}
-            <h1 className="text-white text-lg font-semibold tracking-wide">{config?.name || config?.titel || 'Abfahrten'}</h1>
+            <h1 className={`text-white ${s.header} font-semibold tracking-wide`}>{config?.name || config?.titel || 'Abfahrten'}</h1>
           </div>
           <div className="flex items-center gap-5">
             {config?.zeige_wetter && wetter && (
@@ -639,24 +861,24 @@ export default function MonitorPage() {
                 <span className="text-white/60 font-medium">{wetter.temperatur}°C</span>
               </div>
             )}
-            <div className="text-white font-mono text-4xl font-bold tabular-nums tracking-tight">
+            <div className={`text-white font-mono ${s.clock} font-bold tabular-nums tracking-tight`}>
               {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
           </div>
         </div>
 
-        {/* Stationen */}
-        <div className="flex-1 overflow-y-auto px-5 py-3" style={{ scrollbarWidth: 'none' }}>
-          {abfahrten.length > 0 ? (
-            useColumns ? (
-              <div className="grid gap-4 h-full" style={{ gridTemplateColumns: `repeat(${Math.min(abfahrten.length, 3)}, 1fr)` }}>
-                {abfahrten.map(station => (
-                  <StationBlock key={station.station_id} station={station} />
-                ))}
-              </div>
-            ) : (
-              <StationBlock station={abfahrten[0]} />
-            )
+        {/* Stationen — Spalten-Layout */}
+        <div className="flex-1 overflow-hidden px-4 py-2">
+          {spalten.length > 0 ? (
+            <div className="flex gap-3 h-full">
+              {spalten.map((colStations, colIdx) => (
+                <div key={colIdx} className="flex-1 flex flex-col gap-2 min-w-0">
+                  {colStations.map(station => (
+                    <StationBlock key={station.station_id} station={station} compact={colStations.length > 1} />
+                  ))}
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center py-20">
               <div className="text-center text-white/15">
@@ -668,9 +890,17 @@ export default function MonitorPage() {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-1 flex items-center justify-between text-white/[0.08] text-[9px] shrink-0">
-          <span>{abfahrten.reduce((s, st) => s + (st.abfahrten?.length || 0), 0)} Verbindungen</span>
-          {error && <span className="text-red-400/40">Verbindungsfehler</span>}
+        <div className="px-6 py-0.5 flex items-center justify-between text-white/[0.06] text-[8px] shrink-0">
+          <span>{abfahrten.reduce((sum, st) => sum + (st.abfahrten?.length || 0), 0)} Verbindungen</span>
+          <div className="flex items-center gap-3">
+            {error && <span className="text-red-400/40">Verbindungsfehler</span>}
+            {lastFetchTime && (
+              <span>Aktualisiert {(() => {
+                const sek = Math.round((time - lastFetchTime) / 1000);
+                return sek < 5 ? 'gerade eben' : `vor ${sek}s`;
+              })()}</span>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -707,7 +937,7 @@ export default function MonitorPage() {
   const hasTicker = config?.zeige_ticker && config?.ticker_text;
 
   return (
-    <div className="fixed inset-0 overflow-hidden select-none" style={{ background: bgColor }}>
+    <div className="fixed inset-0 overflow-hidden select-none cursor-none" style={{ background: bgColor }}>
 
       {/* ═══ Hintergrundbild ═══ */}
       {hasHintergrundbild && (

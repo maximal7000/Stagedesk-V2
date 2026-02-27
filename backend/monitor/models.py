@@ -160,7 +160,7 @@ class MonitorConfig(models.Model):
     # ─── ÖPNV / Abfahrten ──────────────────
     zeige_oepnv = models.BooleanField(default=False)
     oepnv_stationen = models.JSONField(default=list, blank=True,
-        help_text='[{"id": "...", "name": "...", "filter_linien": [], "filter_richtung": "", "zeige_bus": true, "zeige_bahn": true, "zeige_fernverkehr": true}]')
+        help_text='[{"id": "...", "name": "...", "filter_linien": [], "filter_richtung": "", "zeige_bus": true, "zeige_bahn": true, "zeige_fernverkehr": true, "wegzeit_minuten": 0}]')
     oepnv_dauer = models.IntegerField(default=60, help_text="Minuten vorausschauen")
     oepnv_max_abfahrten = models.IntegerField(default=20, help_text="Max Abfahrten pro Station")
     oepnv_zeige_bus = models.BooleanField(default=True)
@@ -168,6 +168,26 @@ class MonitorConfig(models.Model):
     oepnv_zeige_fernverkehr = models.BooleanField(default=True)
     oepnv_api_db = models.BooleanField(default=True)
     oepnv_api_nahsh = models.BooleanField(default=True)
+    oepnv_zeige_via = models.BooleanField(default=False, help_text="Zwischenhalte anzeigen")
+    oepnv_zeige_relativ = models.BooleanField(default=True, help_text="Relative Zeit (in X min) anzeigen")
+    oepnv_farbcodierung = models.BooleanField(default=True, help_text="Farbcodierte Zeitanzeige")
+    oepnv_highlight_naechste = models.BooleanField(default=True, help_text="Nächste Abfahrt hervorheben")
+    oepnv_auto_scroll = models.BooleanField(default=False, help_text="Auto-Scroll bei vielen Abfahrten")
+    oepnv_stoerungsbanner = models.BooleanField(default=True, help_text="Störungsbanner anzeigen")
+    OEPNV_SCHRIFT_CHOICES = [
+        ('normal', 'Normal'),
+        ('gross', 'Groß (HD)'),
+        ('4k', 'Sehr groß (4K)'),
+    ]
+    oepnv_schriftgroesse = models.CharField(max_length=10, choices=OEPNV_SCHRIFT_CHOICES, default='gross', help_text="Schriftgröße für Abfahrtsanzeige")
+    oepnv_layout_spalten = models.IntegerField(default=3, help_text="Anzahl Spalten im Layout (1-4)")
+
+    # ─── Streik-Modus ────────────────────
+    oepnv_streik_aktiv = models.BooleanField(default=False, help_text="Streik-Modus aktivieren")
+    oepnv_streik_text = models.CharField(max_length=300, default='', blank=True, help_text="Streik-Banner Text")
+    oepnv_streik_linien = models.JSONField(default=list, blank=True, help_text="Ausgeblendete Linien (z.B. ['Bus 1', 'RE80'])")
+    oepnv_streik_typen = models.JSONField(default=list, blank=True, help_text="Ausgeblendete Typen (z.B. ['bus', 're'])")
+
     oepnv_cache = models.JSONField(null=True, blank=True)
     oepnv_cache_zeit = models.DateTimeField(null=True, blank=True)
 

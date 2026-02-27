@@ -189,6 +189,9 @@ export default function MonitorAdminPage() {
     'zeige_seitenrotation','seitenrotation_intervall','seitenrotation_seiten',
     'zeige_oepnv','oepnv_stationen','oepnv_dauer','oepnv_max_abfahrten',
     'oepnv_zeige_bus','oepnv_zeige_bahn','oepnv_zeige_fernverkehr','oepnv_api_db','oepnv_api_nahsh',
+    'oepnv_zeige_via','oepnv_zeige_relativ','oepnv_farbcodierung','oepnv_highlight_naechste',
+    'oepnv_auto_scroll','oepnv_stoerungsbanner','oepnv_schriftgroesse','oepnv_layout_spalten',
+    'oepnv_streik_aktiv','oepnv_streik_text','oepnv_streik_linien','oepnv_streik_typen',
     'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild',
     'refresh_intervall',
   ];
@@ -1700,12 +1703,16 @@ export default function MonitorAdminPage() {
                       </div>
 
                       {/* Per-Station Produktfilter */}
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex flex-wrap items-center gap-3 mb-2">
                         <span className="text-[10px] text-gray-500">Zeige:</span>
                         {[
                           { key: 'zeige_bus', label: 'Bus' },
-                          { key: 'zeige_bahn', label: 'Nahverkehr' },
-                          { key: 'zeige_fernverkehr', label: 'Fernverkehr' },
+                          { key: 'zeige_bahn', label: 'RE/RB' },
+                          { key: 'zeige_sbahn', label: 'S-Bahn' },
+                          { key: 'zeige_ubahn', label: 'U-Bahn' },
+                          { key: 'zeige_tram', label: 'Tram' },
+                          { key: 'zeige_fernverkehr', label: 'ICE/IC' },
+                          { key: 'zeige_faehre', label: 'Fähre' },
                         ].map(p => (
                           <label key={p.key} className="flex items-center gap-1 cursor-pointer">
                             <input type="checkbox"
@@ -1720,6 +1727,218 @@ export default function MonitorAdminPage() {
                             <span className="text-[10px] text-white/70">{p.label}</span>
                           </label>
                         ))}
+                      </div>
+
+                      {/* Wegzeit */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[10px] text-gray-500">Wegzeit:</span>
+                        <input type="number"
+                          value={station.wegzeit_minuten || 0}
+                          onChange={e => {
+                            const stationen = [...monitorConfig.oepnv_stationen];
+                            stationen[idx] = { ...stationen[idx], wegzeit_minuten: parseInt(e.target.value) || 0 };
+                            updateConfig('oepnv_stationen', stationen);
+                          }}
+                          min={0} max={60} disabled={!canEdit}
+                          className="w-16 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                        <span className="text-[10px] text-gray-500">Min (Abfahrten erst nach Wegzeit anzeigen)</span>
+                      </div>
+
+                      {/* API pro Station */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[10px] text-gray-500">API:</span>
+                        <select
+                          value={station.api || ''}
+                          onChange={e => {
+                            const stationen = [...monitorConfig.oepnv_stationen];
+                            stationen[idx] = { ...stationen[idx], api: e.target.value };
+                            updateConfig('oepnv_stationen', stationen);
+                          }}
+                          disabled={!canEdit}
+                          className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50">
+                          <option value="">Global (Standard)</option>
+                          <option value="db">Nur DB REST</option>
+                          <option value="nahsh">Nur NAH.SH</option>
+                          <option value="beide">Beide APIs</option>
+                        </select>
+                        <span className="text-[10px] text-gray-500">Welche API für diese Station</span>
+                      </div>
+
+                      {/* Max Abfahrten pro Typ */}
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <span className="text-[10px] text-gray-500">Max:</span>
+                        {[
+                          { key: 'max_abfahrten', label: 'Gesamt' },
+                          { key: 'max_bus', label: 'Bus' },
+                          { key: 'max_zug', label: 'Zug' },
+                        ].map(f => (
+                          <div key={f.key} className="flex items-center gap-1">
+                            <input type="number"
+                              value={station[f.key] || ''}
+                              placeholder="∞"
+                              onChange={e => {
+                                const stationen = [...monitorConfig.oepnv_stationen];
+                                stationen[idx] = { ...stationen[idx], [f.key]: parseInt(e.target.value) || 0 };
+                                updateConfig('oepnv_stationen', stationen);
+                              }}
+                              min={0} max={50} disabled={!canEdit}
+                              className="w-12 bg-gray-900 border border-gray-700 rounded px-1.5 py-1 text-white text-xs text-center disabled:opacity-50" />
+                            <span className="text-[10px] text-gray-500">{f.label}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Spalte zuweisen */}
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[10px] text-gray-500">Spalte:</span>
+                        <select
+                          value={station.spalte ?? 0}
+                          onChange={e => {
+                            const stationen = [...monitorConfig.oepnv_stationen];
+                            stationen[idx] = { ...stationen[idx], spalte: parseInt(e.target.value) };
+                            updateConfig('oepnv_stationen', stationen);
+                          }}
+                          disabled={!canEdit}
+                          className="bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50">
+                          {Array.from({ length: monitorConfig.oepnv_layout_spalten || 3 }, (_, i) => (
+                            <option key={i} value={i}>Spalte {i + 1}</option>
+                          ))}
+                        </select>
+                        <span className="text-[10px] text-gray-500">In welcher Spalte wird diese Station angezeigt</span>
+                      </div>
+
+                      {/* Trennung + Kompakt */}
+                      <div className="flex items-center gap-4 mb-2">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="checkbox"
+                            checked={station.trennung || false}
+                            onChange={e => {
+                              const stationen = [...monitorConfig.oepnv_stationen];
+                              stationen[idx] = { ...stationen[idx], trennung: e.target.checked };
+                              updateConfig('oepnv_stationen', stationen);
+                            }}
+                            disabled={!canEdit}
+                            className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                          <span className="text-[10px] text-white/70">Bus/Zug trennen</span>
+                        </label>
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input type="checkbox"
+                            checked={station.kompakt || false}
+                            onChange={e => {
+                              const stationen = [...monitorConfig.oepnv_stationen];
+                              stationen[idx] = { ...stationen[idx], kompakt: e.target.checked };
+                              updateConfig('oepnv_stationen', stationen);
+                            }}
+                            disabled={!canEdit}
+                            className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                          <span className="text-[10px] text-white/70">Kompaktmodus</span>
+                        </label>
+                      </div>
+
+                      {/* Zusatz-Station (kombinieren) */}
+                      <div className="mb-2 p-2 bg-gray-800/30 rounded border border-gray-700/50">
+                        <div className="text-[10px] text-gray-500 mb-1.5 font-medium">Kombinieren mit 2. Station (Abfahrten zusammenführen)</div>
+                        {station.zusatz_id ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1.5 flex items-center gap-2">
+                              <span className="text-white text-xs font-medium">{station.zusatz_name || station.zusatz_id}</span>
+                              <span className="text-[9px] text-gray-500">ID: {station.zusatz_id}</span>
+                              <select
+                                value={station.zusatz_api || ''}
+                                onChange={e => {
+                                  const stationen = [...monitorConfig.oepnv_stationen];
+                                  stationen[idx] = { ...stationen[idx], zusatz_api: e.target.value };
+                                  updateConfig('oepnv_stationen', stationen);
+                                }}
+                                disabled={!canEdit}
+                                className="ml-auto bg-gray-800 border border-gray-700 rounded px-1.5 py-0.5 text-white text-[10px] disabled:opacity-50">
+                                <option value="">Auto</option>
+                                <option value="db">DB</option>
+                                <option value="nahsh">NAH.SH</option>
+                                <option value="beide">Beide</option>
+                              </select>
+                            </div>
+                            <button type="button" onClick={() => {
+                              const stationen = [...monitorConfig.oepnv_stationen];
+                              stationen[idx] = { ...stationen[idx], zusatz_id: '', zusatz_name: '', zusatz_api: '' };
+                              updateConfig('oepnv_stationen', stationen);
+                            }} disabled={!canEdit} className="text-red-400 hover:text-red-300 p-1 disabled:opacity-50">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <input type="text"
+                              placeholder="Station suchen..."
+                              disabled={!canEdit}
+                              className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50"
+                              onChange={e => {
+                                const val = e.target.value;
+                                const inputEl = e.target;
+                                clearTimeout(inputEl._timer);
+                                if (val.length >= 2) {
+                                  inputEl._timer = setTimeout(async () => {
+                                    try {
+                                      const res = await apiClient.get(`/monitor/oepnv/suche?q=${encodeURIComponent(val)}&results=8&use_db=true&use_nahsh=true`);
+                                      const results = res.data || res || [];
+                                      // Ergebnisse als Dropdown anzeigen
+                                      const dropdown = inputEl.parentElement.querySelector('.zusatz-dropdown');
+                                      if (dropdown) {
+                                        dropdown.innerHTML = '';
+                                        results.forEach(r => {
+                                          const btn = document.createElement('button');
+                                          btn.type = 'button';
+                                          btn.className = 'w-full px-2 py-1.5 text-left text-[11px] text-white hover:bg-gray-700 flex items-center justify-between border-b border-gray-700/30 last:border-0';
+                                          btn.innerHTML = `<span>${r.name}</span><span class="text-[9px] text-gray-500 ml-2">${r.id} · ${r.quelle || 'db'}</span>`;
+                                          btn.onclick = () => {
+                                            const stationen = [...monitorConfig.oepnv_stationen];
+                                            stationen[idx] = { ...stationen[idx], zusatz_id: r.id, zusatz_name: r.name, zusatz_api: r.quelle === 'nahsh' ? 'nahsh' : r.quelle === 'db+nahsh' ? '' : 'db' };
+                                            updateConfig('oepnv_stationen', stationen);
+                                            dropdown.innerHTML = '';
+                                            inputEl.value = '';
+                                          };
+                                          dropdown.appendChild(btn);
+                                        });
+                                      }
+                                    } catch {}
+                                  }, 400);
+                                }
+                              }}
+                              onBlur={e => { setTimeout(() => { const d = e.target.parentElement?.querySelector('.zusatz-dropdown'); if (d) d.innerHTML = ''; }, 200); }}
+                            />
+                            <div className="zusatz-dropdown absolute left-0 right-0 top-full mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden max-h-48 overflow-y-auto z-20" />
+                          </div>
+                        )}
+                        {station.zusatz_id && (
+                          <>
+                            <div className="flex items-center gap-3 mt-1.5">
+                              <span className="text-[10px] text-gray-500">Zusatz zeigt:</span>
+                              {[
+                                { key: 'zusatz_zeige_bus', label: 'Bus' },
+                                { key: 'zusatz_zeige_bahn', label: 'RE/RB' },
+                                { key: 'zusatz_zeige_sbahn', label: 'S-Bahn' },
+                                { key: 'zusatz_zeige_ubahn', label: 'U-Bahn' },
+                                { key: 'zusatz_zeige_tram', label: 'Tram' },
+                                { key: 'zusatz_zeige_fernverkehr', label: 'ICE/IC' },
+                                { key: 'zusatz_zeige_faehre', label: 'Fähre' },
+                              ].map(p => (
+                                <label key={p.key} className="flex items-center gap-1 cursor-pointer">
+                                  <input type="checkbox"
+                                    checked={station[p.key] !== false}
+                                    onChange={e => {
+                                      const stationen = [...monitorConfig.oepnv_stationen];
+                                      stationen[idx] = { ...stationen[idx], [p.key]: e.target.checked };
+                                      updateConfig('oepnv_stationen', stationen);
+                                    }}
+                                    disabled={!canEdit}
+                                    className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                                  <span className="text-[10px] text-white/70">{p.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                            <div className="text-[9px] text-gray-600 mt-1">Tipp: Hauptstation auf DB (Züge), Zusatz auf NAH.SH (Busse) → mit Bus/Zug-Trennung kombiniert.</div>
+                          </>
+                        )}
                       </div>
 
                       {/* Filter — Linien (Badge-Eingabe) + Richtung + Via */}
@@ -1838,6 +2057,59 @@ export default function MonitorAdminPage() {
               </div>
             </div>
 
+            {/* Anzeige-Optionen */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-2 font-medium">Anzeige-Optionen</label>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { key: 'oepnv_zeige_via', label: 'Zwischenhalte (Via) anzeigen', desc: 'Zeigt Halte unter dem Ziel' },
+                  { key: 'oepnv_zeige_relativ', label: 'Relative Zeit ("in X min")', desc: 'Countdown neben Abfahrtszeit' },
+                  { key: 'oepnv_farbcodierung', label: 'Farbcodierte Zeiten', desc: 'Grün = gleich, gedimmt = >30 Min' },
+                  { key: 'oepnv_highlight_naechste', label: 'Nächste Abfahrt hervorheben', desc: 'Erste Abfahrt visuell betont' },
+                  { key: 'oepnv_auto_scroll', label: 'Auto-Scroll', desc: 'Scrollt bei vielen Abfahrten' },
+                  { key: 'oepnv_stoerungsbanner', label: 'Störungsbanner', desc: 'Warnung bei gehäuften Ausfällen' },
+                ].map(opt => (
+                  <div key={opt.key} className="flex items-start gap-2">
+                    <Toggle checked={monitorConfig[opt.key] !== false} onChange={v => updateConfig(opt.key, v)} disabled={!canEdit} />
+                    <div>
+                      <span className="text-xs text-white block">{opt.label}</span>
+                      <span className="text-[10px] text-gray-500">{opt.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Schriftgröße */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Schriftgröße</label>
+              <select value={monitorConfig.oepnv_schriftgroesse || 'gross'}
+                onChange={e => updateConfig('oepnv_schriftgroesse', e.target.value)}
+                disabled={!canEdit}
+                className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
+                <option value="normal">Normal</option>
+                <option value="gross">Groß (HD)</option>
+                <option value="4k">Sehr groß (4K)</option>
+              </select>
+            </div>
+
+            {/* Layout-Spalten */}
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Layout-Spalten</label>
+              <div className="flex items-center gap-3">
+                <select value={monitorConfig.oepnv_layout_spalten || 3}
+                  onChange={e => updateConfig('oepnv_layout_spalten', parseInt(e.target.value))}
+                  disabled={!canEdit}
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
+                  <option value={1}>1 Spalte</option>
+                  <option value={2}>2 Spalten</option>
+                  <option value={3}>3 Spalten</option>
+                  <option value={4}>4 Spalten</option>
+                </select>
+                <span className="text-[10px] text-gray-500">Stationen werden in diese Spalten aufgeteilt. Zuordnung pro Station oben konfigurierbar.</span>
+              </div>
+            </div>
+
             {(monitorConfig.oepnv_stationen || []).length === 0 && (
               <div className="p-6 text-center text-gray-500">
                 <Activity className="w-10 h-10 mx-auto mb-2 opacity-20" />
@@ -1845,6 +2117,101 @@ export default function MonitorAdminPage() {
                 <p className="text-xs mt-1">Oben nach einer Haltestelle oder einem Bahnhof suchen</p>
               </div>
             )}
+
+            {/* ─── Streik-Modus ─── */}
+            <div className="border-t border-gray-700/40 pt-4 mt-4">
+              <div className="flex items-center gap-3 mb-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={!!monitorConfig.oepnv_streik_aktiv} disabled={!canEdit}
+                    onChange={e => updateConfig('oepnv_streik_aktiv', e.target.checked)}
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 text-red-500 focus:ring-red-500/30" />
+                  <span className="text-sm font-medium text-red-400">Streik-Modus</span>
+                </label>
+                {monitorConfig.oepnv_streik_aktiv && (
+                  <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full font-medium">AKTIV</span>
+                )}
+              </div>
+
+              {monitorConfig.oepnv_streik_aktiv && (
+                <div className="space-y-3 ml-6">
+                  {/* Banner-Text */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Banner-Text (optional)</label>
+                    <input type="text" value={monitorConfig.oepnv_streik_text || ''} disabled={!canEdit}
+                      onChange={e => updateConfig('oepnv_streik_text', e.target.value)}
+                      placeholder="z.B. Streik bei DB Regio — einige Verbindungen entfallen"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 disabled:opacity-50" />
+                  </div>
+
+                  {/* Linien ausblenden */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Linien ausblenden</label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(monitorConfig.oepnv_streik_linien || []).map((linie, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full text-xs font-medium">
+                          {linie}
+                          {canEdit && (
+                            <button onClick={() => {
+                              const updated = (monitorConfig.oepnv_streik_linien || []).filter((_, j) => j !== i);
+                              updateConfig('oepnv_streik_linien', updated);
+                            }} className="hover:text-red-100 ml-0.5">&times;</button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="text" placeholder="Linie eingeben, z.B. Bus 1, RE80"
+                        disabled={!canEdit}
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-600 disabled:opacity-50"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && e.target.value.trim()) {
+                            const val = e.target.value.trim();
+                            const current = monitorConfig.oepnv_streik_linien || [];
+                            if (!current.includes(val)) {
+                              updateConfig('oepnv_streik_linien', [...current, val]);
+                            }
+                            e.target.value = '';
+                          }
+                        }} />
+                      <span className="text-[10px] text-gray-500 self-center whitespace-nowrap">Enter zum Hinzufügen</span>
+                    </div>
+                  </div>
+
+                  {/* Typen ausblenden */}
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Verkehrsmittel-Typen ausblenden</label>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { key: 'bus', label: 'Bus', color: 'purple' },
+                        { key: 're', label: 'RE/RB', color: 'gray' },
+                        { key: 'sbahn', label: 'S-Bahn', color: 'green' },
+                        { key: 'ubahn', label: 'U-Bahn', color: 'blue' },
+                        { key: 'tram', label: 'Tram', color: 'red' },
+                        { key: 'ice', label: 'ICE/IC', color: 'red' },
+                        { key: 'faehre', label: 'Fähre', color: 'cyan' },
+                      ].map(typ => {
+                        const active = (monitorConfig.oepnv_streik_typen || []).includes(typ.key);
+                        return (
+                          <button key={typ.key} disabled={!canEdit}
+                            onClick={() => {
+                              const current = monitorConfig.oepnv_streik_typen || [];
+                              const updated = active ? current.filter(t => t !== typ.key) : [...current, typ.key];
+                              updateConfig('oepnv_streik_typen', updated);
+                            }}
+                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all disabled:opacity-50 ${
+                              active
+                                ? 'bg-red-500/30 border-red-500/50 text-red-300'
+                                : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                            }`}>
+                            {active && <span className="mr-1">✕</span>}{typ.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </Section>
           )}
 
