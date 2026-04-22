@@ -27,6 +27,7 @@ from inventar.api import inventar_router
 from veranstaltung.api import veranstaltung_router
 from monitor.api import monitor_router
 from anwesenheit.api import anwesenheit_router
+from kompetenzen.api import kompetenzen_router
 
 # Django Ninja API-Instanz
 api = NinjaAPI(
@@ -51,6 +52,7 @@ api.add_router("/inventar", inventar_router)
 api.add_router("/veranstaltung", veranstaltung_router)
 api.add_router("/monitor", monitor_router)
 api.add_router("/anwesenheit", anwesenheit_router)
+api.add_router("/kompetenzen", kompetenzen_router)
 
 
 urlpatterns = [

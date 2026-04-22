@@ -5,11 +5,60 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Loader2, Calendar, MapPin, User, FileDown,
-  Ticket, Filter, ChevronRight, Clock, Users, X, CalendarDays,
+  Ticket, Filter, ChevronRight, Clock, Users, X, CalendarDays, Hand,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+
+function MeldenButton({ v, onRefetch }) {
+  const [loading, setLoading] = useState(false);
+
+  const handleMelden = async (e) => {
+    e.stopPropagation();
+    setLoading(true);
+    try {
+      if (v.ist_gemeldet) {
+        await apiClient.post(`/veranstaltung/${v.id}/abmelden`, {});
+        toast.success('Abgemeldet');
+      } else {
+        await apiClient.post(`/veranstaltung/${v.id}/melden`, {});
+        toast.success('Gemeldet');
+      }
+      onRefetch();
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.response?.data?.error;
+      const status = err?.response?.status;
+      if (status === 403 && detail) {
+        toast.error(detail, {
+          description: 'Öffne die Veranstaltung für Details zu den fehlenden Kompetenzen.',
+          duration: 8000,
+        });
+      } else {
+        toast.error(detail || 'Melden fehlgeschlagen');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleMelden}
+      disabled={loading}
+      className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+        v.ist_gemeldet
+          ? 'bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400'
+          : 'bg-gray-700 hover:bg-green-600/30 text-gray-400 hover:text-green-400'
+      }`}
+      title={v.ist_gemeldet ? 'Abmelden' : 'Melden'}
+    >
+      <Hand className="w-3 h-3" />
+      {v.ist_gemeldet ? 'Gemeldet' : 'Melden'}
+    </button>
+  );
+}
 
 const STATUS_LABELS = {
   planung: 'Planung',
@@ -44,21 +93,21 @@ function formatTime(d) {
   return new Date(d).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 }
 
-function VeranstaltungCard({ v }) {
+function VeranstaltungCard({ v, onRefetch }) {
   const navigate = useNavigate();
   const isActive = ACTIVE_STATUS.includes(v.status);
   const isSameDay = v.datum_von && v.datum_bis &&
     new Date(v.datum_von).toDateString() === new Date(v.datum_bis).toDateString();
 
   return (
-    <button
+    <div
       onClick={() => navigate(`/veranstaltung/${v.id}`)}
-      className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-colors group"
+      className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-colors group cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           {/* Titel + Status */}
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
               {v.titel}
             </span>
@@ -67,7 +116,7 @@ function VeranstaltungCard({ v }) {
             </span>
             {v.ist_zugewiesen && (
               <span className="shrink-0 px-2 py-0.5 text-[10px] font-medium rounded bg-blue-900/30 text-blue-400">
-                Du
+                Zugeteilt
               </span>
             )}
           </div>
@@ -120,13 +169,16 @@ function VeranstaltungCard({ v }) {
           </div>
         </div>
 
-        <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors shrink-0 mt-1" />
+        <div className="flex flex-col items-end gap-2 shrink-0">
+          {isActive && v.meldung_aktiv !== false && <MeldenButton v={v} onRefetch={onRefetch} />}
+          <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+        </div>
       </div>
-    </button>
+    </div>
   );
 }
 
-function SectionGroup({ title, items }) {
+function SectionGroup({ title, items, onRefetch }) {
   const [open, setOpen] = useState(true);
   if (items.length === 0) return null;
   return (
@@ -141,7 +193,7 @@ function SectionGroup({ title, items }) {
       </button>
       {open && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {items.map((v) => <VeranstaltungCard key={v.id} v={v} />)}
+          {items.map((v) => <VeranstaltungCard key={v.id} v={v} onRefetch={onRefetch} />)}
         </div>
       )}
     </div>
@@ -336,8 +388,8 @@ export default function VeranstaltungenPage() {
         </div>
       ) : (
         <div className="space-y-6">
-          <SectionGroup title="Aktive Veranstaltungen" items={aktive} />
-          <SectionGroup title="Abgeschlossene & Abgesagte" items={abgeschlossene} />
+          <SectionGroup title="Aktive Veranstaltungen" items={aktive} onRefetch={fetchList} />
+          <SectionGroup title="Abgeschlossene & Abgesagte" items={abgeschlossene} onRefetch={fetchList} />
         </div>
       )}
 

@@ -131,17 +131,23 @@ export default function MonitorPage() {
   const [rotationIdx, setRotationIdx] = useState(0);
   const lastActivityRef = useRef(Date.now());
 
-  // Profil-Slug aus URL (?profil=xxx)
+  // Profil-Slug oder Bildschirm-Slug aus URL
   const profilSlug = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get('profil') || '';
   }, []);
+  const bildschirmSlug = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('bildschirm') || '';
+  }, []);
 
   const fetchData = useCallback(async () => {
     try {
-      const url = profilSlug
-        ? `${API_BASE}/monitor/display?profil=${encodeURIComponent(profilSlug)}`
-        : `${API_BASE}/monitor/display`;
+      const params = new URLSearchParams();
+      if (bildschirmSlug) params.set('bildschirm', bildschirmSlug);
+      else if (profilSlug) params.set('profil', profilSlug);
+      const qs = params.toString();
+      const url = `${API_BASE}/monitor/display${qs ? '?' + qs : ''}`;
       const res = await fetch(url);
       if (!res.ok) throw new Error();
       const json = await res.json();
@@ -151,7 +157,7 @@ export default function MonitorPage() {
     } catch {
       setError(true);
     }
-  }, [profilSlug]);
+  }, [profilSlug, bildschirmSlug]);
 
   // Polling
   useEffect(() => {

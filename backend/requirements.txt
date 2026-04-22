@@ -5,5 +5,9 @@ python-jose[cryptography]==3.3.0
 python-dotenv==1.0.1
 beautifulsoup4==4.12.3
 requests==2.31.0
-lxml==5.3.0
+lxml>=5.3.0
 python-dateutil==2.8.2
+channels
+channels-redis
+daphne
+reportlab>=4.0

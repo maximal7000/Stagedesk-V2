@@ -11,6 +11,10 @@ class TaetigkeitsRolle(models.Model):
     """Konfigurierbare Tätigkeitsrollen für Veranstaltungs-Zuweisungen."""
     name = models.CharField(max_length=100, unique=True)
     sortierung = models.IntegerField(default=0)
+    erforderliche_kompetenzen = models.ManyToManyField(
+        'kompetenzen.Kompetenz', blank=True, related_name='erforderlich_fuer_taetigkeiten',
+        help_text="Kompetenzen, die User für diese Tätigkeit haben müssen"
+    )
 
     class Meta:
         ordering = ['sortierung', 'name']
@@ -69,6 +73,24 @@ class Veranstaltung(models.Model):
     # Discord-Integration
     discord_event_id = models.CharField(max_length=100, blank=True, help_text="Discord Scheduled Event ID")
     discord_channel_id = models.CharField(max_length=100, blank=True, help_text="Discord Text-Channel ID")
+
+    # Sichtbarkeit: JSON-Liste von keycloak_ids die dieses Event NICHT sehen
+    ausgeblendete_user = models.JSONField(default=list, blank=True,
+        help_text="Liste von keycloak_ids für die dieses Event ausgeblendet ist")
+
+    # Meldung: Wenn False, können sich User nicht melden (nur Zuweisungen durch Admin)
+    meldung_aktiv = models.BooleanField(default=True,
+        help_text="Ob sich User für diese Veranstaltung melden können")
+
+    # Erforderliche Kompetenzen für Meldung/Zuweisung
+    erforderliche_kompetenzen = models.ManyToManyField(
+        'kompetenzen.Kompetenz', blank=True, related_name='erforderlich_fuer_veranstaltungen',
+        help_text="User brauchen diese Kompetenzen, um sich zu melden"
+    )
+    empfohlene_kompetenzen = models.ManyToManyField(
+        'kompetenzen.Kompetenz', blank=True, related_name='empfohlen_fuer_veranstaltungen',
+        help_text="Diese Kompetenzen sind hilfreich, aber nicht zwingend"
+    )
 
     erstellt_von = models.CharField(max_length=100, blank=True)
     erstellt_am = models.DateTimeField(auto_now_add=True)
@@ -169,6 +191,41 @@ class VeranstaltungAnhang(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class VeranstaltungMeldung(models.Model):
+    """User meldet sich für eine Veranstaltung (hat Zeit)."""
+    veranstaltung = models.ForeignKey(Veranstaltung, on_delete=models.CASCADE, related_name='meldungen')
+    user_keycloak_id = models.CharField(max_length=100)
+    user_username = models.CharField(max_length=150, blank=True)
+    kommentar = models.TextField(blank=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['veranstaltung', 'user_keycloak_id']
+        ordering = ['erstellt_am']
+        verbose_name = 'Meldung'
+        verbose_name_plural = 'Meldungen'
+
+    def __str__(self):
+        return f"{self.user_username or self.user_keycloak_id} @ {self.veranstaltung.titel}"
+
+
+class VeranstaltungAbmeldung(models.Model):
+    """Log wenn ein User sich von einer Veranstaltung abmeldet."""
+    veranstaltung = models.ForeignKey(Veranstaltung, on_delete=models.CASCADE, related_name='abmeldungen')
+    user_keycloak_id = models.CharField(max_length=100)
+    user_username = models.CharField(max_length=150, blank=True)
+    grund = models.TextField(blank=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-erstellt_am']
+        verbose_name = 'Abmeldung'
+        verbose_name_plural = 'Abmeldungen'
+
+    def __str__(self):
+        return f"{self.user_username or self.user_keycloak_id} abgemeldet @ {self.veranstaltung.titel}"
 
 
 class VeranstaltungErinnerung(models.Model):

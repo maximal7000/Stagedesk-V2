@@ -307,6 +307,86 @@ class MonitorConfig(models.Model):
         return f"{self.name} ({self.slug})"
 
 
+class Bildschirm(models.Model):
+    """Ein physischer Monitor-Bildschirm mit eigenem Zeitplan"""
+
+    name = models.CharField(max_length=100, help_text="z.B. Eingang, Lehrerzimmer")
+    slug = models.SlugField(max_length=50, unique=True)
+    default_profil = models.ForeignKey(
+        MonitorConfig, on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='als_default_bildschirm',
+        help_text="Fallback-Profil wenn kein Zeitplan greift"
+    )
+    zeitplan = models.JSONField(default=list, blank=True,
+        help_text='[{"profil_id": 3, "tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]')
+    power_on = models.CharField(max_length=5, blank=True, default='',
+        help_text="Einschaltzeit HH:MM (HDMI-CEC)")
+    power_off = models.CharField(max_length=5, blank=True, default='',
+        help_text="Ausschaltzeit HH:MM (HDMI-CEC)")
+
+    # CEC-Status vom Pi gemeldet
+    cec_status = models.CharField(max_length=20, blank=True, default='',
+        help_text="Letzter CEC-Status vom Pi (on/standby/unknown)")
+    cec_status_zeit = models.DateTimeField(null=True, blank=True,
+        help_text="Zeitpunkt der letzten CEC-Status-Meldung")
+
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    aktualisiert_am = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Bildschirm'
+        verbose_name_plural = 'Bildschirme'
+        ordering = ['name']
+
+    def __str__(self):
+        return f"{self.name} ({self.slug})"
+
+    def get_power_state(self):
+        """Soll der Bildschirm gerade an sein? Gibt True/False zurück."""
+        if not self.power_on and not self.power_off:
+            return True  # Keine Power-Zeiten = immer an
+        from datetime import datetime as _dt
+        zeit = _dt.now().strftime('%H:%M')
+        if self.power_on and self.power_off:
+            if self.power_on <= self.power_off:
+                return self.power_on <= zeit <= self.power_off
+            else:
+                # Über Mitternacht (z.B. 22:00 - 06:00)
+                return zeit >= self.power_on or zeit <= self.power_off
+        if self.power_on:
+            return zeit >= self.power_on
+        if self.power_off:
+            return zeit <= self.power_off
+        return True
+
+    def get_active_profil(self):
+        """Aktives Profil anhand des Zeitplans bestimmen."""
+        from datetime import datetime as _dt
+        now = _dt.now()
+        wochentag = now.weekday()
+        zeit = now.strftime('%H:%M')
+
+        if self.zeitplan and isinstance(self.zeitplan, list):
+            for entry in self.zeitplan:
+                if not isinstance(entry, dict):
+                    continue
+                tage = entry.get('tage', [])
+                von = entry.get('von', '00:00')
+                bis = entry.get('bis', '23:59')
+                profil_id = entry.get('profil_id')
+                if (isinstance(tage, list) and wochentag in tage
+                        and von <= zeit <= bis and profil_id):
+                    try:
+                        return MonitorConfig.objects.get(id=profil_id)
+                    except MonitorConfig.DoesNotExist:
+                        continue
+
+        if self.default_profil:
+            return self.default_profil
+        return MonitorConfig.get()
+
+
 class Ankuendigung(models.Model):
     """Freitext-Ankündigungen für das Display"""
 

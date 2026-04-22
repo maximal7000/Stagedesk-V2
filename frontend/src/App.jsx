@@ -36,6 +36,8 @@ import AdminPage from './pages/admin/AdminPage';
 import MonitorAdminPage from './pages/admin/MonitorAdminPage';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
+// Kompetenzen
+import KompetenzenPage from './pages/kompetenzen/KompetenzenPage';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -84,6 +86,8 @@ function AppContent() {
                   <Route path="/ausleihen/:id" element={<AusleihePage />} />
                   <Route path="/anwesenheit" element={<AnwesenheitPage />} />
                   <Route path="/anwesenheit/:id" element={<AnwesenheitPage />} />
+                  <Route path="/kompetenzen" element={<KompetenzenPage />} />
+                  <Route path="/kompetenzen/user/:userId" element={<KompetenzenPage />} />
                   <Route path="/veranstaltung" element={<VeranstaltungenPage />} />
                   <Route path="/veranstaltung/neu" element={<VeranstaltungDetailPage />} />
                   <Route path="/veranstaltung/:id" element={<VeranstaltungDetailPage />} />

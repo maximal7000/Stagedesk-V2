@@ -15,12 +15,13 @@ from django.utils.text import slugify
 
 from core.auth import keycloak_auth
 from users.api import is_admin
-from .models import MonitorConfig, Ankuendigung, MonitorDatei
+from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm
 from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
     MonitorProfileListSchema, MonitorProfileCreateSchema,
     AnkuendigungSchema, AnkuendigungCreateSchema,
     MonitorDateiSchema, OnAirSchema, NotfallSchema,
+    BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
 )
 from . import oepnv
 
@@ -213,9 +214,16 @@ def _fetch_oepnv(config):
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
 @monitor_router.get("/display")
-def get_display_data(request, profil: str = None):
+def get_display_data(request, profil: str = None, bildschirm: str = None):
     """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display"""
-    config = MonitorConfig.get(slug=profil)
+    if bildschirm:
+        try:
+            bs = Bildschirm.objects.get(slug=bildschirm)
+            config = bs.get_active_profil()
+        except Bildschirm.DoesNotExist:
+            config = MonitorConfig.get(slug=profil)
+    else:
+        config = MonitorConfig.get(slug=profil)
     now = timezone.now()
 
     # Ankündigungen: nur aktive + im Zeitfenster
@@ -533,3 +541,80 @@ def search_oepnv_stations(request, q: str = "", results: int = 10,
         return []
     return oepnv.search_stations(q, results=min(results, 20),
                                   use_db=use_db, use_nahsh=use_nahsh)
+
+
+# ═══ Bildschirm: Power-Status (öffentlich, kein Auth) ═════════════
+
+@monitor_router.get("/bildschirm/power")
+def get_bildschirm_power(request, slug: str):
+    """Öffentlicher Endpunkt: Soll der Bildschirm gerade an sein?
+    Wird vom Raspberry Pi per Cronjob gepollt."""
+    try:
+        bs = Bildschirm.objects.get(slug=slug)
+        return {
+            'slug': bs.slug,
+            'power': bs.get_power_state(),
+            'power_on': bs.power_on,
+            'power_off': bs.power_off,
+            'cec_status': bs.cec_status,
+            'cec_status_zeit': bs.cec_status_zeit,
+        }
+    except Bildschirm.DoesNotExist:
+        return {'slug': slug, 'power': True, 'error': 'Bildschirm nicht gefunden'}
+
+
+@monitor_router.post("/bildschirm/cec-status")
+def report_cec_status(request, slug: str, status: str):
+    """Öffentlicher Endpunkt: Pi meldet den tatsächlichen CEC-Status zurück.
+    status: 'on', 'standby', 'unknown'"""
+    try:
+        bs = Bildschirm.objects.get(slug=slug)
+        bs.cec_status = status[:20]
+        bs.cec_status_zeit = timezone.now()
+        bs.save(update_fields=['cec_status', 'cec_status_zeit', 'aktualisiert_am'])
+        return {'success': True, 'slug': bs.slug, 'cec_status': bs.cec_status}
+    except Bildschirm.DoesNotExist:
+        return {'success': False, 'error': 'Bildschirm nicht gefunden'}
+
+
+# ═══ Admin: Bildschirme ═══════════════════════════════════════════
+
+@monitor_router.get("/bildschirme", response=list[BildschirmListSchema], auth=keycloak_auth)
+def list_bildschirme(request):
+    return Bildschirm.objects.all()
+
+
+@monitor_router.post("/bildschirme", auth=keycloak_auth)
+def create_bildschirm(request, payload: BildschirmCreateSchema):
+    slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
+    base_slug = slug
+    counter = 1
+    while Bildschirm.objects.filter(slug=slug).exists():
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+    bs = Bildschirm.objects.create(
+        name=payload.name,
+        slug=slug,
+        default_profil_id=payload.default_profil_id,
+    )
+    return {'id': bs.id, 'name': bs.name, 'slug': bs.slug}
+
+
+@monitor_router.put("/bildschirme/{id}", response=BildschirmListSchema, auth=keycloak_auth)
+def update_bildschirm(request, id: int, payload: BildschirmUpdateSchema):
+    bs = get_object_or_404(Bildschirm, id=id)
+    data = payload.dict(exclude_unset=True)
+    if 'default_profil_id' in data:
+        val = data.pop('default_profil_id')
+        bs.default_profil_id = val if val else None
+    for key, value in data.items():
+        setattr(bs, key, value)
+    bs.save()
+    return bs
+
+
+@monitor_router.delete("/bildschirme/{id}", auth=keycloak_auth)
+def delete_bildschirm(request, id: int):
+    bs = get_object_or_404(Bildschirm, id=id)
+    bs.delete()
+    return {"success": True}

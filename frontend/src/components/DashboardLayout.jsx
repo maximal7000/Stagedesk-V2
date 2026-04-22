@@ -21,6 +21,7 @@ import {
   CalendarDays,
   Monitor,
   ClipboardList,
+  Award,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
@@ -43,6 +44,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Kalender', href: '/kalender', icon: Calendar, permission: 'kalender.view' },
     { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Anwesenheit', href: '/anwesenheit', icon: ClipboardList, permission: 'anwesenheit.view' },
+    { name: 'Kompetenzen', href: '/kompetenzen', icon: Award, permission: 'kompetenzen.view' },
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 

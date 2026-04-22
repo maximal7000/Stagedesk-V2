@@ -95,6 +95,11 @@ class UserProfile(models.Model):
     # 2FA Status (wird von Keycloak verwaltet, hier nur gecacht)
     two_factor_enabled = models.BooleanField(default=False)
 
+    # Admin-Status wird beim Login aus Keycloak-Rollen persistiert,
+    # damit wir ihn auch für andere User abrufen können (in Listen etc.)
+    is_admin_cached = models.BooleanField(default=False,
+                                          help_text="Zuletzt erkannter Admin-Status aus Keycloak")
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

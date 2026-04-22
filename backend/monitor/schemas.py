@@ -248,6 +248,35 @@ class VeranstaltungDisplaySchema(Schema):
     ist_laufend: bool
 
 
+class BildschirmListSchema(Schema):
+    id: int
+    name: str
+    slug: str
+    default_profil_id: Optional[int] = None
+    zeitplan: list = []
+    power_on: str = ''
+    power_off: str = ''
+    cec_status: str = ''
+    cec_status_zeit: Optional[datetime] = None
+    erstellt_am: datetime
+    aktualisiert_am: datetime
+
+
+class BildschirmCreateSchema(Schema):
+    name: str
+    slug: str = ''
+    default_profil_id: Optional[int] = None
+
+
+class BildschirmUpdateSchema(Schema):
+    name: Optional[str] = None
+    slug: Optional[str] = None
+    default_profil_id: Optional[int] = None
+    zeitplan: Optional[list] = None
+    power_on: Optional[str] = None
+    power_off: Optional[str] = None
+
+
 class OnAirSchema(Schema):
     on_air: bool
 

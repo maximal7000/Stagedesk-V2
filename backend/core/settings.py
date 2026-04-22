@@ -29,8 +29,7 @@ SECRET_KEY = 'django-insecure-blm7=qql^hh(v#7l@rd^o*(-4qqj@rt2=2uui!0$#bc138c&hg
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
-
+ALLOWED_HOSTS = ["t410.de", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -49,6 +48,8 @@ INSTALLED_APPS = [
     'veranstaltung',
     'monitor',
     'anwesenheit',
+    'kompetenzen',
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -80,8 +81,16 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'core.wsgi.application'
+ASGI_APPLICATION = "core.asgi.application"
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
@@ -145,6 +154,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
+    "https://t410.de",
 ]
 
 CORS_ALLOW_CREDENTIALS = True

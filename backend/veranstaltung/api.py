@@ -20,6 +20,8 @@ from .models import (
     Veranstaltung,
     VeranstaltungTermin,
     VeranstaltungZuweisung,
+    VeranstaltungMeldung,
+    VeranstaltungAbmeldung,
     VeranstaltungChecklisteItem,
     VeranstaltungNotiz,
     VeranstaltungAnhang,
@@ -34,6 +36,8 @@ from .schemas import (
     VeranstaltungFilterSchema,
     VeranstaltungTermineSaveSchema,
     ZuweisungCreateSchema,
+    MeldungSetSchema,
+    AbmeldungSchema,
     ChecklisteItemCreateSchema,
     ChecklisteItemUpdateSchema,
     NotizCreateSchema,
@@ -139,6 +143,8 @@ def _set_ist_zugewiesen(veranstaltung, keycloak_id: str):
         return
     zuweisung_ids = set(veranstaltung.zuweisungen.values_list('user_keycloak_id', flat=True))
     setattr(veranstaltung, 'ist_zugewiesen', keycloak_id in zuweisung_ids)
+    meldung_ids = set(veranstaltung.meldungen.values_list('user_keycloak_id', flat=True))
+    setattr(veranstaltung, 'ist_gemeldet', keycloak_id in meldung_ids)
 
 
 # ========== Benutzer für Zuweisung ==========
@@ -185,7 +191,12 @@ def download_anhang_early(request, anhang_id: int):
 def list_veranstaltungen(request, q: Query[VeranstaltungFilterSchema] = None):
     require_permission(request, 'veranstaltung.view')
     filters = q.dict() if q else {}
-    qs = Veranstaltung.objects.prefetch_related('zuweisungen').order_by('-datum_von')
+    kid = get_user_id(request)
+    qs = Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen').order_by('-datum_von')
+
+    # Ausgeblendete Events fuer diesen User filtern (Admins sehen alles)
+    # Python-seitig filtern, da SQLite kein JSON-contains unterstuetzt
+    ausblenden_filter = not is_admin(request)
 
     if filters.get('status'):
         qs = qs.filter(status=filters['status'])
@@ -199,11 +210,22 @@ def list_veranstaltungen(request, q: Query[VeranstaltungFilterSchema] = None):
             Q(titel__icontains=s) | Q(beschreibung__icontains=s) | Q(ort__icontains=s)
         )
     if filters.get('nur_meine'):
-        kid = get_user_id(request)
         qs = qs.filter(zuweisungen__user_keycloak_id=kid).distinct()
 
     result = list(qs)
-    kid = get_user_id(request)
+    if ausblenden_filter:
+        filtered = []
+        for v in result:
+            # Ausgeblendete Events filtern
+            if kid in (v.ausgeblendete_user or []):
+                continue
+            # Wenn meldung_aktiv=False: nur zugewiesene User sehen das Event
+            if not v.meldung_aktiv:
+                zugewiesen_ids = set(v.zuweisungen.values_list('user_keycloak_id', flat=True))
+                if kid not in zugewiesen_ids:
+                    continue
+            filtered.append(v)
+        result = filtered
     for v in result:
         _set_ist_zugewiesen(v, kid)
     return result
@@ -228,11 +250,22 @@ def get_veranstaltung(request, id: int):
     require_permission(request, 'veranstaltung.view')
     v = get_object_or_404(
         Veranstaltung.objects.prefetch_related(
-            'termine', 'zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
+            'termine', 'zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
         ),
         id=id
     )
-    _set_ist_zugewiesen(v, get_user_id(request))
+    kid = get_user_id(request)
+    # Zugriffskontrolle: ausgeblendete User + meldung_aktiv=False fuer nicht-zugewiesene
+    if not is_admin(request):
+        if kid in (v.ausgeblendete_user or []):
+            from ninja.errors import HttpError
+            raise HttpError(404, "Veranstaltung nicht gefunden")
+        if not v.meldung_aktiv:
+            zugewiesen_ids = set(v.zuweisungen.values_list('user_keycloak_id', flat=True))
+            if kid not in zugewiesen_ids:
+                from ninja.errors import HttpError
+                raise HttpError(404, "Veranstaltung nicht gefunden")
+    _set_ist_zugewiesen(v, kid)
     return v
 
 
@@ -276,6 +309,8 @@ def update_veranstaltung(request, id: int, payload: VeranstaltungUpdateSchema):
     v = get_object_or_404(Veranstaltung, id=id)
     data = payload.dict(exclude_unset=True)
     ausleihliste_id = data.pop('ausleihliste_id', None)
+    erforderliche = data.pop('erforderliche_kompetenzen_ids', None)
+    empfohlene = data.pop('empfohlene_kompetenzen_ids', None)
     if 'ausleihliste_id' in payload.dict():
         if ausleihliste_id:
             from inventar.models import Ausleihliste
@@ -289,6 +324,12 @@ def update_veranstaltung(request, id: int, payload: VeranstaltungUpdateSchema):
     for k, val in data.items():
         setattr(v, k, val)
     v.save()
+    if erforderliche is not None:
+        from kompetenzen.models import Kompetenz
+        v.erforderliche_kompetenzen.set(Kompetenz.objects.filter(id__in=erforderliche))
+    if empfohlene is not None:
+        from kompetenzen.models import Kompetenz
+        v.empfohlene_kompetenzen.set(Kompetenz.objects.filter(id__in=empfohlene))
     # Kalender-Events synchronisieren wenn vorhanden (Name/Status/Ort können sich geändert haben)
     _sync_kalender_events(v)
     _set_ist_zugewiesen(v, get_user_id(request))
@@ -571,7 +612,7 @@ def unlink_anwesenheit(request, id: int):
 @veranstaltung_router.post("/{id}/zuweisungen", response=VeranstaltungSchema, auth=keycloak_auth)
 def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
     require_permission(request, 'veranstaltung.zuweisungen')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     data = payload.dict()
     taetigkeit = None
     if data.get('taetigkeit_id'):
@@ -606,7 +647,7 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
 @veranstaltung_router.delete("/{id}/zuweisungen/{user_keycloak_id}", response=VeranstaltungSchema, auth=keycloak_auth)
 def remove_zuweisung(request, id: int, user_keycloak_id: str):
     require_permission(request, 'veranstaltung.zuweisungen')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
 
     # Discord-Channel-Zugriff entziehen
     if v.discord_channel_id:
@@ -626,12 +667,116 @@ def remove_zuweisung(request, id: int, user_keycloak_id: str):
     return v
 
 
+# ========== Meldungen ==========
+
+@veranstaltung_router.post("/{id}/melden", response=VeranstaltungSchema, auth=keycloak_auth)
+def melden(request, id: int, payload: MeldungSetSchema):
+    """Sich für eine Veranstaltung melden (= hab Zeit)."""
+    require_permission(request, 'veranstaltung.view')
+    profile = get_or_create_profile(request)
+    v = get_object_or_404(
+        Veranstaltung.objects.prefetch_related(
+            'termine', 'zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
+        ),
+        id=id
+    )
+    if not v.meldung_aktiv:
+        from ninja.errors import HttpError
+        raise HttpError(400, "Meldung ist für diese Veranstaltung deaktiviert")
+
+    # Kompetenz-Check: User braucht alle erforderlichen Kompetenzen (nicht abgelaufen)
+    # Admins sind vom Check ausgenommen
+    erforderlich_ids = list(v.erforderliche_kompetenzen.values_list('id', flat=True))
+    if erforderlich_ids and not is_admin(request):
+        from kompetenzen.models import UserKompetenz
+        user_uks = UserKompetenz.objects.filter(
+            user_keycloak_id=profile.keycloak_id,
+            kompetenz_id__in=erforderlich_ids,
+            hat_kompetenz=True,
+        ).select_related('kompetenz')
+        erfuellt_ids = {uk.kompetenz_id for uk in user_uks if not uk.ist_abgelaufen}
+        fehlend_ids = set(erforderlich_ids) - erfuellt_ids
+        if fehlend_ids:
+            from kompetenzen.models import Kompetenz
+            from ninja.errors import HttpError
+            fehlende_namen = list(Kompetenz.objects.filter(
+                id__in=fehlend_ids).values_list('name', flat=True))
+            raise HttpError(
+                403,
+                "Fehlende oder abgelaufene Kompetenzen: " + ", ".join(fehlende_namen)
+            )
+
+    VeranstaltungMeldung.objects.update_or_create(
+        veranstaltung=v,
+        user_keycloak_id=profile.keycloak_id,
+        defaults={
+            'user_username': profile.username or '',
+            'kommentar': payload.kommentar,
+        }
+    )
+    v.refresh_from_db()
+    _set_ist_zugewiesen(v, get_user_id(request))
+    return v
+
+
+@veranstaltung_router.post("/{id}/abmelden", response=VeranstaltungSchema, auth=keycloak_auth)
+def abmelden(request, id: int, payload: AbmeldungSchema):
+    """Sich von einer Veranstaltung abmelden (mit optionalem Grund)."""
+    require_permission(request, 'veranstaltung.view')
+    profile = get_or_create_profile(request)
+    v = get_object_or_404(
+        Veranstaltung.objects.prefetch_related(
+            'termine', 'zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'
+        ),
+        id=id
+    )
+    deleted, _ = VeranstaltungMeldung.objects.filter(
+        veranstaltung=v, user_keycloak_id=profile.keycloak_id
+    ).delete()
+    # Abmeldung ins Log schreiben wenn tatsaechlich eine Meldung existierte
+    if deleted:
+        VeranstaltungAbmeldung.objects.create(
+            veranstaltung=v,
+            user_keycloak_id=profile.keycloak_id,
+            user_username=profile.username or '',
+            grund=payload.grund,
+        )
+    v.refresh_from_db()
+    _set_ist_zugewiesen(v, get_user_id(request))
+    return v
+
+
+@veranstaltung_router.put("/{id}/sichtbarkeit", auth=keycloak_auth)
+def set_sichtbarkeit(request, id: int, user_keycloak_id: str, ausblenden: bool = True):
+    """Admin: Veranstaltung für einen User ein-/ausblenden."""
+    require_permission(request, 'veranstaltung.zuweisungen')
+    v = get_object_or_404(Veranstaltung, id=id)
+    liste = v.ausgeblendete_user or []
+    if ausblenden and user_keycloak_id not in liste:
+        liste.append(user_keycloak_id)
+    elif not ausblenden and user_keycloak_id in liste:
+        liste.remove(user_keycloak_id)
+    v.ausgeblendete_user = liste
+    v.save(update_fields=['ausgeblendete_user', 'aktualisiert_am'])
+    return {'success': True, 'ausgeblendete_user': v.ausgeblendete_user}
+
+
+@veranstaltung_router.put("/{id}/meldung-aktiv", auth=keycloak_auth)
+def toggle_meldung_aktiv(request, id: int, aktiv: bool = True):
+    """Admin: Meldefunktion für eine Veranstaltung ein-/ausschalten."""
+    require_permission(request, 'veranstaltung.zuweisungen')
+    v = get_object_or_404(Veranstaltung, id=id)
+    v.meldung_aktiv = aktiv
+    v.save(update_fields=['meldung_aktiv', 'aktualisiert_am'])
+    return {'success': True, 'meldung_aktiv': v.meldung_aktiv}
+
+
 # ========== Checkliste ==========
 
 @veranstaltung_router.post("/{id}/checkliste", response=VeranstaltungSchema, auth=keycloak_auth)
 def add_checkliste_item(request, id: int, payload: ChecklisteItemCreateSchema):
     require_permission(request, 'veranstaltung.edit')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     VeranstaltungChecklisteItem.objects.create(
         veranstaltung=v,
         titel=payload.titel,
@@ -645,7 +790,7 @@ def add_checkliste_item(request, id: int, payload: ChecklisteItemCreateSchema):
 @veranstaltung_router.put("/{id}/checkliste/{item_id}", response=VeranstaltungSchema, auth=keycloak_auth)
 def update_checkliste_item(request, id: int, item_id: int, payload: ChecklisteItemUpdateSchema):
     require_permission(request, 'veranstaltung.edit')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     item = get_object_or_404(VeranstaltungChecklisteItem, veranstaltung=v, id=item_id)
     data = payload.dict(exclude_unset=True)
     if 'erledigt' in data and data['erledigt']:
@@ -663,7 +808,7 @@ def update_checkliste_item(request, id: int, item_id: int, payload: ChecklisteIt
 @veranstaltung_router.delete("/{id}/checkliste/{item_id}", response=VeranstaltungSchema, auth=keycloak_auth)
 def delete_checkliste_item(request, id: int, item_id: int):
     require_permission(request, 'veranstaltung.edit')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     get_object_or_404(VeranstaltungChecklisteItem, veranstaltung=v, id=item_id).delete()
     v.refresh_from_db()
     _set_ist_zugewiesen(v, get_user_id(request))
@@ -676,7 +821,7 @@ def delete_checkliste_item(request, id: int, item_id: int):
 def add_notiz(request, id: int, payload: NotizCreateSchema):
     require_permission(request, 'veranstaltung.edit')
     profile = get_or_create_profile(request)
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     VeranstaltungNotiz.objects.create(
         veranstaltung=v,
         text=payload.text,
@@ -694,7 +839,7 @@ def add_notiz(request, id: int, payload: NotizCreateSchema):
 def add_anhang(request, id: int, name: str = Form(''), url: str = Form(''), datei: UploadedFile = File(None)):
     require_permission(request, 'veranstaltung.edit')
     import hashlib
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     anhang_name = name or (datei.name if datei else 'Anhang')
 
     # Unique-Key generieren um Duplikate zu verhindern
@@ -722,7 +867,7 @@ def add_anhang(request, id: int, name: str = Form(''), url: str = Form(''), date
 @veranstaltung_router.delete("/{id}/anhaenge/{anhang_id}", response=VeranstaltungSchema, auth=keycloak_auth)
 def delete_anhang(request, id: int, anhang_id: int):
     require_permission(request, 'veranstaltung.edit')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     get_object_or_404(VeranstaltungAnhang, veranstaltung=v, id=anhang_id).delete()
     v.refresh_from_db()
     _set_ist_zugewiesen(v, get_user_id(request))
@@ -734,7 +879,7 @@ def delete_anhang(request, id: int, anhang_id: int):
 @veranstaltung_router.post("/{id}/erinnerungen", response=VeranstaltungSchema, auth=keycloak_auth)
 def add_erinnerung(request, id: int, payload: ErinnerungCreateSchema):
     require_permission(request, 'veranstaltung.edit')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     VeranstaltungErinnerung.objects.create(
         veranstaltung=v,
         zeit_vorher=payload.zeit_vorher,
@@ -748,7 +893,7 @@ def add_erinnerung(request, id: int, payload: ErinnerungCreateSchema):
 @veranstaltung_router.delete("/{id}/erinnerungen/{erinnerung_id}", response=VeranstaltungSchema, auth=keycloak_auth)
 def delete_erinnerung(request, id: int, erinnerung_id: int):
     require_permission(request, 'veranstaltung.edit')
-    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     get_object_or_404(VeranstaltungErinnerung, veranstaltung=v, id=erinnerung_id).delete()
     v.refresh_from_db()
     _set_ist_zugewiesen(v, get_user_id(request))

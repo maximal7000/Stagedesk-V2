@@ -66,6 +66,8 @@ def get_or_create_profile(request) -> UserProfile:
         if default_groups.exists():
             profile.permission_groups.set(default_groups)
 
+    admin_flag = is_admin(request)
+
     # Update profile wenn sich was geändert hat
     if not created:
         updated = False
@@ -75,13 +77,19 @@ def get_or_create_profile(request) -> UserProfile:
         if profile.email != email:
             profile.email = email
             updated = True
+        if profile.is_admin_cached != admin_flag:
+            profile.is_admin_cached = admin_flag
+            updated = True
         if updated:
             profile.save()
-    
+    else:
+        profile.is_admin_cached = admin_flag
+        profile.save()
+
     # Keycloak-Rollen an das Objekt anhängen (nicht in DB, nur für Response)
     profile._keycloak_roles = keycloak_roles
-    profile._is_admin = is_admin(request)
-    
+    profile._is_admin = admin_flag
+
     return profile
 
 
@@ -247,11 +255,12 @@ def list_users(request):
     users = UserProfile.objects.prefetch_related('permissions', 'bereiche', 'permission_groups').all()
     
     # Hinweis: Wir können die Keycloak-Rollen nicht für alle User abrufen
-    # ohne deren Token zu haben. Daher sind keycloak_roles leer in der Liste.
+    # ohne deren Token zu haben. is_admin kommt aus dem gecachten Flag,
+    # das beim letzten Login des jeweiligen Users gesetzt wurde.
     for user in users:
         user._keycloak_roles = []  # Unbekannt ohne deren Token
-        user._is_admin = False  # Unbekannt
-    
+        user._is_admin = user.is_admin_cached
+
     return users
 
 
@@ -473,6 +482,15 @@ def initialize_system(request):
          'description': 'Erlaubt den Export von Anwesenheitslisten', 'category': 'anwesenheit'},
         {'code': 'anwesenheit.view_all', 'name': 'Alle Anwesenheitslisten anzeigen',
          'description': 'Erlaubt das Anzeigen aller Listen (ohne diese Permission: nur eigene Listen)', 'category': 'anwesenheit'},
+        # Kompetenzen
+        {'code': 'kompetenzen.view', 'name': 'Kompetenzen anzeigen',
+         'description': 'Erlaubt das Anzeigen der eigenen Kompetenzen', 'category': 'kompetenzen'},
+        {'code': 'kompetenzen.view_all', 'name': 'Alle User-Kompetenzen anzeigen',
+         'description': 'Erlaubt das Anzeigen der Kompetenzen aller User', 'category': 'kompetenzen'},
+        {'code': 'kompetenzen.manage', 'name': 'Kompetenzen verwalten',
+         'description': 'Erlaubt das Bestätigen und Entziehen von Kompetenzen bei Usern', 'category': 'kompetenzen'},
+        {'code': 'kompetenzen.edit_catalog', 'name': 'Kompetenz-Katalog bearbeiten',
+         'description': 'Erlaubt das Anlegen/Bearbeiten/Löschen von Kategorien, Gruppen und Kompetenzen', 'category': 'kompetenzen'},
     ]
     
     created_permissions = []

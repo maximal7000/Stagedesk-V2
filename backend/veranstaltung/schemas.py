@@ -81,6 +81,30 @@ class ErinnerungSchema(Schema):
         return obj.get_einheit_display()
 
 
+class MeldungSchema(Schema):
+    id: int
+    user_keycloak_id: str
+    user_username: str
+    kommentar: str
+    erstellt_am: datetime
+
+
+class MeldungSetSchema(Schema):
+    kommentar: str = ''
+
+
+class AbmeldungSchema(Schema):
+    grund: str = ''
+
+
+class AbmeldungLogSchema(Schema):
+    id: int
+    user_keycloak_id: str
+    user_username: str
+    grund: str
+    erstellt_am: datetime
+
+
 class VeranstaltungSchema(Schema):
     id: int
     titel: str
@@ -105,11 +129,26 @@ class VeranstaltungSchema(Schema):
     aktualisiert_am: datetime
     termine: List[VeranstaltungTerminSchema]
     zuweisungen: List[ZuweisungSchema]
+    meldungen: List[MeldungSchema]
+    abmeldungen: List[AbmeldungLogSchema]
     checkliste: List[ChecklisteItemSchema]
     notizen: List[NotizSchema]
     anhaenge: List[AnhangSchema]
     erinnerungen: List[ErinnerungSchema]
+    meldung_aktiv: bool = True
+    ausgeblendete_user: list = []
     ist_zugewiesen: bool = False
+    ist_gemeldet: bool = False
+    erforderliche_kompetenzen_ids: List[int] = []
+    empfohlene_kompetenzen_ids: List[int] = []
+
+    @staticmethod
+    def resolve_erforderliche_kompetenzen_ids(obj):
+        return list(obj.erforderliche_kompetenzen.values_list('id', flat=True))
+
+    @staticmethod
+    def resolve_empfohlene_kompetenzen_ids(obj):
+        return list(obj.empfohlene_kompetenzen.values_list('id', flat=True))
 
     @staticmethod
     def resolve_status_display(obj):
@@ -122,6 +161,14 @@ class VeranstaltungSchema(Schema):
     @staticmethod
     def resolve_zuweisungen(obj):
         return obj.zuweisungen.select_related('taetigkeit').all()
+
+    @staticmethod
+    def resolve_meldungen(obj):
+        return obj.meldungen.all()
+
+    @staticmethod
+    def resolve_abmeldungen(obj):
+        return obj.abmeldungen.all()
 
     @staticmethod
     def resolve_checkliste(obj):
@@ -163,7 +210,9 @@ class VeranstaltungListSchema(Schema):
     zammad_ticket_number: str
     anzahl_zuweisungen: int
     anzahl_termine: int
+    meldung_aktiv: bool = True
     ist_zugewiesen: bool = False
+    ist_gemeldet: bool = False
 
     @staticmethod
     def resolve_status_display(obj):
@@ -210,6 +259,8 @@ class VeranstaltungUpdateSchema(Schema):
     wiederholung: Optional[str] = None
     wiederholung_ende: Optional[date] = None
     ausleihliste_id: Optional[int] = None
+    erforderliche_kompetenzen_ids: Optional[List[int]] = None
+    empfohlene_kompetenzen_ids: Optional[List[int]] = None
 
 
 class ZuweisungCreateSchema(Schema):
