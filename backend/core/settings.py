@@ -24,12 +24,17 @@ load_dotenv(BASE_DIR / '.env')
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-blm7=qql^hh(v#7l@rd^o*(-4qqj@rt2=2uui!0$#bc138c&hg'
+SECRET_KEY = os.getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-blm7=qql^hh(v#7l@rd^o*(-4qqj@rt2=2uui!0$#bc138c&hg',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ["t410.de", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv(
+    'DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1'
+).split(',') if h.strip()]
 
 # Application definition
 
@@ -95,15 +100,28 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 20,  # Wartezeit bei Lock (Sekunden)
+_db_engine = os.getenv('DB_ENGINE', 'sqlite').lower()
+if _db_engine == 'postgres':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DB_NAME', 'stagedesk'),
+            'USER': os.getenv('DB_USER', 'stagedesk'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+            'PORT': os.getenv('DB_PORT', '5432'),
         }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+            'OPTIONS': {
+                'timeout': 20,  # Wartezeit bei Lock (Sekunden)
+            }
+        }
+    }
 
 
 # Password validation
@@ -140,7 +158,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = os.getenv('DJANGO_STATIC_URL', 'static/')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (Uploads)
 MEDIA_URL = '/media/'
@@ -152,10 +171,14 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "https://t410.de",
-]
+_default_cors = "http://localhost:5173"
+CORS_ALLOWED_ORIGINS = [o.strip() for o in os.getenv(
+    'DJANGO_CORS_ORIGINS', _default_cors
+).split(',') if o.strip()]
+
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.getenv(
+    'DJANGO_CSRF_TRUSTED_ORIGINS', _default_cors
+).split(',') if o.strip()]
 
 CORS_ALLOW_CREDENTIALS = True
 

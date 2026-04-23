@@ -1,0 +1,19 @@
+# /etc/systemd/system/tag-backend.service
+[Unit]
+Description=Daphne ASGI (Stagedesk V2)
+After=network.target postgresql.service redis.service
+
+[Service]
+User=root
+Group=www-data
+WorkingDirectory=/opt/stagedesk/backend
+EnvironmentFile=/opt/stagedesk/backend/.env
+ExecStart=/opt/stagedesk/backend/venv/bin/daphne \
+    -u /run/t-ag.sock \
+    --access-log /var/log/stagedesk-access.log \
+    core.asgi:application
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

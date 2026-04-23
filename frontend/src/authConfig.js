@@ -1,51 +1,42 @@
 /**
  * Keycloak OIDC-Konfiguration für react-oidc-context
- * 
- * Diese Datei enthält die Konfiguration für die Authentifizierung
- * mit Keycloak über OpenID Connect (OIDC).
+ *
+ * Werte kommen aus Vite-Env-Variablen. Für Produktion in `.env.production`
+ * (oder direkt beim Build) setzen:
+ *   VITE_KEYCLOAK_URL=https://auth.t410.de
+ *   VITE_KEYCLOAK_REALM=technik-ag
+ *   VITE_KEYCLOAK_CLIENT=stagedesk
+ *
+ * redirect_uri/post_logout_redirect_uri nehmen automatisch die aktuelle
+ * Origin (funktioniert in Dev und Prod gleichermaßen).
  */
 
+const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL || 'https://auth.t410.de';
+const KEYCLOAK_REALM = import.meta.env.VITE_KEYCLOAK_REALM || 'master';
+const KEYCLOAK_CLIENT = import.meta.env.VITE_KEYCLOAK_CLIENT || 'stagedesk';
+
+const ORIGIN = typeof window !== 'undefined'
+  ? window.location.origin
+  : 'http://localhost:5173';
+
 export const oidcConfig = {
-  // URL des Keycloak-Servers
-  authority: "https://auth.t410.de/realms/master",
-  
-  // Client-ID der Anwendung in Keycloak
-  client_id: "stagedesk",
-  
-  // Redirect-URL nach erfolgreicher Anmeldung
-  redirect_uri: "http://localhost:5173",
-  
-  // URL nach dem Logout
-  post_logout_redirect_uri: "http://localhost:5173",
-  
-  // Gewünschte Scopes
+  authority: `${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}`,
+  client_id: KEYCLOAK_CLIENT,
+
+  redirect_uri: ORIGIN,
+  post_logout_redirect_uri: ORIGIN,
+
   scope: "openid profile email",
-  
-  // Response-Typ
   response_type: "code",
-  
-  // ===== WICHTIG: Alle automatischen Token-Operationen DEAKTIVIEREN =====
-  
-  // KEIN automatisches Silent Renew (verursacht 2x/Sekunde Anfragen!)
+
+  // Alle automatischen Token-Operationen deaktiviert
   automaticSilentRenew: false,
-  
-  // KEIN Session-Monitoring
   monitorSession: false,
-  
-  // KEINE automatischen User-Info Abfragen
   loadUserInfo: false,
-  
-  // Keine Check-Session iframe
   includeIdTokenInSilentRenew: false,
-  
-  // Kein automatischer Silent Sign-in beim Start
   silentRequestTimeoutInSeconds: 10,
-  
-  // Keine automatische Metadaten-Validierung
   validateSubOnSilentRenew: false,
   filterProtocolClaims: true,
-  
-  // Wichtig: revokeTokensOnSignout deaktivieren
   revokeTokensOnSignout: false,
 };
 
