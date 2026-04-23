@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='monitorconfig',
             name='slug',
-            field=models.SlugField(default='', blank=True),
+            field=models.SlugField(default='', blank=True, db_index=False),
             preserve_default=False,
         ),
         migrations.AddField(
