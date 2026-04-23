@@ -554,8 +554,9 @@ def get_bildschirm_power(request, slug: str):
         return {
             'slug': bs.slug,
             'power': bs.get_power_state(),
-            'power_on': bs.power_on,
-            'power_off': bs.power_off,
+            'power_zeitplan': bs.power_zeitplan,
+            'ferien_modus': bs.ferien_modus,
+            'power_ausnahmen': bs.power_ausnahmen,
             'cec_status': bs.cec_status,
             'cec_status_zeit': bs.cec_status_zeit,
         }

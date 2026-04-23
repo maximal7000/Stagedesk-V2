@@ -2,6 +2,7 @@
 Monitor / Public Display Models
 """
 import uuid
+from datetime import date
 from django.db import models
 from django.utils import timezone
 
@@ -254,8 +255,7 @@ class MonitorConfig(models.Model):
             except cls.DoesNotExist:
                 pass
 
-        from datetime import datetime as _dt
-        now = _dt.now()
+        now = timezone.localtime()
         wochentag = now.weekday()
         zeit = now.strftime('%H:%M')
 
@@ -320,10 +320,12 @@ class Bildschirm(models.Model):
     )
     zeitplan = models.JSONField(default=list, blank=True,
         help_text='[{"profil_id": 3, "tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]')
-    power_on = models.CharField(max_length=5, blank=True, default='',
-        help_text="Einschaltzeit HH:MM (HDMI-CEC)")
-    power_off = models.CharField(max_length=5, blank=True, default='',
-        help_text="Ausschaltzeit HH:MM (HDMI-CEC)")
+    power_zeitplan = models.JSONField(default=list, blank=True,
+        help_text='[{"tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]. Leer = immer an.')
+    ferien_modus = models.BooleanField(default=False,
+        help_text="Wenn aktiv: Bildschirm grundsätzlich aus, nur Ausnahmen greifen.")
+    power_ausnahmen = models.JSONField(default=list, blank=True,
+        help_text='[{"von_datum": "YYYY-MM-DD", "bis_datum": "YYYY-MM-DD", "von": "HH:MM", "bis": "HH:MM", "notiz": ""}]')
 
     # CEC-Status vom Pi gemeldet
     cec_status = models.CharField(max_length=20, blank=True, default='',
@@ -342,28 +344,63 @@ class Bildschirm(models.Model):
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
+    @staticmethod
+    def _zeit_im_fenster(zeit: str, von: str, bis: str) -> bool:
+        """Prüft ob Uhrzeit HH:MM im Fenster [von, bis] liegt (auch über Mitternacht)."""
+        if not von and not bis:
+            return True
+        von = von or '00:00'
+        bis = bis or '23:59'
+        if von <= bis:
+            return von <= zeit <= bis
+        # über Mitternacht
+        return zeit >= von or zeit <= bis
+
+    def _aktive_ausnahme(self, heute: date):
+        """Gibt die erste Ausnahme zurück, deren Datumsbereich heute enthält."""
+        for e in self.power_ausnahmen or []:
+            if not isinstance(e, dict):
+                continue
+            try:
+                von_d = date.fromisoformat(e.get('von_datum', ''))
+                bis_d = date.fromisoformat(e.get('bis_datum') or e.get('von_datum', ''))
+            except (ValueError, TypeError):
+                continue
+            if von_d <= heute <= bis_d:
+                return e
+        return None
+
     def get_power_state(self):
-        """Soll der Bildschirm gerade an sein? Gibt True/False zurück."""
-        if not self.power_on and not self.power_off:
-            return True  # Keine Power-Zeiten = immer an
-        from datetime import datetime as _dt
-        zeit = _dt.now().strftime('%H:%M')
-        if self.power_on and self.power_off:
-            if self.power_on <= self.power_off:
-                return self.power_on <= zeit <= self.power_off
-            else:
-                # Über Mitternacht (z.B. 22:00 - 06:00)
-                return zeit >= self.power_on or zeit <= self.power_off
-        if self.power_on:
-            return zeit >= self.power_on
-        if self.power_off:
-            return zeit <= self.power_off
-        return True
+        """Soll der Bildschirm gerade an sein? Gibt True/False zurück.
+        Reihenfolge: Ausnahme (Datum) > Ferienmodus > Wochentag-Zeitplan > immer an.
+        Zeit wird in Europe/Berlin (settings.TIME_ZONE) gerechnet."""
+        now = timezone.localtime()
+        zeit = now.strftime('%H:%M')
+        wochentag = now.weekday()
+
+        ausnahme = self._aktive_ausnahme(now.date())
+        if ausnahme is not None:
+            return self._zeit_im_fenster(zeit, ausnahme.get('von', ''), ausnahme.get('bis', ''))
+
+        if self.ferien_modus:
+            return False
+
+        zeitplan = self.power_zeitplan or []
+        if not zeitplan:
+            return True  # Kein Zeitplan = immer an
+        for e in zeitplan:
+            if not isinstance(e, dict):
+                continue
+            tage = e.get('tage', [])
+            if not isinstance(tage, list) or wochentag not in tage:
+                continue
+            if self._zeit_im_fenster(zeit, e.get('von', ''), e.get('bis', '')):
+                return True
+        return False
 
     def get_active_profil(self):
         """Aktives Profil anhand des Zeitplans bestimmen."""
-        from datetime import datetime as _dt
-        now = _dt.now()
+        now = timezone.localtime()
         wochentag = now.weekday()
         zeit = now.strftime('%H:%M')
 

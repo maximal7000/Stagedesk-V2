@@ -254,8 +254,9 @@ class BildschirmListSchema(Schema):
     slug: str
     default_profil_id: Optional[int] = None
     zeitplan: list = []
-    power_on: str = ''
-    power_off: str = ''
+    power_zeitplan: list = []
+    ferien_modus: bool = False
+    power_ausnahmen: list = []
     cec_status: str = ''
     cec_status_zeit: Optional[datetime] = None
     erstellt_am: datetime
@@ -273,8 +274,9 @@ class BildschirmUpdateSchema(Schema):
     slug: Optional[str] = None
     default_profil_id: Optional[int] = None
     zeitplan: Optional[list] = None
-    power_on: Optional[str] = None
-    power_off: Optional[str] = None
+    power_zeitplan: Optional[list] = None
+    ferien_modus: Optional[bool] = None
+    power_ausnahmen: Optional[list] = None
 
 
 class OnAirSchema(Schema):

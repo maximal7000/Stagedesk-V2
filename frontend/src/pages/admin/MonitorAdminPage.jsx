@@ -293,18 +293,22 @@ export default function MonitorAdminPage() {
   };
 
   const handleSaveBildschirm = async (bs) => {
+    const payload = {
+      name: bs.name,
+      slug: bs.slug,
+      default_profil_id: bs.default_profil_id ?? null,
+      zeitplan: bs.zeitplan || [],
+      power_zeitplan: bs.power_zeitplan || [],
+      ferien_modus: !!bs.ferien_modus,
+      power_ausnahmen: bs.power_ausnahmen || [],
+    };
     try {
-      await apiClient.put(`/monitor/bildschirme/${bs.id}`, {
-        name: bs.name,
-        slug: bs.slug,
-        default_profil_id: bs.default_profil_id,
-        zeitplan: bs.zeitplan,
-        power_on: bs.power_on || '',
-        power_off: bs.power_off || '',
-      });
+      await apiClient.put(`/monitor/bildschirme/${bs.id}`, payload);
       await fetchBildschirme();
       toast.success('Bildschirm gespeichert');
-    } catch { toast.error('Fehler beim Speichern'); }
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Fehler beim Speichern');
+    }
   };
 
   const updateBildschirmLocal = (id, key, value) => {
@@ -901,21 +905,11 @@ export default function MonitorAdminPage() {
                   {/* Power-Steuerung (HDMI-CEC) */}
                   <div>
                     <h4 className="text-sm font-semibold text-white mb-1">Power-Steuerung (HDMI-CEC)</h4>
-                    <p className="text-xs text-gray-500 mb-3">TV/Monitor automatisch ein- und ausschalten per Raspberry Pi</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs text-gray-400 mb-1">Einschalten</label>
-                        <input type="time" value={bs.power_on || ''} disabled={!canEdit}
-                          onChange={e => updateBildschirmLocal(bs.id, 'power_on', e.target.value)}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-400 mb-1">Ausschalten</label>
-                        <input type="time" value={bs.power_off || ''} disabled={!canEdit}
-                          onChange={e => updateBildschirmLocal(bs.id, 'power_off', e.target.value)}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
-                      </div>
-                    </div>
+                    <p className="text-xs text-gray-500 mb-3">TV/Monitor automatisch ein- und ausschalten per Raspberry Pi. Zeitzone: Europe/Berlin (Sommerzeit automatisch).</p>
+
+                    <PowerZeitplanEditor bs={bs} canEdit={canEdit}
+                      update={(key, value) => updateBildschirmLocal(bs.id, key, value)} />
+
                     {/* CEC-Status vom Pi */}
                     {bs.cec_status && (
                       <div className="mt-3 flex items-center gap-2">
@@ -2583,6 +2577,181 @@ export default function MonitorAdminPage() {
       {/* Hidden Inputs */}
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleUploadFile}
         accept={uploadTyp === 'pdf' ? '.pdf' : 'image/*'} />
+    </div>
+  );
+}
+
+// ─── Power-Zeitplan Editor (Wochentage + Ferienmodus + Ausnahmen) ───
+function PowerZeitplanEditor({ bs, canEdit, update }) {
+  const plan = bs.power_zeitplan || [];
+  const ausnahmen = bs.power_ausnahmen || [];
+
+  const setPlanEntry = (idx, patch) => {
+    const next = plan.map((e, i) => i === idx ? { ...e, ...patch } : e);
+    update('power_zeitplan', next);
+  };
+  const addPlanEntry = (preset) => {
+    const entry = preset === 'wochenende'
+      ? { tage: [5, 6], von: '10:00', bis: '16:00' }
+      : preset === 'alle'
+        ? { tage: [0, 1, 2, 3, 4, 5, 6], von: '07:00', bis: '17:00' }
+        : { tage: [0, 1, 2, 3, 4], von: '07:00', bis: '17:00' };
+    update('power_zeitplan', [...plan, entry]);
+  };
+  const removePlanEntry = (idx) => update('power_zeitplan', plan.filter((_, i) => i !== idx));
+  const toggleTag = (idx, tagIdx) => {
+    const tage = plan[idx]?.tage || [];
+    setPlanEntry(idx, { tage: tage.includes(tagIdx) ? tage.filter(t => t !== tagIdx) : [...tage, tagIdx] });
+  };
+
+  const addAusnahme = () => {
+    const heute = new Date().toISOString().slice(0, 10);
+    update('power_ausnahmen', [...ausnahmen, { von_datum: heute, bis_datum: heute, von: '09:00', bis: '17:00', notiz: '' }]);
+  };
+  const setAusnahme = (idx, patch) => {
+    update('power_ausnahmen', ausnahmen.map((a, i) => i === idx ? { ...a, ...patch } : a));
+  };
+  const removeAusnahme = (idx) => update('power_ausnahmen', ausnahmen.filter((_, i) => i !== idx));
+
+  return (
+    <div className="space-y-4">
+      {/* Ferienmodus */}
+      <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
+        <div>
+          <div className="text-sm font-medium text-white">Ferienmodus</div>
+          <p className="text-[11px] text-gray-500">Bildschirm bleibt aus — außer zu eingestellten Sonderzeiten unten.</p>
+        </div>
+        <Toggle checked={!!bs.ferien_modus} disabled={!canEdit}
+          onChange={(v) => update('ferien_modus', v)} />
+      </div>
+
+      {/* Wochentage-Zeitplan */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h5 className="text-sm font-semibold text-white">Wochen-Zeitplan</h5>
+            <p className="text-[11px] text-gray-500">
+              {bs.ferien_modus ? 'Inaktiv während Ferienmodus.' : 'Bildschirm ist nur während dieser Fenster an. Leer = immer an.'}
+            </p>
+          </div>
+          {canEdit && (
+            <div className="flex gap-1.5">
+              <button onClick={() => addPlanEntry('woche')}
+                className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs rounded">
+                + Mo–Fr
+              </button>
+              <button onClick={() => addPlanEntry('wochenende')}
+                className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs rounded">
+                + Sa–So
+              </button>
+              <button onClick={() => addPlanEntry('alle')}
+                className="px-2.5 py-1 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-300 text-xs rounded">
+                + Alle Tage
+              </button>
+            </div>
+          )}
+        </div>
+
+        {plan.length === 0 ? (
+          <div className="p-3 bg-gray-800/20 rounded-lg border border-gray-700/30 text-center text-xs text-gray-500">
+            Kein Zeitplan — Bildschirm ist {bs.ferien_modus ? 'aus (Ferienmodus)' : 'immer an'}.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {plan.map((entry, idx) => (
+              <div key={idx} className={`p-2.5 rounded-lg border ${bs.ferien_modus ? 'bg-gray-800/10 border-gray-700/20 opacity-60' : 'bg-gray-800/30 border-gray-700/40'}`}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex gap-1">
+                    {WOCHENTAGE.map((tag, tagIdx) => (
+                      <button key={tagIdx} disabled={!canEdit}
+                        onClick={() => toggleTag(idx, tagIdx)}
+                        className={`w-7 h-7 rounded text-[11px] font-bold transition-colors disabled:opacity-50 ${
+                          (entry.tage || []).includes(tagIdx)
+                            ? (tagIdx >= 5 ? 'bg-purple-600/30 border border-purple-500/40 text-purple-200' : 'bg-blue-600/30 border border-blue-500/40 text-blue-200')
+                            : 'bg-gray-800 border border-gray-700 text-gray-500'
+                        }`}>
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <input type="time" value={entry.von || ''} disabled={!canEdit}
+                      onChange={e => setPlanEntry(idx, { von: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                    <span className="text-gray-500 text-xs">—</span>
+                    <input type="time" value={entry.bis || ''} disabled={!canEdit}
+                      onChange={e => setPlanEntry(idx, { bis: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                  </div>
+                  {canEdit && (
+                    <button onClick={() => removePlanEntry(idx)}
+                      className="ml-auto p-1 text-gray-500 hover:text-red-400 rounded hover:bg-gray-800">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Ausnahmen / Sonderzeiten */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h5 className="text-sm font-semibold text-white">Sonderzeiten / Ausnahmen</h5>
+            <p className="text-[11px] text-gray-500">Überschreibt Wochenplan und Ferienmodus für bestimmte Tage.</p>
+          </div>
+          {canEdit && (
+            <button onClick={addAusnahme}
+              className="flex items-center gap-1 px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs rounded">
+              <Plus className="w-3 h-3" /> Sonderzeit
+            </button>
+          )}
+        </div>
+
+        {ausnahmen.length === 0 ? (
+          <div className="p-3 bg-gray-800/20 rounded-lg border border-gray-700/30 text-center text-xs text-gray-500">
+            Keine Ausnahmen.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {ausnahmen.map((a, idx) => (
+              <div key={idx} className="p-2.5 bg-amber-900/10 rounded-lg border border-amber-700/30">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input type="date" value={a.von_datum || ''} disabled={!canEdit}
+                    onChange={e => setAusnahme(idx, { von_datum: e.target.value })}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                  <span className="text-gray-500 text-xs">bis</span>
+                  <input type="date" value={a.bis_datum || ''} disabled={!canEdit}
+                    onChange={e => setAusnahme(idx, { bis_datum: e.target.value })}
+                    className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <input type="time" value={a.von || ''} disabled={!canEdit}
+                      onChange={e => setAusnahme(idx, { von: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                    <span className="text-gray-500 text-xs">—</span>
+                    <input type="time" value={a.bis || ''} disabled={!canEdit}
+                      onChange={e => setAusnahme(idx, { bis: e.target.value })}
+                      className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
+                  </div>
+                  {canEdit && (
+                    <button onClick={() => removeAusnahme(idx)}
+                      className="ml-auto p-1 text-gray-500 hover:text-red-400 rounded hover:bg-gray-800">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <input type="text" value={a.notiz || ''} disabled={!canEdit}
+                  onChange={e => setAusnahme(idx, { notiz: e.target.value })}
+                  placeholder="Notiz (z.B. Tag der offenen Tür)"
+                  className="w-full mt-2 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50 placeholder-gray-500" />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
