@@ -213,7 +213,7 @@ export default function AdminPage() {
                   {editingUser?.id === user.id ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-white">{user.username}</span>
+                        <span className="font-medium text-white">{user.first_name || user.username}</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleUpdateUser(user.id, {
                             permission_codes: editingUser.permission_codes,
@@ -300,14 +300,15 @@ export default function AdminPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium">{user.username?.charAt(0).toUpperCase() || '?'}</span>
+                          <span className="text-white font-medium">{(user.first_name || user.username)?.charAt(0).toUpperCase() || '?'}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-white">{user.username}</span>
+                            <span className="font-medium text-white">
+                              {user.first_name ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}` : user.username}
+                            </span>
                             {user.is_admin && <span className="px-2 py-0.5 text-xs bg-purple-600/20 text-purple-400 rounded flex items-center gap-1"><Shield className="w-3 h-3" /> Admin</span>}
                           </div>
-                          <div className="text-sm text-gray-400">{user.email}</div>
                           {user.discord_id && <div className="text-xs text-indigo-400">Discord: {user.discord_id}</div>}
                           <div className="flex flex-wrap gap-1 mt-1">
                             {user.bereiche?.map(b => <span key={b.id} className="px-1.5 py-0.5 text-xs bg-blue-600/20 text-blue-400 rounded">{b.name}</span>)}

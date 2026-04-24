@@ -53,11 +53,14 @@ def get_or_create_profile(request) -> UserProfile:
     keycloak_id = request.auth.get('sub')
     username = request.auth.get('preferred_username', '')
     email = request.auth.get('email', '')
+    first_name = request.auth.get('given_name', '')
+    last_name = request.auth.get('family_name', '')
     keycloak_roles = get_keycloak_roles(request)
-    
+
     profile, created = UserProfile.objects.get_or_create(
         keycloak_id=keycloak_id,
-        defaults={'username': username, 'email': email}
+        defaults={'username': username, 'email': email,
+                  'first_name': first_name, 'last_name': last_name}
     )
 
     # Neue User bekommen Standard-Gruppen
@@ -76,6 +79,12 @@ def get_or_create_profile(request) -> UserProfile:
             updated = True
         if profile.email != email:
             profile.email = email
+            updated = True
+        if profile.first_name != first_name:
+            profile.first_name = first_name
+            updated = True
+        if profile.last_name != last_name:
+            profile.last_name = last_name
             updated = True
         if profile.is_admin_cached != admin_flag:
             profile.is_admin_cached = admin_flag

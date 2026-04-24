@@ -122,7 +122,7 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                   <input type="checkbox" checked={selectedUsers.includes(u.keycloak_id)}
                     onChange={() => toggleUserSelection(u.keycloak_id)}
                     className="rounded border-gray-600 bg-gray-700 text-blue-500" />
-                  <span className="text-white text-sm">{u.username || u.email || u.keycloak_id}</span>
+                  <span className="text-white text-sm">{u.first_name || u.username || u.keycloak_id}</span>
                   {gemeldeteIds.has(u.keycloak_id) && (
                     <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
                       <Hand className="w-3 h-3" /> gemeldet

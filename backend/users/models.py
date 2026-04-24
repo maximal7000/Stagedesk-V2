@@ -70,6 +70,8 @@ class UserProfile(models.Model):
     keycloak_id = models.CharField(max_length=100, unique=True, help_text="Keycloak User Sub ID")
     username = models.CharField(max_length=150, blank=True)
     email = models.CharField(max_length=254, blank=True)
+    first_name = models.CharField(max_length=150, blank=True, help_text="Vorname aus Keycloak (given_name)")
+    last_name = models.CharField(max_length=150, blank=True, help_text="Nachname aus Keycloak (family_name)")
 
     # Discord-Verknüpfung
     discord_id = models.CharField(max_length=100, blank=True, help_text="Discord User-ID für Event-Verknüpfung")

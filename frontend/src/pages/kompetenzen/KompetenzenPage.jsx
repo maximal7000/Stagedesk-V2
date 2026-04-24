@@ -681,18 +681,19 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
                   istAdmin ? 'bg-purple-600' : 'bg-blue-600'
                 }`}>
-                  {u.username?.[0]?.toUpperCase() || '?'}
+                  {(u.first_name || u.username)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-medium truncate">{u.username || '—'}</span>
+                    <span className="text-white font-medium truncate">
+                      {u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : (u.username || '—')}
+                    </span>
                     {istAdmin && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded text-[10px]">
                         <Shield className="w-3 h-3" /> Admin
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500 truncate">{u.email}</div>
                   {(u.bereiche?.length > 0 || u.permission_groups?.length > 0) && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {u.bereiche?.map(b => (

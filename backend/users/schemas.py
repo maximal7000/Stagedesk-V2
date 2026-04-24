@@ -61,6 +61,8 @@ class UserProfileSchema(Schema):
     keycloak_id: str
     username: str
     email: str
+    first_name: str = ''
+    last_name: str = ''
     discord_id: str
     bereiche: List[BereichSchema]
     theme: str
@@ -151,6 +153,8 @@ class UserListSchema(Schema):
     keycloak_id: str
     username: str
     email: str
+    first_name: str = ''
+    last_name: str = ''
     discord_id: str
     bereiche: List[BereichSchema]
     permission_groups: List[PermissionGroupBriefSchema]

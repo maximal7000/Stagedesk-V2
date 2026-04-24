@@ -63,7 +63,7 @@ export default function DashboardPage() {
       {/* Welcome Section */}
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">
-          Willkommen zurück, {user?.preferred_username || user?.name}! 👋
+          Willkommen zurück, {user?.given_name || user?.name?.split(' ')[0] || user?.preferred_username}! 👋
         </h1>
         <p className="text-gray-400">
           Verwalte deine Haushalte und behalte den Überblick über deine Finanzen.

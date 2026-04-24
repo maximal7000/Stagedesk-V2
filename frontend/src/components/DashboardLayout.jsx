@@ -217,7 +217,7 @@ export default function DashboardLayout({ children }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-white truncate">
-                    {user?.preferred_username || user?.name || 'Benutzer'}
+                    {user?.given_name || user?.name?.split(' ')[0] || user?.preferred_username || 'Benutzer'}
                   </p>
                   <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                 </div>
