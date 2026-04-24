@@ -11,6 +11,7 @@ import {
   Thermometer, Droplets, Timer, FileText, QrCode, AlignLeft,
   LayoutGrid, Train, Bus, TramFront, Ship,
 } from 'lucide-react';
+import BaukastenRenderer from '../components/monitor/BaukastenRenderer';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
@@ -302,6 +303,7 @@ export default function MonitorPage() {
   }
 
   // ─── Gemeinsame Overlays (für alle Layouts) ───
+  const klausur = data?.klausur;
   const overlays = (
     <>
       {/* NOTFALL */}
@@ -311,6 +313,29 @@ export default function MonitorPage() {
             <AlertTriangle className="w-28 h-28 text-white mx-auto mb-8 animate-pulse" />
             <h1 className="text-6xl font-black text-white mb-6 leading-tight">{config.notfall_text}</h1>
             <div className="w-24 h-1 mx-auto rounded-full animate-pulse" style={{ background: accent }} />
+          </div>
+        </div>
+      )}
+
+      {/* KLAUSUR — nur aktiv wenn bildschirm-Slug vorhanden und Klausur läuft */}
+      {klausur && !config?.notfall_aktiv && (
+        <div
+          className="fixed inset-0 z-[95] flex items-center justify-center"
+          style={{ background: klausur.farbe || '#1e40af' }}
+        >
+          <div className="text-center px-12 max-w-5xl">
+            <div className="inline-flex items-center gap-4 px-8 py-3 rounded-full bg-white/10 text-white/90 text-xl tracking-[0.3em] uppercase mb-10">
+              <AlignLeft className="w-6 h-6" /> Klausur
+            </div>
+            <h1 className="text-7xl font-black text-white mb-8 leading-tight">{klausur.titel}</h1>
+            {klausur.text && (
+              <p className="text-2xl text-white/85 leading-relaxed whitespace-pre-line">{klausur.text}</p>
+            )}
+            {klausur.aktiv_bis && (
+              <div className="mt-10 text-white/70 text-lg">
+                bis {new Date(klausur.aktiv_bis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -381,6 +406,19 @@ export default function MonitorPage() {
             </div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ═══ BAUKASTEN-LAYOUT ═════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════
+  if (config?.layout_modus === 'baukasten') {
+    return (
+      <div className="fixed inset-0 overflow-hidden select-none cursor-none" style={{ background: bgColor }}>
+        <BaukastenRenderer data={data} config={config} accent={accent} mediaBase={MEDIA_BASE} />
+        {overlays}
+        <OnAirIndicator config={config} accent={accent} />
       </div>
     );
   }
@@ -937,7 +975,8 @@ export default function MonitorPage() {
   // Welche Spalten aktiv?
   const hasLeft = (config?.zeige_veranstaltungen && veranstaltungen.length > 0) || eigenerCountdown;
   const hasMiddle = (config?.zeige_ankuendigungen && ankuendigungen.length > 0) || hasFreitext || hasRaumplan;
-  const hasRight = (config?.zeige_webuntis && config?.webuntis_url) || (config?.zeige_pdf && pdfUrl) || (config?.zeige_slideshow && bilder.length > 0) || hasQrCode;
+  const hasKamera = config?.zeige_kamera && config?.kamera_url;
+  const hasRight = (config?.zeige_webuntis && config?.webuntis_url) || (config?.zeige_pdf && pdfUrl) || (config?.zeige_slideshow && bilder.length > 0) || hasQrCode || hasKamera;
 
   const WetterIcon = wetter?.icon ? (weatherIcons[wetter.icon] || Cloud) : Cloud;
   const hasTicker = config?.zeige_ticker && config?.ticker_text;
@@ -1289,6 +1328,26 @@ export default function MonitorPage() {
                         }} />
                       ))}
                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Kamera-Stream */}
+            {hasKamera && (
+              <div className="flex flex-col rounded-xl overflow-hidden border border-white/10 bg-black">
+                {config.kamera_titel && (
+                  <div className="px-4 py-2 text-sm font-semibold uppercase tracking-wider text-white/70 border-b border-white/10">
+                    {config.kamera_titel}
+                  </div>
+                )}
+                <div className="flex-1 min-h-[200px] flex items-center justify-center">
+                  {config.kamera_typ === 'video' ? (
+                    <video src={config.kamera_url} autoPlay muted playsInline loop className="w-full h-full object-contain" />
+                  ) : config.kamera_typ === 'iframe' ? (
+                    <iframe src={config.kamera_url} className="w-full h-full min-h-[240px] border-0" title={config.kamera_titel || 'Kamera'} />
+                  ) : (
+                    <img src={config.kamera_url} alt={config.kamera_titel || 'Kamera'} className="w-full h-full object-contain" />
                   )}
                 </div>
               </div>

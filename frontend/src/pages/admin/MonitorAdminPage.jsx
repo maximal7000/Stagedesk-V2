@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import apiClient from '../../lib/api';
+import BaukastenEditor from '../../components/monitor/BaukastenEditor';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
@@ -88,6 +89,10 @@ export default function MonitorAdminPage() {
   const [showNewBildschirm, setShowNewBildschirm] = useState(false);
   const [newBildschirmName, setNewBildschirmName] = useState('');
 
+  // Klausuren
+  const [klausuren, setKlausuren] = useState([]);
+  const [showNewKlausur, setShowNewKlausur] = useState(false);
+
   // Sections
   const [openSections, setOpenSections] = useState({
     profil: true,
@@ -128,6 +133,13 @@ export default function MonitorAdminPage() {
     } catch {}
   }, []);
 
+  const fetchKlausuren = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/monitor/klausuren');
+      setKlausuren(res.data);
+    } catch {}
+  }, []);
+
   const fetchConfigForProfile = useCallback(async (profileId) => {
     try {
       const [configRes, ankRes, dateiRes] = await Promise.all([
@@ -146,13 +158,14 @@ export default function MonitorAdminPage() {
     (async () => {
       const profs = await fetchProfiles();
       fetchBildschirme();
+      fetchKlausuren();
       if (profs.length > 0) {
         const std = profs.find(p => p.ist_standard) || profs[0];
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
     })();
-  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme]);
+  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren]);
 
   // Switch profile
   const switchProfile = (id) => {
@@ -209,6 +222,8 @@ export default function MonitorAdminPage() {
     'oepnv_streik_aktiv','oepnv_streik_text','oepnv_streik_linien','oepnv_streik_typen',
     'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild',
     'refresh_intervall',
+    'zeige_kamera','kamera_url','kamera_titel','kamera_typ',
+    'layout_widgets','baukasten_spalten','baukasten_zeilenhoehe',
   ];
 
   const handleSaveMonitorConfig = async () => {
@@ -315,6 +330,36 @@ export default function MonitorAdminPage() {
     setBildschirme(prev => prev.map(b => b.id === id ? { ...b, [key]: value } : b));
   };
 
+
+  // ═══ Klausur CRUD ═══
+  const handleCreateKlausur = async (payload) => {
+    try {
+      await apiClient.post('/monitor/klausuren', payload);
+      await fetchKlausuren();
+      setShowNewKlausur(false);
+      toast.success('Klausur erstellt');
+    } catch { toast.error('Fehler beim Erstellen'); }
+  };
+
+  const handleUpdateKlausur = async (id, payload) => {
+    try {
+      await apiClient.put(`/monitor/klausuren/${id}`, payload);
+      await fetchKlausuren();
+    } catch { toast.error('Fehler beim Speichern'); }
+  };
+
+  const handleDeleteKlausur = async (id) => {
+    if (!confirm('Klausur wirklich löschen?')) return;
+    try {
+      await apiClient.delete(`/monitor/klausuren/${id}`);
+      await fetchKlausuren();
+      toast.success('Klausur gelöscht');
+    } catch { toast.error('Fehler beim Löschen'); }
+  };
+
+  const updateKlausurLocal = (id, patch) => {
+    setKlausuren(prev => prev.map(k => k.id === id ? { ...k, ...patch } : k));
+  };
 
   const handleToggleOnAir = async () => {
     if (!canOnAir) return;
@@ -558,6 +603,7 @@ export default function MonitorAdminPage() {
     { key: 'zeige_wetter', label: 'Wetter', icon: CloudSun, cat: 'extern' },
     { key: 'zeige_webuntis', label: 'WebUntis', icon: Calendar, cat: 'extern' },
     { key: 'zeige_qr_code', label: 'QR-Code', icon: QrCode, cat: 'extern' },
+    { key: 'zeige_kamera', label: 'Kamera-Stream', icon: Activity, cat: 'extern' },
     { key: 'zeige_ticker', label: 'Lauftext / Ticker', icon: Type, cat: 'erweitert' },
     { key: 'zeige_slideshow', label: 'Slideshow', icon: Image, cat: 'erweitert' },
     { key: 'zeige_pdf', label: 'PDF-Anzeige', icon: FileText, cat: 'erweitert' },
@@ -616,6 +662,326 @@ export default function MonitorAdminPage() {
         </div>
       </div>
 
+      {/* ═══ Bildschirme ═══ */}
+      <Section id="bildschirme" title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
+        icon={Monitor} iconColor="bg-indigo-600/30" open={openSections.bildschirme} onToggle={toggleSection}
+        badge={bildschirme.length || null}>
+
+        {/* Bildschirm-Liste */}
+        <div className="flex flex-wrap gap-2 mb-3">
+          {bildschirme.map(bs => (
+            <button key={bs.id} onClick={() => setActiveBildschirmId(activeBildschirmId === bs.id ? null : bs.id)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                bs.id === activeBildschirmId
+                  ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300'
+                  : 'bg-gray-800/60 border border-gray-700/60 text-gray-400 hover:text-white hover:border-gray-600'
+              }`}>
+              <Monitor className="w-3.5 h-3.5" />
+              {bs.name}
+              {(bs.zeitplan || []).length > 0 && <CalendarClock className="w-3 h-3 text-green-400" />}
+            </button>
+          ))}
+          {canEdit && (
+            <button onClick={() => setShowNewBildschirm(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-white hover:bg-gray-800 border border-dashed border-gray-700 transition-colors">
+              <Plus className="w-3.5 h-3.5" /> Neuer Bildschirm
+            </button>
+          )}
+        </div>
+
+        {/* Neuer Bildschirm Dialog */}
+        {showNewBildschirm && (
+          <div className="p-4 border border-gray-700 rounded-xl bg-gray-800/30 space-y-3 mb-4">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Name</label>
+              <input type="text" value={newBildschirmName} onChange={e => setNewBildschirmName(e.target.value)}
+                placeholder="z.B. Eingang, Lehrerzimmer" autoFocus
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                onKeyDown={e => e.key === 'Enter' && handleCreateBildschirm()} />
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <button onClick={() => { setShowNewBildschirm(false); setNewBildschirmName(''); }}
+                className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
+              <button onClick={handleCreateBildschirm} disabled={!newBildschirmName.trim()}
+                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm rounded-lg">Erstellen</button>
+            </div>
+          </div>
+        )}
+
+        {/* Aktiver Bildschirm — Detail */}
+        {activeBildschirmId && (() => {
+          const bs = bildschirme.find(b => b.id === activeBildschirmId);
+          if (!bs) return null;
+          const bsZeitplan = bs.zeitplan || [];
+          return (
+            <div className="p-4 border border-indigo-500/20 rounded-xl bg-gray-800/20 space-y-4">
+              {/* Name & Slug */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Name</label>
+                  <input type="text" value={bs.name} disabled={!canEdit}
+                    onChange={e => updateBildschirmLocal(bs.id, 'name', e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Slug</label>
+                  <input type="text" value={bs.slug} disabled={!canEdit}
+                    onChange={e => updateBildschirmLocal(bs.id, 'slug', e.target.value)}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono disabled:opacity-50" />
+                </div>
+              </div>
+
+              {/* Default-Profil */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Standard-Profil (Fallback)</label>
+                <select value={bs.default_profil_id || ''} disabled={!canEdit}
+                  onChange={e => updateBildschirmLocal(bs.id, 'default_profil_id', e.target.value ? parseInt(e.target.value) : null)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
+                  <option value="">Globaler Standard</option>
+                  {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <p className="text-[10px] text-gray-500 mt-1">Wird angezeigt wenn kein Zeitplan-Eintrag greift</p>
+              </div>
+
+              {/* Monitor-URL */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1">Monitor-URL</label>
+                <div className="flex gap-2">
+                  <input type="text" readOnly
+                    value={`${window.location.origin}/monitor?bildschirm=${bs.slug}`}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+                  <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/monitor?bildschirm=${bs.slug}`); toast.success('URL kopiert'); }}
+                    className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg">
+                    <Copy className="w-4 h-4" />
+                  </button>
+                  <a href={`/monitor?bildschirm=${bs.slug}`} target="_blank" rel="noopener noreferrer"
+                    className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg flex items-center">
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+
+              {/* Zeitplan */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Zeitplan</h4>
+                    <p className="text-xs text-gray-500">Welches Profil wird wann angezeigt?</p>
+                  </div>
+                  {canEdit && (
+                    <button onClick={() => {
+                      const updated = [...bsZeitplan, { profil_id: profiles[0]?.id || null, tage: [0,1,2,3,4], von: '08:00', bis: '16:00' }];
+                      updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                    }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 text-sm rounded-lg">
+                      <Plus className="w-3.5 h-3.5" /> Zeitfenster
+                    </button>
+                  )}
+                </div>
+
+                {bsZeitplan.length === 0 ? (
+                  <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-center">
+                    <p className="text-gray-500 text-sm">Kein Zeitplan — es wird immer das Standard-Profil angezeigt.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {bsZeitplan.map((entry, idx) => (
+                      <div key={idx} className="p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {/* Profil-Auswahl */}
+                          <select value={entry.profil_id || ''} disabled={!canEdit}
+                            onChange={e => {
+                              const updated = [...bsZeitplan];
+                              updated[idx] = { ...entry, profil_id: parseInt(e.target.value) };
+                              updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                            }}
+                            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50 min-w-[140px]">
+                            {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          {/* Wochentage */}
+                          <div className="flex gap-1">
+                            {WOCHENTAGE.map((tag, tagIdx) => (
+                              <button key={tagIdx} disabled={!canEdit}
+                                onClick={() => {
+                                  const tage = entry.tage || [];
+                                  const updated = [...bsZeitplan];
+                                  updated[idx] = { ...entry, tage: tage.includes(tagIdx) ? tage.filter(t => t !== tagIdx) : [...tage, tagIdx] };
+                                  updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                                }}
+                                className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
+                                  (entry.tage || []).includes(tagIdx)
+                                    ? 'bg-green-600/30 border border-green-500/40 text-green-300'
+                                    : 'bg-gray-800 border border-gray-700 text-gray-500'
+                                }`}>
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                          {/* Zeiten */}
+                          <div className="flex items-center gap-2">
+                            <input type="time" value={entry.von || '08:00'} disabled={!canEdit}
+                              onChange={e => {
+                                const updated = [...bsZeitplan];
+                                updated[idx] = { ...entry, von: e.target.value };
+                                updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                              }}
+                              className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50" />
+                            <span className="text-gray-500">—</span>
+                            <input type="time" value={entry.bis || '16:00'} disabled={!canEdit}
+                              onChange={e => {
+                                const updated = [...bsZeitplan];
+                                updated[idx] = { ...entry, bis: e.target.value };
+                                updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                              }}
+                              className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50" />
+                          </div>
+                          {canEdit && (
+                            <button onClick={() => {
+                              const updated = bsZeitplan.filter((_, i) => i !== idx);
+                              updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                            }}
+                              className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-gray-800">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Power-Steuerung (HDMI-CEC) */}
+              <div>
+                <h4 className="text-sm font-semibold text-white mb-1">Power-Steuerung (HDMI-CEC)</h4>
+                <p className="text-xs text-gray-500 mb-3">TV/Monitor automatisch ein- und ausschalten per Raspberry Pi. Zeitzone: Europe/Berlin (Sommerzeit automatisch).</p>
+
+                <PowerZeitplanEditor bs={bs} canEdit={canEdit}
+                  update={(key, value) => updateBildschirmLocal(bs.id, key, value)} />
+
+                {/* CEC-Status vom Pi */}
+                {bs.cec_status && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      bs.cec_status === 'on' ? 'bg-green-900/40 text-green-400 border border-green-700/40' :
+                      bs.cec_status === 'standby' ? 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/40' :
+                      'bg-gray-800 text-gray-400 border border-gray-700/40'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        bs.cec_status === 'on' ? 'bg-green-400' :
+                        bs.cec_status === 'standby' ? 'bg-yellow-400' : 'bg-gray-500'
+                      }`} />
+                      TV: {bs.cec_status === 'on' ? 'An' : bs.cec_status === 'standby' ? 'Standby' : bs.cec_status}
+                    </span>
+                    {bs.cec_status_zeit && (
+                      <span className="text-[10px] text-gray-500">
+                        Zuletzt: {new Date(bs.cec_status_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
+                  <p className="text-[10px] text-gray-400 font-medium mb-1">API-Endpoint für den Raspberry Pi:</p>
+                  <div className="flex gap-2 items-center">
+                    <code className="text-[10px] text-indigo-300 bg-gray-800 px-2 py-1 rounded font-mono flex-1 truncate">
+                      GET /api/monitor/bildschirm/power?slug={bs.slug}
+                    </code>
+                    <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/api/monitor/bildschirm/power?slug=${bs.slug}`); toast.success('URL kopiert'); }}
+                      className="p-1 text-gray-500 hover:text-white shrink-0">
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1.5">Leer lassen = immer an. Pi pollt diesen Endpoint per Cronjob und steuert cec-client.</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+                {canEdit && (
+                  <button onClick={() => handleDeleteBildschirm(bs.id)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg text-sm">
+                    <Trash2 className="w-3.5 h-3.5" /> Bildschirm löschen
+                  </button>
+                )}
+                {canEdit && (
+                  <button onClick={() => handleSaveBildschirm(bs)}
+                    className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+                    <Save className="w-3.5 h-3.5" /> Speichern
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {bildschirme.length === 0 && !showNewBildschirm && (
+          <div className="p-6 text-center text-gray-500">
+            <Monitor className="w-10 h-10 mx-auto mb-2 opacity-20" />
+            <p className="text-sm">Noch keine Bildschirme konfiguriert</p>
+            <p className="text-xs mt-1">Erstelle Bildschirme um verschiedene Monitore mit eigenen Zeitplänen zu steuern</p>
+          </div>
+        )}
+      </Section>
+
+      {/* ═══ Klausuren — pro Bildschirm ═══ */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-600/30">
+              <AlignLeft className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-white text-sm">Klausuren</h3>
+              <p className="text-xs text-gray-500">Zeitfenster mit Hinweisbildschirm für ausgewählte Bildschirme</p>
+            </div>
+            {klausuren.length > 0 && (
+              <span className="px-1.5 py-0.5 text-[10px] bg-gray-700 text-gray-300 rounded-full">{klausuren.length}</span>
+            )}
+          </div>
+          {canEdit && (
+            <button onClick={() => setShowNewKlausur(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+              <Plus className="w-3.5 h-3.5" /> Neue Klausur
+            </button>
+          )}
+        </div>
+
+        {showNewKlausur && (
+          <KlausurForm
+            initial={null}
+            bildschirme={bildschirme}
+            onSave={handleCreateKlausur}
+            onCancel={() => setShowNewKlausur(false)}
+          />
+        )}
+
+        {klausuren.length === 0 && !showNewKlausur ? (
+          <div className="text-center text-gray-500 py-4">
+            <p className="text-sm">Keine Klausuren geplant</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {klausuren.map(k => (
+              <KlausurCard
+                key={k.id} klausur={k} bildschirme={bildschirme}
+                canEdit={canEdit}
+                onLocalChange={(patch) => updateKlausurLocal(k.id, patch)}
+                onSave={(payload) => handleUpdateKlausur(k.id, payload)}
+                onDelete={() => handleDeleteKlausur(k.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ─── Trenner: Profil-Konfiguration ─────── */}
+      <div className="flex items-center gap-3 py-2">
+        <div className="flex-1 h-px bg-gray-800" />
+        <span className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Profil-Konfiguration</span>
+        <div className="flex-1 h-px bg-gray-800" />
+      </div>
+
       {!monitorConfig ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
@@ -665,6 +1031,7 @@ export default function MonitorAdminPage() {
                       <option value="stundenplan">Stundenplan-Vollbild</option>
                       <option value="onair">ON AIR Display</option>
                       <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
+                      <option value="baukasten">Widget-Baukasten (frei)</option>
                     </select>
                   </div>
                 </div>
@@ -713,267 +1080,6 @@ export default function MonitorAdminPage() {
             </div>
           )}
 
-          {/* ═══ Bildschirme ═══ */}
-          <Section id="bildschirme" title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
-            icon={Monitor} iconColor="bg-indigo-600/30" open={openSections.bildschirme} onToggle={toggleSection}
-            badge={bildschirme.length || null}>
-
-            {/* Bildschirm-Liste */}
-            <div className="flex flex-wrap gap-2 mb-3">
-              {bildschirme.map(bs => (
-                <button key={bs.id} onClick={() => setActiveBildschirmId(activeBildschirmId === bs.id ? null : bs.id)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    bs.id === activeBildschirmId
-                      ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300'
-                      : 'bg-gray-800/60 border border-gray-700/60 text-gray-400 hover:text-white hover:border-gray-600'
-                  }`}>
-                  <Monitor className="w-3.5 h-3.5" />
-                  {bs.name}
-                  {(bs.zeitplan || []).length > 0 && <CalendarClock className="w-3 h-3 text-green-400" />}
-                </button>
-              ))}
-              {canEdit && (
-                <button onClick={() => setShowNewBildschirm(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-white hover:bg-gray-800 border border-dashed border-gray-700 transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Neuer Bildschirm
-                </button>
-              )}
-            </div>
-
-            {/* Neuer Bildschirm Dialog */}
-            {showNewBildschirm && (
-              <div className="p-4 border border-gray-700 rounded-xl bg-gray-800/30 space-y-3 mb-4">
-                <div>
-                  <label className="block text-xs text-gray-400 mb-1">Name</label>
-                  <input type="text" value={newBildschirmName} onChange={e => setNewBildschirmName(e.target.value)}
-                    placeholder="z.B. Eingang, Lehrerzimmer" autoFocus
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
-                    onKeyDown={e => e.key === 'Enter' && handleCreateBildschirm()} />
-                </div>
-                <div className="flex items-center gap-2 justify-end">
-                  <button onClick={() => { setShowNewBildschirm(false); setNewBildschirmName(''); }}
-                    className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
-                  <button onClick={handleCreateBildschirm} disabled={!newBildschirmName.trim()}
-                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm rounded-lg">Erstellen</button>
-                </div>
-              </div>
-            )}
-
-            {/* Aktiver Bildschirm — Detail */}
-            {activeBildschirmId && (() => {
-              const bs = bildschirme.find(b => b.id === activeBildschirmId);
-              if (!bs) return null;
-              const bsZeitplan = bs.zeitplan || [];
-              return (
-                <div className="p-4 border border-indigo-500/20 rounded-xl bg-gray-800/20 space-y-4">
-                  {/* Name & Slug */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Name</label>
-                      <input type="text" value={bs.name} disabled={!canEdit}
-                        onChange={e => updateBildschirmLocal(bs.id, 'name', e.target.value)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-400 mb-1">Slug</label>
-                      <input type="text" value={bs.slug} disabled={!canEdit}
-                        onChange={e => updateBildschirmLocal(bs.id, 'slug', e.target.value)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono disabled:opacity-50" />
-                    </div>
-                  </div>
-
-                  {/* Default-Profil */}
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Standard-Profil (Fallback)</label>
-                    <select value={bs.default_profil_id || ''} disabled={!canEdit}
-                      onChange={e => updateBildschirmLocal(bs.id, 'default_profil_id', e.target.value ? parseInt(e.target.value) : null)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
-                      <option value="">Globaler Standard</option>
-                      {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                    <p className="text-[10px] text-gray-500 mt-1">Wird angezeigt wenn kein Zeitplan-Eintrag greift</p>
-                  </div>
-
-                  {/* Monitor-URL */}
-                  <div>
-                    <label className="block text-xs text-gray-400 mb-1">Monitor-URL</label>
-                    <div className="flex gap-2">
-                      <input type="text" readOnly
-                        value={`${window.location.origin}/monitor?bildschirm=${bs.slug}`}
-                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
-                      <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/monitor?bildschirm=${bs.slug}`); toast.success('URL kopiert'); }}
-                        className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg">
-                        <Copy className="w-4 h-4" />
-                      </button>
-                      <a href={`/monitor?bildschirm=${bs.slug}`} target="_blank" rel="noopener noreferrer"
-                        className="px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg flex items-center">
-                        <ExternalLink className="w-4 h-4" />
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Zeitplan */}
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h4 className="text-sm font-semibold text-white">Zeitplan</h4>
-                        <p className="text-xs text-gray-500">Welches Profil wird wann angezeigt?</p>
-                      </div>
-                      {canEdit && (
-                        <button onClick={() => {
-                          const updated = [...bsZeitplan, { profil_id: profiles[0]?.id || null, tage: [0,1,2,3,4], von: '08:00', bis: '16:00' }];
-                          updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                        }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 text-sm rounded-lg">
-                          <Plus className="w-3.5 h-3.5" /> Zeitfenster
-                        </button>
-                      )}
-                    </div>
-
-                    {bsZeitplan.length === 0 ? (
-                      <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-center">
-                        <p className="text-gray-500 text-sm">Kein Zeitplan — es wird immer das Standard-Profil angezeigt.</p>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {bsZeitplan.map((entry, idx) => (
-                          <div key={idx} className="p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
-                            <div className="flex items-center gap-3 flex-wrap">
-                              {/* Profil-Auswahl */}
-                              <select value={entry.profil_id || ''} disabled={!canEdit}
-                                onChange={e => {
-                                  const updated = [...bsZeitplan];
-                                  updated[idx] = { ...entry, profil_id: parseInt(e.target.value) };
-                                  updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                                }}
-                                className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50 min-w-[140px]">
-                                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                              </select>
-                              {/* Wochentage */}
-                              <div className="flex gap-1">
-                                {WOCHENTAGE.map((tag, tagIdx) => (
-                                  <button key={tagIdx} disabled={!canEdit}
-                                    onClick={() => {
-                                      const tage = entry.tage || [];
-                                      const updated = [...bsZeitplan];
-                                      updated[idx] = { ...entry, tage: tage.includes(tagIdx) ? tage.filter(t => t !== tagIdx) : [...tage, tagIdx] };
-                                      updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                                    }}
-                                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors disabled:opacity-50 ${
-                                      (entry.tage || []).includes(tagIdx)
-                                        ? 'bg-green-600/30 border border-green-500/40 text-green-300'
-                                        : 'bg-gray-800 border border-gray-700 text-gray-500'
-                                    }`}>
-                                    {tag}
-                                  </button>
-                                ))}
-                              </div>
-                              {/* Zeiten */}
-                              <div className="flex items-center gap-2">
-                                <input type="time" value={entry.von || '08:00'} disabled={!canEdit}
-                                  onChange={e => {
-                                    const updated = [...bsZeitplan];
-                                    updated[idx] = { ...entry, von: e.target.value };
-                                    updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                                  }}
-                                  className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50" />
-                                <span className="text-gray-500">—</span>
-                                <input type="time" value={entry.bis || '16:00'} disabled={!canEdit}
-                                  onChange={e => {
-                                    const updated = [...bsZeitplan];
-                                    updated[idx] = { ...entry, bis: e.target.value };
-                                    updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                                  }}
-                                  className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50" />
-                              </div>
-                              {canEdit && (
-                                <button onClick={() => {
-                                  const updated = bsZeitplan.filter((_, i) => i !== idx);
-                                  updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                                }}
-                                  className="p-1.5 text-gray-500 hover:text-red-400 rounded-lg hover:bg-gray-800">
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Power-Steuerung (HDMI-CEC) */}
-                  <div>
-                    <h4 className="text-sm font-semibold text-white mb-1">Power-Steuerung (HDMI-CEC)</h4>
-                    <p className="text-xs text-gray-500 mb-3">TV/Monitor automatisch ein- und ausschalten per Raspberry Pi. Zeitzone: Europe/Berlin (Sommerzeit automatisch).</p>
-
-                    <PowerZeitplanEditor bs={bs} canEdit={canEdit}
-                      update={(key, value) => updateBildschirmLocal(bs.id, key, value)} />
-
-                    {/* CEC-Status vom Pi */}
-                    {bs.cec_status && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          bs.cec_status === 'on' ? 'bg-green-900/40 text-green-400 border border-green-700/40' :
-                          bs.cec_status === 'standby' ? 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/40' :
-                          'bg-gray-800 text-gray-400 border border-gray-700/40'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            bs.cec_status === 'on' ? 'bg-green-400' :
-                            bs.cec_status === 'standby' ? 'bg-yellow-400' : 'bg-gray-500'
-                          }`} />
-                          TV: {bs.cec_status === 'on' ? 'An' : bs.cec_status === 'standby' ? 'Standby' : bs.cec_status}
-                        </span>
-                        {bs.cec_status_zeit && (
-                          <span className="text-[10px] text-gray-500">
-                            Zuletzt: {new Date(bs.cec_status_zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="mt-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
-                      <p className="text-[10px] text-gray-400 font-medium mb-1">API-Endpoint für den Raspberry Pi:</p>
-                      <div className="flex gap-2 items-center">
-                        <code className="text-[10px] text-indigo-300 bg-gray-800 px-2 py-1 rounded font-mono flex-1 truncate">
-                          GET /api/monitor/bildschirm/power?slug={bs.slug}
-                        </code>
-                        <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/api/monitor/bildschirm/power?slug=${bs.slug}`); toast.success('URL kopiert'); }}
-                          className="p-1 text-gray-500 hover:text-white shrink-0">
-                          <Copy className="w-3 h-3" />
-                        </button>
-                      </div>
-                      <p className="text-[10px] text-gray-500 mt-1.5">Leer lassen = immer an. Pi pollt diesen Endpoint per Cronjob und steuert cec-client.</p>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-800">
-                    {canEdit && (
-                      <button onClick={() => handleDeleteBildschirm(bs.id)}
-                        className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg text-sm">
-                        <Trash2 className="w-3.5 h-3.5" /> Bildschirm löschen
-                      </button>
-                    )}
-                    {canEdit && (
-                      <button onClick={() => handleSaveBildschirm(bs)}
-                        className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-                        <Save className="w-3.5 h-3.5" /> Speichern
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {bildschirme.length === 0 && !showNewBildschirm && (
-              <div className="p-6 text-center text-gray-500">
-                <Monitor className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                <p className="text-sm">Noch keine Bildschirme konfiguriert</p>
-                <p className="text-xs mt-1">Erstelle Bildschirme um verschiedene Monitore mit eigenen Zeitplänen zu steuern</p>
-              </div>
-            )}
-          </Section>
 
           {/* ═══ Status Dashboard ═══ */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -1091,9 +1197,19 @@ export default function MonitorAdminPage() {
                   <option value="stundenplan">Stundenplan-Vollbild</option>
                   <option value="onair">ON AIR Display</option>
                   <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
+                  <option value="baukasten">Widget-Baukasten (frei)</option>
                 </select>
               </div>
             </div>
+
+            {monitorConfig.layout_modus === 'baukasten' && (
+              <div className="p-3 bg-cyan-900/10 border border-cyan-500/20 rounded-lg">
+                <p className="text-xs text-cyan-300">
+                  <LayoutGrid className="w-3.5 h-3.5 inline mr-1" />
+                  Widget-Baukasten: Widgets per Drag &amp; Drop frei platzieren und skalieren. Der Editor erscheint unten als eigene Section.
+                </p>
+              </div>
+            )}
 
             {monitorConfig.layout_modus === 'stundenplan' && (
               <div className="p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg">
@@ -1213,6 +1329,22 @@ export default function MonitorAdminPage() {
               </div>
             )}
           </Section>
+
+          {/* ═══ Baukasten-Editor (nur bei layout_modus='baukasten') ═══ */}
+          {monitorConfig.layout_modus === 'baukasten' && (
+            <Section id="baukasten" title="Widget-Baukasten" description="Widgets per Drag &amp; Drop platzieren"
+              icon={LayoutGrid} iconColor="bg-cyan-600/30" open={openSections.baukasten !== false} onToggle={toggleSection}
+              badge={(monitorConfig.layout_widgets || []).length || null}>
+              <BaukastenEditor
+                widgets={monitorConfig.layout_widgets || []}
+                cols={monitorConfig.baukasten_spalten || 24}
+                rowHeight={monitorConfig.baukasten_zeilenhoehe || 40}
+                onChange={(w) => updateConfig('layout_widgets', w)}
+                onColsChange={(c) => updateConfig('baukasten_spalten', c)}
+                onRowHeightChange={(r) => updateConfig('baukasten_zeilenhoehe', r)}
+              />
+            </Section>
+          )}
 
           {/* ═══ Allgemein ═══ */}
           <Section id="allgemein" title="Allgemein" description="Titel, Refresh und Import/Export"
@@ -1519,6 +1651,34 @@ export default function MonitorAdminPage() {
                         disabled={!canEdit} placeholder="z.B. Event-Anmeldung"
                         className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {monitorConfig.zeige_kamera && (
+                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
+                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Activity className="w-4 h-4 text-cyan-400" /> Kamera-Stream</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Titel</label>
+                      <input type="text" value={monitorConfig.kamera_titel || ''} onChange={e => updateConfig('kamera_titel', e.target.value)}
+                        disabled={!canEdit} placeholder="z.B. Saal" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Typ</label>
+                      <select value={monitorConfig.kamera_typ || 'img'} onChange={e => updateConfig('kamera_typ', e.target.value)}
+                        disabled={!canEdit} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
+                        <option value="img">MJPEG / Bild-Stream</option>
+                        <option value="video">HLS / MP4</option>
+                        <option value="iframe">iframe / Embed</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Stream-URL</label>
+                    <input type="url" value={monitorConfig.kamera_url || ''} onChange={e => updateConfig('kamera_url', e.target.value)}
+                      disabled={!canEdit} placeholder="http://kamera.lan/stream.mjpg"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
                   </div>
                 </div>
               )}
@@ -2752,6 +2912,157 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+
+// ─── Klausur-Form ────────────────────────────────────────────
+function KlausurForm({ initial, bildschirme, onSave, onCancel }) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const toLocalInput = (d) => {
+    const x = new Date(d);
+    return `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}`;
+  };
+  const now = new Date();
+  const in1h = new Date(now.getTime() + 60 * 60 * 1000);
+  const [titel, setTitel] = useState(initial?.titel || 'Klausur');
+  const [text, setText] = useState(initial?.text || '');
+  const [von, setVon] = useState(initial ? toLocalInput(initial.aktiv_von) : toLocalInput(now));
+  const [bis, setBis] = useState(initial ? toLocalInput(initial.aktiv_bis) : toLocalInput(in1h));
+  const [farbe, setFarbe] = useState(initial?.farbe || '#1e40af');
+  const [bildschirmIds, setBildschirmIds] = useState(initial?.bildschirm_ids || []);
+
+  const toggleBs = (id) => setBildschirmIds(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  );
+
+  const submit = () => {
+    if (!titel.trim() || !von || !bis) return;
+    onSave({
+      titel, text,
+      aktiv_von: new Date(von).toISOString(),
+      aktiv_bis: new Date(bis).toISOString(),
+      farbe, bildschirm_ids: bildschirmIds,
+    });
+  };
+
+  return (
+    <div className="p-4 border border-blue-500/30 rounded-xl bg-blue-900/10 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Titel</label>
+          <input type="text" value={titel} onChange={e => setTitel(e.target.value)} autoFocus
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Farbe</label>
+          <input type="color" value={farbe} onChange={e => setFarbe(e.target.value)}
+            className="w-full h-10 bg-gray-800 border border-gray-700 rounded-lg" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-1">Hinweistext (optional)</label>
+        <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
+          placeholder="z.B. Bitte Ruhe — Klausur läuft bis 10:30"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Von</label>
+          <input type="datetime-local" value={von} onChange={e => setVon(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Bis</label>
+          <input type="datetime-local" value={bis} onChange={e => setBis(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs text-gray-400 mb-2">Auf welchen Bildschirmen?</label>
+        {bildschirme.length === 0 ? (
+          <p className="text-xs text-gray-500 italic">Keine Bildschirme angelegt — zuerst Bildschirme erstellen.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {bildschirme.map(bs => (
+              <button key={bs.id} type="button" onClick={() => toggleBs(bs.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                  bildschirmIds.includes(bs.id)
+                    ? 'bg-blue-600/30 border-blue-500/40 text-blue-200'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
+                }`}>
+                {bs.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-500/20">
+        <button onClick={onCancel} className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
+        <button onClick={submit} disabled={!titel.trim() || bildschirmIds.length === 0}
+          className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-lg flex items-center gap-2">
+          <Save className="w-3.5 h-3.5" /> Speichern
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Klausur-Card (editierbar inline) ───────────────────────
+function KlausurCard({ klausur, bildschirme, canEdit, onSave, onDelete }) {
+  const [editing, setEditing] = useState(false);
+  const von = new Date(klausur.aktiv_von);
+  const bis = new Date(klausur.aktiv_bis);
+  const now = new Date();
+  const isLive = von <= now && now <= bis;
+  const isPast = bis < now;
+
+  if (editing) {
+    return (
+      <KlausurForm
+        initial={klausur}
+        bildschirme={bildschirme}
+        onSave={(payload) => { onSave(payload); setEditing(false); }}
+        onCancel={() => setEditing(false)}
+      />
+    );
+  }
+
+  return (
+    <div className={`flex items-center gap-3 p-3 rounded-lg border ${
+      isLive ? 'bg-blue-900/20 border-blue-500/40' : isPast ? 'bg-gray-800/20 border-gray-700/40 opacity-60' : 'bg-gray-800/30 border-gray-700/40'
+    }`}>
+      <div className="w-2 h-10 rounded-full shrink-0" style={{ background: klausur.farbe }} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-white truncate">{klausur.titel}</span>
+          {isLive && <span className="px-1.5 py-0.5 text-[9px] bg-red-600/30 text-red-300 border border-red-500/30 rounded-full animate-pulse">LIVE</span>}
+          {isPast && <span className="px-1.5 py-0.5 text-[9px] bg-gray-700 text-gray-400 rounded-full">Vergangen</span>}
+        </div>
+        <div className="text-xs text-gray-400 mt-0.5">
+          {von.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+          {' – '}
+          {bis.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+        </div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {(klausur.bildschirm_ids || []).map(id => {
+            const bs = bildschirme.find(b => b.id === id);
+            return bs ? <span key={id} className="px-1.5 py-0.5 text-[9px] bg-gray-700/60 text-gray-300 rounded">{bs.name}</span> : null;
+          })}
+        </div>
+      </div>
+      {canEdit && (
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={() => setEditing(true)} className="p-1.5 text-gray-400 hover:text-white rounded hover:bg-gray-800">
+            <Edit className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onDelete} className="p-1.5 text-gray-500 hover:text-red-400 rounded hover:bg-gray-800">
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

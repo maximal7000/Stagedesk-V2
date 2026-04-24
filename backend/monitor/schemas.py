@@ -121,6 +121,13 @@ class MonitorConfigSchema(Schema):
     on_air_vollbild: bool
     api_token: str
     refresh_intervall: int
+    zeige_kamera: bool = False
+    kamera_url: str = ''
+    kamera_titel: str = ''
+    kamera_typ: str = 'img'
+    layout_widgets: list = []
+    baukasten_spalten: int = 24
+    baukasten_zeilenhoehe: int = 40
 
 
 class MonitorConfigUpdateSchema(Schema):
@@ -208,6 +215,13 @@ class MonitorConfigUpdateSchema(Schema):
     on_air_farbe: Optional[str] = None
     on_air_vollbild: Optional[bool] = None
     refresh_intervall: Optional[int] = None
+    zeige_kamera: Optional[bool] = None
+    kamera_url: Optional[str] = None
+    kamera_titel: Optional[str] = None
+    kamera_typ: Optional[str] = None
+    layout_widgets: Optional[list] = None
+    baukasten_spalten: Optional[int] = None
+    baukasten_zeilenhoehe: Optional[int] = None
 
 
 class MonitorProfileCreateSchema(Schema):
@@ -286,3 +300,42 @@ class OnAirSchema(Schema):
 class NotfallSchema(Schema):
     aktiv: bool
     text: str = ''
+
+
+class KlausurSchema(Schema):
+    id: int
+    titel: str
+    text: str
+    aktiv_von: datetime
+    aktiv_bis: datetime
+    farbe: str
+    bildschirm_ids: List[int] = []
+
+    @staticmethod
+    def resolve_bildschirm_ids(obj):
+        return list(obj.bildschirme.values_list('id', flat=True))
+
+
+class KlausurCreateSchema(Schema):
+    titel: str = 'Klausur'
+    text: str = ''
+    aktiv_von: datetime
+    aktiv_bis: datetime
+    farbe: str = '#1e40af'
+    bildschirm_ids: List[int] = []
+
+
+class KlausurUpdateSchema(Schema):
+    titel: Optional[str] = None
+    text: Optional[str] = None
+    aktiv_von: Optional[datetime] = None
+    aktiv_bis: Optional[datetime] = None
+    farbe: Optional[str] = None
+    bildschirm_ids: Optional[List[int]] = None
+
+
+class KlausurDisplaySchema(Schema):
+    titel: str
+    text: str
+    farbe: str
+    aktiv_bis: datetime

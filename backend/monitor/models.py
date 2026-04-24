@@ -51,8 +51,15 @@ class MonitorConfig(models.Model):
         ('stundenplan', 'Stundenplan-Vollbild'),
         ('onair', 'ON AIR Display'),
         ('abfahrten', 'Abfahrtsmonitor (ÖPNV)'),
+        ('baukasten', 'Widget-Baukasten (frei)'),
     ]
     layout_modus = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='standard')
+
+    # ─── Baukasten-Layout ────────────────
+    layout_widgets = models.JSONField(default=list, blank=True,
+        help_text='[{"i": "uid", "type": "uhr|...", "x": 0, "y": 0, "w": 4, "h": 4, "config": {}}]')
+    baukasten_spalten = models.IntegerField(default=24, help_text="Grid-Spalten (12-48)")
+    baukasten_zeilenhoehe = models.IntegerField(default=40, help_text="Pixel pro Grid-Einheit")
 
     # ─── Allgemein ─────────────────────────
     titel = models.CharField(max_length=200, default='Stagedesk Monitor')
@@ -220,6 +227,17 @@ class MonitorConfig(models.Model):
     on_air_blinken = models.BooleanField(default=True)
     on_air_farbe = models.CharField(max_length=7, blank=True, help_text="Leer = Akzentfarbe")
     on_air_vollbild = models.BooleanField(default=False, help_text="Bei ON AIR automatisch Vollbild-Anzeige")
+
+    # ─── Kamera ────────────────────────────
+    zeige_kamera = models.BooleanField(default=False)
+    kamera_url = models.URLField(blank=True, help_text="HLS/MJPEG-Stream oder iframe-URL")
+    kamera_titel = models.CharField(max_length=100, blank=True)
+    KAMERA_TYP_CHOICES = [
+        ('img', 'MJPEG / Bild-Stream'),
+        ('video', 'HLS / MP4'),
+        ('iframe', 'iframe / Embed'),
+    ]
+    kamera_typ = models.CharField(max_length=10, choices=KAMERA_TYP_CHOICES, default='img')
 
     # ─── API ───────────────────────────────
     api_token = models.CharField(max_length=64, unique=True, blank=True,
@@ -422,6 +440,42 @@ class Bildschirm(models.Model):
         if self.default_profil:
             return self.default_profil
         return MonitorConfig.get()
+
+    def get_active_klausur(self):
+        """Aktive Klausur für diesen Bildschirm (wenn jetzt eine läuft)."""
+        now = timezone.now()
+        return (self.klausuren
+                .filter(aktiv_von__lte=now, aktiv_bis__gte=now)
+                .order_by('aktiv_von')
+                .first())
+
+
+class Klausur(models.Model):
+    """Hinweis auf laufende Klausur — blockiert ausgewählte Bildschirme in Zeitfenster."""
+
+    titel = models.CharField(max_length=200, default='Klausur')
+    text = models.TextField(blank=True, help_text="Optionaler Zusatztext")
+    aktiv_von = models.DateTimeField()
+    aktiv_bis = models.DateTimeField()
+    farbe = models.CharField(max_length=7, default='#1e40af', help_text="Hintergrundfarbe (Hex)")
+    bildschirme = models.ManyToManyField(
+        Bildschirm, related_name='klausuren', blank=True,
+        help_text="Auf welchen Bildschirmen angezeigt"
+    )
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-aktiv_von']
+        verbose_name = 'Klausur'
+        verbose_name_plural = 'Klausuren'
+
+    @property
+    def ist_aktiv_jetzt(self):
+        now = timezone.now()
+        return self.aktiv_von <= now <= self.aktiv_bis
+
+    def __str__(self):
+        return f"{self.titel} ({self.aktiv_von:%d.%m. %H:%M}–{self.aktiv_bis:%H:%M})"
 
 
 class Ankuendigung(models.Model):

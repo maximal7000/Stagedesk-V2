@@ -15,13 +15,14 @@ from django.utils.text import slugify
 
 from core.auth import keycloak_auth
 from users.api import is_admin
-from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm
+from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur
 from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
     MonitorProfileListSchema, MonitorProfileCreateSchema,
     AnkuendigungSchema, AnkuendigungCreateSchema,
     MonitorDateiSchema, OnAirSchema, NotfallSchema,
     BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
+    KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
 )
 from . import oepnv
 
@@ -216,15 +217,26 @@ def _fetch_oepnv(config):
 @monitor_router.get("/display")
 def get_display_data(request, profil: str = None, bildschirm: str = None):
     """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display"""
+    bs_obj = None
     if bildschirm:
         try:
-            bs = Bildschirm.objects.get(slug=bildschirm)
-            config = bs.get_active_profil()
+            bs_obj = Bildschirm.objects.get(slug=bildschirm)
+            config = bs_obj.get_active_profil()
         except Bildschirm.DoesNotExist:
             config = MonitorConfig.get(slug=profil)
     else:
         config = MonitorConfig.get(slug=profil)
     now = timezone.now()
+
+    # Aktive Klausur (pro Bildschirm)
+    klausur = None
+    if bs_obj:
+        k = bs_obj.get_active_klausur()
+        if k:
+            klausur = {
+                'titel': k.titel, 'text': k.text,
+                'farbe': k.farbe, 'aktiv_bis': k.aktiv_bis,
+            }
 
     # Ankündigungen: nur aktive + im Zeitfenster
     ankuendigungen = []
@@ -312,6 +324,7 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
         'raumplan': raumplan,
         'abfahrten': abfahrten,
         'on_air_profil': on_air_profil,
+        'klausur': klausur,
     }
 
 
@@ -618,4 +631,41 @@ def update_bildschirm(request, id: int, payload: BildschirmUpdateSchema):
 def delete_bildschirm(request, id: int):
     bs = get_object_or_404(Bildschirm, id=id)
     bs.delete()
+    return {"success": True}
+
+
+# ═══ Klausuren ════════════════════════════════════════════════════
+
+@monitor_router.get("/klausuren", response=list[KlausurSchema], auth=keycloak_auth)
+def list_klausuren(request):
+    return list(Klausur.objects.prefetch_related('bildschirme').all())
+
+
+@monitor_router.post("/klausuren", response=KlausurSchema, auth=keycloak_auth)
+def create_klausur(request, payload: KlausurCreateSchema):
+    data = payload.dict()
+    bildschirm_ids = data.pop('bildschirm_ids', [])
+    k = Klausur.objects.create(**data)
+    if bildschirm_ids:
+        k.bildschirme.set(Bildschirm.objects.filter(id__in=bildschirm_ids))
+    return k
+
+
+@monitor_router.put("/klausuren/{id}", response=KlausurSchema, auth=keycloak_auth)
+def update_klausur(request, id: int, payload: KlausurUpdateSchema):
+    k = get_object_or_404(Klausur, id=id)
+    data = payload.dict(exclude_unset=True)
+    bildschirm_ids = data.pop('bildschirm_ids', None)
+    for key, value in data.items():
+        setattr(k, key, value)
+    k.save()
+    if bildschirm_ids is not None:
+        k.bildschirme.set(Bildschirm.objects.filter(id__in=bildschirm_ids))
+    return k
+
+
+@monitor_router.delete("/klausuren/{id}", auth=keycloak_auth)
+def delete_klausur(request, id: int):
+    k = get_object_or_404(Klausur, id=id)
+    k.delete()
     return {"success": True}
