@@ -45,7 +45,7 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
               <Wallet className="w-5 h-5 text-white" />
             </div>
-            <h2 className="text-xl font-bold text-white">Haushalt bearbeiten</h2>
+            <h2 className="text-xl font-bold text-white">Kasse bearbeiten</h2>
           </div>
           <button
             onClick={onClose}
@@ -60,7 +60,7 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
           {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Name des Haushalts *
+              Name der Kasse *
             </label>
             <input
               type="text"
@@ -114,7 +114,7 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
             <textarea
               value={formData.beschreibung}
               onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
-              placeholder="Kurze Beschreibung des Haushalts..."
+              placeholder="Kurze Beschreibung der Kasse..."
               rows={3}
               className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             />
