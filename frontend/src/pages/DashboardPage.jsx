@@ -66,7 +66,7 @@ export default function DashboardPage() {
           Willkommen zurück, {user?.given_name || user?.name?.split(' ')[0] || user?.preferred_username}! 👋
         </h1>
         <p className="text-gray-400">
-          Verwalte deine Haushalte und behalte den Überblick über deine Finanzen.
+          Schön, dass du da bist.
         </p>
       </div>
 
@@ -194,11 +194,11 @@ export default function DashboardPage() {
             to="/haushalte"
             className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group"
           >
-            <div className="text-3xl mb-2">💰</div>
+            <div className="text-3xl mb-2">🏠</div>
             <h3 className="font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors">
-              Kasse
+              Haushalte
             </h3>
-            <p className="text-sm text-gray-400">Ausgaben verwalten</p>
+            <p className="text-sm text-gray-400">Haushalte verwalten</p>
           </Link>
 
           <Link

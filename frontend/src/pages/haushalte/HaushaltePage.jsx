@@ -59,7 +59,7 @@ export default function HaushaltePage() {
     } catch (err) {
       console.error('Fehler beim Laden der Haushalte:', err);
       if (!silent) {
-        setError('Kassen konnten nicht geladen werden.');
+        setError('Haushalte konnten nicht geladen werden.');
       }
     } finally {
       if (!silent) {
@@ -74,14 +74,14 @@ export default function HaushaltePage() {
   };
 
   const handleDeleteHaushalt = async (haushaltId) => {
-    if (!confirm('Möchtest du diese Kasse wirklich löschen?')) return;
+    if (!confirm('Möchtest du diesen Haushalt wirklich löschen?')) return;
     
     try {
       await apiClient.delete(`/haushalte/${haushaltId}`);
       setHaushalte(haushalte.filter(h => h.id !== haushaltId));
     } catch (err) {
       console.error('Fehler beim Löschen:', err);
-      alert('Kasse konnte nicht gelöscht werden.');
+      alert('Haushalt konnte nicht gelöscht werden.');
     }
   };
 
@@ -95,9 +95,9 @@ export default function HaushaltePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Kassenbuch</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Meine Haushalte</h1>
           <div className="flex items-center gap-3">
-            <p className="text-gray-400">Ausgaben der Technik-AG verwalten</p>
+            <p className="text-gray-400">Verwalte deine Haushalte und Budget</p>
             {/* Live-Update Status */}
             <div className="flex items-center gap-2">
               <button
@@ -125,7 +125,7 @@ export default function HaushaltePage() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
         >
           <Plus className="w-5 h-5" />
-          Neue Kasse
+          Neuer Haushalt
         </button>
       </div>
 
@@ -133,7 +133,7 @@ export default function HaushaltePage() {
       {loading ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
           <Loader2 className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-spin" />
-          <p className="text-gray-400">Kassen werden geladen...</p>
+          <p className="text-gray-400">Haushalte werden geladen...</p>
         </div>
       ) : error ? (
         <div className="bg-gray-900 border border-red-800 rounded-xl p-12 text-center">
@@ -148,14 +148,14 @@ export default function HaushaltePage() {
       ) : haushalte.length === 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
           <Wallet className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">Noch keine Kassen</h3>
-          <p className="text-gray-400 mb-6">Erstelle deine erste Kasse, um loszulegen!</p>
+          <h3 className="text-xl font-semibold text-white mb-2">Noch keine Haushalte</h3>
+          <p className="text-gray-400 mb-6">Erstelle deinen ersten Haushalt, um loszulegen!</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Erste Kasse erstellen
+            Ersten Haushalt erstellen
           </button>
         </div>
       ) : (

@@ -448,7 +448,7 @@ export default function HaushaltDetailPage() {
   if (error || !haushalt) {
     return (
       <div className="bg-gray-900 border border-red-800 rounded-xl p-12 text-center">
-        <p className="text-red-400 mb-4">{error || 'Kasse nicht gefunden'}</p>
+        <p className="text-red-400 mb-4">{error || 'Haushalt nicht gefunden'}</p>
         <button
           onClick={() => navigate('/haushalte')}
           className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg"

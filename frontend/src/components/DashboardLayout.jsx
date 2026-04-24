@@ -45,7 +45,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Anwesenheit', href: '/anwesenheit', icon: ClipboardList, permission: 'anwesenheit.view' },
     { name: 'Kompetenzen', href: '/kompetenzen', icon: Award, permission: 'kompetenzen.view' },
-    { name: 'Kasse', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
+    { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 
   // Inventar-Unternavigation
@@ -92,7 +92,7 @@ export default function DashboardLayout({ children }) {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800">
-          <h1 className="text-xl font-bold text-white">Technik-AG</h1>
+          <h1 className="text-xl font-bold text-white">Stagedesk</h1>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400 hover:text-white"
