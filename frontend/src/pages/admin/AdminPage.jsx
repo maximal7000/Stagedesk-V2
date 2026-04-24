@@ -213,7 +213,7 @@ export default function AdminPage() {
                   {editingUser?.id === user.id ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-white">{user.first_name || user.username}</span>
+                        <span className="font-medium text-white">{user.first_name ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}` : user.username}</span>
                         <div className="flex gap-2">
                           <button onClick={() => handleUpdateUser(user.id, {
                             permission_codes: editingUser.permission_codes,

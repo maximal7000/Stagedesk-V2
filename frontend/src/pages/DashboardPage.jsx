@@ -63,7 +63,9 @@ export default function DashboardPage() {
       {/* Welcome Section */}
       <div>
         <h1 className="text-3xl font-bold text-white mb-2">
-          Willkommen zurück, {user?.given_name || user?.name?.split(' ')[0] || user?.preferred_username}! 👋
+          Willkommen zurück, {(user?.given_name || user?.family_name)
+            ? [user?.given_name, user?.family_name].filter(Boolean).join(' ')
+            : (user?.name || user?.preferred_username)}! 👋
         </h1>
         <p className="text-gray-400">
           Schön, dass du da bist.
