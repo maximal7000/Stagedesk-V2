@@ -331,11 +331,6 @@ export default function MonitorPage() {
             {klausur.text && (
               <p className="text-2xl text-white/85 leading-relaxed whitespace-pre-line">{klausur.text}</p>
             )}
-            {klausur.aktiv_bis && (
-              <div className="mt-10 text-white/70 text-lg">
-                bis {new Date(klausur.aktiv_bis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
-              </div>
-            )}
           </div>
         </div>
       )}
