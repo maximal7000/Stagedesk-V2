@@ -22,14 +22,35 @@ class VeranstaltungTerminSchema(Schema):
         return obj.ende.strftime('%H:%M') if obj.ende else None
 
 
+def _profile_name(keycloak_id: str) -> tuple:
+    """Liefert (first_name, last_name) für eine keycloak_id, leer wenn nicht gefunden."""
+    if not keycloak_id:
+        return ('', '')
+    from users.models import UserProfile
+    p = UserProfile.objects.filter(keycloak_id=keycloak_id).only('first_name', 'last_name').first()
+    if p:
+        return (p.first_name or '', p.last_name or '')
+    return ('', '')
+
+
 class ZuweisungSchema(Schema):
     id: int
     user_keycloak_id: str
     user_username: str
+    user_first_name: str = ''
+    user_last_name: str = ''
     user_email: str
     taetigkeit_id: Optional[int]
     taetigkeit_name: str
     zugewiesen_am: datetime
+
+    @staticmethod
+    def resolve_user_first_name(obj):
+        return _profile_name(obj.user_keycloak_id)[0]
+
+    @staticmethod
+    def resolve_user_last_name(obj):
+        return _profile_name(obj.user_keycloak_id)[1]
 
     @staticmethod
     def resolve_taetigkeit_id(obj):
@@ -85,8 +106,18 @@ class MeldungSchema(Schema):
     id: int
     user_keycloak_id: str
     user_username: str
+    user_first_name: str = ''
+    user_last_name: str = ''
     kommentar: str
     erstellt_am: datetime
+
+    @staticmethod
+    def resolve_user_first_name(obj):
+        return _profile_name(obj.user_keycloak_id)[0]
+
+    @staticmethod
+    def resolve_user_last_name(obj):
+        return _profile_name(obj.user_keycloak_id)[1]
 
 
 class MeldungSetSchema(Schema):
@@ -101,8 +132,18 @@ class AbmeldungLogSchema(Schema):
     id: int
     user_keycloak_id: str
     user_username: str
+    user_first_name: str = ''
+    user_last_name: str = ''
     grund: str
     erstellt_am: datetime
+
+    @staticmethod
+    def resolve_user_first_name(obj):
+        return _profile_name(obj.user_keycloak_id)[0]
+
+    @staticmethod
+    def resolve_user_last_name(obj):
+        return _profile_name(obj.user_keycloak_id)[1]
 
 
 class VeranstaltungSchema(Schema):

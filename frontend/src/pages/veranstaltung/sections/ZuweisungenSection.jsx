@@ -80,14 +80,18 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
             <Hand className="w-4 h-4" /> Gemeldete Personen zuweisen
           </h4>
           <div className="flex flex-wrap gap-2">
-            {gemeldetNichtZugewiesen.map((m) => (
-              <button key={m.id} type="button"
-                onClick={() => addZuweisungen([m.user_keycloak_id])}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm transition-colors">
-                <Plus className="w-3.5 h-3.5" />
-                {m.user_username || m.user_keycloak_id.slice(0, 8)}
-              </button>
-            ))}
+            {gemeldetNichtZugewiesen.map((m) => {
+              const name = [m.user_first_name, m.user_last_name].filter(Boolean).join(' ')
+                || m.user_username || m.user_keycloak_id.slice(0, 8);
+              return (
+                <button key={m.id} type="button"
+                  onClick={() => addZuweisungen([m.user_keycloak_id])}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm transition-colors">
+                  <Plus className="w-3.5 h-3.5" />
+                  {name}
+                </button>
+              );
+            })}
             {gemeldetNichtZugewiesen.length > 1 && (
               <button type="button"
                 onClick={() => addZuweisungen(gemeldetNichtZugewiesen.map(m => m.user_keycloak_id))}
@@ -159,13 +163,16 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
 
       {(data?.zuweisungen || []).length > 0 ? (
         <div className="space-y-2">
-          {data.zuweisungen.map((z) => (
+          {data.zuweisungen.map((z) => {
+            const name = [z.user_first_name, z.user_last_name].filter(Boolean).join(' ')
+              || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
+            return (
             <div key={z.id} className="flex items-center justify-between py-2.5 px-4 bg-gray-800 rounded-lg group">
               <div className="flex items-center gap-3 min-w-0">
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm font-medium">{(z.user_username || '?').charAt(0).toUpperCase()}</span>
+                  <span className="text-white text-sm font-medium">{name.charAt(0).toUpperCase()}</span>
                 </div>
-                <span className="text-white font-medium truncate">{z.user_username || z.user_keycloak_id?.slice(0, 8)}</span>
+                <span className="text-white font-medium truncate">{name}</span>
                 {canEdit ? (
                   <select value={z.taetigkeit_id || ''} onChange={(e) => updateZuweisung(z, e.target.value)}
                     className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 cursor-pointer">
@@ -183,7 +190,8 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                 </button>
               )}
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <p className="text-gray-500 text-sm">Keine Zuweisungen</p>

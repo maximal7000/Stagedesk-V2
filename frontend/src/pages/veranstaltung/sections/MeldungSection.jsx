@@ -159,16 +159,20 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-300">Gemeldete Personen</h3>
             <div className="space-y-1">
-              {meldungen.map((m) => (
-                <div key={m.id} className="flex items-center gap-3 py-2 px-3 bg-gray-800 rounded-lg">
-                  <div className="w-7 h-7 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-xs font-medium">{(m.user_username || '?')[0].toUpperCase()}</span>
+              {meldungen.map((m) => {
+                const name = [m.user_first_name, m.user_last_name].filter(Boolean).join(' ')
+                  || m.user_username || m.user_keycloak_id?.slice(0, 8) || '?';
+                return (
+                  <div key={m.id} className="flex items-center gap-3 py-2 px-3 bg-gray-800 rounded-lg">
+                    <div className="w-7 h-7 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs font-medium">{name[0].toUpperCase()}</span>
+                    </div>
+                    <span className="text-white text-sm">{name}</span>
+                    {m.kommentar && <span className="text-gray-500 text-xs">{m.kommentar}</span>}
+                    <span className="text-gray-600 text-xs ml-auto">{formatDatum(m.erstellt_am)}</span>
                   </div>
-                  <span className="text-white text-sm">{m.user_username || m.user_keycloak_id.slice(0, 8)}</span>
-                  {m.kommentar && <span className="text-gray-500 text-xs">{m.kommentar}</span>}
-                  <span className="text-gray-600 text-xs ml-auto">{formatDatum(m.erstellt_am)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -178,16 +182,20 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-red-400/80">Abmeldungen</h3>
             <div className="space-y-1">
-              {abmeldungen.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 py-2 px-3 bg-red-900/10 border border-red-800/20 rounded-lg">
-                  <div className="w-7 h-7 bg-red-600/30 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-red-400 text-xs font-medium">{(a.user_username || '?')[0].toUpperCase()}</span>
+              {abmeldungen.map((a) => {
+                const name = [a.user_first_name, a.user_last_name].filter(Boolean).join(' ')
+                  || a.user_username || a.user_keycloak_id?.slice(0, 8) || '?';
+                return (
+                  <div key={a.id} className="flex items-center gap-3 py-2 px-3 bg-red-900/10 border border-red-800/20 rounded-lg">
+                    <div className="w-7 h-7 bg-red-600/30 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-red-400 text-xs font-medium">{name[0].toUpperCase()}</span>
+                    </div>
+                    <span className="text-gray-300 text-sm">{name}</span>
+                    {a.grund && <span className="text-gray-500 text-xs italic">"{a.grund}"</span>}
+                    <span className="text-gray-600 text-xs ml-auto">{formatDatum(a.erstellt_am)}</span>
                   </div>
-                  <span className="text-gray-300 text-sm">{a.user_username || a.user_keycloak_id.slice(0, 8)}</span>
-                  {a.grund && <span className="text-gray-500 text-xs italic">"{a.grund}"</span>}
-                  <span className="text-gray-600 text-xs ml-auto">{formatDatum(a.erstellt_am)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
