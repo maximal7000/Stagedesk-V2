@@ -26,13 +26,9 @@ import ErinnerungenSection from './sections/ErinnerungenSection';
 import DiscordSection from './sections/DiscordSection';
 import KompetenzenSection from './sections/KompetenzenSection';
 
-// Manuell setzbare Stati: alles andere (laufend/abgeschlossen) leitet das Backend
-// aus datum_von/datum_bis ab und liefert es als effektiv_status zurück.
-const STATUS_LABELS = {
-  geplant: 'Geplant',
-  abgesagt: 'Abgesagt',
-};
-
+// Anzeige-Labels für effektiv_status. Manuell setzbar sind nur 'geplant' und
+// 'abgesagt' (über Absagen-Button); 'laufend' und 'abgeschlossen' leitet das
+// Backend aus datum_von/datum_bis ab.
 const EFFEKTIV_LABELS = {
   geplant: 'Geplant',
   laufend: 'Laufend',
@@ -155,6 +151,17 @@ export default function VeranstaltungDetailPage() {
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Speichern fehlgeschlagen');
     } finally { setSaving(false); }
+  };
+
+  const handleStatusToggle = async (newStatus) => {
+    if (newStatus === 'abgesagt' && !confirm('Veranstaltung wirklich absagen?')) return;
+    try {
+      await apiClient.put(`/veranstaltung/${id}`, { status: newStatus });
+      toast.success(newStatus === 'abgesagt' ? 'Veranstaltung abgesagt' : 'Veranstaltung wieder aktiv');
+      fetchDetail();
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Fehler');
+    }
   };
 
   const canEdit = hasPermission('veranstaltung.edit');
@@ -282,14 +289,6 @@ export default function VeranstaltungDetailPage() {
                     onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))}
                     className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm" />
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">Status</label>
-                  <select value={form.status}
-                    onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm">
-                    {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
-                </div>
               </div>
             )}
           </div>
@@ -302,6 +301,19 @@ export default function VeranstaltungDetailPage() {
                 }`}>{EFFEKTIV_LABELS[eff] || eff}</span>
               );
             })()}
+            {canEdit && !editMode && (
+              data.status === 'abgesagt' ? (
+                <button type="button" onClick={() => handleStatusToggle('geplant')}
+                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm">
+                  Wieder aktivieren
+                </button>
+              ) : (
+                <button type="button" onClick={() => handleStatusToggle('abgesagt')}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">
+                  Absagen
+                </button>
+              )
+            )}
             {canEdit && !editMode ? (
               <button type="button" onClick={() => setEditMode(true)}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
