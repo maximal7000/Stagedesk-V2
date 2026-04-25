@@ -65,10 +65,15 @@ if [ "$DOW" = "7" ]; then
 fi
 
 # Rotation: ältere Daily/Weekly-Dateien löschen
+# Why: pipefail würde einen leeren `ls`-Treffer als Fehler werten und den Lauf
+# abbrechen, sodass die nachfolgenden chmod-Calls nicht mehr ausgeführt würden.
 prune() {
     local dir="$1" keep="$2" pattern="$3"
+    local files
     # shellcheck disable=SC2012
-    ls -1t "$dir"/$pattern 2>/dev/null | tail -n +$((keep + 1)) | xargs -r rm -v
+    files=$(ls -1t "$dir"/$pattern 2>/dev/null || true)
+    [ -z "$files" ] && return 0
+    echo "$files" | tail -n +$((keep + 1)) | xargs -r rm -v
 }
 echo "→ Rotation"
 prune "$BACKUP_DIR/daily"  "$DAILY_KEEP"  "db-*.dump"
