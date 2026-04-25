@@ -7,6 +7,7 @@ import { useAuth } from 'react-oidc-context';
 import { setAuthContext } from './lib/api';
 import { UserProvider } from './contexts/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import PermissionRoute from './components/PermissionRoute';
 import DashboardLayout from './components/DashboardLayout';
 // Root pages
 import LoginPage from './pages/LoginPage';
@@ -71,29 +72,29 @@ function AppContent() {
               <DashboardLayout>
                 <Routes>
                   <Route path="/" element={<DashboardPage />} />
-                  <Route path="/haushalte" element={<HaushaltePage />} />
-                  <Route path="/haushalte/:id" element={<HaushaltDetailPage />} />
-                  <Route path="/kalender" element={<KalenderPage />} />
-                  <Route path="/ressourcen" element={<RessourcenPage />} />
-                  <Route path="/kategorien" element={<KategorienPage />} />
-                  <Route path="/inventar" element={<InventarPage />} />
-                  <Route path="/inventar/neu" element={<ItemDetailPage />} />
-                  <Route path="/inventar/sets" element={<ItemSetsPage />} />
-                  <Route path="/inventar/:id" element={<ItemDetailPage />} />
-                  <Route path="/ausleihen" element={<AusleihePage />} />
-                  <Route path="/ausleihen/dashboard" element={<AusleiheDashboardPage />} />
-                  <Route path="/ausleihen/kalender" element={<AusleiheKalenderPage />} />
-                  <Route path="/ausleihen/:id" element={<AusleihePage />} />
-                  <Route path="/anwesenheit" element={<AnwesenheitPage />} />
-                  <Route path="/anwesenheit/:id" element={<AnwesenheitPage />} />
-                  <Route path="/kompetenzen" element={<KompetenzenPage />} />
-                  <Route path="/kompetenzen/user/:userId" element={<KompetenzenPage />} />
-                  <Route path="/veranstaltung" element={<VeranstaltungenPage />} />
-                  <Route path="/veranstaltung/neu" element={<VeranstaltungDetailPage />} />
-                  <Route path="/veranstaltung/:id" element={<VeranstaltungDetailPage />} />
+                  <Route path="/haushalte" element={<PermissionRoute permission="haushalte.view"><HaushaltePage /></PermissionRoute>} />
+                  <Route path="/haushalte/:id" element={<PermissionRoute permission="haushalte.view"><HaushaltDetailPage /></PermissionRoute>} />
+                  <Route path="/kalender" element={<PermissionRoute permission="kalender.view"><KalenderPage /></PermissionRoute>} />
+                  <Route path="/ressourcen" element={<PermissionRoute permission="kalender.ressourcen"><RessourcenPage /></PermissionRoute>} />
+                  <Route path="/kategorien" element={<PermissionRoute permission="kalender.view"><KategorienPage /></PermissionRoute>} />
+                  <Route path="/inventar" element={<PermissionRoute permission="inventar.view"><InventarPage /></PermissionRoute>} />
+                  <Route path="/inventar/neu" element={<PermissionRoute permission="inventar.create"><ItemDetailPage /></PermissionRoute>} />
+                  <Route path="/inventar/sets" element={<PermissionRoute permission="inventar.view"><ItemSetsPage /></PermissionRoute>} />
+                  <Route path="/inventar/:id" element={<PermissionRoute permission="inventar.view"><ItemDetailPage /></PermissionRoute>} />
+                  <Route path="/ausleihen" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
+                  <Route path="/ausleihen/dashboard" element={<PermissionRoute permission="inventar.ausleihe"><AusleiheDashboardPage /></PermissionRoute>} />
+                  <Route path="/ausleihen/kalender" element={<PermissionRoute permission="inventar.ausleihe"><AusleiheKalenderPage /></PermissionRoute>} />
+                  <Route path="/ausleihen/:id" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
+                  <Route path="/anwesenheit" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
+                  <Route path="/anwesenheit/:id" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
+                  <Route path="/kompetenzen" element={<PermissionRoute permission="kompetenzen.view"><KompetenzenPage /></PermissionRoute>} />
+                  <Route path="/kompetenzen/user/:userId" element={<PermissionRoute permission="kompetenzen.view_all"><KompetenzenPage /></PermissionRoute>} />
+                  <Route path="/veranstaltung" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungenPage /></PermissionRoute>} />
+                  <Route path="/veranstaltung/neu" element={<PermissionRoute permission="veranstaltung.create"><VeranstaltungDetailPage /></PermissionRoute>} />
+                  <Route path="/veranstaltung/:id" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungDetailPage /></PermissionRoute>} />
                   <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/admin" element={<AdminPage />} />
-                  <Route path="/monitor-admin" element={<MonitorAdminPage />} />
+                  <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
+                  <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminPage /></PermissionRoute>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </DashboardLayout>

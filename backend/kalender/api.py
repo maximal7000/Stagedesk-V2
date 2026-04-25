@@ -5,10 +5,13 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from ninja import Router, Query
+from ninja.errors import HttpError
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 from core.auth import keycloak_auth
+from users.api import is_admin
+from users.models import UserProfile
 from .models import Event, EventKategorie, Ressource, EventRessource, EventErinnerung
 from .schemas import (
     EventSchema, EventListSchema, EventCreateSchema, EventUpdateSchema, EventMoveSchema,
@@ -26,17 +29,31 @@ def get_user_id(request) -> str:
     return request.auth.get('sub', '')
 
 
+def require_perm(request, code: str):
+    if is_admin(request):
+        return
+    kid = request.auth.get('sub', '')
+    try:
+        if UserProfile.objects.get(keycloak_id=kid).has_permission(code, False):
+            return
+    except UserProfile.DoesNotExist:
+        pass
+    raise HttpError(403, "Keine Berechtigung")
+
+
 # ========== Kategorien ==========
 
 @kalender_router.get("/kategorien", response=List[EventKategorieSchema], auth=keycloak_auth)
 def list_kategorien(request):
     """Alle Event-Kategorien auflisten"""
+    require_perm(request, 'kalender.view')
     return EventKategorie.objects.filter(ist_aktiv=True)
 
 
 @kalender_router.post("/kategorien", response=EventKategorieSchema, auth=keycloak_auth)
 def create_kategorie(request, payload: EventKategorieCreateSchema):
     """Neue Kategorie erstellen"""
+    require_perm(request, 'kalender.create')
     kategorie = EventKategorie.objects.create(**payload.dict())
     return kategorie
 
@@ -44,18 +61,20 @@ def create_kategorie(request, payload: EventKategorieCreateSchema):
 @kalender_router.put("/kategorien/{kategorie_id}", response=EventKategorieSchema, auth=keycloak_auth)
 def update_kategorie(request, kategorie_id: int, payload: EventKategorieUpdateSchema):
     """Kategorie aktualisieren"""
+    require_perm(request, 'kalender.edit')
     kategorie = get_object_or_404(EventKategorie, id=kategorie_id)
-    
+
     for field, value in payload.dict(exclude_unset=True).items():
         setattr(kategorie, field, value)
     kategorie.save()
-    
+
     return kategorie
 
 
 @kalender_router.delete("/kategorien/{kategorie_id}", auth=keycloak_auth)
 def delete_kategorie(request, kategorie_id: int):
     """Kategorie löschen (deaktivieren)"""
+    require_perm(request, 'kalender.delete')
     kategorie = get_object_or_404(EventKategorie, id=kategorie_id)
     kategorie.ist_aktiv = False
     kategorie.save()
@@ -67,6 +86,7 @@ def delete_kategorie(request, kategorie_id: int):
 @kalender_router.get("/ressourcen", response=List[RessourceSchema], auth=keycloak_auth)
 def list_ressourcen(request, typ: Optional[str] = None):
     """Alle Ressourcen auflisten"""
+    require_perm(request, 'kalender.view')
     qs = Ressource.objects.all()
     if typ:
         qs = qs.filter(typ=typ)
@@ -76,12 +96,14 @@ def list_ressourcen(request, typ: Optional[str] = None):
 @kalender_router.get("/ressourcen/{ressource_id}", response=RessourceSchema, auth=keycloak_auth)
 def get_ressource(request, ressource_id: int):
     """Ressource Details"""
+    require_perm(request, 'kalender.view')
     return get_object_or_404(Ressource, id=ressource_id)
 
 
 @kalender_router.post("/ressourcen", response=RessourceSchema, auth=keycloak_auth)
 def create_ressource(request, payload: RessourceCreateSchema):
     """Neue Ressource erstellen"""
+    require_perm(request, 'kalender.ressourcen')
     ressource = Ressource.objects.create(**payload.dict())
     return ressource
 
@@ -89,18 +111,20 @@ def create_ressource(request, payload: RessourceCreateSchema):
 @kalender_router.put("/ressourcen/{ressource_id}", response=RessourceSchema, auth=keycloak_auth)
 def update_ressource(request, ressource_id: int, payload: RessourceUpdateSchema):
     """Ressource aktualisieren"""
+    require_perm(request, 'kalender.ressourcen')
     ressource = get_object_or_404(Ressource, id=ressource_id)
-    
+
     for field, value in payload.dict(exclude_unset=True).items():
         setattr(ressource, field, value)
     ressource.save()
-    
+
     return ressource
 
 
 @kalender_router.delete("/ressourcen/{ressource_id}", auth=keycloak_auth)
 def delete_ressource(request, ressource_id: int):
     """Ressource löschen"""
+    require_perm(request, 'kalender.ressourcen')
     ressource = get_object_or_404(Ressource, id=ressource_id)
     ressource.delete()
     return {"status": "deleted"}
@@ -109,6 +133,7 @@ def delete_ressource(request, ressource_id: int):
 @kalender_router.post("/ressourcen/verfuegbarkeit", response=VerfuegbarkeitResultSchema, auth=keycloak_auth)
 def check_verfuegbarkeit(request, payload: RessourceVerfuegbarkeitSchema):
     """Prüft ob eine Ressource in einem Zeitraum verfügbar ist"""
+    require_perm(request, 'kalender.view')
     ressource = get_object_or_404(Ressource, id=payload.ressource_id)
     
     if not ressource.ist_verfuegbar:
@@ -152,6 +177,7 @@ def check_verfuegbarkeit(request, payload: RessourceVerfuegbarkeitSchema):
 @kalender_router.get("/events", response=List[EventListSchema], auth=keycloak_auth)
 def list_events(request, filters: EventFilterSchema = Query(...)):
     """Events auflisten mit Filtern"""
+    require_perm(request, 'kalender.view')
     qs = Event.objects.select_related('kategorie').all()
     
     if filters.start_ab:
@@ -173,6 +199,7 @@ def list_events(request, filters: EventFilterSchema = Query(...)):
 @kalender_router.get("/events/{event_id}", response=EventSchema, auth=keycloak_auth)
 def get_event(request, event_id: int):
     """Event Details"""
+    require_perm(request, 'kalender.view')
     event = get_object_or_404(
         Event.objects.select_related('kategorie', 'haushalt')
         .prefetch_related('event_ressourcen__ressource'),
@@ -184,6 +211,7 @@ def get_event(request, event_id: int):
 @kalender_router.post("/events", response=EventSchema, auth=keycloak_auth)
 def create_event(request, payload: EventCreateSchema):
     """Neues Event erstellen"""
+    require_perm(request, 'kalender.create')
     data = payload.dict(exclude={'ressourcen'})
     
     # Kategorie und Haushalt verknüpfen
@@ -274,6 +302,7 @@ def create_wiederholungen(parent_event: Event):
 @kalender_router.put("/events/{event_id}", response=EventSchema, auth=keycloak_auth)
 def update_event(request, event_id: int, payload: EventUpdateSchema):
     """Event aktualisieren"""
+    require_perm(request, 'kalender.edit')
     event = get_object_or_404(Event, id=event_id)
     
     data = payload.dict(exclude_unset=True)
@@ -305,6 +334,7 @@ def update_event(request, event_id: int, payload: EventUpdateSchema):
 @kalender_router.patch("/events/{event_id}/move", response=EventSchema, auth=keycloak_auth)
 def move_event(request, event_id: int, payload: EventMoveSchema):
     """Event verschieben (Drag & Drop)"""
+    require_perm(request, 'kalender.edit')
     event = get_object_or_404(Event, id=event_id)
     
     event.start = payload.start
@@ -323,6 +353,7 @@ def move_event(request, event_id: int, payload: EventMoveSchema):
 @kalender_router.delete("/events/{event_id}", auth=keycloak_auth)
 def delete_event(request, event_id: int, mit_wiederholungen: bool = False):
     """Event löschen"""
+    require_perm(request, 'kalender.delete')
     event = get_object_or_404(Event, id=event_id)
     
     if mit_wiederholungen:
@@ -338,6 +369,7 @@ def delete_event(request, event_id: int, mit_wiederholungen: bool = False):
 @kalender_router.post("/events/{event_id}/ressourcen", response=EventSchema, auth=keycloak_auth)
 def add_ressource_to_event(request, event_id: int, payload: EventRessourceCreateSchema):
     """Ressource zu Event hinzufügen"""
+    require_perm(request, 'kalender.edit')
     event = get_object_or_404(Event, id=event_id)
     ressource = get_object_or_404(Ressource, id=payload.ressource_id)
     
@@ -358,6 +390,7 @@ def add_ressource_to_event(request, event_id: int, payload: EventRessourceCreate
 @kalender_router.delete("/events/{event_id}/ressourcen/{buchung_id}", auth=keycloak_auth)
 def remove_ressource_from_event(request, event_id: int, buchung_id: int):
     """Ressource von Event entfernen"""
+    require_perm(request, 'kalender.edit')
     buchung = get_object_or_404(EventRessource, id=buchung_id, event_id=event_id)
     buchung.delete()
     return {"status": "deleted"}
@@ -368,6 +401,7 @@ def remove_ressource_from_event(request, event_id: int, buchung_id: int):
 @kalender_router.get("/export/ical", auth=keycloak_auth)
 def export_ical(request, filters: EventFilterSchema = Query(...)):
     """Events als iCal exportieren"""
+    require_perm(request, 'kalender.view')
     from django.http import HttpResponse
     
     events = list_events(request, filters)

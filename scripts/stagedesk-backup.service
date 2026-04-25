@@ -1,0 +1,10 @@
+[Unit]
+Description=Stagedesk lokales Backup (DB + Media)
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/stagedesk/scripts/backup.sh
+Nice=10
+IOSchedulingClass=idle

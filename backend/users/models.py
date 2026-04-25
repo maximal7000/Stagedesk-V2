@@ -102,6 +102,11 @@ class UserProfile(models.Model):
     is_admin_cached = models.BooleanField(default=False,
                                           help_text="Zuletzt erkannter Admin-Status aus Keycloak")
 
+    # Dashboard-Widgets: geordnete Liste von Widget-Codes (siehe DASHBOARD_WIDGETS in api)
+    # None = noch nie gespeichert → Default greift; [] = User hat alles abgewählt.
+    dashboard_widgets = models.JSONField(null=True, blank=True, default=None,
+                                         help_text="User-gewählte Dashboard-Widgets (Liste von Codes)")
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

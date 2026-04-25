@@ -135,12 +135,91 @@ def update_current_user(request, payload: UserProfileUpdateSchema):
 def get_my_permissions(request):
     """Eigene Permissions abrufen (Keycloak-Rollen + lokale Permissions)"""
     profile = get_or_create_profile(request)
-    
+
     # Admin hat alle Permissions
     if profile._is_admin:
         return list(Permission.objects.values_list('code', flat=True))
-    
+
     return profile.get_all_permissions()
+
+
+# ========== Dashboard-Widgets ==========
+
+# Autoritativer Widget-Katalog. Permission None = für alle sichtbar.
+DASHBOARD_WIDGETS = [
+    {"code": "meine_veranstaltungen", "name": "Meine Veranstaltungen",
+     "description": "Liste deiner zugewiesenen Veranstaltungen", "permission": None},
+    {"code": "ueberfaellige_ausleihen", "name": "Überfällige Ausleihen",
+     "description": "Warnung bei überfälligen Ausleihen", "permission": "inventar.ausleihe"},
+    {"code": "inventar_stats", "name": "Inventar-Statistik",
+     "description": "Schnellübersicht Items und Ausleihen", "permission": "inventar.view"},
+    {"code": "audit_log", "name": "Letzte Aktivitäten",
+     "description": "Audit-Log des Inventars", "permission": "inventar.view"},
+    {"code": "schnellzugriff", "name": "Schnellzugriff",
+     "description": "Schnell-Buttons für häufige Aktionen", "permission": None},
+    {"code": "kompetenz_punkte", "name": "Meine Kompetenz-Punkte",
+     "description": "Eigener Punktestand und Rang", "permission": "kompetenzen.view"},
+]
+DEFAULT_DASHBOARD_WIDGETS = ["meine_veranstaltungen"]
+
+
+def _user_permissions_set(profile) -> set:
+    if getattr(profile, '_is_admin', False):
+        return set(Permission.objects.values_list('code', flat=True))
+    return set(profile.get_all_permissions())
+
+
+def _filter_allowed_widgets(codes, profile) -> list:
+    """Filtert Widget-Codes auf das, was Katalog UND Permissions erlauben.
+    Reihenfolge bleibt erhalten, Duplikate werden entfernt."""
+    perms = _user_permissions_set(profile)
+    catalog = {w["code"]: w for w in DASHBOARD_WIDGETS}
+    seen = set()
+    out = []
+    for code in codes or []:
+        if code in seen or code not in catalog:
+            continue
+        widget = catalog[code]
+        if widget["permission"] and widget["permission"] not in perms:
+            continue
+        seen.add(code)
+        out.append(code)
+    return out
+
+
+@users_router.get("/me/dashboard/catalog", auth=keycloak_auth)
+def get_dashboard_catalog(request):
+    """Widget-Katalog gefiltert auf was der User wegen seiner Permissions sehen darf."""
+    profile = get_or_create_profile(request)
+    perms = _user_permissions_set(profile)
+    return [
+        {"code": w["code"], "name": w["name"], "description": w["description"]}
+        for w in DASHBOARD_WIDGETS
+        if not w["permission"] or w["permission"] in perms
+    ]
+
+
+@users_router.get("/me/dashboard", auth=keycloak_auth)
+def get_my_dashboard(request):
+    """Aktive Widget-Liste des Users (gefiltert auf erlaubte). Default greift falls nie gesetzt."""
+    profile = get_or_create_profile(request)
+    raw = profile.dashboard_widgets
+    if raw is None:
+        raw = DEFAULT_DASHBOARD_WIDGETS
+    return {"widgets": _filter_allowed_widgets(raw, profile)}
+
+
+@users_router.put("/me/dashboard", auth=keycloak_auth)
+def update_my_dashboard(request, payload: dict):
+    """Setzt die Widget-Liste. Nicht erlaubte Codes werden serverseitig verworfen."""
+    profile = get_or_create_profile(request)
+    codes = payload.get("widgets", [])
+    if not isinstance(codes, list) or not all(isinstance(c, str) for c in codes):
+        return {"error": "widgets muss eine Liste von Strings sein"}, 400
+    allowed = _filter_allowed_widgets(codes, profile)
+    profile.dashboard_widgets = allowed
+    profile.save(update_fields=['dashboard_widgets'])
+    return {"widgets": allowed}
 
 
 # ========== Sessions ==========

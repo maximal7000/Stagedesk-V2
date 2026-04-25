@@ -260,6 +260,7 @@ def delete_ausleiher(request, id: int):
 
 @inventar_router.get("/items", response=List[ItemListSchema], auth=keycloak_auth)
 def list_items(request, filters: ItemFilterSchema = Query(...)):
+    require_permission(request, 'inventar.view')
     qs = InventarItem.objects.select_related('kategorie', 'standort', 'hersteller').prefetch_related('qr_codes').filter(ist_aktiv=True)
     
     if filters.kategorie_id:
@@ -282,6 +283,7 @@ def list_items(request, filters: ItemFilterSchema = Query(...)):
 
 @inventar_router.get("/items/{id}", response=ItemSchema, auth=keycloak_auth)
 def get_item(request, id: int):
+    require_permission(request, 'inventar.view')
     return get_object_or_404(
         InventarItem.objects.select_related('kategorie', 'standort', 'hersteller').prefetch_related('qr_codes'),
         id=id
@@ -1146,8 +1148,9 @@ def export_ausleihen_csv(request, filters: AusleiheFilterSchema = Query(...)):
 @inventar_router.get("/stats", auth=keycloak_auth)
 def get_stats(request):
     """Statistiken für Dashboard"""
+    require_permission(request, 'inventar.view')
     from django.db.models import Count
-    
+
     total_items = InventarItem.objects.filter(ist_aktiv=True).count()
     
     status_counts = dict(
@@ -1197,6 +1200,7 @@ def get_stats(request):
 @inventar_router.get("/audit-log", response=List[AuditLogSchema], auth=keycloak_auth)
 def list_audit_log(request, entity_type: Optional[str] = None, entity_id: Optional[int] = None, limit: int = 50):
     """Audit-Log abrufen, optional gefiltert nach Entity."""
+    require_permission(request, 'inventar.view')
     qs = AuditLog.objects.all()
     if entity_type:
         qs = qs.filter(entity_type=entity_type)

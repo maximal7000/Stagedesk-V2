@@ -152,6 +152,7 @@ def _set_ist_zugewiesen(veranstaltung, keycloak_id: str):
 @veranstaltung_router.get("/benutzer", response=List[dict], auth=keycloak_auth)
 def list_benutzer(request):
     """Benutzer für Zuweisung (Keycloak-User aus UserProfile) inkl. discord_id und bereiche."""
+    require_permission(request, 'veranstaltung.zuweisungen')
     users = UserProfile.objects.prefetch_related('bereiche').all()
     return [
         {
@@ -169,6 +170,7 @@ def list_benutzer(request):
 @veranstaltung_router.get("/taetigkeitsrollen", response=List[dict], auth=keycloak_auth)
 def list_taetigkeitsrollen(request):
     """Verfügbare Tätigkeitsrollen für Zuweisungen."""
+    require_permission(request, 'veranstaltung.view')
     return list(TaetigkeitsRolle.objects.values('id', 'name'))
 
 
@@ -176,6 +178,7 @@ def list_taetigkeitsrollen(request):
 @veranstaltung_router.get("/anhaenge/{anhang_id}/download", auth=keycloak_auth)
 def download_anhang_early(request, anhang_id: int):
     """Anhang-Download mit Authentifizierung (vermeidet Keycloak-Redirect)."""
+    require_permission(request, 'veranstaltung.view')
     from django.http import FileResponse, HttpResponseRedirect
     anhang = get_object_or_404(VeranstaltungAnhang, id=anhang_id)
     if anhang.datei:

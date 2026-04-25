@@ -40,7 +40,7 @@ export default function DashboardLayout({ children }) {
   // Navigation mit Permission-Check
   const navigation = [
     { name: 'Dashboard', href: '/', icon: Home, permission: null },
-    { name: 'Veranstaltungen', href: '/veranstaltung', icon: Ticket, permission: null },
+    { name: 'Veranstaltungen', href: '/veranstaltung', icon: Ticket, permission: 'veranstaltung.view' },
     { name: 'Kalender', href: '/kalender', icon: Calendar, permission: 'kalender.view' },
     { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Anwesenheit', href: '/anwesenheit', icon: ClipboardList, permission: 'anwesenheit.view' },
