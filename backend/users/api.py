@@ -5,7 +5,7 @@ Rollen kommen aus Keycloak JWT, lokale Permissions für feinere Steuerung
 import os
 from typing import List
 from django.utils import timezone
-from ninja import Router
+from ninja import Router, Schema
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.db import transaction
@@ -209,14 +209,15 @@ def get_my_dashboard(request):
     return {"widgets": _filter_allowed_widgets(raw, profile)}
 
 
+class DashboardWidgetsPayload(Schema):
+    widgets: List[str] = []
+
+
 @users_router.put("/me/dashboard", auth=keycloak_auth)
-def update_my_dashboard(request, payload: dict):
+def update_my_dashboard(request, payload: DashboardWidgetsPayload):
     """Setzt die Widget-Liste. Nicht erlaubte Codes werden serverseitig verworfen."""
     profile = get_or_create_profile(request)
-    codes = payload.get("widgets", [])
-    if not isinstance(codes, list) or not all(isinstance(c, str) for c in codes):
-        return {"error": "widgets muss eine Liste von Strings sein"}, 400
-    allowed = _filter_allowed_widgets(codes, profile)
+    allowed = _filter_allowed_widgets(payload.widgets, profile)
     profile.dashboard_widgets = allowed
     profile.save(update_fields=['dashboard_widgets'])
     return {"widgets": allowed}
