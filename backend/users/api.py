@@ -8,7 +8,7 @@ from django.utils import timezone
 from ninja import Router, Schema
 from django.shortcuts import get_object_or_404
 from django.conf import settings
-from django.db import transaction
+from django.db import transaction, models
 import requests
 
 from core.auth import keycloak_auth
@@ -385,7 +385,17 @@ def list_users(request):
 
     _sync_names_from_keycloak(request)
 
-    users = UserProfile.objects.prefetch_related('permissions', 'bereiche', 'permission_groups').all()
+    # Sortierung: Nachname, Vorname, Username (case-insensitive). Profile ohne
+    # Nachnamen rutschen ans Ende, damit die nahmenslosen nicht oben stehen.
+    from django.db.models.functions import Lower, NullIf
+    users = (UserProfile.objects
+             .prefetch_related('permissions', 'bereiche', 'permission_groups')
+             .annotate(
+                 sort_last=Lower(NullIf('last_name', models.Value(''))),
+                 sort_first=Lower(NullIf('first_name', models.Value(''))),
+                 sort_username=Lower('username'),
+             )
+             .order_by('sort_last', 'sort_first', 'sort_username'))
     
     # Hinweis: Wir können die Keycloak-Rollen nicht für alle User abrufen
     # ohne deren Token zu haben. is_admin kommt aus dem gecachten Flag,

@@ -567,13 +567,20 @@ export default function KalenderPage() {
                         )}
                       </div>
                     </div>
-                    <div className={`px-2 py-1 text-xs rounded ${
-                      event.status === 'bestaetigt' ? 'bg-green-900/30 text-green-400' :
-                      event.status === 'abgesagt' ? 'bg-red-900/30 text-red-400' :
-                      'bg-gray-700 text-gray-300'
-                    }`}>
-                      {event.status}
-                    </div>
+                    {(() => {
+                      const eff = event.effektiv_status || event.status || 'geplant';
+                      const cls = {
+                        geplant: 'bg-blue-900/30 text-blue-400',
+                        laufend: 'bg-green-900/30 text-green-400',
+                        abgeschlossen: 'bg-slate-800/40 text-slate-400',
+                        abgesagt: 'bg-red-900/30 text-red-400',
+                      }[eff] || 'bg-gray-700 text-gray-300';
+                      const label = {
+                        geplant: 'Geplant', laufend: 'Laufend',
+                        abgeschlossen: 'Abgeschlossen', abgesagt: 'Abgesagt',
+                      }[eff] || eff;
+                      return <div className={`px-2 py-1 text-xs rounded ${cls}`}>{label}</div>;
+                    })()}
                   </div>
                 ))
               )}

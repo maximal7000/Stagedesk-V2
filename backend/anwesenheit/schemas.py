@@ -68,6 +68,8 @@ class TeilnehmerSchema(Schema):
     id: int
     keycloak_id: str
     name: str
+    first_name: str = ''
+    last_name: str = ''
     email: str
     aufgabe: str
     status: str
@@ -75,6 +77,37 @@ class TeilnehmerSchema(Schema):
     markiert_von: str
     notizen: str
     termin_anwesenheiten: List[TerminAnwesenheitSchema]
+
+    @staticmethod
+    def resolve_name(obj):
+        # name = "Vorname Nachname" wenn Profil vorhanden, sonst gespeicherter
+        # name-Wert (kompatibel mit Listen, die vor first_name/last_name angelegt wurden).
+        from users.models import UserProfile
+        if obj.keycloak_id:
+            p = UserProfile.objects.filter(keycloak_id=obj.keycloak_id).only('first_name', 'last_name').first()
+            if p:
+                full = f"{p.first_name} {p.last_name}".strip()
+                if full:
+                    return full
+        return obj.name
+
+    @staticmethod
+    def resolve_first_name(obj):
+        from users.models import UserProfile
+        if obj.keycloak_id:
+            p = UserProfile.objects.filter(keycloak_id=obj.keycloak_id).only('first_name').first()
+            if p:
+                return p.first_name or ''
+        return ''
+
+    @staticmethod
+    def resolve_last_name(obj):
+        from users.models import UserProfile
+        if obj.keycloak_id:
+            p = UserProfile.objects.filter(keycloak_id=obj.keycloak_id).only('last_name').first()
+            if p:
+                return p.last_name or ''
+        return ''
 
     @staticmethod
     def resolve_termin_anwesenheiten(obj):

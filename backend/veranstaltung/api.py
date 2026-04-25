@@ -179,10 +179,19 @@ def list_taetigkeitsrollen(request):
 def download_anhang_early(request, anhang_id: int):
     """Anhang-Download mit Authentifizierung (vermeidet Keycloak-Redirect)."""
     require_permission(request, 'veranstaltung.view')
+    import os
     from django.http import FileResponse, HttpResponseRedirect
     anhang = get_object_or_404(VeranstaltungAnhang, id=anhang_id)
     if anhang.datei:
-        return FileResponse(anhang.datei.open('rb'), as_attachment=True, filename=anhang.name)
+        # Wenn anhang.name keine Endung enthält, die Endung der gespeicherten
+        # Datei anhängen — sonst lädt der Browser eine endungslose Datei.
+        original_ext = os.path.splitext(anhang.datei.name)[1]
+        base, ext = os.path.splitext(anhang.name or '')
+        if original_ext and not ext:
+            filename = f"{anhang.name}{original_ext}"
+        else:
+            filename = anhang.name or os.path.basename(anhang.datei.name)
+        return FileResponse(anhang.datei.open('rb'), as_attachment=True, filename=filename)
     elif anhang.url:
         return HttpResponseRedirect(anhang.url)
     return {"error": "Kein Inhalt"}, 404

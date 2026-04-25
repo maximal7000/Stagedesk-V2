@@ -70,11 +70,10 @@ class Event(models.Model):
     """
     Haupt-Event-Modell
     """
+    # Wie bei Veranstaltung: nur 'geplant' und 'abgesagt' werden gespeichert,
+    # laufend/abgeschlossen werden aus start/ende abgeleitet (effektiv_status).
     STATUS_CHOICES = [
         ('geplant', 'Geplant'),
-        ('bestaetigt', 'Bestätigt'),
-        ('laufend', 'Laufend'),
-        ('abgeschlossen', 'Abgeschlossen'),
         ('abgesagt', 'Abgesagt'),
     ]
     
@@ -133,7 +132,26 @@ class Event(models.Model):
     
     def __str__(self):
         return f"{self.titel} ({self.start.strftime('%d.%m.%Y')})"
-    
+
+    @property
+    def effektiv_status(self) -> str:
+        from django.utils import timezone
+        if self.status == 'abgesagt':
+            return 'abgesagt'
+        now = timezone.now()
+        if self.start and self.ende and self.start <= now <= self.ende:
+            return 'laufend'
+        if self.ende and self.ende < now:
+            return 'abgeschlossen'
+        return 'geplant'
+
+    @property
+    def effektiv_status_display(self) -> str:
+        return {
+            'geplant': 'Geplant', 'laufend': 'Laufend',
+            'abgeschlossen': 'Abgeschlossen', 'abgesagt': 'Abgesagt',
+        }[self.effektiv_status]
+
     @property
     def dauer_stunden(self):
         """Berechnet die Dauer in Stunden"""

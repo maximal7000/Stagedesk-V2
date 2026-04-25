@@ -9,11 +9,10 @@ import {
 import { format, parseISO, addHours } from 'date-fns';
 import apiClient from '../../lib/api';
 
+// Nur 'geplant' und 'abgesagt' werden manuell gesetzt — laufend/abgeschlossen
+// leitet das Backend aus start/ende ab (effektiv_status).
 const STATUS_OPTIONS = [
-  { value: 'geplant', label: 'Geplant', color: 'bg-gray-600' },
-  { value: 'bestaetigt', label: 'Bestätigt', color: 'bg-green-600' },
-  { value: 'laufend', label: 'Laufend', color: 'bg-blue-600' },
-  { value: 'abgeschlossen', label: 'Abgeschlossen', color: 'bg-gray-500' },
+  { value: 'geplant', label: 'Geplant', color: 'bg-blue-600' },
   { value: 'abgesagt', label: 'Abgesagt', color: 'bg-red-600' },
 ];
 

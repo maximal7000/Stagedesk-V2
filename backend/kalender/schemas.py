@@ -133,6 +133,8 @@ class EventSchema(Schema):
     adresse: str
     status: str
     status_display: str
+    effektiv_status: str
+    effektiv_status_display: str
     wiederholung: str
     wiederholung_display: str
     wiederholung_ende: Optional[date]
@@ -162,6 +164,14 @@ class EventSchema(Schema):
         return obj.get_status_display()
 
     @staticmethod
+    def resolve_effektiv_status(obj):
+        return obj.effektiv_status
+
+    @staticmethod
+    def resolve_effektiv_status_display(obj):
+        return obj.effektiv_status_display
+
+    @staticmethod
     def resolve_wiederholung_display(obj):
         return obj.get_wiederholung_display()
 
@@ -184,11 +194,16 @@ class EventListSchema(Schema):
     kategorie_id: Optional[int]
     kategorie_farbe: Optional[str]
     status: str
+    effektiv_status: str = 'geplant'
     ort: str
 
     @staticmethod
     def resolve_kategorie_farbe(obj):
         return obj.kategorie.farbe if obj.kategorie else '#6B7280'
+
+    @staticmethod
+    def resolve_effektiv_status(obj):
+        return obj.effektiv_status
 
 
 class EventCreateSchema(Schema):

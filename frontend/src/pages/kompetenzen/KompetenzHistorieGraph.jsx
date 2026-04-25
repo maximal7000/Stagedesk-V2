@@ -6,6 +6,13 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Loader2 } from 'lucide-react';
 import apiClient from '../../lib/api';
 
+const AKTION_LABELS = {
+  erworben: 'Erworben',
+  bestaetigt: 'Bestätigt',
+  entzogen: 'Entzogen',
+  abgelaufen: 'Abgelaufen',
+};
+
 export default function KompetenzHistorieGraph({ userId }) {
   const [historie, setHistorie] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +90,7 @@ export default function KompetenzHistorieGraph({ userId }) {
                 h.aktion === 'entzogen' ? 'bg-red-500/20 text-red-400' :
                 'bg-yellow-500/20 text-yellow-400'
               }`}>
-                {h.aktion}
+                {AKTION_LABELS[h.aktion] || h.aktion}
               </span>
               <span className="text-white flex-1 truncate">{h.kompetenz_name}</span>
               <span className="text-xs text-gray-500">

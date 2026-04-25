@@ -94,21 +94,34 @@ def create_liste(request, payload: ListeCreateSchema):
 @anwesenheit_router.get("/verfuegbare-benutzer", response=list, auth=keycloak_auth)
 def verfuegbare_benutzer(request):
     require_permission(request, 'anwesenheit.edit')
-    profiles = UserProfile.objects.all().order_by('username')
-    return [
-        {'keycloak_id': p.keycloak_id, 'name': p.username, 'email': p.email}
-        for p in profiles
-    ]
+    profiles = UserProfile.objects.all().order_by('last_name', 'first_name', 'username')
+    out = []
+    for p in profiles:
+        full = f"{p.first_name} {p.last_name}".strip()
+        out.append({
+            'keycloak_id': p.keycloak_id,
+            'name': full or p.username,
+            'username': p.username,
+            'email': p.email,
+        })
+    return out
 
 
 @anwesenheit_router.get("/{id}", response=AnwesenheitsListeSchema, auth=keycloak_auth)
 def get_liste(request, id: int):
     require_permission(request, 'anwesenheit.view')
-    return get_object_or_404(
+    liste = get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
         ), id=id
     )
+    # Ohne view_all darf der User nur Listen sehen, in denen er Teilnehmer ist.
+    if not _has_permission(request, 'anwesenheit.view_all'):
+        kid = get_user_id(request)
+        if not liste.teilnehmer.filter(keycloak_id=kid).exists():
+            from ninja.errors import HttpError
+            raise HttpError(403, "Keine Berechtigung für diese Liste")
+    return liste
 
 
 @anwesenheit_router.put("/{id}", response=AnwesenheitsListeSchema, auth=keycloak_auth)

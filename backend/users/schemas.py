@@ -158,6 +158,7 @@ class UserListSchema(Schema):
     discord_id: str
     bereiche: List[BereichSchema]
     permission_groups: List[PermissionGroupBriefSchema]
+    permissions: List[str] = []
     theme: str
     forced_theme: Optional[str]
     two_factor_enabled: bool
@@ -172,6 +173,12 @@ class UserListSchema(Schema):
     @staticmethod
     def resolve_permission_groups(obj):
         return obj.permission_groups.all()
+
+    @staticmethod
+    def resolve_permissions(obj):
+        # Direkt zugewiesene Permission-Codes (NICHT inkl. Gruppen-Permissions),
+        # damit der Admin-Edit-Dialog die einzelnen Häkchen vorausgefüllt hat.
+        return list(obj.permissions.values_list('code', flat=True))
 
     @staticmethod
     def resolve_is_admin(obj):

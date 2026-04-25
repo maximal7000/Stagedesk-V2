@@ -287,7 +287,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
                   <a
-                    href="https://auth.t410.de/realms/master/account/#/security/signingin"
+                    href={`${import.meta.env.VITE_KEYCLOAK_URL || 'https://auth.t410.de'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'technik-ag'}/account/#/security/signingin`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"

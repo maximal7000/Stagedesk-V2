@@ -317,8 +317,11 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <button onClick={() => setEditingUser({
-                        id: user.id, permission_codes: [], forced_theme: user.forced_theme, theme_locked: false,
-                        discord_id: user.discord_id || '', bereich_ids: (user.bereiche || []).map(b => b.id),
+                        id: user.id,
+                        permission_codes: user.permissions || [],
+                        forced_theme: user.forced_theme, theme_locked: false,
+                        discord_id: user.discord_id || '',
+                        bereich_ids: (user.bereiche || []).map(b => b.id),
                         group_ids: (user.permission_groups || []).map(g => g.id),
                       })} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
                         <Edit className="w-4 h-4" />

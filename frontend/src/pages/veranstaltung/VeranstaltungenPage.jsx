@@ -200,7 +200,7 @@ function SectionGroup({ title, items, onRefetch }) {
 }
 
 export default function VeranstaltungenPage() {
-  const { hasPermission } = useUser();
+  const { hasPermission, isAdmin } = useUser();
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [suche, setSuche] = useState('');
@@ -313,22 +313,26 @@ export default function VeranstaltungenPage() {
               Neue Veranstaltung
             </Link>
           )}
-          <button
-            type="button"
-            onClick={loadZammadTickets}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-          >
-            <Ticket className="w-4 h-4" />
-            Aus Ticket
-          </button>
-          <button
-            type="button"
-            onClick={exportCsv}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-          >
-            <FileDown className="w-4 h-4" />
-            CSV
-          </button>
+          {isAdmin && (
+            <>
+              <button
+                type="button"
+                onClick={loadZammadTickets}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+              >
+                <Ticket className="w-4 h-4" />
+                Aus Ticket
+              </button>
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+              >
+                <FileDown className="w-4 h-4" />
+                CSV
+              </button>
+            </>
+          )}
         </div>
       </div>
 

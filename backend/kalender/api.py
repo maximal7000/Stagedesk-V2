@@ -41,6 +41,21 @@ def require_perm(request, code: str):
     raise HttpError(403, "Keine Berechtigung")
 
 
+def _user_or_owner(request, event, perm_code: str):
+    """Ersteller eines Events darf es immer bearbeiten/löschen, sonst Permission nötig."""
+    if is_admin(request):
+        return
+    kid = request.auth.get('sub', '')
+    if event.erstellt_von and event.erstellt_von == kid:
+        return
+    try:
+        if UserProfile.objects.get(keycloak_id=kid).has_permission(perm_code, False):
+            return
+    except UserProfile.DoesNotExist:
+        pass
+    raise HttpError(403, "Keine Berechtigung")
+
+
 # ========== Kategorien ==========
 
 @kalender_router.get("/kategorien", response=List[EventKategorieSchema], auth=keycloak_auth)
@@ -302,8 +317,8 @@ def create_wiederholungen(parent_event: Event):
 @kalender_router.put("/events/{event_id}", response=EventSchema, auth=keycloak_auth)
 def update_event(request, event_id: int, payload: EventUpdateSchema):
     """Event aktualisieren"""
-    require_perm(request, 'kalender.edit')
     event = get_object_or_404(Event, id=event_id)
+    _user_or_owner(request, event, 'kalender.edit')
     
     data = payload.dict(exclude_unset=True)
     
@@ -334,8 +349,8 @@ def update_event(request, event_id: int, payload: EventUpdateSchema):
 @kalender_router.patch("/events/{event_id}/move", response=EventSchema, auth=keycloak_auth)
 def move_event(request, event_id: int, payload: EventMoveSchema):
     """Event verschieben (Drag & Drop)"""
-    require_perm(request, 'kalender.edit')
     event = get_object_or_404(Event, id=event_id)
+    _user_or_owner(request, event, 'kalender.edit')
     
     event.start = payload.start
     event.ende = payload.ende
@@ -353,8 +368,8 @@ def move_event(request, event_id: int, payload: EventMoveSchema):
 @kalender_router.delete("/events/{event_id}", auth=keycloak_auth)
 def delete_event(request, event_id: int, mit_wiederholungen: bool = False):
     """Event löschen"""
-    require_perm(request, 'kalender.delete')
     event = get_object_or_404(Event, id=event_id)
+    _user_or_owner(request, event, 'kalender.delete')
     
     if mit_wiederholungen:
         # Alle Wiederholungen löschen

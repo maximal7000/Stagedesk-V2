@@ -14,8 +14,15 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
     if (!anhang.datei_url && anhang.url) { window.open(anhang.url, '_blank'); return; }
     try {
       const res = await apiClient.get(`/veranstaltung/anhaenge/${anhang.id}/download`, { responseType: 'blob' });
+      // Dateiname aus Content-Disposition vom Server lesen (enthält Original-Endung).
+      const cd = res.headers?.['content-disposition'] || '';
+      const match = /filename\*?=(?:UTF-8'')?["']?([^"';]+)/i.exec(cd);
+      const serverName = match ? decodeURIComponent(match[1]) : null;
       const u = URL.createObjectURL(res.data);
-      const a = document.createElement('a'); a.href = u; a.download = anhang.name; a.click();
+      const a = document.createElement('a');
+      a.href = u;
+      a.download = serverName || anhang.name;
+      a.click();
       URL.revokeObjectURL(u);
     } catch { toast.error('Download fehlgeschlagen'); }
   };
@@ -45,17 +52,19 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
   return (
     <CollapsibleSection icon={Paperclip} title="Anhänge">
       {canEdit && (
-        <form onSubmit={add} className="flex flex-wrap gap-2 mb-4">
+        <form onSubmit={add} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 mb-4">
           <input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 w-32" />
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
           <input type="url" placeholder="URL (optional)" value={url} onChange={(e) => setUrl(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 flex-1 min-w-[120px]" />
-          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm max-w-[200px]" />
+            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
           <button type="submit" disabled={adding || (!name.trim() && !file)}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg">
+            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg whitespace-nowrap">
             {adding ? '…' : <><Plus className="w-4 h-4 inline mr-1" /><span>Hinzufügen</span></>}
           </button>
+          <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)}
+            className="sm:col-span-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
+                       file:mr-3 file:px-3 file:py-1 file:bg-gray-700 file:text-white file:border-0 file:rounded
+                       file:text-sm file:cursor-pointer hover:file:bg-gray-600" />
         </form>
       )}
       <ul className="space-y-2">
