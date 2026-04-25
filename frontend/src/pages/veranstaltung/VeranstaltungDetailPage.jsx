@@ -26,12 +26,25 @@ import ErinnerungenSection from './sections/ErinnerungenSection';
 import DiscordSection from './sections/DiscordSection';
 import KompetenzenSection from './sections/KompetenzenSection';
 
+// Manuell setzbare Stati: alles andere (laufend/abgeschlossen) leitet das Backend
+// aus datum_von/datum_bis ab und liefert es als effektiv_status zurück.
 const STATUS_LABELS = {
-  planung: 'Planung',
-  bestaetigt: 'Bestätigt',
+  geplant: 'Geplant',
+  abgesagt: 'Abgesagt',
+};
+
+const EFFEKTIV_LABELS = {
+  geplant: 'Geplant',
   laufend: 'Laufend',
   abgeschlossen: 'Abgeschlossen',
   abgesagt: 'Abgesagt',
+};
+
+const EFFEKTIV_CLASS = {
+  geplant: 'bg-blue-500/20 text-blue-400',
+  laufend: 'bg-green-500/20 text-green-400',
+  abgeschlossen: 'bg-slate-500/20 text-slate-400',
+  abgesagt: 'bg-red-500/20 text-red-400',
 };
 
 function formatDatum(d) {
@@ -57,7 +70,7 @@ export default function VeranstaltungDetailPage() {
 
   const [form, setForm] = useState({
     titel: '', beschreibung: '', datum_von: '', datum_bis: '',
-    ort: '', adresse: '', status: 'planung',
+    ort: '', adresse: '', status: 'geplant',
   });
 
   const fetchDetail = useCallback(async () => {
@@ -203,13 +216,6 @@ export default function VeranstaltungDetailPage() {
               <textarea value={form.adresse} onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
                 rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
             </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-1">Status</label>
-              <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
-                {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select>
-            </div>
             <div className="flex gap-3 pt-4">
               <button type="submit" disabled={saving}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
@@ -288,10 +294,14 @@ export default function VeranstaltungDetailPage() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={`inline-flex px-2 py-1 rounded text-sm font-medium ${
-              data.status === 'planung' ? 'bg-gray-500/20 text-gray-400' :
-              data.status === 'abgesagt' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'
-            }`}>{STATUS_LABELS[data.status] || data.status}</span>
+            {(() => {
+              const eff = data.effektiv_status || data.status;
+              return (
+                <span className={`inline-flex px-2 py-1 rounded text-sm font-medium ${
+                  EFFEKTIV_CLASS[eff] || 'bg-gray-500/20 text-gray-400'
+                }`}>{EFFEKTIV_LABELS[eff] || eff}</span>
+              );
+            })()}
             {canEdit && !editMode ? (
               <button type="button" onClick={() => setEditMode(true)}
                 className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">

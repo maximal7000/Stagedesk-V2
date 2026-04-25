@@ -115,6 +115,8 @@ class VeranstaltungSchema(Schema):
     adresse: str
     status: str
     status_display: str
+    effektiv_status: str
+    effektiv_status_display: str
     zammad_ticket_id: Optional[int]
     zammad_ticket_number: str
     wiederholung: str
@@ -153,6 +155,14 @@ class VeranstaltungSchema(Schema):
     @staticmethod
     def resolve_status_display(obj):
         return obj.get_status_display()
+
+    @staticmethod
+    def resolve_effektiv_status(obj):
+        return obj.effektiv_status
+
+    @staticmethod
+    def resolve_effektiv_status_display(obj):
+        return obj.effektiv_status_display
 
     @staticmethod
     def resolve_termine(obj):
@@ -207,6 +217,8 @@ class VeranstaltungListSchema(Schema):
     ort: str
     status: str
     status_display: str
+    effektiv_status: str
+    effektiv_status_display: str
     zammad_ticket_number: str
     anzahl_zuweisungen: int
     anzahl_termine: int
@@ -217,6 +229,14 @@ class VeranstaltungListSchema(Schema):
     @staticmethod
     def resolve_status_display(obj):
         return obj.get_status_display()
+
+    @staticmethod
+    def resolve_effektiv_status(obj):
+        return obj.effektiv_status
+
+    @staticmethod
+    def resolve_effektiv_status_display(obj):
+        return obj.effektiv_status_display
 
     @staticmethod
     def resolve_anzahl_zuweisungen(obj):
@@ -234,7 +254,7 @@ class VeranstaltungCreateSchema(Schema):
     datum_bis: Optional[str] = None
     ort: str = ''
     adresse: str = ''
-    status: str = 'planung'
+    status: str = 'geplant'
     zammad_ticket_id: Optional[int] = None
     zammad_ticket_number: str = ''
     wiederholung: str = 'keine'

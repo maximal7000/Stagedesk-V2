@@ -26,11 +26,11 @@ class TaetigkeitsRolle(models.Model):
 
 
 class Veranstaltung(models.Model):
+    # Nur "geplant" und "abgesagt" sind gespeicherte Stati. "laufend" und
+    # "abgeschlossen" werden aus datum_von/datum_bis abgeleitet (siehe
+    # effektiv_status). So kann nichts manuell falsch gesetzt werden.
     STATUS_CHOICES = [
-        ('planung', 'Planung'),
-        ('bestaetigt', 'Bestätigt'),
-        ('laufend', 'Laufend'),
-        ('abgeschlossen', 'Abgeschlossen'),
+        ('geplant', 'Geplant'),
         ('abgesagt', 'Abgesagt'),
     ]
     WIEDERHOLUNG_CHOICES = [
@@ -47,7 +47,7 @@ class Veranstaltung(models.Model):
     datum_bis = models.DateTimeField()
     ort = models.CharField(max_length=300, blank=True)
     adresse = models.TextField(blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planung')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='geplant')
 
     # Zammad
     zammad_ticket_id = models.IntegerField(null=True, blank=True, unique=True)
@@ -103,6 +103,28 @@ class Veranstaltung(models.Model):
 
     def __str__(self):
         return f"{self.titel} ({self.datum_von.strftime('%d.%m.%Y')})"
+
+    @property
+    def effektiv_status(self) -> str:
+        """Abgeleiteter Anzeige-Status: abgesagt | laufend | abgeschlossen | geplant.
+        abgesagt ist immer manuell, alle anderen werden aus datum_von/datum_bis abgeleitet."""
+        if self.status == 'abgesagt':
+            return 'abgesagt'
+        now = timezone.now()
+        if self.datum_von and self.datum_bis and self.datum_von <= now <= self.datum_bis:
+            return 'laufend'
+        if self.datum_bis and self.datum_bis < now:
+            return 'abgeschlossen'
+        return 'geplant'
+
+    @property
+    def effektiv_status_display(self) -> str:
+        return {
+            'abgesagt': 'Abgesagt',
+            'laufend': 'Laufend',
+            'abgeschlossen': 'Abgeschlossen',
+            'geplant': 'Geplant',
+        }[self.effektiv_status]
 
 
 class VeranstaltungTermin(models.Model):

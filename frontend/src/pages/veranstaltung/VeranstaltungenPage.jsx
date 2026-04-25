@@ -61,23 +61,21 @@ function MeldenButton({ v, onRefetch }) {
 }
 
 const STATUS_LABELS = {
-  planung: 'Planung',
-  bestaetigt: 'Bestätigt',
+  geplant: 'Geplant',
   laufend: 'Laufend',
   abgeschlossen: 'Abgeschlossen',
   abgesagt: 'Abgesagt',
 };
 
 const STATUS_CLASS = {
-  planung: 'bg-gray-500/20 text-gray-400',
-  bestaetigt: 'bg-blue-500/20 text-blue-400',
+  geplant: 'bg-blue-500/20 text-blue-400',
   laufend: 'bg-green-500/20 text-green-400',
   abgeschlossen: 'bg-slate-500/20 text-slate-400',
   abgesagt: 'bg-red-500/20 text-red-400',
 };
 
-// Aktive Stati (zukünftig/laufend)
-const ACTIVE_STATUS = ['planung', 'bestaetigt', 'laufend'];
+// Effektiv-Status (vom Backend abgeleitet) bestimmt Aktiv/Erledigt
+const ACTIVE_STATUS = ['geplant', 'laufend'];
 const DONE_STATUS = ['abgeschlossen', 'abgesagt'];
 
 function formatDateShort(d) {
@@ -95,7 +93,8 @@ function formatTime(d) {
 
 function VeranstaltungCard({ v, onRefetch }) {
   const navigate = useNavigate();
-  const isActive = ACTIVE_STATUS.includes(v.status);
+  const eff = v.effektiv_status || v.status;
+  const isActive = ACTIVE_STATUS.includes(eff);
   const isSameDay = v.datum_von && v.datum_bis &&
     new Date(v.datum_von).toDateString() === new Date(v.datum_bis).toDateString();
 
@@ -111,8 +110,8 @@ function VeranstaltungCard({ v, onRefetch }) {
             <span className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
               {v.titel}
             </span>
-            <span className={`shrink-0 px-2 py-0.5 text-[10px] font-medium rounded ${STATUS_CLASS[v.status] || 'bg-gray-500/20 text-gray-400'}`}>
-              {STATUS_LABELS[v.status] || v.status}
+            <span className={`shrink-0 px-2 py-0.5 text-[10px] font-medium rounded ${STATUS_CLASS[eff] || 'bg-gray-500/20 text-gray-400'}`}>
+              {STATUS_LABELS[eff] || eff}
             </span>
             {v.ist_zugewiesen && (
               <span className="shrink-0 px-2 py-0.5 text-[10px] font-medium rounded bg-blue-900/30 text-blue-400">
@@ -215,8 +214,9 @@ export default function VeranstaltungenPage() {
   const fetchList = useCallback(async () => {
     setLoading(true);
     try {
+      // status wird clientseitig gefiltert (effektiv_status enthält
+      // laufend/abgeschlossen, die der Server nicht persistiert).
       const params = new URLSearchParams();
-      if (filterStatus) params.append('status', filterStatus);
       if (nurMeine) params.append('nur_meine', 'true');
       if (suche.trim()) params.append('suche', suche.trim());
       const res = await apiClient.get(`/veranstaltung?${params}`);
@@ -227,7 +227,7 @@ export default function VeranstaltungenPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, nurMeine, suche]);
+  }, [nurMeine, suche]);
 
   useEffect(() => { fetchList(); }, [fetchList]);
 
@@ -263,7 +263,10 @@ export default function VeranstaltungenPage() {
   const exportCsv = async () => {
     try {
       const params = new URLSearchParams();
-      if (filterStatus) params.append('status', filterStatus);
+      // Server kennt nur geplant/abgesagt — andere Filter bleiben clientseitig.
+      if (filterStatus === 'geplant' || filterStatus === 'abgesagt') {
+        params.append('status', filterStatus);
+      }
       if (nurMeine) params.append('nur_meine', 'true');
       const res = await apiClient.get(`/veranstaltung/export/csv?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([res.data]));
@@ -277,9 +280,10 @@ export default function VeranstaltungenPage() {
     }
   };
 
-  // Kategorisierung
+  // Kategorisierung — verwendet effektiv_status (vom Backend abgeleitet)
   const filtered = list.filter((v) => {
-    if (filterStatus && v.status !== filterStatus) return false;
+    const eff = v.effektiv_status || v.status;
+    if (filterStatus && eff !== filterStatus) return false;
     if (nurMeine && !v.ist_zugewiesen) return false;
     if (suche.trim()) {
       const q = suche.toLowerCase();
@@ -288,8 +292,8 @@ export default function VeranstaltungenPage() {
     return true;
   });
 
-  const aktive = filtered.filter((v) => ACTIVE_STATUS.includes(v.status));
-  const abgeschlossene = filtered.filter((v) => DONE_STATUS.includes(v.status));
+  const aktive = filtered.filter((v) => ACTIVE_STATUS.includes(v.effektiv_status || v.status));
+  const abgeschlossene = filtered.filter((v) => DONE_STATUS.includes(v.effektiv_status || v.status));
 
   return (
     <div className="space-y-6">
