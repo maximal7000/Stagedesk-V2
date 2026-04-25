@@ -2,12 +2,14 @@
 Users API - Permissions, Settings, Sessions
 Rollen kommen aus Keycloak JWT, lokale Permissions für feinere Steuerung
 """
+import os
 from typing import List
 from django.utils import timezone
 from ninja import Router
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.db import transaction
+import requests
 
 from core.auth import keycloak_auth
 from .models import Permission, PermissionGroup, UserProfile, UserSession, GlobalSettings
@@ -255,12 +257,54 @@ def delete_permission(request, perm_id: int):
 
 # ========== Users (Admin) ==========
 
+def _sync_names_from_keycloak(request) -> None:
+    """Best-effort: Vor-/Nachnamen aller Profile aus Keycloak Admin API ziehen.
+
+    Why: User, die sich seit Einführung von first_name/last_name nicht erneut
+    eingeloggt haben, haben leere Namensfelder. Hier nutzen wir das Token des
+    aufrufenden Admins, um über die Keycloak Admin API alle User-Namen zu
+    holen und die Profile zu aktualisieren.
+    """
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return
+    token = auth_header[len('Bearer '):]
+
+    server = os.getenv('KEYCLOAK_SERVER_URL', '').rstrip('/')
+    realm = os.getenv('KEYCLOAK_REALM', '')
+    if not server or not realm:
+        return
+
+    try:
+        resp = requests.get(
+            f"{server}/admin/realms/{realm}/users",
+            headers={'Authorization': f'Bearer {token}'},
+            params={'max': 1000, 'briefRepresentation': 'true'},
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            return
+        for kc_user in resp.json():
+            kid = kc_user.get('id')
+            if not kid:
+                continue
+            first = kc_user.get('firstName', '') or ''
+            last = kc_user.get('lastName', '') or ''
+            UserProfile.objects.filter(keycloak_id=kid).update(
+                first_name=first, last_name=last
+            )
+    except Exception:
+        return  # best-effort, niemals den Request blockieren
+
+
 @users_router.get("/users", response=List[UserListSchema], auth=keycloak_auth)
 def list_users(request):
     """Alle User auflisten (Admin - aus Keycloak-Rolle)"""
     if not is_admin(request):
         return {"error": "Keine Berechtigung"}, 403
-    
+
+    _sync_names_from_keycloak(request)
+
     users = UserProfile.objects.prefetch_related('permissions', 'bereiche', 'permission_groups').all()
     
     # Hinweis: Wir können die Keycloak-Rollen nicht für alle User abrufen
