@@ -380,7 +380,8 @@ def scoreboard(request):
     admin_kids = set(UserProfile.objects.filter(is_admin_cached=True)
                      .values_list('keycloak_id', flat=True))
 
-    per_user = defaultdict(lambda: {"punkte": 0, "aktiv": 0, "username": ""})
+    per_user = defaultdict(lambda: {"punkte": 0, "aktiv": 0, "username": "",
+                                    "first_name": "", "last_name": ""})
     qs = UserKompetenz.objects.filter(
         hat_kompetenz=True, kompetenz__aktiv=True,
     ).exclude(user_keycloak_id__in=admin_kids).select_related('kompetenz')
@@ -393,10 +394,11 @@ def scoreboard(request):
         if uk.user_username:
             per_user[uk.user_keycloak_id]["username"] = uk.user_username
 
-    # Usernamen ggf. aus Profile nachladen
-    missing_kids = [kid for kid, d in per_user.items() if not d["username"]]
-    if missing_kids:
-        for p in UserProfile.objects.filter(keycloak_id__in=missing_kids):
+    # Vor-/Nachname + ggf. Username aus Profile nachladen
+    for p in UserProfile.objects.filter(keycloak_id__in=list(per_user.keys())):
+        per_user[p.keycloak_id]["first_name"] = p.first_name
+        per_user[p.keycloak_id]["last_name"] = p.last_name
+        if not per_user[p.keycloak_id]["username"]:
             per_user[p.keycloak_id]["username"] = p.username
 
     sortiert = sorted(per_user.items(), key=lambda x: -x[1]["punkte"])
@@ -404,6 +406,8 @@ def scoreboard(request):
         {
             "user_keycloak_id": kid,
             "user_username": d["username"] or kid[:8],
+            "user_first_name": d["first_name"],
+            "user_last_name": d["last_name"],
             "punkte": d["punkte"],
             "anzahl_aktiv": d["aktiv"],
             "anzahl_gesamt": gesamt_kompetenzen,
@@ -593,21 +597,27 @@ def pdf_me(request):
     require_permission(request, 'kompetenzen.view')
     kid = get_user_id(request)
     username = get_username(request)
-    return _generate_pdf(kid, username)
+    first_name = request.auth.get('given_name', '')
+    last_name = request.auth.get('family_name', '')
+    display = f"{first_name} {last_name}".strip() or username
+    return _generate_pdf(kid, display, username)
 
 
 @kompetenzen_router.get("/pdf/user/{user_kid}", auth=keycloak_auth)
 def pdf_user(request, user_kid: str):
     require_permission(request, 'kompetenzen.view_all')
     username = ""
+    display = ""
     try:
-        username = UserProfile.objects.get(keycloak_id=user_kid).username
+        p = UserProfile.objects.get(keycloak_id=user_kid)
+        username = p.username
+        display = f"{p.first_name} {p.last_name}".strip() or p.username
     except UserProfile.DoesNotExist:
         pass
-    return _generate_pdf(user_kid, username)
+    return _generate_pdf(user_kid, display, username)
 
 
-def _generate_pdf(kid: str, username: str):
+def _generate_pdf(kid: str, display_name: str, username: str):
     from django.http import HttpResponse
     try:
         from reportlab.lib.pagesizes import A4
@@ -621,7 +631,7 @@ def _generate_pdf(kid: str, username: str):
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
-    story = [Paragraph(f"Kompetenz-Pass: {username or kid}", styles['Title']),
+    story = [Paragraph(f"Kompetenz-Pass: {display_name or username or kid}", styles['Title']),
              Spacer(1, 12),
              Paragraph(f"Stand: {timezone.now():%d.%m.%Y %H:%M}", styles['Normal']),
              Spacer(1, 18)]
