@@ -127,6 +127,8 @@ class HistorieSchema(Schema):
 class ScoreboardEntrySchema(Schema):
     user_keycloak_id: str
     user_username: str
+    user_first_name: str = ""
+    user_last_name: str = ""
     punkte: int
     anzahl_aktiv: int
     anzahl_gesamt: int
