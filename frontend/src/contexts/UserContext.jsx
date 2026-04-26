@@ -11,7 +11,7 @@ const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
   const auth = useAuth();
-  const { setTheme, setForcedTheme, setCanChangeTheme } = useTheme();
+  const { setTheme, setForcedTheme, setCanChangeTheme, setLightModeAllowed } = useTheme();
   
   const [profile, setProfile] = useState(null);
   const [permissions, setPermissions] = useState([]);
@@ -55,7 +55,13 @@ export function UserProvider({ children }) {
       setPermissions(data.permissions || []);
       setKeycloakRoles(data.keycloak_roles || []);
       setIsAdmin(data.is_admin);  // Kommt aus Keycloak
-      
+
+      // Theme-Permission an ThemeContext melden — sonst kann der User über
+      // die System-Einstellung Light Mode bekommen, obwohl er die Permission nicht hat.
+      const lightAllowed = !!data.is_admin
+        || (data.permissions || []).includes('theme.light_mode');
+      setLightModeAllowed(lightAllowed);
+
       // Theme aus Profil übernehmen
       if (data.forced_theme) {
         setForcedTheme(data.forced_theme);
@@ -65,14 +71,14 @@ export function UserProvider({ children }) {
         setCanChangeTheme(!data.theme_locked);
         setTheme(data.theme || 'dark');
       }
-      
+
       setInitialized(true);
     } catch (err) {
       console.error('Fehler beim Laden des Profils:', err);
     } finally {
       setLoading(false);
     }
-  }, [auth.isAuthenticated, setTheme, setForcedTheme, setCanChangeTheme]);
+  }, [auth.isAuthenticated, setTheme, setForcedTheme, setCanChangeTheme, setLightModeAllowed]);
 
   // Sessions laden
   const fetchSessions = useCallback(async () => {

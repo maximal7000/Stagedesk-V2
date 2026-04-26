@@ -9,51 +9,39 @@ export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState('dark');
   const [forcedTheme, setForcedTheme] = useState(null);
   const [canChangTheme, setCanChangeTheme] = useState(true);
+  // Wenn false, fällt 'system' & 'light' immer auf 'dark' zurück — verhindert,
+  // dass User ohne theme.light_mode-Permission über das System-Setting Light Mode bekommen.
+  const [lightModeAllowed, setLightModeAllowed] = useState(true);
 
-  // Effektives Theme (erzwungen oder selbst gewählt)
-  const effectiveTheme = forcedTheme || theme;
+  // Tatsächliches Theme nach Permission-Check ableiten
+  const requested = forcedTheme || theme;
+  const systemPrefersDark = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  let resolved = requested;
+  if (requested === 'system') resolved = systemPrefersDark ? 'dark' : 'light';
+  if (resolved === 'light' && !lightModeAllowed) resolved = 'dark';
+  const effectiveTheme = resolved;
 
   // Theme auf DOM anwenden
   useEffect(() => {
     const root = document.documentElement;
-    
     if (effectiveTheme === 'dark') {
       root.classList.add('dark');
       root.classList.remove('light');
-    } else if (effectiveTheme === 'light') {
+    } else {
       root.classList.remove('dark');
       root.classList.add('light');
-    } else if (effectiveTheme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        root.classList.add('dark');
-        root.classList.remove('light');
-      } else {
-        root.classList.remove('dark');
-        root.classList.add('light');
-      }
     }
   }, [effectiveTheme]);
 
-  // System Theme Listener
+  // System Theme Listener — re-render bei Wechsel, damit oben effectiveTheme neu gerechnet wird
   useEffect(() => {
-    if (effectiveTheme !== 'system') return;
-
+    if (requested !== 'system') return;
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = (e) => {
-      const root = document.documentElement;
-      if (e.matches) {
-        root.classList.add('dark');
-        root.classList.remove('light');
-      } else {
-        root.classList.remove('dark');
-        root.classList.add('light');
-      }
-    };
-
+    const handleChange = () => { setTheme((t) => (t === 'system' ? 'system' : t)); };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, [effectiveTheme]);
+  }, [requested]);
 
   const value = {
     theme,
@@ -63,7 +51,9 @@ export function ThemeProvider({ children }) {
     effectiveTheme,
     canChangTheme,
     setCanChangeTheme,
-    isDark: effectiveTheme === 'dark' || (effectiveTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches),
+    lightModeAllowed,
+    setLightModeAllowed,
+    isDark: effectiveTheme === 'dark',
   };
 
   return (
