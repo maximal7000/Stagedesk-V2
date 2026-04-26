@@ -5,11 +5,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Loader2, Calendar, MapPin, User, FileDown,
-  Ticket, Filter, ChevronRight, Clock, Users, X, CalendarDays, Hand,
+  Ticket, Filter, ChevronRight, Clock, Users, X, CalendarDays, Hand, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import VeranstaltungTemplateModal from '../../components/VeranstaltungTemplateModal';
 
 function MeldenButton({ v, onRefetch }) {
   const [loading, setLoading] = useState(false);
@@ -207,6 +208,7 @@ export default function VeranstaltungenPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [nurMeine, setNurMeine] = useState(false);
   const [showZammad, setShowZammad] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [zammadTickets, setZammadTickets] = useState([]);
   const [zammadLoading, setZammadLoading] = useState(false);
   const [creatingFromTicket, setCreatingFromTicket] = useState(null);
@@ -312,6 +314,16 @@ export default function VeranstaltungenPage() {
               <Plus className="w-4 h-4" />
               Neue Veranstaltung
             </Link>
+          )}
+          {hasPermission('veranstaltung.create') && (
+            <button
+              type="button"
+              onClick={() => setShowTemplateModal(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Aus Vorlage
+            </button>
           )}
           {isAdmin && (
             <>
@@ -442,6 +454,8 @@ export default function VeranstaltungenPage() {
           </div>
         </div>
       )}
+
+      <VeranstaltungTemplateModal open={showTemplateModal} onClose={() => setShowTemplateModal(false)} />
     </div>
   );
 }

@@ -269,3 +269,37 @@ class VeranstaltungErinnerung(models.Model):
 
     def __str__(self):
         return f"Erinnerung {self.zeit_vorher} {self.get_einheit_display()} vor {self.veranstaltung.titel}"
+
+
+class VeranstaltungTemplate(models.Model):
+    """Wiederverwendbare Veranstaltungs-Vorlage. Beim Anlegen einer neuen
+    Veranstaltung kann eine Vorlage gewählt werden — Felder, Tätigkeiten und
+    Erinnerungen werden vorbefüllt."""
+    name = models.CharField(max_length=200, unique=True)
+    beschreibung = models.TextField(blank=True)
+    # Vorlagen-Werte für die neue Veranstaltung
+    titel_vorlage = models.CharField(max_length=300, blank=True,
+        help_text="Titel-Vorschlag (wird beim Anlegen vorausgefüllt)")
+    beschreibung_vorlage = models.TextField(blank=True)
+    ort_vorlage = models.CharField(max_length=300, blank=True)
+    dauer_minuten = models.IntegerField(default=120,
+        help_text="Default-Dauer in Minuten (Start = jetzt, Ende = jetzt + dauer)")
+    # Tätigkeitsrollen, die als Zuweisungs-Slots vorgeschlagen werden
+    taetigkeiten = models.ManyToManyField(TaetigkeitsRolle, blank=True,
+        related_name='templates')
+    # Erinnerungs-Konfiguration als JSON ([{zeit_vorher, einheit}, ...])
+    erinnerungen = models.JSONField(default=list, blank=True,
+        help_text="Liste von {zeit_vorher, einheit}")
+    # Erforderliche Kompetenzen für die Veranstaltung
+    erforderliche_kompetenzen = models.ManyToManyField(
+        'kompetenzen.Kompetenz', blank=True, related_name='templates_erforderlich')
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    aktualisiert_am = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Veranstaltungs-Template'
+        verbose_name_plural = 'Veranstaltungs-Templates'
+
+    def __str__(self):
+        return self.name

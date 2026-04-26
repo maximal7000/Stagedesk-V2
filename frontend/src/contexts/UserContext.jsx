@@ -21,6 +21,25 @@ export function UserProvider({ children }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
+  // Impersonate (User-Sicht für Admins): wenn gesetzt, verwendet die UI die
+  // Permissions/Admin-Status des simulierten Users. API-Calls bleiben mit
+  // Admin-Token — also nur Frontend-seitige Filter (Routes, Sidebar, Buttons).
+  const [impersonate, setImpersonateState] = useState(() => {
+    try {
+      const raw = localStorage.getItem('stagedesk_impersonate');
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  });
+
+  const setImpersonate = useCallback((data) => {
+    if (data) {
+      localStorage.setItem('stagedesk_impersonate', JSON.stringify(data));
+    } else {
+      localStorage.removeItem('stagedesk_impersonate');
+    }
+    setImpersonateState(data);
+  }, []);
+
   // Profil laden
   const fetchProfile = useCallback(async () => {
     if (!auth.isAuthenticated) {
@@ -102,11 +121,16 @@ export function UserProvider({ children }) {
     }
   }, [setTheme]);
 
-  // Permission prüfen
+  // Effektive Werte: bei Impersonate die Werte des simulierten Users verwenden
+  const effectiveIsAdmin = impersonate ? !!impersonate.is_admin : isAdmin;
+  const effectivePermissions = impersonate ? (impersonate.permissions || []) : permissions;
+
+  // Permission prüfen — verwendet effektive Werte, sodass Admin im Impersonate
+  // -Modus exakt das sieht, was der simulierte User sehen würde.
   const hasPermission = useCallback((permissionCode) => {
-    if (isAdmin) return true;
-    return permissions.includes(permissionCode);
-  }, [isAdmin, permissions]);
+    if (effectiveIsAdmin) return true;
+    return effectivePermissions.includes(permissionCode);
+  }, [effectiveIsAdmin, effectivePermissions]);
 
   // System initialisieren (macht ersten User zum Admin)
   const initializeSystem = useCallback(async () => {
@@ -143,11 +167,14 @@ export function UserProvider({ children }) {
 
   const value = {
     profile,
-    permissions,
+    permissions: effectivePermissions,
     keycloakRoles,
     sessions,
     loading,
-    isAdmin,
+    isAdmin: effectiveIsAdmin,
+    realIsAdmin: isAdmin,  // echtes Admin-Recht (für Impersonate-Banner)
+    impersonate,
+    setImpersonate,
     initialized,
     hasPermission,
     fetchProfile,

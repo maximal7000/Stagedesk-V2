@@ -1,7 +1,7 @@
 /**
  * Dashboard Layout mit Sidebar-Navigation
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from 'react-oidc-context';
 import {
   Home,
@@ -22,18 +22,34 @@ import {
   Monitor,
   ClipboardList,
   Award,
+  Search,
+  ScrollText,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
+import GlobalSearchModal from './GlobalSearchModal';
 
 export default function DashboardLayout({ children }) {
   const auth = useAuth();
   const location = useLocation();
   const { effectiveTheme, isDark } = useTheme();
-  const { isAdmin, hasPermission } = useUser();
+  const { isAdmin, hasPermission, impersonate, setImpersonate } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // Ctrl+K / Cmd+K öffnet die globale Suche
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const user = auth.user?.profile;
 
@@ -56,6 +72,7 @@ export default function DashboardLayout({ children }) {
   // Admin-Navigation
   const adminNavigation = [
     ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Shield }] : []),
+    ...(isAdmin ? [{ name: 'Audit-Log', href: '/admin/audit', icon: ScrollText }] : []),
     ...(isAdmin || hasPermission('monitor.view') ? [{ name: 'Monitor', href: '/monitor-admin', icon: Monitor }] : []),
   ];
 
@@ -98,6 +115,18 @@ export default function DashboardLayout({ children }) {
             className="lg:hidden text-gray-400 hover:text-white"
           >
             <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Globale Suche */}
+        <div className="px-4 pt-4">
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-sm text-gray-400"
+          >
+            <Search className="w-4 h-4" />
+            <span className="flex-1 text-left">Suchen…</span>
+            <kbd className="text-[10px] px-1.5 py-0.5 bg-gray-900 border border-gray-700 rounded">Ctrl K</kbd>
           </button>
         </div>
 
@@ -261,6 +290,21 @@ export default function DashboardLayout({ children }) {
 
       {/* Main Content */}
       <div className="lg:pl-64">
+        {/* Impersonate-Banner */}
+        {impersonate && (
+          <div className="bg-amber-600 text-black text-sm font-medium flex items-center justify-between px-4 lg:px-8 py-2">
+            <span>
+              👁️ Sicht: <strong>
+                {[impersonate.first_name, impersonate.last_name].filter(Boolean).join(' ')
+                  || impersonate.username}
+              </strong> (UI-Filter — API-Antworten kommen weiter aus deinem Admin-Account)
+            </span>
+            <button onClick={() => { setImpersonate(null); window.location.href = '/'; }}
+              className="px-3 py-1 bg-black/20 hover:bg-black/40 rounded text-white">
+              Beenden
+            </button>
+          </div>
+        )}
         {/* Top Bar */}
         <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-4 lg:px-8">
           <button
@@ -289,6 +333,8 @@ export default function DashboardLayout({ children }) {
           {children}
         </main>
       </div>
+
+      <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }

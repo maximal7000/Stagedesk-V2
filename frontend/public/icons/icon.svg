@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0b1220"/>
+  <g fill="#3b82f6">
+    <rect x="80" y="220" width="352" height="40" rx="8"/>
+    <rect x="80" y="280" width="352" height="40" rx="8" fill="#1e3a8a"/>
+  </g>
+  <g fill="#fff">
+    <text x="256" y="180" font-family="Arial, sans-serif" font-size="84" font-weight="bold" text-anchor="middle">SD</text>
+    <text x="256" y="400" font-family="Arial, sans-serif" font-size="40" text-anchor="middle">Stagedesk</text>
+  </g>
+</svg>

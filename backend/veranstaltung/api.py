@@ -13,6 +13,7 @@ import csv
 import io
 
 from core.auth import keycloak_auth
+from core.audit import log as audit_log
 from users.models import UserProfile
 from users.api import get_or_create_profile, is_admin
 from .models import (
@@ -101,7 +102,9 @@ def _sync_kalender_events(v):
             beschreibung_parts.append('Besetzung:\n' + '\n'.join(f'• {p}' for p in personen_lines))
         beschreibung = '\n\n'.join(beschreibung_parts)
 
-        kalender_status = 'bestaetigt' if v.status in ('bestaetigt', 'laufend') else 'geplant'
+        # Status auf vereinfachte Kalender-Choices mappen (nur geplant/abgesagt
+        # werden gespeichert, alles andere wird vom Effektiv-Status abgeleitet).
+        kalender_status = 'abgesagt' if v.status == 'abgesagt' else 'geplant'
 
         # Alte auto-erstellte Events löschen
         KalenderEvent.objects.filter(veranstaltung_id=v.id).delete()
@@ -312,6 +315,7 @@ def create_veranstaltung(request, payload: VeranstaltungCreateSchema):
     else:
         data['ausleihliste'] = None
     v = Veranstaltung.objects.create(**data)
+    audit_log(request, 'erstellt', 'veranstaltung', v.id, v.titel)
     return {"id": v.id, "titel": v.titel}
 
 
@@ -345,6 +349,7 @@ def update_veranstaltung(request, id: int, payload: VeranstaltungUpdateSchema):
     # Kalender-Events synchronisieren wenn vorhanden (Name/Status/Ort können sich geändert haben)
     _sync_kalender_events(v)
     _set_ist_zugewiesen(v, get_user_id(request))
+    audit_log(request, 'aktualisiert', 'veranstaltung', v.id, v.titel)
     return v
 
 
@@ -358,7 +363,10 @@ def delete_veranstaltung(request, id: int):
         KalenderEvent.objects.filter(veranstaltung_id=v.id).delete()
     except Exception:
         pass
+    titel = v.titel
+    vid = v.id
     v.delete()
+    audit_log(request, 'geloescht', 'veranstaltung', vid, titel)
     return {"status": "deleted"}
 
 
@@ -639,15 +647,17 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
         }
     )
 
-    # Discord-Channel-Zugriff automatisch gewähren
-    if v.discord_channel_id:
-        from . import discord_client
-        try:
-            profile = UserProfile.objects.get(keycloak_id=data['user_keycloak_id'])
-            if profile.discord_id:
+    # Discord-Channel-Zugriff + DM-Benachrichtigung
+    from . import discord_client
+    try:
+        profile = UserProfile.objects.get(keycloak_id=data['user_keycloak_id'])
+        if profile.discord_id:
+            if v.discord_channel_id:
                 discord_client.grant_channel_access(v.discord_channel_id, profile.discord_id)
-        except UserProfile.DoesNotExist:
-            pass
+            # Best-effort DM, blockiert nie den Request
+            discord_client.notify_zuweisung(v, profile.discord_id)
+    except UserProfile.DoesNotExist:
+        pass
 
     v.refresh_from_db()
     # Kalender-Events synchronisieren (Besetzung in Beschreibung aktualisieren)
@@ -1095,3 +1105,96 @@ def export_veranstaltungen_csv(request, filters: VeranstaltungFilterSchema = Que
     response = HttpResponse(buf.getvalue(), content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="veranstaltungen.csv"'
     return response
+
+
+# ─── Veranstaltungs-Templates ────────────────────────────────────
+
+from .models import VeranstaltungTemplate
+from .schemas import (
+    TemplateSchema, TemplateCreateSchema, TemplateUpdateSchema,
+    CreateFromTemplateSchema,
+)
+
+
+@veranstaltung_router.get("/templates", response=List[TemplateSchema], auth=keycloak_auth)
+def list_templates(request):
+    require_permission(request, 'veranstaltung.view')
+    return VeranstaltungTemplate.objects.prefetch_related('taetigkeiten').all()
+
+
+@veranstaltung_router.post("/templates", response=TemplateSchema, auth=keycloak_auth)
+def create_template(request, payload: TemplateCreateSchema):
+    require_permission(request, 'veranstaltung.create')
+    data = payload.dict()
+    taetigkeit_ids = data.pop('taetigkeit_ids', [])
+    komp_ids = data.pop('erforderliche_kompetenzen_ids', [])
+    erinnerungen = [e.dict() if hasattr(e, 'dict') else e for e in data.pop('erinnerungen', [])]
+    tpl = VeranstaltungTemplate.objects.create(erinnerungen=erinnerungen, **data)
+    if taetigkeit_ids:
+        tpl.taetigkeiten.set(TaetigkeitsRolle.objects.filter(id__in=taetigkeit_ids))
+    if komp_ids:
+        from kompetenzen.models import Kompetenz
+        tpl.erforderliche_kompetenzen.set(Kompetenz.objects.filter(id__in=komp_ids))
+    return tpl
+
+
+@veranstaltung_router.put("/templates/{tpl_id}", response=TemplateSchema, auth=keycloak_auth)
+def update_template(request, tpl_id: int, payload: TemplateUpdateSchema):
+    require_permission(request, 'veranstaltung.create')
+    tpl = get_object_or_404(VeranstaltungTemplate, id=tpl_id)
+    data = payload.dict(exclude_unset=True)
+    taetigkeit_ids = data.pop('taetigkeit_ids', None)
+    komp_ids = data.pop('erforderliche_kompetenzen_ids', None)
+    if 'erinnerungen' in data and data['erinnerungen'] is not None:
+        data['erinnerungen'] = [e.dict() if hasattr(e, 'dict') else e for e in data['erinnerungen']]
+    for k, v in data.items():
+        setattr(tpl, k, v)
+    tpl.save()
+    if taetigkeit_ids is not None:
+        tpl.taetigkeiten.set(TaetigkeitsRolle.objects.filter(id__in=taetigkeit_ids))
+    if komp_ids is not None:
+        from kompetenzen.models import Kompetenz
+        tpl.erforderliche_kompetenzen.set(Kompetenz.objects.filter(id__in=komp_ids))
+    return tpl
+
+
+@veranstaltung_router.delete("/templates/{tpl_id}", auth=keycloak_auth)
+def delete_template(request, tpl_id: int):
+    require_permission(request, 'veranstaltung.create')
+    get_object_or_404(VeranstaltungTemplate, id=tpl_id).delete()
+    return {"status": "deleted"}
+
+
+@veranstaltung_router.post("/templates/{tpl_id}/anlegen",
+                           response=CreateVeranstaltungResponseSchema, auth=keycloak_auth)
+def create_from_template(request, tpl_id: int, payload: CreateFromTemplateSchema):
+    """Erzeugt eine neue Veranstaltung basierend auf einer Vorlage."""
+    require_permission(request, 'veranstaltung.create')
+    from datetime import timedelta
+    tpl = get_object_or_404(VeranstaltungTemplate, id=tpl_id)
+    profile = get_or_create_profile(request)
+    datum_bis = payload.datum_von + timedelta(minutes=tpl.dauer_minuten or 120)
+    v = Veranstaltung.objects.create(
+        titel=tpl.titel_vorlage or tpl.name,
+        beschreibung=tpl.beschreibung_vorlage,
+        datum_von=payload.datum_von,
+        datum_bis=datum_bis,
+        ort=tpl.ort_vorlage,
+        status='geplant',
+        erstellt_von=profile.keycloak_id,
+    )
+    # Erinnerungen kopieren
+    for er in (tpl.erinnerungen or []):
+        try:
+            VeranstaltungErinnerung.objects.create(
+                veranstaltung=v,
+                zeit_vorher=int(er.get('zeit_vorher', 1)),
+                einheit=er.get('einheit', 'tage'),
+            )
+        except Exception:
+            pass
+    # Erforderliche Kompetenzen kopieren
+    komp_ids = list(tpl.erforderliche_kompetenzen.values_list('id', flat=True))
+    if komp_ids:
+        v.erforderliche_kompetenzen.set(komp_ids)
+    return v

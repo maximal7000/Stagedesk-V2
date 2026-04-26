@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 
 from core.auth import keycloak_auth
+from core.audit import log as audit_log
 from users.api import is_admin
 from users.models import UserProfile
 from .models import Event, EventKategorie, Ressource, EventRessource, EventErinnerung
@@ -263,7 +264,8 @@ def create_event(request, payload: EventCreateSchema):
     # Wiederholungen erstellen wenn gewünscht
     if event.wiederholung != 'keine' and event.wiederholung_ende:
         create_wiederholungen(event)
-    
+
+    audit_log(request, 'erstellt', 'kalender_event', event.id, event.titel)
     return get_event(request, event.id)
 
 
@@ -374,8 +376,11 @@ def delete_event(request, event_id: int, mit_wiederholungen: bool = False):
     if mit_wiederholungen:
         # Alle Wiederholungen löschen
         Event.objects.filter(parent_event=event).delete()
-    
+
+    titel = event.titel
+    eid = event.id
     event.delete()
+    audit_log(request, 'geloescht', 'kalender_event', eid, titel)
     return {"status": "deleted"}
 
 

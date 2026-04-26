@@ -35,6 +35,7 @@ import KategorienPage from './pages/kalender/KategorienPage';
 // Admin
 import AdminPage from './pages/admin/AdminPage';
 import MonitorAdminPage from './pages/admin/MonitorAdminPage';
+import AuditLogPage from './pages/admin/AuditLogPage';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
 // Kompetenzen
@@ -94,6 +95,7 @@ function AppContent() {
                   <Route path="/veranstaltung/:id" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungDetailPage /></PermissionRoute>} />
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
+                  <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
                   <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminPage /></PermissionRoute>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

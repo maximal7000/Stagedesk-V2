@@ -178,6 +178,31 @@ export default function AnwesenheitPage() {
     }
   }, [listId, fetchDetail, fetchListen]);
 
+  // Live-Updates über WebSocket: bei jedem Update vom Server lädt der Client
+  // die ganze Liste neu (idempotent, einfach). Reconnect mit Backoff.
+  useEffect(() => {
+    if (!listId) return;
+    let ws = null;
+    let closed = false;
+    let backoff = 1000;
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const url = `${proto}://${window.location.host}/ws/anwesenheit/${listId}/`;
+    const connect = () => {
+      if (closed) return;
+      ws = new WebSocket(url);
+      ws.onmessage = () => { fetchDetail(); };
+      ws.onopen = () => { backoff = 1000; };
+      ws.onclose = () => {
+        if (closed) return;
+        setTimeout(connect, backoff);
+        backoff = Math.min(backoff * 2, 30000);
+      };
+      ws.onerror = () => { try { ws.close(); } catch {} };
+    };
+    connect();
+    return () => { closed = true; try { ws && ws.close(); } catch {} };
+  }, [listId, fetchDetail]);
+
   // ═══ CRUD ═══
 
   const handleCreate = async () => {

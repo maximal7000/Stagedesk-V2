@@ -177,3 +177,66 @@ def revoke_channel_access(channel_id, discord_user_id):
     except Exception as e:
         logger.error(f'Discord Channel-Zugriff entfernen fehlgeschlagen: {e}')
         return False
+
+
+def send_dm(discord_user_id, message):
+    """Schickt eine Direktnachricht an einen Discord-User.
+    Funktioniert nur, wenn der Bot mit dem User Server-Mitgliedschaft teilt.
+    Returns True bei Erfolg, False sonst (best-effort, kein Re-Raise)."""
+    if not is_configured() or not discord_user_id:
+        return False
+    try:
+        # 1) DM-Channel öffnen
+        r = requests.post(
+            f'{DISCORD_API}/users/@me/channels',
+            json={'recipient_id': str(discord_user_id)},
+            headers=_headers(),
+            timeout=8,
+        )
+        if r.status_code not in (200, 201):
+            logger.warning('Discord open-DM fehlgeschlagen %s', r.status_code)
+            return False
+        channel_id = r.json().get('id')
+        if not channel_id:
+            return False
+        # 2) Nachricht senden
+        r2 = requests.post(
+            f'{DISCORD_API}/channels/{channel_id}/messages',
+            json={'content': message[:1900]},
+            headers=_headers(),
+            timeout=8,
+        )
+        return r2.status_code in (200, 201)
+    except Exception as e:
+        logger.warning('Discord DM error: %s', e)
+        return False
+
+
+def notify_zuweisung(veranstaltung, discord_user_id):
+    """Schickt einem Helfer eine DM, dass er einer Veranstaltung zugewiesen wurde."""
+    if not discord_user_id:
+        return False
+    when = veranstaltung.datum_von.strftime('%d.%m.%Y %H:%M') if veranstaltung.datum_von else 'noch offen'
+    location = f'\n📍 {veranstaltung.ort}' if veranstaltung.ort else ''
+    msg = (f'🎬 Du wurdest **{veranstaltung.titel}** zugewiesen.\n'
+           f'🗓 {when}{location}')
+    return send_dm(discord_user_id, msg)
+
+
+def notify_event_reminder(veranstaltung, hours_until: int):
+    """DM an alle zugewiesenen Helfer mit Discord-ID."""
+    if not is_configured():
+        return 0
+    sent = 0
+    when = veranstaltung.datum_von.strftime('%d.%m.%Y %H:%M') if veranstaltung.datum_von else ''
+    location = f' @ {veranstaltung.ort}' if veranstaltung.ort else ''
+    msg = f'⏰ Erinnerung: **{veranstaltung.titel}** in {hours_until}h ({when}{location})'
+    try:
+        from users.models import UserProfile
+        zuw_ids = list(veranstaltung.zuweisungen.values_list('user_keycloak_id', flat=True))
+        for p in UserProfile.objects.filter(keycloak_id__in=zuw_ids).exclude(discord_id=''):
+            if send_dm(p.discord_id, msg):
+                sent += 1
+    except Exception as e:
+        logger.warning('notify_event_reminder error: %s', e)
+    return sent

@@ -29,3 +29,12 @@ admin.site.register(VeranstaltungChecklisteItem)
 admin.site.register(VeranstaltungNotiz)
 admin.site.register(VeranstaltungAnhang)
 admin.site.register(VeranstaltungErinnerung)
+
+
+from .models import VeranstaltungTemplate
+
+@admin.register(VeranstaltungTemplate)
+class VeranstaltungTemplateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'titel_vorlage', 'dauer_minuten', 'erstellt_am')
+    search_fields = ('name', 'titel_vorlage')
+    filter_horizontal = ('taetigkeiten', 'erforderliche_kompetenzen')

@@ -382,3 +382,66 @@ class ZammadTicketSchema(Schema):
     customer_id: Optional[int] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
+
+# ─── Templates ─────────────────────────────────────────────────────
+
+class TemplateErinnerungEntry(Schema):
+    zeit_vorher: int = 1
+    einheit: str = 'tage'
+
+
+class TemplateSchema(Schema):
+    id: int
+    name: str
+    beschreibung: str
+    titel_vorlage: str
+    beschreibung_vorlage: str
+    ort_vorlage: str
+    dauer_minuten: int
+    taetigkeit_ids: List[int] = []
+    taetigkeit_namen: List[str] = []
+    erinnerungen: List[TemplateErinnerungEntry] = []
+    erforderliche_kompetenzen_ids: List[int] = []
+    erstellt_am: datetime
+
+    @staticmethod
+    def resolve_taetigkeit_ids(obj):
+        return list(obj.taetigkeiten.values_list('id', flat=True))
+
+    @staticmethod
+    def resolve_taetigkeit_namen(obj):
+        return list(obj.taetigkeiten.values_list('name', flat=True))
+
+    @staticmethod
+    def resolve_erforderliche_kompetenzen_ids(obj):
+        return list(obj.erforderliche_kompetenzen.values_list('id', flat=True))
+
+
+class TemplateCreateSchema(Schema):
+    name: str
+    beschreibung: str = ''
+    titel_vorlage: str = ''
+    beschreibung_vorlage: str = ''
+    ort_vorlage: str = ''
+    dauer_minuten: int = 120
+    taetigkeit_ids: List[int] = []
+    erinnerungen: List[TemplateErinnerungEntry] = []
+    erforderliche_kompetenzen_ids: List[int] = []
+
+
+class TemplateUpdateSchema(Schema):
+    name: Optional[str] = None
+    beschreibung: Optional[str] = None
+    titel_vorlage: Optional[str] = None
+    beschreibung_vorlage: Optional[str] = None
+    ort_vorlage: Optional[str] = None
+    dauer_minuten: Optional[int] = None
+    taetigkeit_ids: Optional[List[int]] = None
+    erinnerungen: Optional[List[TemplateErinnerungEntry]] = None
+    erforderliche_kompetenzen_ids: Optional[List[int]] = None
+
+
+class CreateFromTemplateSchema(Schema):
+    template_id: int
+    datum_von: datetime  # User wählt Start; Ende = Start + dauer_minuten

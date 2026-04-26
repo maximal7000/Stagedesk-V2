@@ -412,11 +412,28 @@ def get_user(request, user_id: int):
     """User Details abrufen (Admin)"""
     if not is_admin(request):
         return {"error": "Keine Berechtigung"}, 403
-    
+
     user = get_object_or_404(UserProfile, id=user_id)
     user._keycloak_roles = []  # Unbekannt ohne deren Token
     user._is_admin = False  # Unbekannt
     return user
+
+
+@users_router.get("/users/{user_id}/effective-permissions", auth=keycloak_auth)
+def get_user_effective_permissions(request, user_id: int):
+    """Effektive Permission-Codes (direkt + Gruppen) eines Users — für Admin-Impersonate.
+    Achtung: keine Keycloak-Admin-Rollen, nur lokale Permissions."""
+    if not is_admin(request):
+        return {"error": "Keine Berechtigung"}, 403
+    user = get_object_or_404(UserProfile, id=user_id)
+    return {
+        "keycloak_id": user.keycloak_id,
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "username": user.username,
+        "is_admin": user.is_admin_cached,
+        "permissions": user.get_all_permissions(),
+    }
 
 
 @users_router.put("/users/{user_id}", response=UserProfileSchema, auth=keycloak_auth)

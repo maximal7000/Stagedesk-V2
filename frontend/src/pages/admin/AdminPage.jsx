@@ -4,14 +4,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
-  Users, Key, Plus, Edit, Trash2,
+  Users, Key, Plus, Edit, Trash2, Eye,
   Save, X, Loader2, Sun, Moon, AlertCircle, Info, Shield, FolderOpen, Check,
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import apiClient from '../../lib/api';
 
 export default function AdminPage() {
-  const { isAdmin, keycloakRoles } = useUser();
+  const { isAdmin, keycloakRoles, setImpersonate } = useUser();
   const [activeTab, setActiveTab] = useState('users');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -316,16 +316,32 @@ export default function AdminPage() {
                           </div>
                         </div>
                       </div>
-                      <button onClick={() => setEditingUser({
-                        id: user.id,
-                        permission_codes: user.permissions || [],
-                        forced_theme: user.forced_theme, theme_locked: false,
-                        discord_id: user.discord_id || '',
-                        bereich_ids: (user.bereiche || []).map(b => b.id),
-                        group_ids: (user.permission_groups || []).map(g => g.id),
-                      })} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          title="Als dieser User ansehen (UI-Filter)"
+                          onClick={async () => {
+                            try {
+                              const res = await apiClient.get(`/users/users/${user.id}/effective-permissions`);
+                              setImpersonate(res.data);
+                              window.location.href = '/';
+                            } catch {
+                              toast.error('Konnte Berechtigungen nicht laden');
+                            }
+                          }}
+                          className="p-2 text-gray-400 hover:text-amber-400 hover:bg-gray-800 rounded-lg">
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => setEditingUser({
+                          id: user.id,
+                          permission_codes: user.permissions || [],
+                          forced_theme: user.forced_theme, theme_locked: false,
+                          discord_id: user.discord_id || '',
+                          bereich_ids: (user.bereiche || []).map(b => b.id),
+                          group_ids: (user.permission_groups || []).map(g => g.id),
+                        })} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>

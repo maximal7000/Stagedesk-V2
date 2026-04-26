@@ -11,8 +11,10 @@ from django.http import HttpResponse
 from ninja import Router
 
 from core.auth import keycloak_auth
+from core.audit import log as audit_log
 from users.api import is_admin
 from users.models import UserProfile
+from .consumers import broadcast_anwesenheit_update
 from .models import AnwesenheitsListe, Termin, Teilnehmer, TerminAnwesenheit
 from .schemas import (
     AnwesenheitsListeSchema, AnwesenheitsListeListSchema,
@@ -86,6 +88,7 @@ def create_liste(request, payload: ListeCreateSchema):
         erstellt_von_keycloak_id=get_user_id(request),
         erstellt_von_username=get_username(request),
     )
+    audit_log(request, 'erstellt', 'anwesenheit', liste.id, liste.titel)
     return liste
 
 
@@ -131,6 +134,7 @@ def update_liste(request, id: int, payload: ListeUpdateSchema):
     for k, v in payload.dict(exclude_unset=True).items():
         setattr(liste, k, v)
     liste.save()
+    broadcast_anwesenheit_update(id, "liste_updated")
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -142,7 +146,11 @@ def update_liste(request, id: int, payload: ListeUpdateSchema):
 def delete_liste(request, id: int):
     require_permission(request, 'anwesenheit.delete')
     liste = get_object_or_404(AnwesenheitsListe, id=id)
+    titel = liste.titel
+    lid = liste.id
     liste.delete()
+    broadcast_anwesenheit_update(id, "liste_deleted")
+    audit_log(request, 'geloescht', 'anwesenheit', lid, titel)
     return {"status": "deleted"}
 
 
@@ -181,6 +189,7 @@ def save_termine(request, id: int, payload: TermineSaveSchema):
     # Nicht mehr vorhandene Termine loeschen
     liste.termine.exclude(id__in=incoming_ids).delete()
 
+    broadcast_anwesenheit_update(id, "termine_saved")
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -193,6 +202,7 @@ def delete_termin(request, id: int, termin_id: int):
     require_permission(request, 'anwesenheit.edit')
     termin = get_object_or_404(Termin, id=termin_id, liste_id=id)
     termin.delete()
+    broadcast_anwesenheit_update(id, "termin_deleted")
     return {"status": "deleted"}
 
 
@@ -208,6 +218,7 @@ def add_teilnehmer(request, id: int, payload: TeilnehmerBulkAddSchema):
             defaults={'name': t.name, 'email': t.email},
         )
 
+    broadcast_anwesenheit_update(id, "teilnehmer_added")
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -220,6 +231,7 @@ def remove_teilnehmer(request, id: int, teilnehmer_id: int):
     require_permission(request, 'anwesenheit.edit')
     teilnehmer = get_object_or_404(Teilnehmer, id=teilnehmer_id, liste_id=id)
     teilnehmer.delete()
+    broadcast_anwesenheit_update(id, "teilnehmer_removed")
     return {"status": "deleted"}
 
 
@@ -236,6 +248,7 @@ def update_status(request, id: int, payload: StatusUpdateSchema):
         teilnehmer.notizen = payload.notizen
     teilnehmer.save()
 
+    broadcast_anwesenheit_update(id, "status_updated", {"teilnehmer_id": teilnehmer.id})
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -261,6 +274,9 @@ def update_termin_status(request, id: int, payload: TerminStatusUpdateSchema):
         ta.notizen = payload.notizen
     ta.save()
 
+    broadcast_anwesenheit_update(id, "termin_status_updated", {
+        "teilnehmer_id": teilnehmer.id, "termin_id": termin.id,
+    })
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -300,6 +316,7 @@ def bulk_update_status(request, id: int, payload: BulkStatusUpdateSchema):
         except (Teilnehmer.DoesNotExist, Termin.DoesNotExist):
             continue
 
+    broadcast_anwesenheit_update(id, "bulk_status_updated")
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -338,6 +355,9 @@ def self_update_status(request, id: int, payload: SelfStatusUpdateSchema):
     ta.notizen = payload.notizen
     ta.save()
 
+    broadcast_anwesenheit_update(id, "self_status_updated", {
+        "teilnehmer_id": teilnehmer.id, "termin_id": termin.id,
+    })
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -356,6 +376,7 @@ def update_aufgabe(request, id: int, payload: AufgabeUpdateSchema):
     teilnehmer.aufgabe = payload.aufgabe
     teilnehmer.save(update_fields=['aufgabe'])
 
+    broadcast_anwesenheit_update(id, "aufgabe_updated", {"teilnehmer_id": teilnehmer.id})
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'
@@ -371,6 +392,7 @@ def abschliessen(request, id: int):
     liste = get_object_or_404(AnwesenheitsListe, id=id)
     liste.status = 'abgeschlossen'
     liste.save(update_fields=['status', 'aktualisiert_am'])
+    broadcast_anwesenheit_update(id, "abgeschlossen")
     return get_object_or_404(
         AnwesenheitsListe.objects.prefetch_related(
             'teilnehmer__termin_anwesenheiten', 'termine'

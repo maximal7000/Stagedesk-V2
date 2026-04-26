@@ -9,6 +9,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpRequest
 
 from core.auth import keycloak_auth
+from core.audit import log as audit_log
 from users.api import is_admin
 from users.models import UserProfile
 from .models import Haushalt, Artikel, Kategorie
@@ -81,6 +82,7 @@ def create_haushalt(request, payload: HaushaltCreateSchema):
         budget_investiv=payload.budget_investiv,
         benutzer_id=user_id,  # Wer hat erstellt (für Audit)
     )
+    audit_log(request, 'erstellt', 'haushalt', haushalt.id, haushalt.name)
     return haushalt
 
 
@@ -100,6 +102,7 @@ def update_haushalt(request, haushalt_id: int, payload: HaushaltUpdateSchema):
         haushalt.budget_investiv = payload.budget_investiv
 
     haushalt.save()
+    audit_log(request, 'aktualisiert', 'haushalt', haushalt.id, haushalt.name)
     return haushalt
 
 
@@ -108,7 +111,10 @@ def delete_haushalt(request, haushalt_id: int):
     """Haushalt löschen"""
     require_perm(request, 'haushalte.delete')
     haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    name = haushalt.name
+    hid = haushalt.id
     haushalt.delete()
+    audit_log(request, 'geloescht', 'haushalt', hid, name)
     return {"success": True}
 
 
