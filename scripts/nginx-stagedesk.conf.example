@@ -4,7 +4,7 @@
 server {
     server_name stagedesk.t410.de tag.t410.de;
 
-    client_max_body_size 50M;
+    client_max_body_size 100M;
 
     location /admin/ {
         include proxy_params;
