@@ -76,6 +76,23 @@ export default function DashboardLayout({ children }) {
     ...(isAdmin || hasPermission('monitor.view') ? [{ name: 'Monitor', href: '/monitor-admin', icon: Monitor }] : []),
   ];
 
+  // Aktiven Nav-Eintrag über alle Sektionen ermitteln (longest-prefix-wins),
+  // sodass z.B. /admin/audit nur den Audit-Log-Eintrag highlighted, nicht
+  // gleichzeitig den darunterliegenden /admin-Eintrag.
+  const allNavHrefs = [
+    ...navigation.map(n => n.href),
+    ...inventarSubNav.map(n => n.href),
+    ...adminNavigation.map(n => n.href),
+  ];
+  const activeHref = (() => {
+    if (location.pathname === '/') return '/';
+    const matches = allNavHrefs.filter(h =>
+      h !== '/' && (location.pathname === h || location.pathname.startsWith(h + '/'))
+    );
+    if (!matches.length) return null;
+    return matches.reduce((a, b) => (b.length > a.length ? b : a));
+  })();
+
   const handleLogout = () => {
     auth.signoutRedirect();
   };
@@ -134,9 +151,7 @@ export default function DashboardLayout({ children }) {
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
-            const isActive = item.href === '/' 
-              ? location.pathname === '/' 
-              : location.pathname.startsWith(item.href);
+            const isActive = item.href === activeHref;
             const isKalender = item.href === '/kalender';
             const isInventar = item.href === '/inventar';
             const isVeranstaltung = item.href === '/veranstaltung';
@@ -160,7 +175,7 @@ export default function DashboardLayout({ children }) {
                   <div className="pl-4 space-y-1">
                     {inventarSubNav.map((sub) => {
                       const SubIcon = sub.icon;
-                      const subActive = location.pathname === sub.href || (sub.href !== '/inventar' && location.pathname.startsWith(sub.href));
+                      const subActive = sub.href === activeHref;
                       return (
                         <Link
                           key={sub.name}
@@ -196,7 +211,7 @@ export default function DashboardLayout({ children }) {
               </div>
               {adminNavigation.map((item) => {
                 const Icon = item.icon;
-                const isActive = location.pathname.startsWith(item.href);
+                const isActive = item.href === activeHref;
                 
                 return (
                   <Link
