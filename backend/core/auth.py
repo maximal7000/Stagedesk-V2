@@ -1,142 +1,152 @@
 """
-Keycloak JWT-Validierung für Django Ninja
+Keycloak JWT-Validierung für Django Ninja.
 
-ENTWICKLUNG: Token wird ohne Signatur-Verifizierung akzeptiert
-PRODUKTION: Public Key vom Keycloak-Server holen und verifizieren
-
-Siehe Kommentare unten für Produktions-Implementierung
+Token werden über JWKS vom Keycloak-Server signaturgeprüft. Public Keys
+werden im Django-Cache gehalten (1h TTL) — bei einer Schlüssel-Rotation
+einmal manuell `cache.delete('keycloak_jwks_<realm>')` oder warten.
 """
 import os
-from typing import Optional
-from jose import jwt, JWTError
-from django.http import HttpRequest
-from dotenv import load_dotenv
 import time
+from typing import Optional
 
-load_dotenv()
+import requests
+from jose import jwt
+from jose.exceptions import JWTError, ExpiredSignatureError
+from django.core.cache import cache
+from django.http import HttpRequest
 
 
 class KeycloakAuth:
-    """
-    Basis-Klasse für Keycloak JWT-Validierung
-    
-    Umgebungsvariablen:
-    - KEYCLOAK_SERVER_URL: URL des Keycloak-Servers (z.B. http://localhost:8080)
-    - KEYCLOAK_REALM: Name des Keycloak-Realms
-    - KEYCLOAK_CLIENT_ID: Client-ID der Anwendung
-    """
-    
+    """Verifiziert Keycloak-RS256-Tokens gegen das Realm-JWKS."""
+
+    JWKS_TTL = 3600         # Sekunden
+    LEEWAY = 30             # Toleranz für Clock-Skew bei exp/iat
+
     def __init__(self):
-        self.server_url = os.getenv('KEYCLOAK_SERVER_URL', 'http://localhost:8080')
+        self.server_url = os.getenv('KEYCLOAK_SERVER_URL', 'http://localhost:8080').rstrip('/')
         self.realm = os.getenv('KEYCLOAK_REALM', 'master')
         self.client_id = os.getenv('KEYCLOAK_CLIENT_ID', 'stagedesk')
-        
+        # Im Notfall (Keycloak unerreichbar im Test) auf 'true' setzen — niemals
+        # in Produktion! Wenn gesetzt, wird die Signatur NICHT geprüft.
+        self._insecure = os.getenv('AUTH_INSECURE_SKIP_VERIFY', '').lower() in ('1', 'true', 'yes')
+
+    # ── Helpers ────────────────────────────────────────────────────────
+
+    @property
+    def issuer(self) -> str:
+        return f"{self.server_url}/realms/{self.realm}"
+
+    def _jwks_url(self) -> str:
+        return f"{self.issuer}/protocol/openid-connect/certs"
+
+    def _get_jwks(self) -> Optional[dict]:
+        cache_key = f'keycloak_jwks_{self.realm}'
+        jwks = cache.get(cache_key)
+        if jwks:
+            return jwks
+        try:
+            resp = requests.get(self._jwks_url(), timeout=5)
+            resp.raise_for_status()
+            jwks = resp.json()
+            cache.set(cache_key, jwks, self.JWKS_TTL)
+            return jwks
+        except Exception as e:
+            print(f"JWKS-Abruf fehlgeschlagen: {e}")
+            return None
+
+    def _key_for_kid(self, kid: str) -> Optional[dict]:
+        jwks = self._get_jwks()
+        if not jwks:
+            return None
+        for k in jwks.get('keys', []):
+            if k.get('kid') == kid and k.get('use') in (None, 'sig'):
+                return k
+        return None
+
     def get_token_from_request(self, request: HttpRequest) -> Optional[str]:
-        """
-        Extrahiert das JWT-Token aus dem Authorization-Header
-        """
         auth_header = request.headers.get('Authorization', '')
-        
         if not auth_header.startswith('Bearer '):
             return None
-            
-        return auth_header.replace('Bearer ', '')
-    
+        return auth_header[len('Bearer '):].strip() or None
+
+    # ── Verifikation ──────────────────────────────────────────────────
+
     def verify_token(self, token: str) -> Optional[dict]:
-        """
-        Verifiziert das JWT-Token und gibt die Payload zurück
-        
-        ENTWICKLUNG: Signatur und Expiration werden NICHT geprüft
-        """
+        if self._insecure:
+            try:
+                return jwt.decode(token, key='', options={
+                    'verify_signature': False, 'verify_aud': False, 'verify_exp': False,
+                })
+            except Exception:
+                return None
+
         try:
-            # Für die Entwicklung: Token komplett ohne Verifizierung dekodieren
+            unverified = jwt.get_unverified_header(token)
+        except JWTError as e:
+            print(f"Header-Decode fehlgeschlagen: {e}")
+            return None
+
+        kid = unverified.get('kid')
+        alg = unverified.get('alg', 'RS256')
+        if alg not in ('RS256', 'RS384', 'RS512'):
+            print(f"Token-Algorithmus '{alg}' wird nicht akzeptiert")
+            return None
+
+        key = self._key_for_kid(kid) if kid else None
+        if not key:
+            # Cache invalidieren und einmal nachladen — Schlüssel könnten neu sein.
+            cache.delete(f'keycloak_jwks_{self.realm}')
+            key = self._key_for_kid(kid) if kid else None
+        if not key:
+            print(f"Kein passender Public Key für kid={kid}")
+            return None
+
+        try:
             payload = jwt.decode(
                 token,
-                key='',
+                key=key,
+                algorithms=[alg],
+                issuer=self.issuer,
                 options={
-                    'verify_signature': False,
+                    'verify_signature': True,
+                    'verify_exp': True,
+                    'verify_iat': False,
+                    'verify_iss': True,
+                    # Keycloak gibt oft mehrere Audiences zurück; wir prüfen
+                    # statt 'aud' lieber selbst gegen 'azp' (authorized party).
                     'verify_aud': False,
-                    'verify_exp': False,  # AUCH Expiration nicht prüfen (Dev-Modus)
-                }
+                },
             )
-            
-            # Optional: Manuell Expiration prüfen mit Toleranz (5 Minuten)
-            exp = payload.get('exp', 0)
-            now = time.time()
-            if exp > 0 and now > exp + 300:  # 5 Minuten Toleranz
-                print(f"Token stark abgelaufen: {int(now - exp)} Sekunden")
-                # Trotzdem akzeptieren für Entwicklung
-            
-            return payload
-            
+        except ExpiredSignatureError:
+            print("Token abgelaufen")
+            return None
         except JWTError as e:
             print(f"JWT-Validierung fehlgeschlagen: {e}")
             return None
-        except Exception as e:
-            print(f"Unerwarteter Auth-Fehler: {e}")
+
+        # Manuelles Audience-Handling: 'azp' (authorized party) muss zu unserer
+        # Client-ID passen, oder client_id ist in der 'aud'-Liste enthalten.
+        azp = payload.get('azp')
+        aud = payload.get('aud')
+        aud_list = aud if isinstance(aud, list) else ([aud] if aud else [])
+        if azp != self.client_id and self.client_id not in aud_list:
+            print(f"Token nicht für client_id={self.client_id} (azp={azp}, aud={aud})")
             return None
-    
+
+        # Zusätzliche exp-Toleranz (nb_skew)
+        exp = payload.get('exp', 0)
+        if exp and time.time() > exp + self.LEEWAY:
+            print("Token abgelaufen (post-leeway)")
+            return None
+
+        return payload
+
     def __call__(self, request: HttpRequest) -> Optional[dict]:
-        """
-        Authentifizierungs-Handler für Django Ninja
-        """
         token = self.get_token_from_request(request)
-        
         if not token:
-            print("Kein Token im Request gefunden")
             return None
-        
-        result = self.verify_token(token)
-        if result:
-            print(f"Auth OK für: {result.get('preferred_username', 'unknown')}")
-        return result
+        return self.verify_token(token)
 
 
 # Instanz für die Verwendung in Django Ninja
 keycloak_auth = KeycloakAuth()
-
-
-"""
-PRODUKTION: Public Key Validierung implementieren
-================================================
-
-1. Public Key vom Keycloak-Server holen:
-   
-   import requests
-   
-   def get_keycloak_public_key(server_url: str, realm: str) -> str:
-       url = f"{server_url}/realms/{realm}"
-       response = requests.get(url)
-       data = response.json()
-       return data['public_key']
-
-2. In verify_token() verwenden:
-   
-   public_key = get_keycloak_public_key(self.server_url, self.realm)
-   
-   # Public Key formatieren
-   formatted_key = f"-----BEGIN PUBLIC KEY-----\n{public_key}\n-----END PUBLIC KEY-----"
-   
-   payload = jwt.decode(
-       token,
-       key=formatted_key,
-       algorithms=['RS256'],
-       audience=self.client_id,
-       options={
-           'verify_signature': True,
-           'verify_aud': True,
-           'verify_exp': True,
-       }
-   )
-
-3. Public Key cachen (nicht bei jedem Request neu holen):
-   
-   from django.core.cache import cache
-   
-   cache_key = f'keycloak_public_key_{self.realm}'
-   public_key = cache.get(cache_key)
-   
-   if not public_key:
-       public_key = get_keycloak_public_key(self.server_url, self.realm)
-       cache.set(cache_key, public_key, 3600)  # 1 Stunde
-"""

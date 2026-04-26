@@ -127,9 +127,13 @@ export function UserProvider({ children }) {
     }
   }, [setTheme]);
 
-  // Effektive Werte: bei Impersonate die Werte des simulierten Users verwenden
-  const effectiveIsAdmin = impersonate ? !!impersonate.is_admin : isAdmin;
-  const effectivePermissions = impersonate ? (impersonate.permissions || []) : permissions;
+  // Impersonate ist nur ein UI-Filter und wird NUR akzeptiert, wenn der echte
+  // User Admin ist. Jeder andere localStorage-Wert wird ignoriert — sonst
+  // könnte sich ein normaler User durch manuelles Setzen die Admin-Sicht
+  // verschaffen (Backend filtert ohnehin, aber UI darf das nicht zeigen).
+  const impersonateActive = isAdmin && impersonate ? impersonate : null;
+  const effectiveIsAdmin = impersonateActive ? !!impersonateActive.is_admin : isAdmin;
+  const effectivePermissions = impersonateActive ? (impersonateActive.permissions || []) : permissions;
 
   // Permission prüfen — verwendet effektive Werte, sodass Admin im Impersonate
   // -Modus exakt das sieht, was der simulierte User sehen würde.
@@ -179,7 +183,7 @@ export function UserProvider({ children }) {
     loading,
     isAdmin: effectiveIsAdmin,
     realIsAdmin: isAdmin,  // echtes Admin-Recht (für Impersonate-Banner)
-    impersonate,
+    impersonate: impersonateActive,
     setImpersonate,
     initialized,
     hasPermission,
