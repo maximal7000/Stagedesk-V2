@@ -183,6 +183,7 @@ def download_anhang_early(request, anhang_id: int):
     """Anhang-Download mit Authentifizierung (vermeidet Keycloak-Redirect)."""
     require_permission(request, 'veranstaltung.view')
     import os
+    from ninja.errors import HttpError
     from django.http import FileResponse, HttpResponseRedirect
     anhang = get_object_or_404(VeranstaltungAnhang, id=anhang_id)
     if anhang.datei:
@@ -197,7 +198,7 @@ def download_anhang_early(request, anhang_id: int):
         return FileResponse(anhang.datei.open('rb'), as_attachment=True, filename=filename)
     elif anhang.url:
         return HttpResponseRedirect(anhang.url)
-    return {"error": "Kein Inhalt"}, 404
+    raise HttpError(404, "Anhang hat weder Datei noch URL")
 
 
 # ========== Veranstaltungen CRUD ==========
@@ -861,6 +862,9 @@ def add_notiz(request, id: int, payload: NotizCreateSchema):
 def add_anhang(request, id: int, name: str = Form(''), url: str = Form(''), datei: UploadedFile = File(None)):
     require_permission(request, 'veranstaltung.edit')
     import hashlib
+    from ninja.errors import HttpError
+    if not datei and not (url or '').strip():
+        raise HttpError(400, "Bitte Datei oder URL angeben")
     v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
     anhang_name = name or (datei.name if datei else 'Anhang')
 

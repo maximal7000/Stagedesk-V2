@@ -29,19 +29,22 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
 
   const add = async (e) => {
     e.preventDefault();
+    if (!file && !url.trim()) {
+      toast.error('Bitte Datei oder URL angeben');
+      return;
+    }
     const n = name.trim() || (file?.name ?? 'Anhang');
-    if (!n) return;
     setAdding(true);
     try {
       const formData = new FormData();
       formData.append('name', n); formData.append('url', url.trim());
       if (file) formData.append('datei', file);
-      // Wichtig: Content-Type NICHT manuell setzen — der Browser/axios braucht
-      // die multipart-Boundary, sonst kann das Backend FormData nicht parsen.
+      // Content-Type wird vom Browser/axios-Interceptor selbst gesetzt (Boundary nötig).
       await apiClient.post(`/veranstaltung/${eventId}/anhaenge`, formData);
       setName(''); setUrl(''); setFile(null); refetch();
-    } catch { toast.error('Anhang konnte nicht hinzugefügt werden.'); }
-    finally { setAdding(false); }
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Anhang konnte nicht hinzugefügt werden.');
+    } finally { setAdding(false); }
   };
 
   const remove = async (id) => {
@@ -59,7 +62,7 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
           <input type="url" placeholder="URL (optional)" value={url} onChange={(e) => setUrl(e.target.value)}
             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
-          <button type="submit" disabled={adding || (!name.trim() && !file)}
+          <button type="submit" disabled={adding || (!file && !url.trim())}
             className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg whitespace-nowrap">
             {adding ? '…' : <><Plus className="w-4 h-4 inline mr-1" /><span>Hinzufügen</span></>}
           </button>
