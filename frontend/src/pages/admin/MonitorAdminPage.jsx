@@ -444,9 +444,7 @@ export default function MonitorAdminPage() {
       formData.append('datei', file);
       formData.append('name', file.name);
       formData.append('typ', uploadTyp);
-      await apiClient.post('/monitor/dateien', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await apiClient.post('/monitor/dateien', formData);
       fetchConfigForProfile(activeProfileId);
       toast.success('Datei hochgeladen');
     } catch { toast.error('Upload fehlgeschlagen'); }

@@ -36,7 +36,9 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
       const formData = new FormData();
       formData.append('name', n); formData.append('url', url.trim());
       if (file) formData.append('datei', file);
-      await apiClient.post(`/veranstaltung/${eventId}/anhaenge`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      // Wichtig: Content-Type NICHT manuell setzen — der Browser/axios braucht
+      // die multipart-Boundary, sonst kann das Backend FormData nicht parsen.
+      await apiClient.post(`/veranstaltung/${eventId}/anhaenge`, formData);
       setName(''); setUrl(''); setFile(null); refetch();
     } catch { toast.error('Anhang konnte nicht hinzugefügt werden.'); }
     finally { setAdding(false); }

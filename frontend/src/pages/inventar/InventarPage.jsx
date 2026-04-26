@@ -226,7 +226,7 @@ export default function InventarPage() {
     setImporting(true);
     try {
       const fd = new FormData(); fd.append('datei', file);
-      const r = await apiClient.post('/inventar/import/items', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const r = await apiClient.post('/inventar/import/items', fd);
       toast.success(`${r.data.importiert || 0} importiert`); setShowImportModal(false); fetchItems();
     } catch (err) { toast.error(err.response?.data?.error || 'Import fehlgeschlagen'); }
     finally { setImporting(false); if (fileInputRef.current) fileInputRef.current.value = ''; }

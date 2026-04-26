@@ -275,9 +275,7 @@ export default function ItemDetailPage() {
       for (const file of files) {
         const fd = new FormData();
         fd.append('file', file);
-        await apiClient.post(`/inventar/items/${id}/bilder`, fd, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
+        await apiClient.post(`/inventar/items/${id}/bilder`, fd);
       }
       toast.success('Bild(er) hochgeladen');
       fetchData();
