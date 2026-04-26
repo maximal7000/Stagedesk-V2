@@ -648,14 +648,21 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
         }
     )
 
-    # Discord-Channel-Zugriff + DM-Benachrichtigung
+    # In-App-Inbox + Discord-DM benachrichtigen
     from . import discord_client
+    from core.notify import notify
     try:
         profile = UserProfile.objects.get(keycloak_id=data['user_keycloak_id'])
+        when_str = v.datum_von.strftime('%d.%m.%Y %H:%M') if v.datum_von else ''
+        notify(
+            profile.keycloak_id, 'zuweisung',
+            f'Zugewiesen: {v.titel}',
+            f'{when_str}{(" @ " + v.ort) if v.ort else ""}',
+            link=f'/veranstaltung/{v.id}',
+        )
         if profile.discord_id:
             if v.discord_channel_id:
                 discord_client.grant_channel_access(v.discord_channel_id, profile.discord_id)
-            # Best-effort DM, blockiert nie den Request
             discord_client.notify_zuweisung(v, profile.discord_id)
     except UserProfile.DoesNotExist:
         pass
@@ -664,6 +671,8 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
     # Kalender-Events synchronisieren (Besetzung in Beschreibung aktualisieren)
     _sync_kalender_events(v)
     _set_ist_zugewiesen(v, get_user_id(request))
+    audit_log(request, 'aktualisiert', 'veranstaltung', v.id,
+              f"{v.titel} → Zuweisung {data.get('user_username', '') or data['user_keycloak_id']}")
     return v
 
 
@@ -671,6 +680,8 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
 def remove_zuweisung(request, id: int, user_keycloak_id: str):
     require_permission(request, 'veranstaltung.zuweisungen')
     v = get_object_or_404(Veranstaltung.objects.prefetch_related('zuweisungen', 'meldungen', 'abmeldungen', 'checkliste', 'notizen', 'anhaenge', 'erinnerungen'), id=id)
+    audit_log(request, 'aktualisiert', 'veranstaltung', v.id,
+              f"{v.titel} → Zuweisung entfernt {user_keycloak_id}")
 
     # Discord-Channel-Zugriff entziehen
     if v.discord_channel_id:
@@ -885,6 +896,8 @@ def add_anhang(request, id: int, name: str = Form(''), url: str = Form(''), date
     if datei:
         anhang.datei = datei
     anhang.save()
+    audit_log(request, 'erstellt', 'anhang', anhang.id,
+              f"{anhang_name} (für {v.titel})")
     v.refresh_from_db()
     _set_ist_zugewiesen(v, get_user_id(request))
     return v

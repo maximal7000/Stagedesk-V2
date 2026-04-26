@@ -209,3 +209,39 @@ class GlobalSettings(models.Model):
             defaults={'value': value, 'description': description, 'updated_by': updated_by}
         )
         return obj
+
+
+class Notification(models.Model):
+    """In-App-Benachrichtigung für einen User. Wird an mehreren Stellen
+    geschrieben (Zuweisung, Mahnung, Kompetenz-Ablauf, …) und über die
+    Glocke in der Topbar ausgespielt."""
+    KIND_CHOICES = [
+        ('zuweisung',    'Zuweisung'),
+        ('mahnung',      'Mahnung'),
+        ('erinnerung',   'Erinnerung'),
+        ('kompetenz',    'Kompetenz'),
+        ('deadline',     'Deadline'),
+        ('konflikt',     'Konflikt'),
+        ('info',         'Info'),
+        ('system',       'System'),
+    ]
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='notifications')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='info')
+    title = models.CharField(max_length=200)
+    body = models.TextField(blank=True)
+    link = models.CharField(max_length=500, blank=True,
+        help_text="Frontend-Pfad, z.B. /veranstaltung/42")
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'read_at']),
+        ]
+        verbose_name = 'Benachrichtigung'
+        verbose_name_plural = 'Benachrichtigungen'
+
+    def __str__(self):
+        return f"{self.kind}: {self.title} ({self.user_id})"

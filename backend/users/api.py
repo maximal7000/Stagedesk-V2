@@ -472,7 +472,14 @@ def update_user(request, user_id: int, payload: UserProfileAdminUpdateSchema):
         user.theme_locked = payload.theme_locked
 
     user.save()
-    
+
+    from core.audit import log as audit_log
+    audit_log(request, 'aktualisiert', 'user', user.id,
+              user.username or user.keycloak_id,
+              {"permissions": payload.permission_codes or [],
+               "groups": payload.group_ids or [],
+               "bereiche": payload.bereich_ids or []})
+
     user._keycloak_roles = []  # Unbekannt
     user._is_admin = False  # Unbekannt
     return user
@@ -672,3 +679,68 @@ def initialize_system(request):
         "keycloak_roles": profile._keycloak_roles,
         "info": "Admin-Status kommt aus Keycloak. Füge die Rolle 'admin' in Keycloak hinzu."
     }
+
+
+# ========== Notifications (In-App-Inbox) ==========
+
+from .models import Notification
+
+
+def _notification_dict(n) -> dict:
+    return {
+        "id": n.id,
+        "kind": n.kind,
+        "kind_display": n.get_kind_display(),
+        "title": n.title,
+        "body": n.body,
+        "link": n.link,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+        "read_at": n.read_at.isoformat() if n.read_at else None,
+        "is_read": bool(n.read_at),
+    }
+
+
+@users_router.get("/me/notifications", auth=keycloak_auth)
+def list_my_notifications(request, only_unread: bool = False, limit: int = 50):
+    profile = get_or_create_profile(request)
+    qs = profile.notifications.all()
+    if only_unread:
+        qs = qs.filter(read_at__isnull=True)
+    qs = qs[:max(1, min(limit, 200))]
+    unread = profile.notifications.filter(read_at__isnull=True).count()
+    return {
+        "unread": unread,
+        "items": [_notification_dict(n) for n in qs],
+    }
+
+
+@users_router.get("/me/notifications/count", auth=keycloak_auth)
+def my_notification_count(request):
+    """Schneller Endpoint nur für die Glocken-Badge."""
+    profile = get_or_create_profile(request)
+    unread = profile.notifications.filter(read_at__isnull=True).count()
+    return {"unread": unread}
+
+
+@users_router.post("/me/notifications/{nid}/read", auth=keycloak_auth)
+def mark_notification_read(request, nid: int):
+    profile = get_or_create_profile(request)
+    n = get_object_or_404(Notification, id=nid, user=profile)
+    if not n.read_at:
+        n.read_at = timezone.now()
+        n.save(update_fields=['read_at'])
+    return {"status": "ok"}
+
+
+@users_router.post("/me/notifications/read-all", auth=keycloak_auth)
+def mark_all_read(request):
+    profile = get_or_create_profile(request)
+    profile.notifications.filter(read_at__isnull=True).update(read_at=timezone.now())
+    return {"status": "ok"}
+
+
+@users_router.delete("/me/notifications/{nid}", auth=keycloak_auth)
+def delete_notification(request, nid: int):
+    profile = get_or_create_profile(request)
+    Notification.objects.filter(id=nid, user=profile).delete()
+    return {"status": "deleted"}

@@ -9,6 +9,7 @@ import { UserProvider } from './contexts/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
 import DashboardLayout from './components/DashboardLayout';
+import SessionTimeoutGuard from './components/SessionTimeoutGuard';
 // Root pages
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -40,6 +41,8 @@ import AuditLogPage from './pages/admin/AuditLogPage';
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
 // Kompetenzen
 import KompetenzenPage from './pages/kompetenzen/KompetenzenPage';
+// Notifications
+import NotificationsPage from './pages/NotificationsPage';
 import { Toaster } from 'sonner';
 import './App.css';
 
@@ -94,6 +97,7 @@ function AppContent() {
                   <Route path="/veranstaltung/neu" element={<PermissionRoute permission="veranstaltung.create"><VeranstaltungDetailPage /></PermissionRoute>} />
                   <Route path="/veranstaltung/:id" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungDetailPage /></PermissionRoute>} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
                   <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
                   <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminPage /></PermissionRoute>} />
@@ -112,6 +116,7 @@ function App() {
   return (
     <>
       <AppContent />
+      <SessionTimeoutGuard />
       <Toaster
         theme="dark"
         position="bottom-right"

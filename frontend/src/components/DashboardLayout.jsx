@@ -29,6 +29,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
 import GlobalSearchModal from './GlobalSearchModal';
+import NotificationBell from './NotificationBell';
 
 export default function DashboardLayout({ children }) {
   const auth = useAuth();
@@ -335,10 +336,13 @@ export default function DashboardLayout({ children }) {
             </h2>
           </div>
 
-          {/* Mobile User Icon */}
-          <div className="lg:hidden">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+          <div className="flex items-center gap-2 ml-auto">
+            <NotificationBell />
+            {/* Mobile User Icon */}
+            <div className="lg:hidden">
+              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5 text-white" />
+              </div>
             </div>
           </div>
         </header>
