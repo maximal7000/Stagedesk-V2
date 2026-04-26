@@ -479,18 +479,22 @@ export default function AnwesenheitPage() {
           </div>
         )}
 
-        {/* Statistik-Leiste */}
+        {/* Statistik-Leiste — wraps auf engen Bildschirmen, Quote rechts wenn Platz */}
         {teilnehmer.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="flex items-center gap-6 text-sm">
-              <span className="text-gray-400"><Users className="w-4 h-4 inline mr-1" />{detailListe.statistik.gesamt} Teilnehmer</span>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <span className="text-gray-400 whitespace-nowrap">
+                <Users className="w-4 h-4 inline mr-1" />{detailListe.statistik.gesamt} Teilnehmer
+              </span>
               {Object.entries(STATUS_COLORS).map(([key, colors]) => (
-                <span key={key} className={`flex items-center gap-1.5 ${colors.text}`}>
+                <span key={key} className={`flex items-center gap-1.5 whitespace-nowrap ${colors.text}`}>
                   <span className={`w-2 h-2 rounded-full ${colors.dot}`} />
                   {detailListe.statistik[key] || 0} {STATUS_LABELS[key]}
                 </span>
               ))}
-              <span className="text-blue-400 font-medium ml-auto">{detailListe.statistik.quote}% Anwesenheit</span>
+              <span className="text-blue-400 font-medium whitespace-nowrap sm:ml-auto">
+                {detailListe.statistik.quote}% Anwesenheit
+              </span>
             </div>
             <div className="mt-2">
               <ProgressBar statistik={detailListe.statistik} />

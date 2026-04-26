@@ -73,16 +73,16 @@ export default function SettingsPage() {
         <p className="text-gray-400 mt-1">Verwalte deine persönlichen Einstellungen</p>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-800">
-        <nav className="flex gap-4">
+      {/* Tabs — auf engen Bildschirmen horizontal scrollbar statt page-overflow */}
+      <div className="border-b border-gray-800 -mx-4 sm:mx-0">
+        <nav className="flex gap-1 sm:gap-4 px-4 sm:px-0 overflow-x-auto whitespace-nowrap">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
+                className={`flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 transition-colors shrink-0 ${
                   activeTab === tab.id
                     ? 'border-blue-500 text-blue-500'
                     : 'border-transparent text-gray-400 hover:text-white'
@@ -121,7 +121,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Dark Mode */}
                 <button
                   onClick={() => handleThemeChange('dark')}
