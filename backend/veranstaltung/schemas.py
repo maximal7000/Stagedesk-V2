@@ -67,6 +67,7 @@ class ChecklisteItemSchema(Schema):
     erledigt: bool
     sortierung: int
     erledigt_am: Optional[datetime]
+    deadline: Optional[datetime] = None
 
 
 class NotizSchema(Schema):
@@ -334,12 +335,14 @@ class ZuweisungCreateSchema(Schema):
 class ChecklisteItemCreateSchema(Schema):
     titel: str
     sortierung: int = 0
+    deadline: Optional[datetime] = None
 
 
 class ChecklisteItemUpdateSchema(Schema):
     titel: Optional[str] = None
     erledigt: Optional[bool] = None
     sortierung: Optional[int] = None
+    deadline: Optional[datetime] = None
 
 
 class NotizCreateSchema(Schema):

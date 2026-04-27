@@ -815,6 +815,7 @@ def add_checkliste_item(request, id: int, payload: ChecklisteItemCreateSchema):
         veranstaltung=v,
         titel=payload.titel,
         sortierung=payload.sortierung,
+        deadline=payload.deadline,
     )
     v.refresh_from_db()
     _set_ist_zugewiesen(v, get_user_id(request))
@@ -1215,3 +1216,83 @@ def create_from_template(request, tpl_id: int, payload: CreateFromTemplateSchema
     if komp_ids:
         v.erforderliche_kompetenzen.set(komp_ids)
     return v
+
+
+# ─── Kandidaten + Konflikt-Check ─────────────────────────────────
+
+@veranstaltung_router.get("/{id}/kandidaten", auth=keycloak_auth)
+def list_kandidaten(request, id: int, taetigkeit_id: Optional[int] = None):
+    """Listet alle Benutzer mit Kompetenz-Match und Zeit-Konflikten für eine
+    Veranstaltung. Wenn taetigkeit_id gesetzt, werden die für die Tätigkeit
+    erforderlichen Kompetenzen aus dem Kompetenz-Profil der Tätigkeit
+    zusätzlich gewertet."""
+    require_permission(request, 'veranstaltung.zuweisungen')
+    v = get_object_or_404(Veranstaltung, id=id)
+
+    # Erforderliche / empfohlene Kompetenzen sammeln
+    req_ids = set(v.erforderliche_kompetenzen.values_list('id', flat=True))
+    rec_ids = set(v.empfohlene_kompetenzen.values_list('id', flat=True))
+    if taetigkeit_id:
+        try:
+            t = TaetigkeitsRolle.objects.get(id=taetigkeit_id)
+            req_ids |= set(t.erforderliche_kompetenzen.values_list('id', flat=True))
+        except TaetigkeitsRolle.DoesNotExist:
+            pass
+
+    # User-Kompetenz-Mapping vorladen
+    from kompetenzen.models import UserKompetenz
+    relevant_ids = list(req_ids | rec_ids)
+    user_kompetenzen = {}  # kid -> set(komp_id)
+    if relevant_ids:
+        for uk in UserKompetenz.objects.filter(
+            kompetenz_id__in=relevant_ids, hat_kompetenz=True,
+        ).select_related('kompetenz'):
+            if uk.ist_abgelaufen:
+                continue
+            user_kompetenzen.setdefault(uk.user_keycloak_id, set()).add(uk.kompetenz_id)
+
+    # Bereich + Schon-Zugewiesen
+    zugewiesene = set(v.zuweisungen.values_list('user_keycloak_id', flat=True))
+
+    # Zeit-Konflikte: andere VAs zur selben Zeit, denen User zugewiesen ist
+    konflikte_map = {}  # kid -> [{titel, datum_von}]
+    if v.datum_von and v.datum_bis:
+        overlap_qs = Veranstaltung.objects.filter(
+            datum_von__lt=v.datum_bis,
+            datum_bis__gt=v.datum_von,
+        ).exclude(id=v.id).exclude(status='abgesagt').prefetch_related('zuweisungen')
+        for other in overlap_qs:
+            for z in other.zuweisungen.all():
+                konflikte_map.setdefault(z.user_keycloak_id, []).append({
+                    'veranstaltung_id': other.id,
+                    'titel': other.titel,
+                    'datum_von': other.datum_von.isoformat() if other.datum_von else None,
+                })
+
+    # User-Liste durchgehen
+    out = []
+    for u in UserProfile.objects.prefetch_related('bereiche').exclude(is_admin_cached=True):
+        kompetenzen = user_kompetenzen.get(u.keycloak_id, set())
+        req_match = len(kompetenzen & req_ids)
+        rec_match = len(kompetenzen & rec_ids)
+        req_total = len(req_ids)
+        full_match = req_total == 0 or req_match == req_total
+        score = req_match * 10 + rec_match
+        out.append({
+            'keycloak_id': u.keycloak_id,
+            'name': f"{u.first_name} {u.last_name}".strip() or u.username,
+            'username': u.username,
+            'email': u.email,
+            'discord_id': u.discord_id,
+            'bereiche': [{'id': b.id, 'name': b.name} for b in u.bereiche.all()],
+            'kompetenzen_match': req_match,
+            'kompetenzen_total': req_total,
+            'empfohlen_match': rec_match,
+            'voll_qualifiziert': full_match,
+            'score': score,
+            'bereits_zugewiesen': u.keycloak_id in zugewiesene,
+            'konflikte': konflikte_map.get(u.keycloak_id, []),
+        })
+    # Sortierung: zuerst voll qualifiziert, dann Score, dann Name
+    out.sort(key=lambda x: (not x['voll_qualifiziert'], -x['score'], x['name'].lower()))
+    return out

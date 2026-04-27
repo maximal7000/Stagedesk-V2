@@ -46,6 +46,7 @@ class KompetenzSchema(Schema):
     ablauf_stufen: List[int] = []
     aktiv: bool = True
     sortierung: int = 0
+    voraussetzung_ids: List[int] = []
 
 
 class KompetenzCreateSchema(Schema):
@@ -57,6 +58,7 @@ class KompetenzCreateSchema(Schema):
     ablauf_stufen: List[int] = []
     sortierung: int = 0
     aktiv: bool = True
+    voraussetzung_ids: List[int] = []
 
 
 class KompetenzUpdateSchema(Schema):
@@ -68,6 +70,7 @@ class KompetenzUpdateSchema(Schema):
     ablauf_stufen: Optional[List[int]] = None
     sortierung: Optional[int] = None
     aktiv: Optional[bool] = None
+    voraussetzung_ids: Optional[List[int]] = None
 
 
 class UserKompetenzSchema(Schema):

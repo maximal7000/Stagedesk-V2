@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User, UserPlus, Plus, X, Hand } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, UserPlus, Plus, X, Hand, CheckCircle2, AlertTriangle, Award } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
@@ -9,8 +9,19 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
   const [newTaetigkeitId, setNewTaetigkeitId] = useState('');
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [kandidaten, setKandidaten] = useState(null);
 
   const meldungen = data?.meldungen || [];
+
+  // Kandidaten-Liste mit Match-Score und Konflikten laden, sobald Dialog
+  // geöffnet wird oder Tätigkeit wechselt.
+  useEffect(() => {
+    if (!showAddUsers || !eventId) { setKandidaten(null); return; }
+    const params = newTaetigkeitId ? { taetigkeit_id: newTaetigkeitId } : {};
+    apiClient.get(`/veranstaltung/${eventId}/kandidaten`, { params })
+      .then(r => setKandidaten(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setKandidaten(null));
+  }, [showAddUsers, eventId, newTaetigkeitId]);
 
   const addZuweisungen = async (userIds = null) => {
     const ids = userIds || selectedUsers;
@@ -105,44 +116,63 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
       )}
 
       {showAddUsers && (() => {
-        const verfuegbar = benutzer.filter((u) =>
-          !zugewieseneIds.has(u.keycloak_id) &&
-          (userSearch === '' ||
-            (u.username || '').toLowerCase().includes(userSearch.toLowerCase()) ||
-            (u.email || '').toLowerCase().includes(userSearch.toLowerCase()))
-        );
-        // Ist der User gemeldet?
         const gemeldeteIds = new Set(meldungen.map(m => m.user_keycloak_id));
+        // Liste aus Kandidaten (mit Score) wenn geladen, sonst Fallback alle benutzer
+        const liste = (kandidaten || benutzer.map(u => ({
+          keycloak_id: u.keycloak_id,
+          name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || u.keycloak_id,
+          username: u.username, email: u.email, discord_id: u.discord_id,
+          bereiche: u.bereiche, kompetenzen_match: 0, kompetenzen_total: 0,
+          voll_qualifiziert: true, konflikte: [], bereits_zugewiesen: zugewieseneIds.has(u.keycloak_id),
+        })))
+          .filter(u => !u.bereits_zugewiesen)
+          .filter(u => !userSearch || (u.name || '').toLowerCase().includes(userSearch.toLowerCase())
+            || (u.email || '').toLowerCase().includes(userSearch.toLowerCase()));
 
         return (
           <div className="mb-4 p-4 bg-gray-800/50 rounded-lg space-y-3">
             <input type="text" placeholder="Benutzer suchen..." value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm" />
-            <div className="max-h-40 overflow-y-auto space-y-1">
-              {verfuegbar.map((u) => (
-                <label key={u.keycloak_id}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded cursor-pointer hover:bg-gray-700 ${selectedUsers.includes(u.keycloak_id) ? 'bg-blue-900/30' : ''}`}>
-                  <input type="checkbox" checked={selectedUsers.includes(u.keycloak_id)}
-                    onChange={() => toggleUserSelection(u.keycloak_id)}
-                    className="rounded border-gray-600 bg-gray-700 text-blue-500" />
-                  <span className="text-white text-sm">{
-                    (u.first_name || u.last_name)
-                      ? [u.first_name, u.last_name].filter(Boolean).join(' ')
-                      : (u.username || u.keycloak_id)
-                  }</span>
-                  {gemeldeteIds.has(u.keycloak_id) && (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
-                      <Hand className="w-3 h-3" /> gemeldet
-                    </span>
-                  )}
-                  {u.bereiche?.length > 0 && (
-                    <span className="text-xs text-gray-500">{u.bereiche.map(b => b.name).join(', ')}</span>
-                  )}
-                  {!u.discord_id && <span className="text-xs text-yellow-500" title="Keine Discord-ID">!</span>}
-                </label>
-              ))}
-              {verfuegbar.length === 0 && <p className="text-gray-500 text-sm px-3 py-2">Keine weiteren Benutzer verfügbar</p>}
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {liste.map((u) => {
+                const hasKonflikt = (u.konflikte || []).length > 0;
+                const isGemeldet = gemeldeteIds.has(u.keycloak_id);
+                return (
+                  <label key={u.keycloak_id}
+                    className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-gray-700 ${selectedUsers.includes(u.keycloak_id) ? 'bg-blue-900/30' : ''}`}>
+                    <input type="checkbox" checked={selectedUsers.includes(u.keycloak_id)}
+                      onChange={() => toggleUserSelection(u.keycloak_id)}
+                      className="rounded border-gray-600 bg-gray-700 text-blue-500" />
+                    <span className="text-white text-sm">{u.name}</span>
+                    {u.kompetenzen_total > 0 && (
+                      <span title="Erforderliche Kompetenzen erfüllt"
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${
+                          u.voll_qualifiziert ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
+                        }`}>
+                        {u.voll_qualifiziert ? <CheckCircle2 className="w-3 h-3" /> : <Award className="w-3 h-3" />}
+                        {u.kompetenzen_match}/{u.kompetenzen_total}
+                      </span>
+                    )}
+                    {isGemeldet && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                        <Hand className="w-3 h-3" /> gemeldet
+                      </span>
+                    )}
+                    {hasKonflikt && (
+                      <span title={u.konflikte.map(k => k.titel).join(', ')}
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">
+                        <AlertTriangle className="w-3 h-3" /> Konflikt
+                      </span>
+                    )}
+                    {u.bereiche?.length > 0 && (
+                      <span className="text-xs text-gray-500 ml-auto">{u.bereiche.map(b => b.name).join(', ')}</span>
+                    )}
+                    {!u.discord_id && <span className="text-xs text-yellow-500" title="Keine Discord-ID">!</span>}
+                  </label>
+                );
+              })}
+              {liste.length === 0 && <p className="text-gray-500 text-sm px-3 py-2">Keine weiteren Benutzer verfügbar</p>}
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-700">
               <select value={newTaetigkeitId} onChange={(e) => setNewTaetigkeitId(e.target.value)}
@@ -157,6 +187,9 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
               <button type="button" onClick={() => { setShowAddUsers(false); setSelectedUsers([]); setUserSearch(''); }}
                 className="text-gray-400 hover:text-white text-sm px-2">Abbrechen</button>
             </div>
+            <p className="text-xs text-gray-500">
+              Sortierung: voll qualifiziert zuerst. Bei Tätigkeit wird zusätzlich nach Tätigkeits-Kompetenzen gefiltert.
+            </p>
           </div>
         );
       })()}

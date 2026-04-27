@@ -171,6 +171,9 @@ class VeranstaltungChecklisteItem(models.Model):
     erledigt = models.BooleanField(default=False)
     sortierung = models.IntegerField(default=0)
     erledigt_am = models.DateTimeField(null=True, blank=True)
+    deadline = models.DateTimeField(null=True, blank=True,
+        help_text="Optionale Frist; rote Markierung wenn überfällig")
+    erinnerung_gesendet = models.BooleanField(default=False)
 
     class Meta:
         ordering = ['sortierung', 'id']

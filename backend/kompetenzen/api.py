@@ -56,6 +56,30 @@ def require_permission(request, code: str):
         raise HttpError(403, "Keine Berechtigung")
 
 
+def _missing_voraussetzungen(user_kid: str, kompetenz) -> list:
+    """Gibt Liste von Kompetenz-Namen zurück, die der User noch nicht aktiv
+    erworben hat. Berücksichtigt nur direkte Voraussetzungen (keine Tiefe)."""
+    required = list(kompetenz.voraussetzungen.values_list('id', flat=True))
+    if not required:
+        return []
+    aktive = set(UserKompetenz.objects.filter(
+        user_keycloak_id=user_kid,
+        kompetenz_id__in=required,
+        hat_kompetenz=True,
+    ).values_list('kompetenz_id', flat=True))
+    # ist_abgelaufen separat filtern
+    valid = set()
+    for uk in UserKompetenz.objects.filter(
+        user_keycloak_id=user_kid, kompetenz_id__in=aktive,
+    ).select_related('kompetenz'):
+        if not uk.ist_abgelaufen:
+            valid.add(uk.kompetenz_id)
+    fehlend_ids = set(required) - valid
+    if not fehlend_ids:
+        return []
+    return list(Kompetenz.objects.filter(id__in=fehlend_ids).values_list('name', flat=True))
+
+
 def _kompetenz_to_schema(k: Kompetenz) -> dict:
     return {
         "id": k.id,
@@ -69,6 +93,7 @@ def _kompetenz_to_schema(k: Kompetenz) -> dict:
         "ablauf_stufen": k.ablauf_stufen or [],
         "aktiv": k.aktiv,
         "sortierung": k.sortierung,
+        "voraussetzung_ids": list(k.voraussetzungen.values_list('id', flat=True)),
     }
 
 
@@ -227,7 +252,11 @@ def list_kompetenzen_alle(request):
 @kompetenzen_router.post("", response=KompetenzSchema, auth=keycloak_auth)
 def create_kompetenz(request, payload: KompetenzCreateSchema):
     require_permission(request, 'kompetenzen.edit_catalog')
-    k = Kompetenz.objects.create(**payload.dict())
+    data = payload.dict()
+    voraussetzung_ids = data.pop('voraussetzung_ids', [])
+    k = Kompetenz.objects.create(**data)
+    if voraussetzung_ids:
+        k.voraussetzungen.set(Kompetenz.objects.filter(id__in=voraussetzung_ids).exclude(id=k.id))
     return _kompetenz_to_schema(k)
 
 
@@ -285,6 +314,13 @@ def set_user_kompetenz(request, user_kid: str, komp_id: int, payload: UserKompet
         target_username = ""
 
     kompetenz = get_object_or_404(Kompetenz, id=komp_id)
+
+    # Voraussetzungs-Check beim Bestätigen — gibt 400 mit fehlender Liste zurück
+    if payload.hat_kompetenz:
+        missing = _missing_voraussetzungen(user_kid, kompetenz)
+        if missing:
+            raise HttpError(400, f"Voraussetzungen fehlen: {', '.join(missing)}")
+
     uk, created = UserKompetenz.objects.get_or_create(
         user_keycloak_id=user_kid,
         kompetenz=kompetenz,
@@ -752,9 +788,14 @@ def apply_stufen_to_all(request, payload: dict):
 def update_kompetenz(request, komp_id: int, payload: KompetenzUpdateSchema):
     require_permission(request, 'kompetenzen.edit_catalog')
     k = get_object_or_404(Kompetenz, id=komp_id)
-    for f, v in payload.dict(exclude_unset=True).items():
+    data = payload.dict(exclude_unset=True)
+    voraussetzung_ids = data.pop('voraussetzung_ids', None)
+    for f, v in data.items():
         setattr(k, f, v)
     k.save()
+    if voraussetzung_ids is not None:
+        # Selbst-Referenz und Zyklen einfach abfangen: alle IDs außer der eigenen.
+        k.voraussetzungen.set(Kompetenz.objects.filter(id__in=voraussetzung_ids).exclude(id=k.id))
     return _kompetenz_to_schema(k)
 
 

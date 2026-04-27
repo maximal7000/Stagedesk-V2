@@ -1,0 +1,10 @@
+[Unit]
+Description=Stagedesk Kompetenz- und Deadline-Erinnerungen
+After=postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/stagedesk/backend
+ExecStart=/opt/stagedesk/backend/venv/bin/python manage.py erinnerungen_kompetenzen
+ExecStartPost=/opt/stagedesk/backend/venv/bin/python manage.py erinnerungen_deadlines
+Nice=10

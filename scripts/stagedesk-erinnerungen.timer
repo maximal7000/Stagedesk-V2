@@ -1,0 +1,10 @@
+[Unit]
+Description=Stagedesk Erinnerungen täglich um 08:00
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

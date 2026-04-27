@@ -79,6 +79,10 @@ class Kompetenz(models.Model):
     )
     aktiv = models.BooleanField(default=True)
     sortierung = models.IntegerField(default=0)
+    voraussetzungen = models.ManyToManyField(
+        'self', symmetrical=False, blank=True, related_name='ermoeglicht',
+        help_text="Kompetenzen die der User vorher haben muss"
+    )
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     class Meta:
