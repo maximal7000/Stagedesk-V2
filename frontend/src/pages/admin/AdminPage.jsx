@@ -31,6 +31,31 @@ export default function AdminPage() {
   const [showGroupModal, setShowGroupModal] = useState(false);
   const [groupForm, setGroupForm] = useState({ name: '', description: '', permission_codes: [], is_default: false });
 
+  // Bulk-Selection
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAction, setBulkAction] = useState('add_group');
+  const [bulkTarget, setBulkTarget] = useState('');
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  const runBulk = async () => {
+    if (!bulkTarget || selectedUserIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      const r = await apiClient.post('/users/users/bulk', {
+        user_ids: Array.from(selectedUserIds),
+        action: bulkAction,
+        target_id: parseInt(bulkTarget, 10),
+      });
+      toast.success(`${r.data?.updated || 0} User aktualisiert`);
+      setBulkOpen(false);
+      setSelectedUserIds(new Set());
+      fetchData();
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Bulk-Aktion fehlgeschlagen');
+    } finally { setBulkBusy(false); }
+  };
+
   const fetchData = useCallback(async () => {
     if (!isAdmin) return;
     setLoading(true);
@@ -203,13 +228,39 @@ export default function AdminPage() {
           {/* ═══ Users Tab ═══ */}
           {activeTab === 'users' && (
             <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
-              <div className="p-4 bg-gray-800/50">
+              <div className="p-4 bg-gray-800/50 flex items-center justify-between gap-2 flex-wrap">
                 <h3 className="font-semibold text-white">Benutzer ({users.length})</h3>
+                <div className="flex items-center gap-2">
+                  {selectedUserIds.size > 0 && (
+                    <>
+                      <span className="text-sm text-gray-400">{selectedUserIds.size} ausgewählt</span>
+                      <button onClick={() => setBulkOpen(true)}
+                        className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        Bulk-Aktion…
+                      </button>
+                      <button onClick={() => setSelectedUserIds(new Set())}
+                        className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
+                        Auswahl aufheben
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               {users.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">Keine Benutzer gefunden</div>
               ) : users.map((user) => (
-                <div key={user.id} className="p-4">
+                <div key={user.id} className="p-4 flex items-start gap-3">
+                  {editingUser?.id !== user.id && (
+                    <input type="checkbox"
+                      className="mt-3 rounded border-gray-600 bg-gray-700 text-blue-500"
+                      checked={selectedUserIds.has(user.id)}
+                      onChange={() => setSelectedUserIds((prev) => {
+                        const next = new Set(prev);
+                        next.has(user.id) ? next.delete(user.id) : next.add(user.id);
+                        return next;
+                      })} />
+                  )}
+                  <div className="flex-1 min-w-0">
                   {editingUser?.id === user.id ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
@@ -344,6 +395,7 @@ export default function AdminPage() {
                       </div>
                     </div>
                   )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -522,6 +574,46 @@ export default function AdminPage() {
               <button onClick={handleSaveGroup} disabled={!groupForm.name}
                 className="flex items-center justify-center gap-2 flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold rounded-lg">
                 <Save className="w-4 h-4" /> {editingGroup ? 'Aktualisieren' : 'Erstellen'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk-Aktion-Modal */}
+      {bulkOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+             onClick={() => setBulkOpen(false)}>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4"
+               onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-white">Bulk-Aktion auf {selectedUserIds.size} User</h2>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Aktion</label>
+              <select value={bulkAction} onChange={(e) => { setBulkAction(e.target.value); setBulkTarget(''); }}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                <option value="add_group">Berechtigungsgruppe hinzufügen</option>
+                <option value="remove_group">Berechtigungsgruppe entfernen</option>
+                <option value="add_bereich">Bereich hinzufügen</option>
+                <option value="remove_bereich">Bereich entfernen</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Ziel</label>
+              <select value={bulkTarget} onChange={(e) => setBulkTarget(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                <option value="">— wählen —</option>
+                {bulkAction.includes('group')
+                  ? groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)
+                  : bereiche.map(b => <option key={b.id} value={b.id}>{b.name}</option>)
+                }
+              </select>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button onClick={() => setBulkOpen(false)} disabled={bulkBusy}
+                className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">Abbrechen</button>
+              <button onClick={runBulk} disabled={!bulkTarget || bulkBusy}
+                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                {bulkBusy ? 'Läuft…' : 'Anwenden'}
               </button>
             </div>
           </div>

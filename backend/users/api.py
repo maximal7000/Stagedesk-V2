@@ -799,3 +799,49 @@ def test_push(request):
     profile = get_or_create_profile(request)
     sent = send_push_to_user(profile, "Stagedesk Test", "Push funktioniert. ✓", link="/")
     return {"sent": sent}
+
+
+# ========== Bulk-Operationen (Admin) ==========
+
+class BulkUserUpdateSchema(Schema):
+    user_ids: List[int]
+    action: str  # 'add_group' | 'remove_group' | 'add_bereich' | 'remove_bereich'
+    target_id: int
+
+
+@users_router.post("/users/bulk", auth=keycloak_auth)
+def bulk_user_update(request, payload: BulkUserUpdateSchema):
+    """Wendet eine Aktion auf mehrere User auf einmal an (Admin-only)."""
+    if not is_admin(request):
+        return {"error": "Keine Berechtigung"}, 403
+    from .models import Bereich
+    users = UserProfile.objects.filter(id__in=payload.user_ids)
+    if not users.exists():
+        return {"updated": 0}
+
+    action = payload.action
+    target = payload.target_id
+    updated = 0
+    if action == 'add_group':
+        group = get_object_or_404(PermissionGroup, id=target)
+        for u in users:
+            u.permission_groups.add(group); updated += 1
+    elif action == 'remove_group':
+        group = get_object_or_404(PermissionGroup, id=target)
+        for u in users:
+            u.permission_groups.remove(group); updated += 1
+    elif action == 'add_bereich':
+        bereich = get_object_or_404(Bereich, id=target)
+        for u in users:
+            u.bereiche.add(bereich); updated += 1
+    elif action == 'remove_bereich':
+        bereich = get_object_or_404(Bereich, id=target)
+        for u in users:
+            u.bereiche.remove(bereich); updated += 1
+    else:
+        return {"error": f"Unbekannte Aktion: {action}"}, 400
+
+    from core.audit import log as audit_log
+    audit_log(request, 'aktualisiert', 'user_bulk', 0, f"{action} auf {updated} User",
+              {"action": action, "target_id": target, "user_ids": payload.user_ids})
+    return {"updated": updated}
