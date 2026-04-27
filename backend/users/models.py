@@ -245,3 +245,23 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"{self.kind}: {self.title} ({self.user_id})"
+
+
+class PushSubscription(models.Model):
+    """Web-Push-Subscription pro Browser/Gerät eines Users.
+    Mehrere Subscriptions pro User möglich (z.B. Handy + Desktop)."""
+    user = models.ForeignKey(UserProfile, on_delete=models.CASCADE, related_name='push_subscriptions')
+    endpoint = models.URLField(max_length=500, unique=True)
+    p256dh = models.CharField(max_length=200)
+    auth = models.CharField(max_length=100)
+    user_agent = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Push-Subscription'
+        verbose_name_plural = 'Push-Subscriptions'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Push für {self.user_id} ({self.endpoint[:40]}...)"

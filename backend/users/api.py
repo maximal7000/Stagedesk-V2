@@ -744,3 +744,58 @@ def delete_notification(request, nid: int):
     profile = get_or_create_profile(request)
     Notification.objects.filter(id=nid, user=profile).delete()
     return {"status": "deleted"}
+
+
+# ========== Push-Subscriptions (Web Push) ==========
+
+from .models import PushSubscription
+
+
+class PushSubscribeSchema(Schema):
+    endpoint: str
+    p256dh: str
+    auth: str
+    user_agent: str = ''
+
+
+@users_router.get("/push/public-key", auth=keycloak_auth)
+def get_push_public_key(request):
+    """Liefert den VAPID-Public-Key für die Browser-Subscription."""
+    from core.push import get_public_key, push_enabled
+    return {"public_key": get_public_key(), "enabled": push_enabled()}
+
+
+@users_router.post("/me/push/subscribe", auth=keycloak_auth)
+def subscribe_push(request, payload: PushSubscribeSchema):
+    """Speichert eine Browser-Subscription. Wenn endpoint schon existiert,
+    wird nur das User-Mapping aktualisiert (Endpoint global eindeutig)."""
+    profile = get_or_create_profile(request)
+    sub, created = PushSubscription.objects.update_or_create(
+        endpoint=payload.endpoint,
+        defaults={
+            'user': profile,
+            'p256dh': payload.p256dh,
+            'auth': payload.auth,
+            'user_agent': payload.user_agent[:300],
+        },
+    )
+    return {"id": sub.id, "created": created}
+
+
+@users_router.post("/me/push/unsubscribe", auth=keycloak_auth)
+def unsubscribe_push(request, payload: dict):
+    """Entfernt eine Subscription anhand des Endpoints."""
+    profile = get_or_create_profile(request)
+    endpoint = (payload or {}).get('endpoint', '')
+    if endpoint:
+        PushSubscription.objects.filter(user=profile, endpoint=endpoint).delete()
+    return {"status": "ok"}
+
+
+@users_router.post("/me/push/test", auth=keycloak_auth)
+def test_push(request):
+    """Schickt eine Test-Notification an alle Subscriptions des Users."""
+    from core.push import send_push_to_user
+    profile = get_or_create_profile(request)
+    sent = send_push_to_user(profile, "Stagedesk Test", "Push funktioniert. ✓", link="/")
+    return {"sent": sent}

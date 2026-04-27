@@ -2,12 +2,14 @@
  * Einstellungen-Seite mit Tabs
  */
 import { useState, useEffect } from 'react';
-import { 
-  Sun, Moon, Monitor, Smartphone, Laptop, Globe, 
-  Shield, Key, Loader2, LogOut, CheckCircle, XCircle, AlertCircle
+import {
+  Sun, Moon, Monitor, Smartphone, Laptop, Globe,
+  Shield, Key, Loader2, LogOut, CheckCircle, XCircle, AlertCircle, Bell,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
+import { getPushStatus, subscribePush, unsubscribePush, testPush } from '../lib/push';
 
 export default function SettingsPage() {
   const { theme, effectiveTheme, forcedTheme, canChangTheme, setTheme } = useTheme();
@@ -34,6 +36,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'appearance', name: 'Darstellung', icon: Sun },
+    { id: 'notifications', name: 'Benachrichtigungen', icon: Bell },
     { id: 'sessions', name: 'Sitzungen', icon: Globe },
     { id: 'security', name: 'Sicherheit', icon: Shield },
   ];
@@ -189,6 +192,9 @@ export default function SettingsPage() {
           </div>
         )}
 
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && <NotificationsTab />}
+
         {/* Sessions Tab */}
         {activeTab === 'sessions' && (
           <div className="space-y-6">
@@ -328,6 +334,87 @@ export default function SettingsPage() {
             )}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function NotificationsTab() {
+  const [status, setStatus] = useState({ supported: true, permission: 'default', subscribed: false });
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { getPushStatus().then(setStatus).catch(() => {}); }, []);
+
+  const refresh = () => getPushStatus().then(setStatus).catch(() => {});
+
+  const onSubscribe = async () => {
+    setBusy(true);
+    try { await subscribePush(); toast.success('Benachrichtigungen aktiviert'); }
+    catch (e) { toast.error(e.message || 'Aktivierung fehlgeschlagen'); }
+    finally { setBusy(false); refresh(); }
+  };
+
+  const onUnsubscribe = async () => {
+    setBusy(true);
+    try { await unsubscribePush(); toast.success('Benachrichtigungen deaktiviert'); }
+    catch { toast.error('Fehler beim Abbestellen'); }
+    finally { setBusy(false); refresh(); }
+  };
+
+  const onTest = async () => {
+    try { await testPush(); toast.success('Test-Push gesendet'); }
+    catch { toast.error('Test fehlgeschlagen'); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-2">Push-Benachrichtigungen</h3>
+        <p className="text-sm text-gray-400 mb-4">
+          Bekomme Browser-Hinweise auf Zuweisungen, Erinnerungen und Mahnungen — auch wenn die App nicht offen ist.
+        </p>
+        {!status.supported ? (
+          <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg text-sm text-gray-400 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" /> Dein Browser unterstützt keine Web-Push-Notifications.
+          </div>
+        ) : status.permission === 'denied' ? (
+          <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg text-sm text-red-300">
+            <p className="font-medium">Permission verweigert.</p>
+            <p className="mt-1">Du hast die Berechtigung im Browser blockiert. Bitte über das Schloss-Symbol neben der URL wieder freigeben.</p>
+          </div>
+        ) : (
+          <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bell className={`w-5 h-5 ${status.subscribed ? 'text-green-400' : 'text-gray-400'}`} />
+              <div>
+                <span className="font-medium text-white">{status.subscribed ? 'Aktiviert' : 'Nicht aktiviert'}</span>
+                <p className="text-xs text-gray-500">Pro Browser/Gerät — auf jedem Endgerät separat aktivieren.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {status.subscribed && (
+                <button onClick={onTest} disabled={busy}
+                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
+                  Test
+                </button>
+              )}
+              {status.subscribed ? (
+                <button onClick={onUnsubscribe} disabled={busy}
+                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
+                  Deaktivieren
+                </button>
+              ) : (
+                <button onClick={onSubscribe} disabled={busy}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm disabled:opacity-50">
+                  {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Aktivieren'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+        <p className="text-xs text-gray-500 mt-2">
+          Hinweis: Auf iOS funktionieren Push-Notifications nur, wenn Stagedesk als PWA über „Zum Home-Bildschirm" installiert ist.
+        </p>
       </div>
     </div>
   );
