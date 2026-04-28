@@ -15,7 +15,23 @@ from django.utils.text import slugify
 
 from core.auth import keycloak_auth
 from users.api import is_admin
+from users.models import UserProfile
+from ninja.errors import HttpError
 from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur
+
+
+def _require_perm(request, code: str):
+    """Admin oder Permission. Wirft 403 wenn nichts davon passt."""
+    if is_admin(request):
+        return
+    kid = request.auth.get('sub', '') if request.auth else ''
+    if kid:
+        try:
+            if UserProfile.objects.get(keycloak_id=kid).has_permission(code, False):
+                return
+        except UserProfile.DoesNotExist:
+            pass
+    raise HttpError(403, "Keine Berechtigung")
 from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
     MonitorProfileListSchema, MonitorProfileCreateSchema,
@@ -350,8 +366,10 @@ def toggle_on_air(request, payload: OnAirSchema):
     if not auth_result:
         return 401, {"success": False, "message": "Nicht autorisiert"}
     request.auth = auth_result
-    if not is_admin(request):
-        return 403, {"success": False, "message": "Kein Admin"}
+    try:
+        _require_perm(request, 'monitor.onair')
+    except HttpError as e:
+        return 403, {"success": False, "message": e.message}
     MonitorConfig.objects.all().update(
         ist_on_air=payload.on_air,
         on_air_seit=timezone.now() if payload.on_air else None,
@@ -379,8 +397,10 @@ def toggle_notfall(request, payload: NotfallSchema):
     if not auth_result:
         return 401, {"success": False, "message": "Nicht autorisiert"}
     request.auth = auth_result
-    if not is_admin(request):
-        return 403, {"success": False, "message": "Kein Admin"}
+    try:
+        _require_perm(request, 'monitor.notfall')
+    except HttpError as e:
+        return 403, {"success": False, "message": e.message}
     MonitorConfig.objects.all().update(
         notfall_aktiv=payload.aktiv,
         notfall_text=payload.text,
@@ -392,11 +412,13 @@ def toggle_notfall(request, payload: NotfallSchema):
 
 @monitor_router.get("/profile", response=list[MonitorProfileListSchema], auth=keycloak_auth)
 def list_profiles(request):
+    _require_perm(request, 'monitor.view')
     return MonitorConfig.objects.all()
 
 
 @monitor_router.post("/profile", auth=keycloak_auth)
 def create_profile(request, payload: MonitorProfileCreateSchema):
+    _require_perm(request, 'monitor.edit')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
 
     # Slug-Kollision vermeiden
@@ -430,6 +452,7 @@ def create_profile(request, payload: MonitorProfileCreateSchema):
 
 @monitor_router.delete("/profile/{id}", auth=keycloak_auth)
 def delete_profile(request, id: int):
+    _require_perm(request, 'monitor.edit')
     config = get_object_or_404(MonitorConfig, id=id)
     if config.ist_standard:
         return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
@@ -441,6 +464,7 @@ def delete_profile(request, id: int):
 
 @monitor_router.get("/config", response=MonitorConfigSchema, auth=keycloak_auth)
 def get_config(request, profil_id: int = None):
+    _require_perm(request, 'monitor.view')
     if profil_id:
         return get_object_or_404(MonitorConfig, id=profil_id)
     return MonitorConfig.get()
@@ -448,6 +472,7 @@ def get_config(request, profil_id: int = None):
 
 @monitor_router.put("/config", response=MonitorConfigSchema, auth=keycloak_auth)
 def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = None):
+    _require_perm(request, 'monitor.edit')
     if profil_id:
         config = get_object_or_404(MonitorConfig, id=profil_id)
     else:
@@ -474,6 +499,7 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
 
 @monitor_router.post("/config/regenerate-token", auth=keycloak_auth)
 def regenerate_token(request, profil_id: int = None):
+    _require_perm(request, 'monitor.edit')
     if profil_id:
         config = get_object_or_404(MonitorConfig, id=profil_id)
     else:
@@ -487,6 +513,7 @@ def regenerate_token(request, profil_id: int = None):
 
 @monitor_router.get("/dateien", response=list[MonitorDateiSchema], auth=keycloak_auth)
 def list_dateien(request, typ: str = None):
+    _require_perm(request, 'monitor.view')
     qs = MonitorDatei.objects.all()
     if typ:
         qs = qs.filter(typ=typ)
@@ -495,6 +522,7 @@ def list_dateien(request, typ: str = None):
 
 @monitor_router.post("/dateien", auth=keycloak_auth)
 def upload_datei(request, datei: UploadedFile = File(...), name: str = Form(""), typ: str = Form("bild")):
+    _require_perm(request, 'monitor.edit')
     obj = MonitorDatei.objects.create(
         name=name or datei.name,
         datei=datei,
@@ -508,6 +536,7 @@ def upload_datei(request, datei: UploadedFile = File(...), name: str = Form(""),
 
 @monitor_router.delete("/dateien/{id}", auth=keycloak_auth)
 def delete_datei(request, id: int):
+    _require_perm(request, 'monitor.edit')
     d = get_object_or_404(MonitorDatei, id=id)
     # Datei vom Dateisystem entfernen
     if d.datei:
@@ -520,16 +549,19 @@ def delete_datei(request, id: int):
 
 @monitor_router.get("/ankuendigungen", response=list[AnkuendigungSchema], auth=keycloak_auth)
 def list_ankuendigungen(request):
+    _require_perm(request, 'monitor.view')
     return Ankuendigung.objects.all()
 
 
 @monitor_router.post("/ankuendigungen", response=AnkuendigungSchema, auth=keycloak_auth)
 def create_ankuendigung(request, payload: AnkuendigungCreateSchema):
+    _require_perm(request, 'monitor.edit')
     return Ankuendigung.objects.create(**payload.dict())
 
 
 @monitor_router.put("/ankuendigungen/{id}", response=AnkuendigungSchema, auth=keycloak_auth)
 def update_ankuendigung(request, id: int, payload: AnkuendigungCreateSchema):
+    _require_perm(request, 'monitor.edit')
     a = get_object_or_404(Ankuendigung, id=id)
     for key, value in payload.dict().items():
         setattr(a, key, value)
@@ -539,6 +571,7 @@ def update_ankuendigung(request, id: int, payload: AnkuendigungCreateSchema):
 
 @monitor_router.delete("/ankuendigungen/{id}", auth=keycloak_auth)
 def delete_ankuendigung(request, id: int):
+    _require_perm(request, 'monitor.edit')
     a = get_object_or_404(Ankuendigung, id=id)
     a.delete()
     return {"success": True}
@@ -550,6 +583,7 @@ def delete_ankuendigung(request, id: int):
 def search_oepnv_stations(request, q: str = "", results: int = 10,
                            use_db: bool = True, use_nahsh: bool = True):
     """Stationen für ÖPNV-Abfahrtsmonitor suchen"""
+    _require_perm(request, 'monitor.edit')
     if len(q) < 2:
         return []
     return oepnv.search_stations(q, results=min(results, 20),
@@ -595,11 +629,13 @@ def report_cec_status(request, slug: str, status: str):
 
 @monitor_router.get("/bildschirme", response=list[BildschirmListSchema], auth=keycloak_auth)
 def list_bildschirme(request):
+    _require_perm(request, 'monitor.view')
     return Bildschirm.objects.all()
 
 
 @monitor_router.post("/bildschirme", auth=keycloak_auth)
 def create_bildschirm(request, payload: BildschirmCreateSchema):
+    _require_perm(request, 'monitor.edit')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
     base_slug = slug
     counter = 1
@@ -616,6 +652,7 @@ def create_bildschirm(request, payload: BildschirmCreateSchema):
 
 @monitor_router.put("/bildschirme/{id}", response=BildschirmListSchema, auth=keycloak_auth)
 def update_bildschirm(request, id: int, payload: BildschirmUpdateSchema):
+    _require_perm(request, 'monitor.edit')
     bs = get_object_or_404(Bildschirm, id=id)
     data = payload.dict(exclude_unset=True)
     if 'default_profil_id' in data:
@@ -629,6 +666,7 @@ def update_bildschirm(request, id: int, payload: BildschirmUpdateSchema):
 
 @monitor_router.delete("/bildschirme/{id}", auth=keycloak_auth)
 def delete_bildschirm(request, id: int):
+    _require_perm(request, 'monitor.edit')
     bs = get_object_or_404(Bildschirm, id=id)
     bs.delete()
     return {"success": True}
@@ -638,11 +676,13 @@ def delete_bildschirm(request, id: int):
 
 @monitor_router.get("/klausuren", response=list[KlausurSchema], auth=keycloak_auth)
 def list_klausuren(request):
+    _require_perm(request, 'monitor.view')
     return list(Klausur.objects.prefetch_related('bildschirme').all())
 
 
 @monitor_router.post("/klausuren", response=KlausurSchema, auth=keycloak_auth)
 def create_klausur(request, payload: KlausurCreateSchema):
+    _require_perm(request, 'monitor.edit')
     data = payload.dict()
     bildschirm_ids = data.pop('bildschirm_ids', [])
     k = Klausur.objects.create(**data)
@@ -653,6 +693,7 @@ def create_klausur(request, payload: KlausurCreateSchema):
 
 @monitor_router.put("/klausuren/{id}", response=KlausurSchema, auth=keycloak_auth)
 def update_klausur(request, id: int, payload: KlausurUpdateSchema):
+    _require_perm(request, 'monitor.edit')
     k = get_object_or_404(Klausur, id=id)
     data = payload.dict(exclude_unset=True)
     bildschirm_ids = data.pop('bildschirm_ids', None)
@@ -666,6 +707,7 @@ def update_klausur(request, id: int, payload: KlausurUpdateSchema):
 
 @monitor_router.delete("/klausuren/{id}", auth=keycloak_auth)
 def delete_klausur(request, id: int):
+    _require_perm(request, 'monitor.edit')
     k = get_object_or_404(Klausur, id=id)
     k.delete()
     return {"success": True}
