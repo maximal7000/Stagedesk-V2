@@ -27,8 +27,26 @@ def _require_perm(request, code: str):
     raise HttpError(403, "Keine Berechtigung")
 
 
-def _display_name(p) -> str:
+def _short_name(p) -> str:
+    """Für Monitor-Vollbild: Vorname → Nachname → Username → keycloak_id[:8]."""
     return p.first_name or p.last_name or p.username or p.keycloak_id[:8]
+
+
+def _full_name(p) -> str:
+    """Für Admin-Anzeigen: 'Vorname Nachname' wenn vorhanden, sonst Username."""
+    full = ' '.join(s for s in (p.first_name, p.last_name) if s)
+    return full or p.username or p.keycloak_id[:8]
+
+
+def _user_dict(p) -> dict:
+    return {
+        "id": p.id, "keycloak_id": p.keycloak_id,
+        "name": _full_name(p),           # für Admin-Listen
+        "kurzname": _short_name(p),       # für Monitor
+        "first_name": p.first_name or '',
+        "last_name": p.last_name or '',
+        "username": p.username,
+    }
 
 
 def _aufgabe_to_dict(a: AgAufgabe) -> dict:
@@ -38,13 +56,7 @@ def _aufgabe_to_dict(a: AgAufgabe) -> dict:
         "beschreibung": a.beschreibung,
         "status": a.status,
         "sortierung": a.sortierung,
-        "zugewiesene": [
-            {
-                "id": u.id, "keycloak_id": u.keycloak_id,
-                "name": _display_name(u),
-                "username": u.username,
-            } for u in a.zugewiesene.all()
-        ],
+        "zugewiesene": [_user_dict(u) for u in a.zugewiesene.all()],
         "erstellt_am": a.erstellt_am.isoformat() if a.erstellt_am else None,
         "erledigt_am": a.erledigt_am.isoformat() if a.erledigt_am else None,
     }
@@ -128,14 +140,8 @@ def delete_aufgabe(request, aid: int):
 def list_users_for_ag(request):
     """Verfügbare User für Zuweisung."""
     _require_perm(request, 'ag.manage')
-    return [
-        {
-            "id": u.id, "keycloak_id": u.keycloak_id,
-            "name": _display_name(u),
-            "username": u.username,
-        }
-        for u in UserProfile.objects.exclude(is_admin_cached=True).order_by('last_name', 'first_name', 'username')
-    ]
+    return [_user_dict(u) for u in UserProfile.objects.exclude(is_admin_cached=True)
+            .order_by('last_name', 'first_name', 'username')]
 
 
 # ─── Öffentlicher Endpoint für Monitor-Display ──────────────────────

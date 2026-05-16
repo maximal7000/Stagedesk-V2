@@ -113,7 +113,7 @@ function Column({ title, items, meta, highlight }) {
                 {a.zugewiesene.map(z => (
                   <span key={z.id}
                     className="inline-block px-2.5 py-1 bg-blue-500/20 text-blue-200 rounded-md text-sm">
-                    {z.name}
+                    {z.kurzname || z.name}
                   </span>
                 ))}
               </div>

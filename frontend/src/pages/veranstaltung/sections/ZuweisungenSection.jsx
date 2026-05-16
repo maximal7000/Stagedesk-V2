@@ -92,7 +92,8 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
           </h4>
           <div className="flex flex-wrap gap-2">
             {gemeldetNichtZugewiesen.map((m) => {
-              const name = m.user_first_name || m.user_last_name || m.user_username || m.user_keycloak_id.slice(0, 8);
+              const name = [m.user_first_name, m.user_last_name].filter(Boolean).join(' ')
+                || m.user_username || m.user_keycloak_id.slice(0, 8);
               return (
                 <button key={m.id} type="button"
                   onClick={() => addZuweisungen([m.user_keycloak_id])}
@@ -196,7 +197,8 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
       {(data?.zuweisungen || []).length > 0 ? (
         <div className="space-y-2">
           {data.zuweisungen.map((z) => {
-            const name = z.user_first_name || z.user_last_name || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
+            const name = [z.user_first_name, z.user_last_name].filter(Boolean).join(' ')
+              || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
             return (
             <div key={z.id} className="flex items-center justify-between py-2.5 px-4 bg-gray-800 rounded-lg group">
               <div className="flex items-center gap-3 min-w-0">

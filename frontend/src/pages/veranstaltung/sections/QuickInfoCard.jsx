@@ -83,7 +83,8 @@ export default function QuickInfoCard({ data, isAdmin }) {
             <>
               <div className="flex -space-x-2">
                 {(data.zuweisungen || []).slice(0, 5).map((z) => {
-                  const name = z.user_first_name || z.user_last_name || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
+                  const name = [z.user_first_name, z.user_last_name].filter(Boolean).join(' ')
+                    || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
                   return (
                     <div key={z.id} className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center ring-2 ring-gray-900" title={name}>
                       <span className="text-white text-xs font-medium">{name[0].toUpperCase()}</span>
