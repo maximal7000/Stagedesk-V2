@@ -9,14 +9,14 @@ from users.models import UserProfile
 class AgAufgabe(models.Model):
     STATUS_CHOICES = [
         ('offen', 'Offen'),
-        ('laeuft', 'Läuft'),
-        ('fertig', 'Fertig'),
+        ('abgeschlossen', 'Abgeschlossen'),
     ]
 
     titel = models.CharField(max_length=200)
     beschreibung = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='offen')
-    sortierung = models.IntegerField(default=0)
+    sortierung = models.IntegerField(default=0,
+        help_text="Frei wählbare Reihenfolge — kleiner Wert zuerst")
     zugewiesene = models.ManyToManyField(UserProfile, blank=True, related_name='ag_aufgaben')
 
     erstellt_am = models.DateTimeField(auto_now_add=True)
@@ -24,9 +24,9 @@ class AgAufgabe(models.Model):
     erledigt_am = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ['status', 'sortierung', 'id']
-        verbose_name = 'AG-Aufgabe'
-        verbose_name_plural = 'AG-Aufgaben'
+        ordering = ['sortierung', 'id']
+        verbose_name = 'Aufgabe'
+        verbose_name_plural = 'Aufgaben'
 
     def __str__(self):
         return self.titel

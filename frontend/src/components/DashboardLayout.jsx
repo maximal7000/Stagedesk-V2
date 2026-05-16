@@ -62,7 +62,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Inventar', href: '/inventar', icon: Boxes, permission: 'inventar.view' },
     { name: 'Anwesenheit', href: '/anwesenheit', icon: ClipboardList, permission: 'anwesenheit.view' },
     { name: 'Kompetenzen', href: '/kompetenzen', icon: Award, permission: 'kompetenzen.view' },
-    { name: 'AG-Aufgaben', href: '/ag', icon: ClipboardList, permission: 'ag.view' },
+    { name: 'Aufgaben', href: '/ag', icon: ClipboardList, permission: 'ag.view' },
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 

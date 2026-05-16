@@ -658,11 +658,11 @@ def initialize_system(request):
          'description': 'Erlaubt das Bestätigen und Entziehen von Kompetenzen bei Usern', 'category': 'kompetenzen'},
         {'code': 'kompetenzen.edit_catalog', 'name': 'Kompetenz-Katalog bearbeiten',
          'description': 'Erlaubt das Anlegen/Bearbeiten/Löschen von Kategorien, Gruppen und Kompetenzen', 'category': 'kompetenzen'},
-        # AG-Aufgaben
-        {'code': 'ag.view', 'name': 'AG-Aufgaben anzeigen',
-         'description': 'Erlaubt das Anzeigen der AG-Aufgaben', 'category': 'ag'},
-        {'code': 'ag.manage', 'name': 'AG-Aufgaben verwalten',
-         'description': 'Erlaubt Anlegen/Bearbeiten/Löschen und Zuweisen', 'category': 'ag'},
+        # Aufgaben
+        {'code': 'ag.view', 'name': 'Aufgaben anzeigen',
+         'description': 'Erlaubt das Anzeigen der Aufgaben', 'category': 'aufgaben'},
+        {'code': 'ag.manage', 'name': 'Aufgaben verwalten',
+         'description': 'Erlaubt Anlegen/Bearbeiten/Löschen und Zuweisen', 'category': 'aufgaben'},
     ]
     
     created_permissions = []

@@ -136,6 +136,20 @@ def delete_aufgabe(request, aid: int):
     return {"status": "deleted"}
 
 
+class ReorderSchema(Schema):
+    ids: List[int]
+
+
+@ag_router.put("/aufgaben/reorder", auth=keycloak_auth)
+def reorder_aufgaben(request, payload: ReorderSchema):
+    """Setzt die Sortierung gemäß der übergebenen ID-Reihenfolge."""
+    _require_perm(request, 'ag.manage')
+    for idx, aid in enumerate(payload.ids):
+        AgAufgabe.objects.filter(id=aid).update(sortierung=idx)
+    _broadcast()
+    return {"status": "ok", "count": len(payload.ids)}
+
+
 @ag_router.get("/users", auth=keycloak_auth)
 def list_users_for_ag(request):
     """Verfügbare User für Zuweisung."""

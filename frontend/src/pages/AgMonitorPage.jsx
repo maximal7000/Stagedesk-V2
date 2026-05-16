@@ -1,22 +1,16 @@
 /**
- * Vollbild-Anzeige der AG-Aufgaben für einen TV / großen Monitor.
- * Live-Update via WebSocket (kein Polling). Kein Login nötig — Read-only.
+ * Vollbild-Anzeige der Aufgaben für einen TV. Eine Liste in der vom Admin
+ * gewählten Reihenfolge; abgeschlossene Aufgaben sind durchgestrichen.
+ * Live-Update via WebSocket. Kein Login nötig.
  */
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { CheckCircle2, PlayCircle, Circle, ListChecks } from 'lucide-react';
+import { CheckCircle2, Circle, ListChecks } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-
-const STATUS_META = {
-  offen:  { Icon: Circle,       cls: 'text-gray-400',  label: 'Offen' },
-  laeuft: { Icon: PlayCircle,   cls: 'text-blue-400',  label: 'Läuft' },
-  fertig: { Icon: CheckCircle2, cls: 'text-green-400', label: 'Fertig' },
-};
 
 export default function AgMonitorPage() {
   const [aufgaben, setAufgaben] = useState([]);
   const [now, setNow] = useState(new Date());
-  const wsRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -27,7 +21,7 @@ export default function AgMonitorPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Uhr alle 30s aktualisieren
+  // Uhr alle 30 s aktualisieren
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30 * 1000);
     return () => clearInterval(t);
@@ -49,13 +43,10 @@ export default function AgMonitorPage() {
       };
     };
     connect();
-    wsRef.current = ws;
     return () => { closed = true; try { ws && ws.close(); } catch {} };
   }, [load]);
 
-  const offen  = aufgaben.filter(a => a.status === 'offen');
-  const laeuft = aufgaben.filter(a => a.status === 'laeuft');
-  const fertig = aufgaben.filter(a => a.status === 'fertig');
+  const offen = aufgaben.filter(a => a.status !== 'abgeschlossen').length;
 
   return (
     <div className="min-h-screen bg-black text-white p-6 lg:p-10">
@@ -63,7 +54,10 @@ export default function AgMonitorPage() {
       <div className="flex items-center justify-between mb-8 pb-6 border-b border-white/10">
         <div className="flex items-center gap-3">
           <ListChecks className="w-10 h-10 text-blue-400" />
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">AG-Aufgaben</h1>
+          <div>
+            <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">Aufgaben</h1>
+            <p className="text-sm text-white/50 mt-1">{offen} offen</p>
+          </div>
         </div>
         <div className="text-right">
           <div className="text-4xl lg:text-5xl font-mono tabular-nums">
@@ -80,50 +74,43 @@ export default function AgMonitorPage() {
           Keine Aufgaben — heute ist frei? 😊
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Column title="Offen"  items={offen}  meta={STATUS_META.offen} />
-          <Column title="Läuft"  items={laeuft} meta={STATUS_META.laeuft} highlight />
-          <Column title="Fertig" items={fertig} meta={STATUS_META.fertig} />
-        </div>
+        <ul className="space-y-3 max-w-5xl mx-auto">
+          {aufgaben.map(a => {
+            const done = a.status === 'abgeschlossen';
+            return (
+              <li key={a.id}
+                  className={`flex items-start gap-4 p-5 rounded-2xl border ${
+                    done
+                      ? 'bg-white/[0.02] border-white/5 opacity-50'
+                      : 'bg-white/[0.04] border-white/10'
+                  }`}>
+                {done
+                  ? <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0 mt-0.5" />
+                  : <Circle className="w-8 h-8 text-white/40 shrink-0 mt-0.5" />
+                }
+                <div className="flex-1 min-w-0">
+                  <div className={`text-2xl font-semibold ${done ? 'line-through' : ''}`}>
+                    {a.titel}
+                  </div>
+                  {a.beschreibung && (
+                    <p className="text-base text-white/60 mt-1 line-clamp-3">{a.beschreibung}</p>
+                  )}
+                  {a.zugewiesene?.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {a.zugewiesene.map(z => (
+                        <span key={z.id}
+                          className="inline-block px-3 py-1 bg-blue-500/20 text-blue-200 rounded-md text-base">
+                          {z.kurzname || z.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       )}
-    </div>
-  );
-}
-
-function Column({ title, items, meta, highlight }) {
-  const { Icon, cls } = meta;
-  return (
-    <div className={`rounded-2xl border ${highlight ? 'border-blue-500/40 bg-blue-500/5' : 'border-white/10 bg-white/[0.02]'} p-5`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className={`flex items-center gap-2 ${cls}`}>
-          <Icon className="w-6 h-6" />
-          <h2 className="text-2xl font-bold">{title}</h2>
-        </div>
-        <span className="text-3xl font-bold text-white/40 tabular-nums">{items.length}</span>
-      </div>
-      <ul className="space-y-3">
-        {items.map(a => (
-          <li key={a.id} className="bg-white/5 border border-white/10 rounded-xl p-4">
-            <div className="text-xl font-semibold leading-tight">{a.titel}</div>
-            {a.beschreibung && (
-              <p className="text-sm text-white/60 mt-1 line-clamp-3">{a.beschreibung}</p>
-            )}
-            {a.zugewiesene?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {a.zugewiesene.map(z => (
-                  <span key={z.id}
-                    className="inline-block px-2.5 py-1 bg-blue-500/20 text-blue-200 rounded-md text-sm">
-                    {z.kurzname || z.name}
-                  </span>
-                ))}
-              </div>
-            )}
-          </li>
-        ))}
-        {items.length === 0 && (
-          <li className="text-center py-4 text-white/30 text-sm">—</li>
-        )}
-      </ul>
     </div>
   );
 }
