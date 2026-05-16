@@ -345,6 +345,14 @@ class Bildschirm(models.Model):
     power_ausnahmen = models.JSONField(default=list, blank=True,
         help_text='[{"von_datum": "YYYY-MM-DD", "bis_datum": "YYYY-MM-DD", "von": "HH:MM", "bis": "HH:MM", "notiz": ""}]')
 
+    # Manueller Override: deaktiviert den Zeitplan und erzwingt einen Zustand.
+    POWER_MODUS_CHOICES = [
+        ('auto', 'Automatisch (Zeitplan)'),
+        ('manuell_an', 'Manuell — Immer An'),
+        ('manuell_aus', 'Manuell — Immer Aus'),
+    ]
+    power_modus = models.CharField(max_length=20, choices=POWER_MODUS_CHOICES, default='auto')
+
     # CEC-Status vom Pi gemeldet
     cec_status = models.CharField(max_length=20, blank=True, default='',
         help_text="Letzter CEC-Status vom Pi (on/standby/unknown)")
@@ -390,8 +398,14 @@ class Bildschirm(models.Model):
 
     def get_power_state(self):
         """Soll der Bildschirm gerade an sein? Gibt True/False zurück.
-        Reihenfolge: Ausnahme (Datum) > Ferienmodus > Wochentag-Zeitplan > immer an.
+        Reihenfolge: Manueller Modus > Ausnahme (Datum) > Ferienmodus > Wochentag-Zeitplan > immer an.
         Zeit wird in Europe/Berlin (settings.TIME_ZONE) gerechnet."""
+        # Manueller Override hat höchste Priorität
+        if self.power_modus == 'manuell_an':
+            return True
+        if self.power_modus == 'manuell_aus':
+            return False
+
         now = timezone.localtime()
         zeit = now.strftime('%H:%M')
         wochentag = now.weekday()

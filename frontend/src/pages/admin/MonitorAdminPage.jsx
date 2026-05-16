@@ -2771,15 +2771,51 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
   };
   const removeAusnahme = (idx) => update('power_ausnahmen', ausnahmen.filter((_, i) => i !== idx));
 
+  const modus = bs.power_modus || 'auto';
+  const setModus = (m) => update('power_modus', m);
+
   return (
     <div className="space-y-4">
+      {/* Modus-Schalter: Automatisch (Zeitplan) vs Manuell An/Aus */}
+      <div className="p-3 bg-gray-800/30 rounded-lg border border-gray-700/40 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-sm font-medium text-white">Steuerung</div>
+            <p className="text-[11px] text-gray-500">Im manuellen Modus ignoriert der Bildschirm den Zeitplan.</p>
+          </div>
+          <div className="inline-flex rounded-lg overflow-hidden border border-gray-700">
+            {[
+              { v: 'auto', l: 'Automatisch' },
+              { v: 'manuell_an', l: 'An' },
+              { v: 'manuell_aus', l: 'Aus' },
+            ].map(({ v, l }) => (
+              <button key={v} type="button" disabled={!canEdit} onClick={() => setModus(v)}
+                className={`px-3 py-1.5 text-sm transition-colors ${
+                  modus === v
+                    ? (v === 'manuell_an' ? 'bg-green-600 text-white'
+                       : v === 'manuell_aus' ? 'bg-red-600 text-white'
+                       : 'bg-blue-600 text-white')
+                    : 'bg-gray-800 text-gray-400 hover:text-white'
+                } disabled:opacity-50`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+        {modus !== 'auto' && (
+          <p className="text-[11px] text-amber-400">
+            Manueller Modus aktiv — Zeitplan und Ferienmodus haben keinen Effekt.
+          </p>
+        )}
+      </div>
+
       {/* Ferienmodus */}
-      <div className="flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
+      <div className={`flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/40 ${modus !== 'auto' ? 'opacity-50' : ''}`}>
         <div>
           <div className="text-sm font-medium text-white">Ferienmodus</div>
           <p className="text-[11px] text-gray-500">Bildschirm bleibt aus — außer zu eingestellten Sonderzeiten unten.</p>
         </div>
-        <Toggle checked={!!bs.ferien_modus} disabled={!canEdit}
+        <Toggle checked={!!bs.ferien_modus} disabled={!canEdit || modus !== 'auto'}
           onChange={(v) => update('ferien_modus', v)} />
       </div>
 

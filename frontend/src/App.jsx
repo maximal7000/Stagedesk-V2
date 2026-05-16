@@ -9,7 +9,6 @@ import { UserProvider } from './contexts/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
 import DashboardLayout from './components/DashboardLayout';
-import SessionTimeoutGuard from './components/SessionTimeoutGuard';
 // Root pages
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -116,7 +115,6 @@ function App() {
   return (
     <>
       <AppContent />
-      <SessionTimeoutGuard />
       <Toaster
         theme="dark"
         position="bottom-right"

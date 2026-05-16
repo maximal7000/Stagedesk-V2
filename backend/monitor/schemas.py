@@ -271,6 +271,7 @@ class BildschirmListSchema(Schema):
     power_zeitplan: list = []
     ferien_modus: bool = False
     power_ausnahmen: list = []
+    power_modus: str = 'auto'
     cec_status: str = ''
     cec_status_zeit: Optional[datetime] = None
     erstellt_am: datetime
@@ -291,6 +292,7 @@ class BildschirmUpdateSchema(Schema):
     power_zeitplan: Optional[list] = None
     ferien_modus: Optional[bool] = None
     power_ausnahmen: Optional[list] = None
+    power_modus: Optional[str] = None
 
 
 class OnAirSchema(Schema):
