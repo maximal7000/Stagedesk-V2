@@ -160,8 +160,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
             <h3 className="text-sm font-medium text-gray-300">Gemeldete Personen</h3>
             <div className="space-y-1">
               {meldungen.map((m) => {
-                const name = [m.user_first_name, m.user_last_name].filter(Boolean).join(' ')
-                  || m.user_username || m.user_keycloak_id?.slice(0, 8) || '?';
+                const name = m.user_first_name || m.user_last_name || m.user_username || m.user_keycloak_id?.slice(0, 8) || '?';
                 return (
                   <div key={m.id} className="flex items-center gap-3 py-2 px-3 bg-gray-800 rounded-lg">
                     <div className="w-7 h-7 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -183,8 +182,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
             <h3 className="text-sm font-medium text-red-400/80">Abmeldungen</h3>
             <div className="space-y-1">
               {abmeldungen.map((a) => {
-                const name = [a.user_first_name, a.user_last_name].filter(Boolean).join(' ')
-                  || a.user_username || a.user_keycloak_id?.slice(0, 8) || '?';
+                const name = a.user_first_name || a.user_last_name || a.user_username || a.user_keycloak_id?.slice(0, 8) || '?';
                 return (
                   <div key={a.id} className="flex items-center gap-3 py-2 px-3 bg-red-900/10 border border-red-800/20 rounded-lg">
                     <div className="w-7 h-7 bg-red-600/30 rounded-full flex items-center justify-center flex-shrink-0">

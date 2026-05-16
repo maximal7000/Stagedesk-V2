@@ -234,7 +234,8 @@ class MonitorConfig(models.Model):
     kamera_titel = models.CharField(max_length=100, blank=True)
     KAMERA_TYP_CHOICES = [
         ('img', 'MJPEG / Bild-Stream'),
-        ('video', 'HLS / MP4'),
+        ('video', 'MP4 / nativer Video-Stream'),
+        ('hls', 'HLS-Stream (.m3u8, z.B. RTSP via go2rtc-Bridge)'),
         ('iframe', 'iframe / Embed'),
     ]
     kamera_typ = models.CharField(max_length=10, choices=KAMERA_TYP_CHOICES, default='img')

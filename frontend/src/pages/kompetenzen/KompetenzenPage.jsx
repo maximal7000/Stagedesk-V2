@@ -294,9 +294,7 @@ function Scoreboard({ data, currentKid }) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-white truncate">
-                {(entry.user_first_name || entry.user_last_name)
-                  ? [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ')
-                  : entry.user_username} {isMe && <span className="text-xs text-blue-400">(Du)</span>}
+                {entry.user_first_name || entry.user_last_name || entry.user_username} {isMe && <span className="text-xs text-blue-400">(Du)</span>}
               </div>
               <div className="text-xs text-gray-500">
                 {entry.anzahl_aktiv} / {entry.anzahl_gesamt} Kompetenzen aktiv
@@ -688,7 +686,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-white font-medium truncate">
-                      {u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : (u.username || '—')}
+                      {u.first_name || u.last_name || u.username || '—'}
                     </span>
                     {istAdmin && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded text-[10px]">

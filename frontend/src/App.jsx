@@ -36,6 +36,8 @@ import KategorienPage from './pages/kalender/KategorienPage';
 import AdminPage from './pages/admin/AdminPage';
 import MonitorAdminPage from './pages/admin/MonitorAdminPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
+import AgAufgabenPage from './pages/admin/AgAufgabenPage';
+import AgMonitorPage from './pages/AgMonitorPage';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
 // Kompetenzen
@@ -65,6 +67,7 @@ function AppContent() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/design-test" element={<DesignTestPage />} />
       <Route path="/monitor" element={<MonitorPage />} />
+      <Route path="/ag-monitor" element={<AgMonitorPage />} />
 
       {/* Protected Routes: Dashboard */}
       <Route
@@ -99,6 +102,7 @@ function AppContent() {
                   <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
                   <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
+                  <Route path="/ag" element={<PermissionRoute anyOf={['ag.view', 'ag.manage']} adminOnly><AgAufgabenPage /></PermissionRoute>} />
                   <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminPage /></PermissionRoute>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
