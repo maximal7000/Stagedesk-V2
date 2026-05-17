@@ -4,12 +4,13 @@
 import { useState, useEffect } from 'react';
 import {
   Sun, Moon, Monitor, Smartphone, Laptop, Globe,
-  Shield, Key, Loader2, LogOut, CheckCircle, XCircle, AlertCircle, Bell,
+  Shield, Key, Loader2, LogOut, CheckCircle, XCircle, AlertCircle, Bell, User, Upload, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
 import { getPushStatus, subscribePush, unsubscribePush, testPush } from '../lib/push';
+import apiClient from '../lib/api';
 
 export default function SettingsPage() {
   const { theme, effectiveTheme, forcedTheme, canChangTheme, setTheme } = useTheme();
@@ -35,6 +36,7 @@ export default function SettingsPage() {
   }, [activeTab, fetchSessions]);
 
   const tabs = [
+    { id: 'profile', name: 'Profil', icon: User },
     { id: 'appearance', name: 'Darstellung', icon: Sun },
     { id: 'notifications', name: 'Benachrichtigungen', icon: Bell },
     { id: 'sessions', name: 'Sitzungen', icon: Globe },
@@ -101,6 +103,9 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        {/* Profile Tab */}
+        {activeTab === 'profile' && <ProfileTab />}
+
         {/* Appearance Tab */}
         {activeTab === 'appearance' && (
           <div className="space-y-6">
@@ -391,6 +396,97 @@ function NotificationsTab() {
         <p className="text-xs text-gray-500 mt-2">
           Hinweis: Auf iOS funktionieren Push-Notifications nur, wenn Stagedesk als PWA über „Zum Home-Bildschirm" installiert ist.
         </p>
+      </div>
+    </div>
+  );
+}
+
+function ProfileTab() {
+  const { profile, fetchProfile } = useUser();
+  const [landing, setLanding] = useState(profile?.default_landing || '');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => { setLanding(profile?.default_landing || ''); }, [profile?.default_landing]);
+
+  const LANDING_OPTIONS = [
+    { v: '',                l: 'Dashboard (Standard)' },
+    { v: '/veranstaltung',  l: 'Veranstaltungen' },
+    { v: '/kalender',       l: 'Kalender' },
+    { v: '/inventar',       l: 'Inventar' },
+    { v: '/anwesenheit',    l: 'Anwesenheit' },
+    { v: '/kompetenzen',    l: 'Kompetenzen' },
+    { v: '/aufgaben',       l: 'Aufgaben' },
+    { v: '/haushalte',      l: 'Haushalte' },
+    { v: '/notifications',  l: 'Benachrichtigungen' },
+  ];
+
+  const saveLanding = async (v) => {
+    setSaving(true);
+    setLanding(v);
+    try { await apiClient.put('/users/me', { default_landing: v }); fetchProfile(); toast.success('Gespeichert'); }
+    catch { toast.error('Speichern fehlgeschlagen'); }
+    finally { setSaving(false); }
+  };
+
+  const uploadAvatar = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const fd = new FormData(); fd.append('datei', file);
+      await apiClient.post('/users/me/avatar', fd);
+      fetchProfile(); toast.success('Profilbild aktualisiert');
+    } catch (e) { toast.error(e?.response?.data?.detail || 'Upload fehlgeschlagen'); }
+    finally { setUploading(false); }
+  };
+
+  const removeAvatar = async () => {
+    if (!confirm('Profilbild entfernen?')) return;
+    try { await apiClient.delete('/users/me/avatar'); fetchProfile(); toast.success('Entfernt'); }
+    catch { toast.error('Fehler'); }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Avatar */}
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-3">Profilbild</h3>
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center">
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+              : <User className="w-9 h-9 text-white" />
+            }
+          </div>
+          <div className="flex flex-col gap-2">
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg cursor-pointer">
+              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+              {profile?.avatar_url ? 'Bild ersetzen' : 'Bild hochladen'}
+              <input type="file" className="hidden" accept="image/*"
+                onChange={(e) => uploadAvatar(e.target.files?.[0])} />
+            </label>
+            {profile?.avatar_url && (
+              <button onClick={removeAvatar}
+                className="inline-flex items-center gap-1 text-sm text-red-400 hover:text-red-300">
+                <Trash2 className="w-3.5 h-3.5" /> Entfernen
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 mt-2">Max. 5 MB · JPG/PNG/GIF/WebP</p>
+      </div>
+
+      {/* Landing Page */}
+      <div className="pt-6 border-t border-gray-800">
+        <h3 className="text-lg font-semibold text-white mb-2">Startseite nach Login</h3>
+        <p className="text-sm text-gray-400 mb-3">
+          Welche Seite soll direkt nach dem Anmelden geöffnet werden?
+        </p>
+        <select value={landing} onChange={(e) => saveLanding(e.target.value)}
+          disabled={saving}
+          className="w-full md:w-80 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          {LANDING_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        </select>
       </div>
     </div>
   );

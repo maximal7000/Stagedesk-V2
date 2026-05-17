@@ -119,15 +119,55 @@ def get_current_user(request):
 def update_current_user(request, payload: UserProfileUpdateSchema):
     """Eigenes Profil aktualisieren"""
     profile = get_or_create_profile(request)
-    
+
+    changed = []
     if payload.theme and not profile.theme_locked:
-        # Prüfe ob User Permission für Light Mode hat (Admin hat immer)
         if payload.theme == 'light' and not profile.has_permission('theme.light_mode', profile._is_admin):
-            pass  # Ignoriere, keine Permission
+            pass  # ohne Light-Permission ignorieren
         else:
             profile.theme = payload.theme
-            profile.save()
-    
+            changed.append('theme')
+
+    if payload.default_landing is not None:
+        # Pfade explizit auf eigene Routen begrenzen (kein https://… o.ä.)
+        v = (payload.default_landing or '').strip()
+        if v and not v.startswith('/'):
+            v = '/' + v
+        profile.default_landing = v[:200]
+        changed.append('default_landing')
+
+    if changed:
+        profile.save(update_fields=changed + ['updated_at'])
+    return profile
+
+
+from ninja import File as _NinjaFile
+from ninja.files import UploadedFile as _NinjaUploadedFile
+
+
+@users_router.post("/me/avatar", response=UserProfileSchema, auth=keycloak_auth)
+def upload_avatar(request, datei: _NinjaUploadedFile = _NinjaFile(...)):
+    """Eigenes Profilbild hochladen — ersetzt vorhandenes."""
+    profile = get_or_create_profile(request)
+    if datei.size > 5 * 1024 * 1024:
+        from ninja.errors import HttpError
+        raise HttpError(400, 'Maximal 5 MB')
+    if profile.avatar:
+        try: profile.avatar.delete(save=False)
+        except Exception: pass
+    profile.avatar = datei
+    profile.save(update_fields=['avatar', 'updated_at'])
+    return profile
+
+
+@users_router.delete("/me/avatar", response=UserProfileSchema, auth=keycloak_auth)
+def delete_avatar(request):
+    profile = get_or_create_profile(request)
+    if profile.avatar:
+        try: profile.avatar.delete(save=False)
+        except Exception: pass
+        profile.avatar = None
+        profile.save(update_fields=['avatar', 'updated_at'])
     return profile
 
 

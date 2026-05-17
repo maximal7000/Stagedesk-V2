@@ -11,10 +11,20 @@ export default function LoginPage() {
   const [installPrompt, setInstallPrompt] = useState(null);
 
   useEffect(() => {
-    if (auth.isAuthenticated) {
-      window.location.href = '/';
-    }
-  }, [auth.isAuthenticated]);
+    if (!auth.isAuthenticated) return;
+    // Bevorzugte Landing-Page aus dem Profil holen (falls gesetzt),
+    // sonst Dashboard. Wir fragen das Profil-Endpoint direkt mit dem
+    // gerade gewonnenen Access-Token an.
+    const token = auth.user?.access_token;
+    const base = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    fetch(`${base}/users/me`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const target = (data?.default_landing || '/').trim() || '/';
+        window.location.href = target;
+      })
+      .catch(() => { window.location.href = '/'; });
+  }, [auth.isAuthenticated, auth.user]);
 
   // PWA-Install-Hinweis: Browser-Event abfangen, Default-Banner unterdrücken,
   // eigenen Button anzeigen.

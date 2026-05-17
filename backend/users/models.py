@@ -107,6 +107,14 @@ class UserProfile(models.Model):
     dashboard_widgets = models.JSONField(null=True, blank=True, default=None,
                                          help_text="User-gewählte Dashboard-Widgets (Liste von Codes)")
 
+    # Bevorzugte Startseite nach dem Login (Pfad, z.B. /veranstaltung).
+    # Leer = Dashboard /.
+    default_landing = models.CharField(max_length=200, blank=True, default='',
+                                       help_text='Startseite nach Login, z.B. /veranstaltung')
+
+    # Profilbild — wird statt der Initialen genutzt wenn vorhanden.
+    avatar = models.ImageField(upload_to='avatars/%Y/', null=True, blank=True)
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
