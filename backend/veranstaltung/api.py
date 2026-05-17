@@ -249,11 +249,18 @@ def list_veranstaltungen(request, q: Query[VeranstaltungFilterSchema] = None):
 
 @veranstaltung_router.get("/meine", response=List[VeranstaltungListSchema], auth=keycloak_auth)
 def list_meine_veranstaltungen(request):
-    """Veranstaltungen, denen der aktuelle User zugewiesen ist (für Dashboard)."""
+    """Veranstaltungen, denen der aktuelle User zugewiesen ist (für Dashboard).
+    Abgeschlossene und abgesagte werden ausgeblendet — abgeschlossen ist hier
+    abgeleitet aus datum_bis < jetzt (siehe Veranstaltung.effektiv_status)."""
     require_permission(request, 'veranstaltung.view')
+    from django.db.models import Q
     kid = get_user_id(request)
+    now = timezone.now()
     qs = Veranstaltung.objects.prefetch_related('zuweisungen').filter(
-        zuweisungen__user_keycloak_id=kid
+        zuweisungen__user_keycloak_id=kid,
+    ).exclude(status='abgesagt').filter(
+        # Noch nicht beendet: entweder kein Enddatum oder Ende ≥ jetzt
+        Q(datum_bis__isnull=True) | Q(datum_bis__gte=now)
     ).distinct().order_by('datum_von')
     result = list(qs)
     for v in result:
