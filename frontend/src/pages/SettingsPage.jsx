@@ -22,6 +22,7 @@ export default function SettingsPage() {
     sessions, 
     fetchSessions, 
     revokeSession,
+    revokeAllSessions,
     initializeSystem 
   } = useUser();
   
@@ -204,10 +205,36 @@ export default function SettingsPage() {
         {activeTab === 'sessions' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Aktive Sitzungen</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Hier siehst du alle Geräte, auf denen du angemeldet bist
-              </p>
+              <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
+                <div>
+                  <h3 className="text-lg font-semibold text-white">Aktive Sitzungen</h3>
+                  <p className="text-sm text-gray-400">
+                    Hier siehst du alle Geräte, auf denen du angemeldet bist.
+                  </p>
+                </div>
+                {sessions.length > 0 && (
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Alle anderen Sitzungen abmelden? Auf diesen Geräten ist eine neue Anmeldung nötig.')) return;
+                        const r = await revokeAllSessions({ includeCurrent: false });
+                        if (r) toast.success(`${r.revoked} Sitzung(en) abgemeldet`);
+                        else toast.error('Fehler');
+                      }}
+                      className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
+                      Alle anderen abmelden
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('ALLE Sitzungen inkl. diese abmelden? Du musst dich danach neu anmelden.')) return;
+                        await revokeAllSessions({ includeCurrent: true });
+                      }}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg">
+                      Auch hier abmelden
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {sessions.length === 0 ? (
                 <div className="text-center py-8 text-gray-400">

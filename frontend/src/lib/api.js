@@ -84,8 +84,17 @@
           } catch (refreshError) {
             console.error('Token-Refresh fehlgeschlagen:', refreshError);
             isRefreshing = false;
-            // NICHT automatisch ausloggen - nur Fehler werfen
-            // Der User kann manuell neu einloggen wenn nötig
+            // Keycloak-Session weg (z.B. von Admin abgemeldet) → lokal
+            // ausloggen und Login-Seite öffnen, damit der User neu anmeldet
+            try {
+              if (authContext?.removeUser) await authContext.removeUser();
+            } catch {}
+            try {
+              localStorage.removeItem('stagedesk_impersonate');
+            } catch {}
+            if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+              window.location.href = '/login';
+            }
           }
         }
       }
