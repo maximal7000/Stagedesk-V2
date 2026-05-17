@@ -8,7 +8,7 @@ import {
   ArrowLeft, Plus, Wallet, TrendingUp, TrendingDown,
   Trash2, Edit, ExternalLink, Loader2, Package, RefreshCw,
   Wand2, Save, X, LayoutGrid, List, Columns,
-  ChevronUp, ChevronDown, Info, ArrowUpDown,
+  ChevronUp, ChevronDown, Info, ArrowUpDown, Search, FileDown,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import EditHaushaltModal from '../../components/EditHaushaltModal';
@@ -306,6 +306,56 @@ export default function HaushaltDetailPage() {
   const [sortBy, setSortBy] = useState({ konsumitiv: 'manuell', investiv: 'manuell' });
   // Welche Beschreibungen sind aufgeklappt
   const [openDesc, setOpenDesc] = useState(() => new Set());
+  // Suche/Filter + Bulk-Selection
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [statusSummary, setStatusSummary] = useState(null);
+
+  const fetchStatusSummary = async () => {
+    try {
+      const r = await apiClient.get(`/haushalte/${id}/status-summary`);
+      setStatusSummary(r.data);
+    } catch {}
+  };
+  useEffect(() => { if (id) fetchStatusSummary(); }, [id, artikel.length]);
+
+  const filterItems = (items) => items.filter((a) => {
+    if (filterStatus && a.status !== filterStatus) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!a.name.toLowerCase().includes(q) && !(a.beschreibung || '').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const toggleSelect = (id) => setSelectedIds((s) => {
+    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const bulkSetStatus = async (status) => {
+    if (selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      await apiClient.put(`/haushalte/${id}/artikel/bulk`, {
+        ids: Array.from(selectedIds), status,
+      });
+      clearSelection();
+      fetchData();
+    } catch {} finally { setBulkBusy(false); }
+  };
+
+  const exportCsv = async () => {
+    try {
+      const res = await apiClient.get(`/haushalte/${id}/artikel.csv`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${haushalt?.name || 'artikel'}.csv`; a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+  };
 
   // Initiales Laden - nur bei ID-Wechsel
   useEffect(() => {
@@ -568,6 +618,13 @@ export default function HaushaltDetailPage() {
     return (
       <>
       <tr className="border-b border-gray-800 hover:bg-gray-800/30 group align-middle">
+        {/* Checkbox */}
+        <td className="p-2 w-[32px]">
+          <input type="checkbox"
+            checked={selectedIds.has(item.id)}
+            onChange={() => toggleSelect(item.id)}
+            className="rounded border-gray-600 bg-gray-700 text-blue-500" />
+        </td>
         {/* Status */}
         <td className="p-2 w-[110px]">
           <select value={item.status || 'beantragt'}
@@ -650,7 +707,7 @@ export default function HaushaltDetailPage() {
       </tr>
       {descOpen && item.beschreibung && (
         <tr className="border-b border-gray-800 bg-gray-900/40">
-          <td colSpan={9} className="px-4 py-2 text-sm text-gray-300 whitespace-pre-wrap">
+          <td colSpan={10} className="px-4 py-2 text-sm text-gray-300 whitespace-pre-wrap">
             {item.beschreibung}
           </td>
         </tr>
@@ -726,6 +783,7 @@ export default function HaushaltDetailPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase tracking-wider">
+              <th className="p-2 w-[32px]"></th>
               <th className="p-2 w-[110px]">Status</th>
               <th className="p-2 w-[48px]"></th>
               <th className="p-2">Name</th>
@@ -742,7 +800,7 @@ export default function HaushaltDetailPage() {
               <ArtikelRow key={item.id} item={item} kategorie={kategorie} />
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={9} className="p-6 text-center text-gray-500 text-sm">Noch keine Artikel</td></tr>
+              <tr><td colSpan={10} className="p-6 text-center text-gray-500 text-sm">Noch keine Artikel</td></tr>
             )}
           </tbody>
         </table>
@@ -833,6 +891,68 @@ export default function HaushaltDetailPage() {
         </div>
       </div>
 
+      {/* Such/Filter/Bulk + CSV-Export */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[180px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input type="text" placeholder="Suchen…" value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm" />
+        </div>
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white">
+          <option value="">Alle Status</option>
+          {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        </select>
+        <button onClick={exportCsv}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
+          <FileDown className="w-4 h-4" /> CSV
+        </button>
+        {selectedIds.size > 0 && (
+          <>
+            <span className="text-sm text-gray-400">{selectedIds.size} ausgewählt</span>
+            <select onChange={(e) => { if (e.target.value) { bulkSetStatus(e.target.value); e.target.value = ''; } }}
+              disabled={bulkBusy}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded px-2 py-2 border-0">
+              <option value="">Status setzen…</option>
+              {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900">{l}</option>)}
+            </select>
+            <button onClick={clearSelection}
+              className="text-sm text-gray-400 hover:text-white px-2">Auswahl×</button>
+          </>
+        )}
+      </div>
+
+      {/* Status-Summary (Budget-Aufteilung) */}
+      {statusSummary && (
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Budget nach Status</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {['konsumitiv', 'investiv'].map((kat) => {
+              const sums = statusSummary[kat] || {};
+              const total = Object.values(sums).reduce((s, x) => s + (x.summe || 0), 0);
+              return (
+                <div key={kat}>
+                  <div className="text-xs text-gray-400 mb-1 capitalize">{kat}</div>
+                  <div className="flex flex-wrap gap-1.5 text-xs">
+                    {Object.entries(STATUS_LABEL).map(([s, l]) => {
+                      const v = sums[s];
+                      if (!v) return null;
+                      return (
+                        <span key={s} className={`px-2 py-0.5 rounded ${STATUS_CLASS[s]}`}>
+                          {l}: {v.summe.toLocaleString('de-DE', {minimumFractionDigits: 2})} € ({v.anzahl})
+                        </span>
+                      );
+                    })}
+                    {total === 0 && <span className="text-gray-600">—</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Tabellen - Je nach Ansicht */}
       {viewMode === 'tabs' && (
         <div>
@@ -865,7 +985,7 @@ export default function HaushaltDetailPage() {
           {/* Aktive Tabelle */}
           {activeTab === 'konsumitiv' && (
             <ArtikelTabelle
-              items={artikelKonsumitiv}
+              items={filterItems(artikelKonsumitiv)}
               kategorie="konsumitiv"
               color="orange"
               icon={TrendingDown}
@@ -875,7 +995,7 @@ export default function HaushaltDetailPage() {
           )}
           {activeTab === 'investiv' && (
             <ArtikelTabelle
-              items={artikelInvestitiv}
+              items={filterItems(artikelInvestitiv)}
               kategorie="investiv"
               color="green"
               icon={TrendingUp}
@@ -889,7 +1009,7 @@ export default function HaushaltDetailPage() {
       {viewMode === 'split' && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <ArtikelTabelle
-            items={artikelKonsumitiv}
+            items={filterItems(artikelKonsumitiv)}
             kategorie="konsumitiv"
             color="orange"
             icon={TrendingDown}
@@ -897,7 +1017,7 @@ export default function HaushaltDetailPage() {
             ausgaben={gesamtKonsumitiv}
           />
           <ArtikelTabelle
-            items={artikelInvestitiv}
+            items={filterItems(artikelInvestitiv)}
             kategorie="investiv"
             color="green"
             icon={TrendingUp}
@@ -910,7 +1030,7 @@ export default function HaushaltDetailPage() {
       {viewMode === 'stacked' && (
         <div className="space-y-6">
           <ArtikelTabelle
-            items={artikelKonsumitiv}
+            items={filterItems(artikelKonsumitiv)}
             kategorie="konsumitiv"
             color="orange"
             icon={TrendingDown}
@@ -918,7 +1038,7 @@ export default function HaushaltDetailPage() {
             ausgaben={gesamtKonsumitiv}
           />
           <ArtikelTabelle
-            items={artikelInvestitiv}
+            items={filterItems(artikelInvestitiv)}
             kategorie="investiv"
             color="green"
             icon={TrendingUp}
