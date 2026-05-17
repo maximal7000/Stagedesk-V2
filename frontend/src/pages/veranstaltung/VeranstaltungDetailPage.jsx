@@ -50,6 +50,46 @@ function formatDatum(d) {
   });
 }
 
+/**
+ * Backend liefert ISO-Strings mit Timezone (UTC oder +02:00). Das
+ * <input type="datetime-local"> erwartet aber LOKALE Zeit ohne Timezone.
+ * Hier konvertieren wir den ISO-String in einen "YYYY-MM-DDTHH:MM"-String
+ * in Browser-Zeitzone, sodass der User in der Anzeige und im Edit-Feld
+ * dieselbe Uhrzeit sieht.
+ */
+function isoToLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** datetime-local-String (Browser-Zeit) zurück in ISO-UTC für die API. */
+function localInputToISO(local) {
+  if (!local) return null;
+  const d = new Date(local);  // Browser interpretiert ohne TZ-Suffix als lokal
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+/**
+ * Sicherstellen, dass datum_bis >= datum_von ist. Wenn datum_bis leer oder
+ * davor liegt: auf datum_von + 1 Stunde setzen. Beide Werte sind im
+ * datetime-local-Format (lokal).
+ */
+function ensureEndAfterStart(vonLocal, bisLocal) {
+  if (!vonLocal) return bisLocal || '';
+  const vd = new Date(vonLocal);
+  if (isNaN(vd.getTime())) return bisLocal || '';
+  const bd = bisLocal ? new Date(bisLocal) : null;
+  if (!bd || isNaN(bd.getTime()) || bd <= vd) {
+    const end = new Date(vd.getTime() + 60 * 60 * 1000);  // +1 h
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${end.getFullYear()}-${pad(end.getMonth() + 1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+  }
+  return bisLocal;
+}
+
 export default function VeranstaltungDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -77,8 +117,9 @@ export default function VeranstaltungDetailPage() {
       setData(res.data);
       setForm({
         titel: res.data.titel, beschreibung: res.data.beschreibung || '',
-        datum_von: res.data.datum_von?.slice(0, 16) || '', datum_bis: res.data.datum_bis?.slice(0, 16) || '',
-        ort: res.data.ort || '', adresse: res.data.adresse || '', status: res.data.status || 'planung',
+        datum_von: isoToLocalInput(res.data.datum_von),
+        datum_bis: isoToLocalInput(res.data.datum_bis),
+        ort: res.data.ort || '', adresse: res.data.adresse || '', status: res.data.status || 'geplant',
       });
     } catch (err) {
       console.error('Fehler:', err);
@@ -121,10 +162,12 @@ export default function VeranstaltungDetailPage() {
     e.preventDefault();
     setSaving(true);
     try {
+      const vonLocal = form.datum_von || isoToLocalInput(new Date().toISOString());
+      const bisLocal = ensureEndAfterStart(vonLocal, form.datum_bis);
       const payload = {
         ...form,
-        datum_von: form.datum_von || new Date().toISOString().slice(0, 16),
-        datum_bis: form.datum_bis || new Date().toISOString().slice(0, 16),
+        datum_von: localInputToISO(vonLocal),
+        datum_bis: localInputToISO(bisLocal),
       };
       const res = await apiClient.post('/veranstaltung', payload);
       const newId = res.data?.id ?? res.data?.pk;
@@ -145,7 +188,14 @@ export default function VeranstaltungDetailPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await apiClient.put(`/veranstaltung/${id}`, form);
+      const vonLocal = form.datum_von;
+      const bisLocal = ensureEndAfterStart(vonLocal, form.datum_bis);
+      const payload = {
+        ...form,
+        datum_von: localInputToISO(vonLocal),
+        datum_bis: localInputToISO(bisLocal),
+      };
+      await apiClient.put(`/veranstaltung/${id}`, payload);
       setEditMode(false);
       fetchDetail();
     } catch (err) {
@@ -326,7 +376,7 @@ export default function VeranstaltungDetailPage() {
                   <Save className="w-4 h-4" /> Speichern
                 </button>
                 <button type="button"
-                  onClick={() => { setEditMode(false); setForm({ titel: data.titel, beschreibung: data.beschreibung || '', datum_von: data.datum_von?.slice(0, 16) || '', datum_bis: data.datum_bis?.slice(0, 16) || '', ort: data.ort || '', adresse: data.adresse || '', status: data.status || 'planung' }); }}
+                  onClick={() => { setEditMode(false); setForm({ titel: data.titel, beschreibung: data.beschreibung || '', datum_von: isoToLocalInput(data.datum_von), datum_bis: isoToLocalInput(data.datum_bis), ort: data.ort || '', adresse: data.adresse || '', status: data.status || 'geplant' }); }}
                   className="p-2 text-gray-400 hover:text-white">
                   <X className="w-4 h-4" />
                 </button>
