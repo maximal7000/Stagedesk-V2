@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Users, Key, Plus, Edit, Trash2, Eye,
-  Save, X, Loader2, Sun, Moon, AlertCircle, Info, Shield, FolderOpen, Check,
+  Save, X, Loader2, Sun, Moon, AlertCircle, Info, Shield, FolderOpen, Check, Settings,
+  RefreshCw, Trash,
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import apiClient from '../../lib/api';
@@ -95,6 +96,7 @@ export default function AdminPage() {
     { id: 'users', name: 'Benutzer', icon: Users },
     { id: 'groups', name: 'Gruppen', icon: FolderOpen },
     { id: 'permissions', name: 'Berechtigungen', icon: Key },
+    { id: 'system', name: 'System', icon: Settings },
   ];
 
   // ═══ User Management ═══
@@ -514,6 +516,9 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {/* ═══ System Tab ═══ */}
+          {activeTab === 'system' && <SystemTab />}
         </>
       )}
 
@@ -619,6 +624,108 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+
+function SystemTab() {
+  const [staleLoading, setStaleLoading] = useState(false);
+  const [stale, setStale] = useState(null);
+  const [initRunning, setInitRunning] = useState(false);
+  const [initResult, setInitResult] = useState(null);
+  const [cleanupRunning, setCleanupRunning] = useState(false);
+
+  const runInit = async () => {
+    setInitRunning(true);
+    try {
+      const r = await apiClient.post('/users/setup/init');
+      setInitResult(r.data);
+      toast.success(`${(r.data?.created_permissions || []).length} Permission(s) neu angelegt`);
+    } catch (e) {
+      toast.error(e.response?.data?.error || 'Init fehlgeschlagen');
+    } finally { setInitRunning(false); }
+  };
+
+  const loadStale = async () => {
+    setStaleLoading(true);
+    try {
+      const r = await apiClient.get('/users/setup/stale-permissions');
+      setStale(r.data);
+    } catch { toast.error('Konnte Stale-Liste nicht laden'); }
+    finally { setStaleLoading(false); }
+  };
+
+  const cleanupStale = async () => {
+    if (!stale?.stale?.length) return;
+    if (!confirm(`${stale.stale.length} veraltete Permission(s) wirklich löschen?`)) return;
+    setCleanupRunning(true);
+    try {
+      const r = await apiClient.post('/users/setup/cleanup-permissions', { all_stale: true });
+      toast.success(`${r.data?.count || 0} gelöscht`);
+      loadStale();
+    } catch { toast.error('Cleanup fehlgeschlagen'); }
+    finally { setCleanupRunning(false); }
+  };
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
+      {/* Permissions initialisieren */}
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-2">Permissions initialisieren</h3>
+        <p className="text-sm text-gray-400 mb-3">
+          Legt alle im Code definierten Standard-Berechtigungen in der Datenbank an
+          (idempotent — bestehende werden nicht überschrieben).
+        </p>
+        <button onClick={runInit} disabled={initRunning}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium rounded-lg">
+          {initRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          Permissions initialisieren
+        </button>
+        {initResult && (
+          <pre className="mt-3 p-3 bg-gray-800 text-xs text-gray-300 rounded-lg overflow-auto max-h-48">
+{JSON.stringify(initResult, null, 2)}
+          </pre>
+        )}
+      </div>
+
+      {/* Stale-Permissions aufräumen */}
+      <div className="pt-6 border-t border-gray-800">
+        <h3 className="text-lg font-semibold text-white mb-2">Veraltete Permissions aufräumen</h3>
+        <p className="text-sm text-gray-400 mb-3">
+          Listet Permission-Codes, die nicht (mehr) im Code-Katalog vorkommen — z.B. nach Umbenennungen.
+        </p>
+        <div className="flex gap-2">
+          <button onClick={loadStale} disabled={staleLoading}
+            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
+            {staleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Prüfen
+          </button>
+          {stale?.stale?.length > 0 && (
+            <button onClick={cleanupStale} disabled={cleanupRunning}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm rounded-lg">
+              {cleanupRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />}
+              Alle löschen ({stale.stale.length})
+            </button>
+          )}
+        </div>
+        {stale && (
+          stale.stale.length === 0 ? (
+            <p className="mt-3 text-sm text-green-400 inline-flex items-center gap-1">
+              <Check className="w-4 h-4" /> Keine veralteten Einträge — sauber.
+            </p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-800 bg-gray-800/40 rounded-lg">
+              {stale.stale.map((p) => (
+                <li key={p.id} className="p-3 flex items-center gap-3">
+                  <code className="text-xs px-2 py-0.5 bg-gray-900 text-red-300 rounded">{p.code}</code>
+                  <span className="text-sm text-gray-300">{p.name}</span>
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+      </div>
     </div>
   );
 }
