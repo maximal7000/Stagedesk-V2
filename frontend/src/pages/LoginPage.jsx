@@ -5,6 +5,7 @@
 import { useAuth } from 'react-oidc-context';
 import { useEffect, useState } from 'react';
 import { LogIn, Download } from 'lucide-react';
+import { LoginBanner } from '../components/MaintenanceBanner';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -80,6 +81,8 @@ export default function LoginPage() {
             Stagedesk
           </h1>
         </div>
+
+        <LoginBanner />
 
         {/* Glas-Card */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-8">

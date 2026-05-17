@@ -9,6 +9,7 @@ import { UserProvider } from './contexts/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
 import DashboardLayout from './components/DashboardLayout';
+import { MaintenanceBanner } from './components/MaintenanceBanner';
 // Root pages
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -118,6 +119,7 @@ function AppContent() {
 function App() {
   return (
     <>
+      <MaintenanceBanner />
       <AppContent />
       <Toaster
         theme="dark"

@@ -635,6 +635,50 @@ function SystemTab() {
   const [initRunning, setInitRunning] = useState(false);
   const [initResult, setInitResult] = useState(null);
   const [cleanupRunning, setCleanupRunning] = useState(false);
+  // Branding + Wartung + Banner
+  const [global, setGlobal] = useState(null);
+  const [globalDirty, setGlobalDirty] = useState(false);
+  const [globalSaving, setGlobalSaving] = useState(false);
+  // Tests + Stats + Version + Backups
+  const [discordResult, setDiscordResult] = useState(null);
+  const [emailTo, setEmailTo] = useState('');
+  const [emailResult, setEmailResult] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [version, setVersion] = useState(null);
+  const [backups, setBackups] = useState(null);
+
+  const loadGlobal = async () => {
+    try { const r = await apiClient.get('/admin/global-settings'); setGlobal(r.data); setGlobalDirty(false); } catch {}
+  };
+  const loadStats = async () => { try { const r = await apiClient.get('/admin/stats'); setStats(r.data); } catch {} };
+  const loadVersion = async () => { try { const r = await apiClient.get('/admin/version'); setVersion(r.data); } catch {} };
+  const loadBackups = async () => { try { const r = await apiClient.get('/admin/backups'); setBackups(r.data); } catch {} };
+
+  useEffect(() => { loadGlobal(); loadStats(); loadVersion(); loadBackups(); }, []);
+
+  const saveGlobal = async () => {
+    setGlobalSaving(true);
+    try {
+      await apiClient.put('/admin/global-settings', { values: global });
+      toast.success('Einstellungen gespeichert');
+      setGlobalDirty(false);
+    } catch { toast.error('Fehler'); }
+    finally { setGlobalSaving(false); }
+  };
+
+  const setKey = (k, v) => { setGlobal(g => ({ ...g, [k]: v })); setGlobalDirty(true); };
+
+  const runDiscordTest = async () => {
+    setDiscordResult(null);
+    try { const r = await apiClient.post('/admin/test-discord'); setDiscordResult(r.data); }
+    catch { setDiscordResult({ ok: false, reason: 'Request fehlgeschlagen' }); }
+  };
+
+  const runEmailTest = async () => {
+    setEmailResult(null);
+    try { const r = await apiClient.post('/admin/test-email', { to: emailTo }); setEmailResult(r.data); }
+    catch { setEmailResult({ ok: false, reason: 'Request fehlgeschlagen' }); }
+  };
 
   const runInit = async () => {
     setInitRunning(true);
@@ -724,6 +768,163 @@ function SystemTab() {
               ))}
             </ul>
           )
+        )}
+      </div>
+
+      {/* Branding + Wartung + Login-Banner */}
+      <div className="pt-6 border-t border-gray-800">
+        <h3 className="text-lg font-semibold text-white mb-3">Globale Einstellungen</h3>
+        {!global ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="text-sm">
+                <span className="block text-gray-400 mb-1">App-Name</span>
+                <input type="text" value={global['branding.app_name'] || ''}
+                  onChange={(e) => setKey('branding.app_name', e.target.value)}
+                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white" />
+              </label>
+              <label className="text-sm">
+                <span className="block text-gray-400 mb-1">Akzentfarbe</span>
+                <input type="color" value={global['branding.accent_color'] || '#3b82f6'}
+                  onChange={(e) => setKey('branding.accent_color', e.target.value)}
+                  className="h-9 bg-gray-800 border border-gray-700 rounded px-1" />
+              </label>
+            </div>
+            <label className="text-sm block">
+              <span className="block text-gray-400 mb-1">Login-Banner-Text (oben über dem Login)</span>
+              <input type="text" value={global['login.banner'] || ''}
+                onChange={(e) => setKey('login.banner', e.target.value)}
+                placeholder="z.B. Bitte 2FA aktivieren ab 01.06."
+                className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white" />
+            </label>
+            <div className="bg-amber-950/30 border border-amber-800/40 rounded-lg p-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm text-amber-300">
+                <input type="checkbox" checked={(global['maintenance.enabled'] || 'false') === 'true'}
+                  onChange={(e) => setKey('maintenance.enabled', e.target.checked ? 'true' : 'false')}
+                  className="rounded border-gray-600 bg-gray-700 text-amber-500" />
+                Wartungsmodus aktiv (großes Banner für alle User)
+              </label>
+              <input type="text" value={global['maintenance.message'] || ''}
+                onChange={(e) => setKey('maintenance.message', e.target.value)}
+                placeholder="Wartungs-Nachricht…"
+                className="w-full bg-gray-900 border border-amber-800/40 rounded px-2 py-1.5 text-amber-100 text-sm" />
+            </div>
+            {globalDirty && (
+              <button onClick={saveGlobal} disabled={globalSaving}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
+                {globalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Speichern
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Tests */}
+      <div className="pt-6 border-t border-gray-800 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-2">Discord-Test</h3>
+          <button onClick={runDiscordTest}
+            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+            Verbindung prüfen
+          </button>
+          {discordResult && (
+            <div className={`mt-2 text-xs p-2 rounded ${discordResult.ok ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+              {discordResult.ok
+                ? <>✓ Guild: <strong>{discordResult.guild_name}</strong> {discordResult.info_channel_konfiguriert && (discordResult.info_channel_erreichbar ? '· Info-Channel ok' : '· Info-Channel nicht erreichbar')}</>
+                : <>✗ {discordResult.reason}</>
+              }
+            </div>
+          )}
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-2">Email-Test</h3>
+          <div className="flex gap-2">
+            <input type="email" value={emailTo} onChange={(e) => setEmailTo(e.target.value)}
+              placeholder="leer = an deine Adresse"
+              className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm" />
+            <button onClick={runEmailTest}
+              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
+              Senden
+            </button>
+          </div>
+          {emailResult && (
+            <div className={`mt-2 text-xs p-2 rounded ${emailResult.ok ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+              {emailResult.ok ? `✓ Gesendet an ${emailResult.to}` : `✗ ${emailResult.reason}`}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* App-Statistik */}
+      <div className="pt-6 border-t border-gray-800">
+        <h3 className="text-lg font-semibold text-white mb-3">App-Statistik</h3>
+        {!stats ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              ['User',                stats.user_count],
+              ['Admins',              stats.admin_count],
+              ['Aktive Sessions',     stats.active_sessions_30min],
+              ['Sessions total',      stats.total_sessions],
+              ['Permissions',         stats.permissions],
+              ['Gruppen',             stats.groups],
+              ['Ungelesen (alle)',    stats.notifications_unread],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-gray-800/40 rounded-lg p-3">
+                <div className="text-xs text-gray-500 uppercase">{label}</div>
+                <div className="text-2xl font-bold text-white tabular-nums">{value}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Version + Updates */}
+      <div className="pt-6 border-t border-gray-800">
+        <h3 className="text-lg font-semibold text-white mb-2">Version</h3>
+        {!version ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : version.error ? (
+          <p className="text-sm text-red-400">{version.error}</p>
+        ) : (
+          <div className="text-sm text-gray-300 space-y-1">
+            <div>Commit: <code className="bg-gray-800 px-2 py-0.5 rounded">{version.commit}</code></div>
+            <div>vom {version.commit_date ? new Date(version.commit_date).toLocaleString('de-DE') : '—'}</div>
+            {version.behind > 0 && (
+              <div className="text-amber-400 mt-2">⚠ {version.behind} Commit(s) hinter main — Update verfügbar.</div>
+            )}
+            {version.behind === 0 && (
+              <div className="text-green-400 mt-2">✓ Aktuell</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Backups */}
+      <div className="pt-6 border-t border-gray-800">
+        <h3 className="text-lg font-semibold text-white mb-2">Backups</h3>
+        {!backups ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {['daily', 'weekly'].map((kind) => (
+              <div key={kind}>
+                <div className="text-xs text-gray-500 uppercase mb-1">{kind === 'daily' ? 'Daily' : 'Weekly'}</div>
+                {(backups[kind] || []).length === 0
+                  ? <p className="text-sm text-gray-500">— keine</p>
+                  : (
+                    <ul className="text-xs space-y-1 max-h-48 overflow-y-auto">
+                      {backups[kind].map((b) => (
+                        <li key={b.name} className="flex items-center gap-2">
+                          <code className="text-gray-300 truncate">{b.name}</code>
+                          <span className="text-gray-500 shrink-0 ml-auto">{(b.size / 1024 / 1024).toFixed(2)} MB</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )
+                }
+                {backups[`${kind}_error`] && (
+                  <p className="text-xs text-red-400 mt-1">{backups[`${kind}_error`]}</p>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>
