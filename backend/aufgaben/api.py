@@ -1,4 +1,4 @@
-"""AG-Aufgaben API + WebSocket-Broadcast."""
+"""Aufgaben-API + WebSocket-Broadcast."""
 from typing import List, Optional
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -8,10 +8,10 @@ from ninja.errors import HttpError
 from core.auth import keycloak_auth
 from users.api import is_admin
 from users.models import UserProfile
-from .models import AgAufgabe
+from .models import Aufgabe
 
 
-ag_router = Router(tags=["AG-Aufgaben"])
+aufgaben_router = Router(tags=["Aufgaben"])
 
 
 def _require_perm(request, code: str):
@@ -41,15 +41,15 @@ def _full_name(p) -> str:
 def _user_dict(p) -> dict:
     return {
         "id": p.id, "keycloak_id": p.keycloak_id,
-        "name": _full_name(p),           # für Admin-Listen
-        "kurzname": _short_name(p),       # für Monitor
+        "name": _full_name(p),
+        "kurzname": _short_name(p),
         "first_name": p.first_name or '',
         "last_name": p.last_name or '',
         "username": p.username,
     }
 
 
-def _aufgabe_to_dict(a: AgAufgabe) -> dict:
+def _aufgabe_to_dict(a: Aufgabe) -> dict:
     return {
         "id": a.id,
         "titel": a.titel,
@@ -70,7 +70,7 @@ def _broadcast():
         layer = get_channel_layer()
         if not layer:
             return
-        async_to_sync(layer.group_send)('ag_aufgaben', {'type': 'aufgaben_update'})
+        async_to_sync(layer.group_send)('aufgaben', {'type': 'aufgaben_update'})
     except Exception:
         pass
 
@@ -91,34 +91,49 @@ class AufgabeUpdateSchema(Schema):
     zugewiesene_ids: Optional[List[int]] = None
 
 
-@ag_router.get("/aufgaben", auth=keycloak_auth)
+@aufgaben_router.get("", auth=keycloak_auth)
 def list_aufgaben(request):
     """Liste aller Aufgaben mit Zuweisungen."""
-    _require_perm(request, 'ag.view')
+    _require_perm(request, 'aufgaben.view')
     return [_aufgabe_to_dict(a) for a in
-            AgAufgabe.objects.prefetch_related('zugewiesene').all()]
+            Aufgabe.objects.prefetch_related('zugewiesene').all()]
 
 
-@ag_router.post("/aufgaben", auth=keycloak_auth)
+@aufgaben_router.post("", auth=keycloak_auth)
 def create_aufgabe(request, payload: AufgabeCreateSchema):
-    _require_perm(request, 'ag.manage')
+    _require_perm(request, 'aufgaben.manage')
     data = payload.dict()
     zugewiesene_ids = data.pop('zugewiesene_ids', [])
-    a = AgAufgabe.objects.create(**data)
+    a = Aufgabe.objects.create(**data)
     if zugewiesene_ids:
         a.zugewiesene.set(UserProfile.objects.filter(id__in=zugewiesene_ids))
     _broadcast()
     return _aufgabe_to_dict(a)
 
 
-@ag_router.put("/aufgaben/{aid}", auth=keycloak_auth)
+class ReorderSchema(Schema):
+    ids: List[int]
+
+
+# Reorder MUSS vor /{aid} stehen, sonst greift der id-Pattern.
+@aufgaben_router.put("/reorder", auth=keycloak_auth)
+def reorder_aufgaben(request, payload: ReorderSchema):
+    """Setzt die Sortierung gemäß der übergebenen ID-Reihenfolge."""
+    _require_perm(request, 'aufgaben.manage')
+    for idx, aid in enumerate(payload.ids):
+        Aufgabe.objects.filter(id=aid).update(sortierung=idx)
+    _broadcast()
+    return {"status": "ok", "count": len(payload.ids)}
+
+
+@aufgaben_router.put("/{aid}", auth=keycloak_auth)
 def update_aufgabe(request, aid: int, payload: AufgabeUpdateSchema):
-    _require_perm(request, 'ag.manage')
-    a = get_object_or_404(AgAufgabe, id=aid)
+    _require_perm(request, 'aufgaben.manage')
+    a = get_object_or_404(Aufgabe, id=aid)
     data = payload.dict(exclude_unset=True)
     zugewiesene_ids = data.pop('zugewiesene_ids', None)
     if 'status' in data:
-        a.erledigt_am = timezone.now() if data['status'] == 'fertig' else None
+        a.erledigt_am = timezone.now() if data['status'] == 'abgeschlossen' else None
     for k, v in data.items():
         setattr(a, k, v)
     a.save()
@@ -128,40 +143,26 @@ def update_aufgabe(request, aid: int, payload: AufgabeUpdateSchema):
     return _aufgabe_to_dict(a)
 
 
-@ag_router.delete("/aufgaben/{aid}", auth=keycloak_auth)
+@aufgaben_router.delete("/{aid}", auth=keycloak_auth)
 def delete_aufgabe(request, aid: int):
-    _require_perm(request, 'ag.manage')
-    get_object_or_404(AgAufgabe, id=aid).delete()
+    _require_perm(request, 'aufgaben.manage')
+    get_object_or_404(Aufgabe, id=aid).delete()
     _broadcast()
     return {"status": "deleted"}
 
 
-class ReorderSchema(Schema):
-    ids: List[int]
-
-
-@ag_router.put("/aufgaben/reorder", auth=keycloak_auth)
-def reorder_aufgaben(request, payload: ReorderSchema):
-    """Setzt die Sortierung gemäß der übergebenen ID-Reihenfolge."""
-    _require_perm(request, 'ag.manage')
-    for idx, aid in enumerate(payload.ids):
-        AgAufgabe.objects.filter(id=aid).update(sortierung=idx)
-    _broadcast()
-    return {"status": "ok", "count": len(payload.ids)}
-
-
-@ag_router.get("/users", auth=keycloak_auth)
-def list_users_for_ag(request):
+@aufgaben_router.get("/users", auth=keycloak_auth)
+def list_users_for_aufgaben(request):
     """Verfügbare User für Zuweisung."""
-    _require_perm(request, 'ag.manage')
+    _require_perm(request, 'aufgaben.manage')
     return [_user_dict(u) for u in UserProfile.objects.exclude(is_admin_cached=True)
             .order_by('last_name', 'first_name', 'username')]
 
 
 # ─── Öffentlicher Endpoint für Monitor-Display ──────────────────────
 
-@ag_router.get("/display", auth=None)
+@aufgaben_router.get("/display", auth=None)
 def display_aufgaben(request):
     """Öffentlicher Read-Only-Endpoint für die Monitor-Vollbildansicht."""
     return [_aufgabe_to_dict(a) for a in
-            AgAufgabe.objects.prefetch_related('zugewiesene').all()]
+            Aufgabe.objects.prefetch_related('zugewiesene').all()]

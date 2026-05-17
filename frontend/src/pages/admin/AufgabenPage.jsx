@@ -9,7 +9,7 @@ import {
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 
-export default function AgAufgabenPage() {
+export default function AufgabenPage() {
   const [aufgaben, setAufgaben] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -23,8 +23,8 @@ export default function AgAufgabenPage() {
     setLoading(true);
     try {
       const [a, u] = await Promise.all([
-        apiClient.get('/ag/aufgaben'),
-        apiClient.get('/ag/users'),
+        apiClient.get('/aufgaben'),
+        apiClient.get('/aufgaben/users'),
       ]);
       setAufgaben(a.data || []);
       setUsers(u.data || []);
@@ -37,7 +37,7 @@ export default function AgAufgabenPage() {
   const addAufgabe = async () => {
     if (!neuerTitel.trim()) return;
     try {
-      await apiClient.post('/ag/aufgaben', {
+      await apiClient.post('/aufgaben', {
         titel: neuerTitel.trim(),
         sortierung: aufgaben.length,
       });
@@ -48,7 +48,7 @@ export default function AgAufgabenPage() {
   const toggleStatus = async (a) => {
     const status = a.status === 'offen' ? 'abgeschlossen' : 'offen';
     try {
-      await apiClient.put(`/ag/aufgaben/${a.id}`, { status });
+      await apiClient.put(`/aufgaben/${a.id}`, { status });
       load();
     } catch { toast.error('Fehler'); }
   };
@@ -57,14 +57,14 @@ export default function AgAufgabenPage() {
     const ids = a.zugewiesene.map(z => z.id);
     const next = ids.includes(userId) ? ids.filter(i => i !== userId) : [...ids, userId];
     try {
-      await apiClient.put(`/ag/aufgaben/${a.id}`, { zugewiesene_ids: next });
+      await apiClient.put(`/aufgaben/${a.id}`, { zugewiesene_ids: next });
       load();
     } catch { toast.error('Fehler'); }
   };
 
   const remove = async (a) => {
     if (!confirm(`Aufgabe "${a.titel}" wirklich löschen?`)) return;
-    try { await apiClient.delete(`/ag/aufgaben/${a.id}`); load(); }
+    try { await apiClient.delete(`/aufgaben/${a.id}`); load(); }
     catch { toast.error('Fehler'); }
   };
 
@@ -84,7 +84,7 @@ export default function AgAufgabenPage() {
     next.splice(toIdx, 0, moved);
     setAufgaben(next);
     try {
-      await apiClient.put('/ag/aufgaben/reorder', { ids: next.map(a => a.id) });
+      await apiClient.put('/aufgaben/reorder', { ids: next.map(a => a.id) });
     } catch { toast.error('Reihenfolge speichern fehlgeschlagen'); load(); }
   };
 
@@ -96,7 +96,7 @@ export default function AgAufgabenPage() {
           <h1 className="text-2xl font-bold text-white">Aufgaben</h1>
           <span className="text-sm text-gray-500">{aufgaben.length}</span>
         </div>
-        <a href="/ag-monitor" target="_blank" rel="noreferrer"
+        <a href="/aufgaben-monitor" target="_blank" rel="noreferrer"
           className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg text-sm">
           <ExternalLink className="w-4 h-4" /> Monitor-Vollbild öffnen
         </a>

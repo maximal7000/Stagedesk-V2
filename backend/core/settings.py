@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'monitor',
     'anwesenheit',
     'kompetenzen',
-    'ag',
+    'aufgaben',
     'channels',
 ]
 

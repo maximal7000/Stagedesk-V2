@@ -659,9 +659,9 @@ def initialize_system(request):
         {'code': 'kompetenzen.edit_catalog', 'name': 'Kompetenz-Katalog bearbeiten',
          'description': 'Erlaubt das Anlegen/Bearbeiten/Löschen von Kategorien, Gruppen und Kompetenzen', 'category': 'kompetenzen'},
         # Aufgaben
-        {'code': 'ag.view', 'name': 'Aufgaben anzeigen',
+        {'code': 'aufgaben.view', 'name': 'Aufgaben anzeigen',
          'description': 'Erlaubt das Anzeigen der Aufgaben', 'category': 'aufgaben'},
-        {'code': 'ag.manage', 'name': 'Aufgaben verwalten',
+        {'code': 'aufgaben.manage', 'name': 'Aufgaben verwalten',
          'description': 'Erlaubt Anlegen/Bearbeiten/Löschen und Zuweisen', 'category': 'aufgaben'},
     ]
     

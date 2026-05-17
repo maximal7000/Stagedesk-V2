@@ -8,13 +8,13 @@ import { CheckCircle2, Circle, ListChecks } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
-export default function AgMonitorPage() {
+export default function AufgabenMonitorPage() {
   const [aufgaben, setAufgaben] = useState([]);
   const [now, setNow] = useState(new Date());
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/ag/display`);
+      const r = await fetch(`${API_BASE}/aufgaben/display`);
       if (r.ok) setAufgaben(await r.json());
     } catch {}
   }, []);
@@ -33,7 +33,7 @@ export default function AgMonitorPage() {
     let ws = null, closed = false, backoff = 1000;
     const connect = () => {
       if (closed) return;
-      ws = new WebSocket(`${proto}://${window.location.host}/ws/ag/aufgaben/`);
+      ws = new WebSocket(`${proto}://${window.location.host}/ws/aufgaben/`);
       ws.onmessage = () => load();
       ws.onopen = () => { backoff = 1000; };
       ws.onclose = () => {

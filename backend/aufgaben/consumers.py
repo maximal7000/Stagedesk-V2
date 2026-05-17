@@ -1,13 +1,13 @@
-"""WebSocket-Consumer für AG-Aufgaben-Vollbild-Anzeige. Sendet bei jedem
-Update der Aufgaben einen Reload-Hinweis an alle verbundenen Monitore."""
+"""WebSocket-Consumer für Aufgaben-Vollbild-Anzeige. Sendet bei jedem
+Update einen Reload-Hinweis an alle verbundenen Monitore."""
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
 
-class AgAufgabenConsumer(AsyncWebsocketConsumer):
-    """URL: /ws/ag/aufgaben/"""
+class AufgabenConsumer(AsyncWebsocketConsumer):
+    """URL: /ws/aufgaben/"""
 
-    GROUP = 'ag_aufgaben'
+    GROUP = 'aufgaben'
 
     async def connect(self):
         await self.channel_layer.group_add(self.GROUP, self.channel_name)
