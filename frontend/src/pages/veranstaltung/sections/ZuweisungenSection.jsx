@@ -10,6 +10,11 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
   const [showAddUsers, setShowAddUsers] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const [kandidaten, setKandidaten] = useState(null);
+  // Verhindert dass Mehrfach-Klick auf "Hinzufügen" mehrere parallele POSTs
+  // auslöst (führte zu doppelten Discord-DMs an die selbe Person).
+  const [busy, setBusy] = useState(false);
+  // Pro-User-Lock für die Quick-Buttons (gemeldete Personen).
+  const [pendingIds, setPendingIds] = useState(new Set());
 
   const meldungen = data?.meldungen || [];
 
@@ -24,8 +29,13 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
   }, [showAddUsers, eventId, newTaetigkeitId]);
 
   const addZuweisungen = async (userIds = null) => {
+    if (busy) return;
     const ids = userIds || selectedUsers;
     if (ids.length === 0) return;
+    // Wenn schon irgendeine der IDs gerade läuft, abbrechen
+    if (ids.some(id => pendingIds.has(id))) return;
+    setBusy(true);
+    setPendingIds((prev) => { const n = new Set(prev); ids.forEach(i => n.add(i)); return n; });
     try {
       for (const keycloakId of ids) {
         const u = benutzer.find((b) => b.keycloak_id === keycloakId);
@@ -42,6 +52,9 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
       refetch();
     } catch {
       toast.error('Zuweisung fehlgeschlagen');
+    } finally {
+      setBusy(false);
+      setPendingIds((prev) => { const n = new Set(prev); ids.forEach(i => n.delete(i)); return n; });
     }
   };
 
@@ -94,10 +107,12 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
             {gemeldetNichtZugewiesen.map((m) => {
               const name = [m.user_first_name, m.user_last_name].filter(Boolean).join(' ')
                 || m.user_username || m.user_keycloak_id.slice(0, 8);
+              const isPending = pendingIds.has(m.user_keycloak_id);
               return (
                 <button key={m.id} type="button"
+                  disabled={isPending || busy}
                   onClick={() => addZuweisungen([m.user_keycloak_id])}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 text-green-400 rounded-lg text-sm transition-colors">
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/40 disabled:opacity-50 disabled:cursor-not-allowed text-green-400 rounded-lg text-sm transition-colors">
                   <Plus className="w-3.5 h-3.5" />
                   {name}
                 </button>
@@ -105,8 +120,9 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
             })}
             {gemeldetNichtZugewiesen.length > 1 && (
               <button type="button"
+                disabled={busy}
                 onClick={() => addZuweisungen(gemeldetNichtZugewiesen.map(m => m.user_keycloak_id))}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
                 <Plus className="w-3.5 h-3.5" />
                 Alle zuweisen ({gemeldetNichtZugewiesen.length})
               </button>
@@ -180,9 +196,11 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                 <option value="">Keine Tätigkeit</option>
                 {taetigkeitsrollen.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-              <button type="button" onClick={() => addZuweisungen()} disabled={selectedUsers.length === 0}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded text-sm">
-                <Plus className="w-3.5 h-3.5" /> {selectedUsers.length > 0 ? `${selectedUsers.length} hinzufügen` : 'Hinzufügen'}
+              <button type="button" onClick={() => addZuweisungen()}
+                disabled={selectedUsers.length === 0 || busy}
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm">
+                <Plus className="w-3.5 h-3.5" />
+                {busy ? '…' : (selectedUsers.length > 0 ? `${selectedUsers.length} hinzufügen` : 'Hinzufügen')}
               </button>
               <button type="button" onClick={() => { setShowAddUsers(false); setSelectedUsers([]); setUserSearch(''); }}
                 className="text-gray-400 hover:text-white text-sm px-2">Abbrechen</button>

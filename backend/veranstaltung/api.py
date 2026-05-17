@@ -638,7 +638,7 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
     taetigkeit = None
     if data.get('taetigkeit_id'):
         taetigkeit = TaetigkeitsRolle.objects.filter(id=data['taetigkeit_id']).first()
-    VeranstaltungZuweisung.objects.update_or_create(
+    _, created = VeranstaltungZuweisung.objects.update_or_create(
         veranstaltung=v,
         user_keycloak_id=data['user_keycloak_id'],
         defaults={
@@ -648,24 +648,26 @@ def add_zuweisung(request, id: int, payload: ZuweisungCreateSchema):
         }
     )
 
-    # In-App-Inbox + Discord-DM benachrichtigen
-    from . import discord_client
-    from core.notify import notify
-    try:
-        profile = UserProfile.objects.get(keycloak_id=data['user_keycloak_id'])
-        when_str = v.datum_von.strftime('%d.%m.%Y %H:%M') if v.datum_von else ''
-        notify(
-            profile.keycloak_id, 'zuweisung',
-            f'Zugewiesen: {v.titel}',
-            f'{when_str}{(" @ " + v.ort) if v.ort else ""}',
-            link=f'/veranstaltung/{v.id}',
-        )
-        if profile.discord_id:
-            if v.discord_channel_id:
-                discord_client.grant_channel_access(v.discord_channel_id, profile.discord_id)
-            discord_client.notify_zuweisung(v, profile.discord_id)
-    except UserProfile.DoesNotExist:
-        pass
+    # In-App-Inbox + Discord-DM nur beim ECHTEN neuen Eintrag — vermeidet
+    # Doppel-DMs bei Re-Click oder Tätigkeitswechsel auf bereits Zugewiesene.
+    if created:
+        from . import discord_client
+        from core.notify import notify
+        try:
+            profile = UserProfile.objects.get(keycloak_id=data['user_keycloak_id'])
+            when_str = v.datum_von.strftime('%d.%m.%Y %H:%M') if v.datum_von else ''
+            notify(
+                profile.keycloak_id, 'zuweisung',
+                f'Zugewiesen: {v.titel}',
+                f'{when_str}{(" @ " + v.ort) if v.ort else ""}',
+                link=f'/veranstaltung/{v.id}',
+            )
+            if profile.discord_id:
+                if v.discord_channel_id:
+                    discord_client.grant_channel_access(v.discord_channel_id, profile.discord_id)
+                discord_client.notify_zuweisung(v, profile.discord_id)
+        except UserProfile.DoesNotExist:
+            pass
 
     v.refresh_from_db()
     # Kalender-Events synchronisieren (Besetzung in Beschreibung aktualisieren)
