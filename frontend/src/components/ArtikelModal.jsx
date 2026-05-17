@@ -5,14 +5,28 @@ import { useState } from 'react';
 import { X, ShoppingCart, Link as LinkIcon, Loader, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import apiClient from '../lib/api';
 
-export default function ArtikelModal({ haushalt, onClose, onCreated, initialKategorie = 'konsumitiv' }) {
+// Status-Optionen (synchron mit Backend STATUS_CHOICES).
+const STATUS_OPTIONS = [
+  { v: 'geplant',   l: 'Geplant' },
+  { v: 'beantragt', l: 'Beantragt' },
+  { v: 'genehmigt', l: 'Genehmigt' },
+  { v: 'bestellt',  l: 'Bestellt' },
+  { v: 'geliefert', l: 'Geliefert' },
+  { v: 'abgelehnt', l: 'Abgelehnt' },
+];
+
+export default function ArtikelModal({ haushalt, onClose, onCreated, initialKategorie = 'konsumitiv', artikel = null }) {
+  // Wenn `artikel` übergeben wird, ist es ein Edit-Modus — sonst Neu-Anlegen.
+  const isEdit = !!artikel;
   const [formData, setFormData] = useState({
-    name: '',
-    preis: '',
-    anzahl: 1,
-    link: '',
-    kategorie: initialKategorie,
-    beschreibung: '',
+    name: artikel?.name || '',
+    preis: artikel?.preis ?? '',
+    anzahl: artikel?.anzahl ?? 1,
+    link: artikel?.link || '',
+    kategorie: artikel?.kategorie || initialKategorie,
+    beschreibung: artikel?.beschreibung || '',
+    status: artikel?.status || 'geplant',
+    bild_url: artikel?.bild_url || '',
   });
   
   const [isParsingLink, setIsParsingLink] = useState(false);
@@ -80,17 +94,22 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
     e.preventDefault();
     setIsSaving(true);
     setSaveError(null);
-    
+
+    const body = {
+      name: formData.name,
+      preis: parseFloat(formData.preis) || 0,
+      anzahl: parseInt(formData.anzahl) || 1,
+      kategorie: formData.kategorie,
+      link: formData.link || '',
+      beschreibung: formData.beschreibung || '',
+      status: formData.status || 'geplant',
+      bild_url: formData.bild_url || '',
+    };
+
     try {
-      const response = await apiClient.post(`/haushalte/${haushalt.id}/artikel`, {
-        name: formData.name,
-        preis: parseFloat(formData.preis) || 0,
-        anzahl: parseInt(formData.anzahl) || 1,
-        kategorie: formData.kategorie,
-        link: formData.link || '',
-        beschreibung: formData.beschreibung || '',
-      });
-      
+      const response = isEdit
+        ? await apiClient.put(`/haushalte/${haushalt.id}/artikel/${artikel.id}`, body)
+        : await apiClient.post(`/haushalte/${haushalt.id}/artikel`, body);
       onCreated(response.data);
     } catch (err) {
       console.error('Fehler beim Speichern:', err);
@@ -111,8 +130,12 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Artikel hinzufügen</h2>
-              <p className="text-sm text-gray-400">zu {haushalt.name}</p>
+              <h2 className="text-xl font-bold text-white">
+                {isEdit ? 'Artikel bearbeiten' : 'Artikel hinzufügen'}
+              </h2>
+              <p className="text-sm text-gray-400">
+                {isEdit ? `in ${haushalt.name}` : `zu ${haushalt.name}`}
+              </p>
             </div>
           </div>
           <button
@@ -266,6 +289,40 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
             <span className="text-2xl font-bold text-white">€ {gesamtPreis.toFixed(2)}</span>
           </div>
 
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Status</label>
+            <select
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s.v} value={s.v}>{s.l}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Bild-URL */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Bild-URL (optional)
+            </label>
+            <div className="flex gap-3">
+              <input
+                type="url"
+                value={formData.bild_url}
+                onChange={(e) => setFormData({ ...formData, bild_url: e.target.value })}
+                placeholder="https://…/produktbild.jpg"
+                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {formData.bild_url && (
+                <img src={formData.bild_url} alt="" className="w-10 h-10 object-cover rounded bg-gray-800"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+              )}
+            </div>
+          </div>
+
           {/* Beschreibung */}
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -308,7 +365,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                   Wird gespeichert...
                 </>
               ) : (
-                'Artikel hinzufügen'
+                isEdit ? 'Speichern' : 'Artikel hinzufügen'
               )}
             </button>
           </div>

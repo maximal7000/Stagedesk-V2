@@ -170,6 +170,7 @@ class Artikel(models.Model):
     )
 
     STATUS_CHOICES = [
+        ('geplant',    'Geplant'),
         ('beantragt',  'Beantragt'),
         ('genehmigt',  'Genehmigt'),
         ('bestellt',   'Bestellt'),
@@ -177,7 +178,7 @@ class Artikel(models.Model):
         ('abgelehnt',  'Abgelehnt'),
     ]
     status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default='beantragt',
+        max_length=20, choices=STATUS_CHOICES, default='geplant',
         verbose_name='Status',
     )
     sortierung = models.IntegerField(default=0,
