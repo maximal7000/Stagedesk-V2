@@ -22,7 +22,6 @@ import ItemDetailPage from './pages/inventar/ItemDetailPage';
 import ItemSetsPage from './pages/inventar/ItemSetsPage';
 import AusleihePage from './pages/inventar/AusleihePage';
 import AusleiheDashboardPage from './pages/inventar/AusleiheDashboardPage';
-import AusleiheKalenderPage from './pages/inventar/AusleiheKalenderPage';
 // Veranstaltung
 import VeranstaltungenPage from './pages/veranstaltung/VeranstaltungenPage';
 import VeranstaltungDetailPage from './pages/veranstaltung/VeranstaltungDetailPage';
@@ -90,7 +89,6 @@ function AppContent() {
                   <Route path="/inventar/:id" element={<PermissionRoute permission="inventar.view"><ItemDetailPage /></PermissionRoute>} />
                   <Route path="/ausleihen" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
                   <Route path="/ausleihen/dashboard" element={<PermissionRoute permission="inventar.ausleihe"><AusleiheDashboardPage /></PermissionRoute>} />
-                  <Route path="/ausleihen/kalender" element={<PermissionRoute permission="inventar.ausleihe"><AusleiheKalenderPage /></PermissionRoute>} />
                   <Route path="/ausleihen/:id" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
                   <Route path="/anwesenheit" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
                   <Route path="/anwesenheit/:id" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />

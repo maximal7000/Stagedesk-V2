@@ -474,51 +474,6 @@ def list_ausleihen_alias(request, filters: AusleiheFilterSchema = Query(...)):
     return list_ausleihlisten(request, filters)
 
 
-# WICHTIG: Literal-Pfade VOR {id}-Parametern registrieren
-@inventar_router.get("/ausleihen/kalender", auth=keycloak_auth)
-def ausleihe_kalender(request, monat: Optional[str] = None):
-    """Ausleihen und Reservierungen für Kalenderansicht."""
-    from datetime import date as date_cls
-    if monat:
-        try:
-            jahr, mon = monat.split('-')
-            start = date_cls(int(jahr), int(mon), 1)
-        except (ValueError, IndexError):
-            start = timezone.now().date().replace(day=1)
-    else:
-        start = timezone.now().date().replace(day=1)
-
-    if start.month == 12:
-        ende = date_cls(start.year + 1, 1, 1) - timedelta(days=1)
-    else:
-        ende = date_cls(start.year, start.month + 1, 1) - timedelta(days=1)
-
-    ausleihen = list(
-        Ausleihliste.objects.filter(
-            status__in=['aktiv', 'teilrueckgabe'],
-        ).values(
-            'id', 'ausleiher_name', 'zweck', 'frist', 'status', 'erstellt_am'
-        )
-    )
-
-    reservierungen = list(
-        Reservierung.objects.filter(
-            status__in=['aktiv', 'bestaetigt'],
-            datum_bis__gte=start,
-            datum_von__lte=ende,
-        ).select_related('item').values(
-            'id', 'item__name', 'item_id', 'ausleiher_name',
-            'datum_von', 'datum_bis', 'zweck', 'status'
-        )
-    )
-
-    return {
-        "monat": str(start),
-        "ausleihen": ausleihen,
-        "reservierungen": reservierungen,
-    }
-
-
 @inventar_router.get("/ausleihlisten/{id}", response=AusleiheListeSchema, auth=keycloak_auth)
 def get_ausleihliste(request, id: int):
     return get_object_or_404(
