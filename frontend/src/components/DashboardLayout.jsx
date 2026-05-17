@@ -67,10 +67,8 @@ export default function DashboardLayout({ children }) {
     { name: 'Haushalte', href: '/haushalte', icon: Wallet, permission: 'haushalte.view' },
   ].filter(item => !item.permission || hasPermission(item.permission));
 
-  // Inventar-Unternavigation
-  const inventarSubNav = hasPermission('inventar.view') ? [
-    { name: 'Ausleihe-Kalender', href: '/ausleihen/kalender', icon: CalendarDays },
-  ] : [];
+  // Inventar-Unternavigation (aktuell leer; bei Bedarf hier ergänzen)
+  const inventarSubNav = [];
 
   // Admin-Navigation
   const adminNavigation = [
