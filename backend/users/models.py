@@ -115,6 +115,10 @@ class UserProfile(models.Model):
     # Profilbild — wird statt der Initialen genutzt wenn vorhanden.
     avatar = models.ImageField(upload_to='avatars/%Y/', null=True, blank=True)
 
+    # Token für den persönlichen iCal-Feed (per query param ausgewertet).
+    ical_token = models.CharField(max_length=64, blank=True, default='',
+                                  help_text='Token für persönlichen iCal-Feed')
+
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

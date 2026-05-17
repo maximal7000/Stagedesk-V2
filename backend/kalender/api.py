@@ -1,6 +1,7 @@
 """
 Kalender API - Events, Kategorien, Ressourcen
 """
+import uuid
 from typing import List, Optional
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -417,6 +418,30 @@ def remove_ressource_from_event(request, event_id: int, buchung_id: int):
 
 
 # ========== iCal Export ==========
+
+@kalender_router.get("/ical-token", auth=keycloak_auth)
+def get_ical_token(request):
+    """Eigener iCal-Feed-Token (wird beim ersten Zugriff erzeugt)."""
+    require_perm(request, 'kalender.view')
+    user_id = get_user_id(request)
+    profile, _ = UserProfile.objects.get_or_create(keycloak_id=user_id)
+    if not profile.ical_token:
+        profile.ical_token = uuid.uuid4().hex
+        profile.save(update_fields=['ical_token'])
+    return {"token": profile.ical_token}
+
+
+@kalender_router.post("/ical-token/regenerate", auth=keycloak_auth)
+def regenerate_ical_token(request):
+    """Token neu generieren — invalidiert alle bisherigen Abos."""
+    require_perm(request, 'kalender.view')
+    user_id = get_user_id(request)
+    profile, _ = UserProfile.objects.get_or_create(keycloak_id=user_id)
+    profile.ical_token = uuid.uuid4().hex
+    profile.save(update_fields=['ical_token'])
+    audit_log(request, 'kalender', 'ical_token_regeneriert', None, '')
+    return {"token": profile.ical_token}
+
 
 @kalender_router.get("/export/ical", auth=keycloak_auth)
 def export_ical(request, filters: EventFilterSchema = Query(...)):
