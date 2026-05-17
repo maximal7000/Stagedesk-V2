@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import {
   Sun, Moon, Monitor, Smartphone, Laptop, Globe,
   Shield, Key, Loader2, LogOut, CheckCircle, XCircle, AlertCircle, Bell, User, Upload, Trash2,
+  Calendar, Copy, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
@@ -40,6 +41,7 @@ export default function SettingsPage() {
     { id: 'profile', name: 'Profil', icon: User },
     { id: 'appearance', name: 'Darstellung', icon: Sun },
     { id: 'notifications', name: 'Benachrichtigungen', icon: Bell },
+    { id: 'kalender', name: 'Kalender-Abo', icon: Calendar },
     { id: 'sessions', name: 'Sitzungen', icon: Globe },
     { id: 'security', name: 'Sicherheit', icon: Shield },
   ];
@@ -200,6 +202,9 @@ export default function SettingsPage() {
 
         {/* Notifications Tab */}
         {activeTab === 'notifications' && <NotificationsTab />}
+
+        {/* Kalender-Abo Tab */}
+        {activeTab === 'kalender' && <KalenderAboTab />}
 
         {/* Sessions Tab */}
         {activeTab === 'sessions' && (
@@ -515,6 +520,91 @@ function ProfileTab() {
           {LANDING_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
         </select>
       </div>
+    </div>
+  );
+}
+
+function KalenderAboTab() {
+  const [token, setToken] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await apiClient.get('/kalender/ical-token');
+        setToken(r.data.token || '');
+      } catch { toast.error('Token konnte nicht geladen werden'); }
+      finally { setLoading(false); }
+    })();
+  }, []);
+
+  const url = token ? `${window.location.origin}/kalender/feed.ics?token=${token}` : '';
+  const webcalUrl = url ? url.replace(/^https?:/, 'webcal:') : '';
+
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(url); toast.success('URL kopiert'); }
+    catch { toast.error('Kopieren fehlgeschlagen'); }
+  };
+
+  const regenerate = async () => {
+    if (!confirm('Aktuelle Abonnements werden ungültig. Fortfahren?')) return;
+    setRegenerating(true);
+    try {
+      const r = await apiClient.post('/kalender/ical-token/regenerate');
+      setToken(r.data.token);
+      toast.success('Neuer Token erzeugt');
+    } catch { toast.error('Fehler beim Neuerzeugen'); }
+    finally { setRegenerating(false); }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-blue-400" /> Kalender-Abo
+        </h3>
+        <p className="text-sm text-gray-400 mb-4">
+          Abonniere alle Stagedesk-Events in deinem Lieblings-Kalender
+          (Apple Calendar, Google Calendar, Thunderbird, Outlook).
+          Änderungen in Stagedesk erscheinen dort automatisch.
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+      ) : (
+        <>
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Deine persönliche Abo-URL</label>
+            <div className="flex gap-2 flex-wrap">
+              <input type="text" readOnly value={url}
+                onFocus={(e) => e.target.select()}
+                className="flex-1 min-w-[260px] bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+              <button onClick={copy}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">
+                <Copy className="w-4 h-4" /> Kopieren
+              </button>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              Tipp: In Apple Calendar als <code className="text-gray-400">webcal://</code>-Link öffnen —{' '}
+              <a href={webcalUrl} className="text-blue-400 underline">direkt abonnieren</a>.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-gray-800">
+            <p className="text-sm text-gray-400 mb-2">
+              Falls du den Link versehentlich geteilt hast: Token neu erzeugen.
+              <span className="text-yellow-500"> Bestehende Abos werden ungültig.</span>
+            </p>
+            <button onClick={regenerate} disabled={regenerating}
+              className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white text-sm rounded-lg">
+              {regenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Token neu erzeugen
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -20,6 +20,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 from ninja import NinjaAPI
 
+from kalender.ical_feed import ical_feed
+
 from haushalte.api import haushalte_router, kategorien_router
 from users.api import users_router
 from users.admin_api import admin_router
@@ -66,6 +68,9 @@ api.add_router("/audit", audit_router)
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', api.urls),
+    # iCal-Feed pro User (Token im Query-String) — abonnierbar in
+    # Apple/Google Calendar etc.
+    path('kalender/feed.ics', ical_feed, name='kalender-ical-feed'),
 ]
 
 if settings.DEBUG:
