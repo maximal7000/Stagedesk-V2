@@ -3,7 +3,7 @@ Pydantic Schemas für Django Ninja API
 """
 from ninja import Schema
 from datetime import datetime, date
-from typing import Optional
+from typing import Optional, List
 from decimal import Decimal
 
 
@@ -71,6 +71,8 @@ class ArtikelCreateSchema(Schema):
     anzahl: int = 1
     kategorie: str  # konsumitiv oder investiv - vom Benutzer gewählt
     link: Optional[str] = ""
+    bild_url: Optional[str] = ""
+    status: Optional[str] = "beantragt"
 
 
 class ArtikelUpdateSchema(Schema):
@@ -83,6 +85,12 @@ class ArtikelUpdateSchema(Schema):
     bild_url: Optional[str] = None
     tag_kategorie_id: Optional[int] = None
     gekauft_am: Optional[date] = None
+    status: Optional[str] = None
+    sortierung: Optional[int] = None
+
+
+class ArtikelReorderSchema(Schema):
+    ids: List[int]
 
 
 class ArtikelSchema(Schema):
@@ -97,6 +105,8 @@ class ArtikelSchema(Schema):
     gesamtpreis: Decimal
     link: str
     bild_url: str
+    status: str = 'beantragt'
+    sortierung: int = 0
     tag_kategorie: Optional[KategorieSchema] = None
     gekauft_am: Optional[date] = None
     erstellt_am: datetime

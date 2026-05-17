@@ -7,6 +7,7 @@ from ninja import Router
 from ninja.errors import HttpError
 from django.shortcuts import get_object_or_404
 from django.http import HttpRequest
+from django.db.models import Max
 
 from core.auth import keycloak_auth
 from core.audit import log as audit_log
@@ -20,6 +21,7 @@ from .schemas import (
     ArtikelSchema,
     ArtikelCreateSchema,
     ArtikelUpdateSchema,
+    ArtikelReorderSchema,
     KategorieSchema,
     KategorieCreateSchema,
     LinkParseRequestSchema,
@@ -135,6 +137,9 @@ def create_artikel(request, haushalt_id: int, payload: ArtikelCreateSchema):
     require_perm(request, 'haushalte.edit')
     haushalt = get_object_or_404(Haushalt, id=haushalt_id)
 
+    # Neue Artikel landen ganz unten in der Sortier-Reihenfolge.
+    max_sort = haushalt.artikel.aggregate(s=Max('sortierung'))['s'] or 0
+
     artikel = Artikel.objects.create(
         haushalt=haushalt,
         name=payload.name,
@@ -143,9 +148,21 @@ def create_artikel(request, haushalt_id: int, payload: ArtikelCreateSchema):
         anzahl=payload.anzahl,
         kategorie=payload.kategorie,
         link=payload.link or '',
-        bild_url='',
+        bild_url=payload.bild_url or '',
+        status=payload.status or 'beantragt',
+        sortierung=max_sort + 1,
     )
     return artikel
+
+
+@haushalte_router.put("/{haushalt_id}/artikel/reorder", auth=keycloak_auth)
+def reorder_artikel(request, haushalt_id: int, payload: ArtikelReorderSchema):
+    """Setzt sortierung gemäß übergebener ID-Reihenfolge (für Drag&Drop / ↑↓)."""
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    for idx, aid in enumerate(payload.ids):
+        Artikel.objects.filter(id=aid, haushalt=haushalt).update(sortierung=idx)
+    return {"status": "ok", "count": len(payload.ids)}
 
 
 @haushalte_router.put("/{haushalt_id}/artikel/{artikel_id}", response=ArtikelSchema, auth=keycloak_auth)

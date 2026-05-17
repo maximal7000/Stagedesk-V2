@@ -168,18 +168,33 @@ class Artikel(models.Model):
         max_length=500,
         verbose_name="Bild-URL"
     )
-    
+
+    STATUS_CHOICES = [
+        ('beantragt',  'Beantragt'),
+        ('genehmigt',  'Genehmigt'),
+        ('bestellt',   'Bestellt'),
+        ('geliefert',  'Geliefert'),
+        ('abgelehnt',  'Abgelehnt'),
+    ]
+    status = models.CharField(
+        max_length=20, choices=STATUS_CHOICES, default='beantragt',
+        verbose_name='Status',
+    )
+    sortierung = models.IntegerField(default=0,
+        help_text='Frei wählbare Reihenfolge — kleiner Wert zuerst')
+
     # Zeitstempel
     erstellt_am = models.DateTimeField(auto_now_add=True)
     aktualisiert_am = models.DateTimeField(auto_now=True)
-    
+
     # Gekauft am (optional)
     gekauft_am = models.DateField(null=True, blank=True, verbose_name="Gekauft am")
-    
+
     class Meta:
         verbose_name = "Artikel"
         verbose_name_plural = "Artikel"
-        ordering = ['-erstellt_am']
+        # Default: vom User gesetzte Reihenfolge, dann neueste zuerst.
+        ordering = ['sortierung', '-erstellt_am']
     
     def __str__(self):
         return f"{self.name} (€{self.gesamtpreis})"

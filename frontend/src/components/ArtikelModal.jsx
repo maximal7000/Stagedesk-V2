@@ -5,13 +5,13 @@ import { useState } from 'react';
 import { X, ShoppingCart, Link as LinkIcon, Loader, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import apiClient from '../lib/api';
 
-export default function ArtikelModal({ haushalt, onClose, onCreated }) {
+export default function ArtikelModal({ haushalt, onClose, onCreated, initialKategorie = 'konsumitiv' }) {
   const [formData, setFormData] = useState({
     name: '',
     preis: '',
     anzahl: 1,
     link: '',
-    kategorie: 'konsumitiv',
+    kategorie: initialKategorie,
     beschreibung: '',
   });
   
