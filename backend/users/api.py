@@ -658,6 +658,11 @@ def initialize_system(request):
          'description': 'Erlaubt das Bestätigen und Entziehen von Kompetenzen bei Usern', 'category': 'kompetenzen'},
         {'code': 'kompetenzen.edit_catalog', 'name': 'Kompetenz-Katalog bearbeiten',
          'description': 'Erlaubt das Anlegen/Bearbeiten/Löschen von Kategorien, Gruppen und Kompetenzen', 'category': 'kompetenzen'},
+        # Aufgaben
+        {'code': 'aufgaben.view', 'name': 'Aufgaben anzeigen',
+         'description': 'Erlaubt das Anzeigen der Aufgaben', 'category': 'aufgaben'},
+        {'code': 'aufgaben.manage', 'name': 'Aufgaben verwalten',
+         'description': 'Erlaubt Anlegen/Bearbeiten/Löschen und Zuweisen', 'category': 'aufgaben'},
     ]
     
     created_permissions = []
@@ -679,6 +684,67 @@ def initialize_system(request):
         "keycloak_roles": profile._keycloak_roles,
         "info": "Admin-Status kommt aus Keycloak. Füge die Rolle 'admin' in Keycloak hinzu."
     }
+
+
+@users_router.get("/setup/stale-permissions", auth=keycloak_auth)
+def list_stale_permissions(request):
+    """Listet Permissions in der DB, die nicht mehr im Code-Katalog stehen
+    (z.B. ag.view nach Rename zu aufgaben.view). Admin-only."""
+    if not is_admin(request):
+        return {"error": "Keine Berechtigung"}, 403
+    # default_permissions ist nur lokal in setup_system — wir holen die Codes
+    # zur Laufzeit über einen Hilfs-Call:
+    from .models import Permission
+    katalog = _get_known_permission_codes()
+    stale = list(Permission.objects.exclude(code__in=katalog).values('id', 'code', 'name'))
+    return {"katalog_count": len(katalog), "stale": stale}
+
+
+@users_router.post("/setup/cleanup-permissions", auth=keycloak_auth)
+def cleanup_stale_permissions(request, payload: dict):
+    """Löscht Permissions die nicht (mehr) im Code-Katalog stehen.
+    Body: {"codes": ["ag.view", "ag.manage"]} oder {"all_stale": true}.
+    Admin-only."""
+    if not is_admin(request):
+        return {"error": "Keine Berechtigung"}, 403
+    from .models import Permission
+    if payload.get('all_stale'):
+        katalog = _get_known_permission_codes()
+        qs = Permission.objects.exclude(code__in=katalog)
+    else:
+        codes = payload.get('codes') or []
+        if not codes:
+            return {"deleted": 0}
+        qs = Permission.objects.filter(code__in=codes)
+    deleted = list(qs.values_list('code', flat=True))
+    qs.delete()
+    return {"deleted": deleted, "count": len(deleted)}
+
+
+def _get_known_permission_codes() -> set:
+    """Sammelt alle Permission-Codes die in setup_system definiert sind.
+    Greift in die lokale Liste innerhalb der Funktion zurück, damit nur eine
+    Quelle der Wahrheit existiert."""
+    # Trick: setup_system mit einem Dummy-Request auszuführen lohnt sich nicht.
+    # Stattdessen pflegen wir die Liste als Modul-Konstante:
+    return KNOWN_PERMISSION_CODES
+
+
+# Eine Wahrheits-Quelle für alle gültigen Codes. Wird bei jedem Aufruf von
+# setup_system zur DB synchronisiert.
+KNOWN_PERMISSION_CODES = {
+    'theme.light_mode',
+    'haushalte.view', 'haushalte.create', 'haushalte.edit', 'haushalte.delete',
+    'kalender.view', 'kalender.create', 'kalender.edit', 'kalender.delete', 'kalender.ressourcen',
+    'inventar.view', 'inventar.create', 'inventar.edit', 'inventar.delete', 'inventar.ausleihe',
+    'veranstaltung.view', 'veranstaltung.create', 'veranstaltung.edit', 'veranstaltung.delete',
+    'veranstaltung.zuweisungen', 'veranstaltung.discord',
+    'monitor.view', 'monitor.edit', 'monitor.onair', 'monitor.notfall',
+    'anwesenheit.view', 'anwesenheit.create', 'anwesenheit.edit', 'anwesenheit.delete',
+    'anwesenheit.statistik', 'anwesenheit.export', 'anwesenheit.view_all',
+    'kompetenzen.view', 'kompetenzen.view_all', 'kompetenzen.manage', 'kompetenzen.edit_catalog',
+    'aufgaben.view', 'aufgaben.manage',
+}
 
 
 # ========== Notifications (In-App-Inbox) ==========

@@ -12,6 +12,7 @@ import {
   LayoutGrid, Train, Bus, TramFront, Ship,
 } from 'lucide-react';
 import BaukastenRenderer from '../components/monitor/BaukastenRenderer';
+import CameraStream from '../components/monitor/CameraStream';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
@@ -1337,13 +1338,8 @@ export default function MonitorPage() {
                   </div>
                 )}
                 <div className="flex-1 min-h-[200px] flex items-center justify-center">
-                  {config.kamera_typ === 'video' ? (
-                    <video src={config.kamera_url} autoPlay muted playsInline loop className="w-full h-full object-contain" />
-                  ) : config.kamera_typ === 'iframe' ? (
-                    <iframe src={config.kamera_url} className="w-full h-full min-h-[240px] border-0" title={config.kamera_titel || 'Kamera'} />
-                  ) : (
-                    <img src={config.kamera_url} alt={config.kamera_titel || 'Kamera'} className="w-full h-full object-contain" />
-                  )}
+                  <CameraStream url={config.kamera_url} typ={config.kamera_typ}
+                                title={config.kamera_titel} />
                 </div>
               </div>
             )}
