@@ -6,7 +6,7 @@ from datetime import datetime as dt
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from ninja import Router, Query, File, Form
+from ninja import Router, Query, File, Form, Schema
 from ninja.files import UploadedFile
 from django.http import HttpResponse
 import csv
@@ -1305,3 +1305,114 @@ def list_kandidaten(request, id: int, taetigkeit_id: Optional[int] = None):
     # Sortierung: zuerst voll qualifiziert, dann Score, dann Name
     out.sort(key=lambda x: (not x['voll_qualifiziert'], -x['score'], x['name'].lower()))
     return out
+
+
+# ─── Discord-Sync ─────────────────────────────────────────────────
+
+class DiscordTogglesSchema(Schema):
+    channel_aktiv: Optional[bool] = None
+    event_aktiv: Optional[bool] = None
+    info_aktiv: Optional[bool] = None  # nur "an" möglich; "aus" via Sync
+
+
+@veranstaltung_router.get("/{id}/discord-status", auth=keycloak_auth)
+def discord_status(request, id: int):
+    """Aktueller IST-/SOLL-Zustand der Discord-Integration."""
+    require_permission(request, 'veranstaltung.discord')
+    v = get_object_or_404(Veranstaltung, id=id)
+    from django.conf import settings
+    info_konfiguriert = bool(getattr(settings, 'DISCORD_INFO_CHANNEL_ID', ''))
+    return {
+        "channel_aktiv": v.discord_channel_aktiv,
+        "channel_id": v.discord_channel_id,
+        "event_aktiv": v.discord_event_aktiv,
+        "event_id": v.discord_event_id,
+        "info_aktiv": bool(v.discord_info_nachricht_id),
+        "info_konfiguriert": info_konfiguriert,
+    }
+
+
+@veranstaltung_router.post("/{id}/discord-toggles", auth=keycloak_auth)
+def set_discord_toggles(request, id: int, payload: DiscordTogglesSchema):
+    """Setzt die Soll-Zustände, ohne sofort zu synchronisieren."""
+    require_permission(request, 'veranstaltung.discord')
+    v = get_object_or_404(Veranstaltung, id=id)
+    if payload.channel_aktiv is not None:
+        v.discord_channel_aktiv = bool(payload.channel_aktiv)
+    if payload.event_aktiv is not None:
+        v.discord_event_aktiv = bool(payload.event_aktiv)
+    v.save(update_fields=['discord_channel_aktiv', 'discord_event_aktiv', 'aktualisiert_am'])
+    return discord_status(request, id)
+
+
+@veranstaltung_router.post("/{id}/discord-sync", auth=keycloak_auth)
+def discord_sync(request, id: int):
+    """Bringt IST auf SOLL: erstellt/löscht Channel + Event, postet oder
+    aktualisiert die Info-Nachricht. Idempotent."""
+    require_permission(request, 'veranstaltung.discord')
+    from . import discord_client
+    v = get_object_or_404(Veranstaltung, id=id)
+    actions = []
+
+    # ── Text-Channel ──
+    if v.discord_channel_aktiv and not v.discord_channel_id:
+        channel_id = discord_client.create_text_channel(v.titel, topic=v.beschreibung or '')
+        if channel_id:
+            v.discord_channel_id = channel_id
+            actions.append('channel_created')
+            # Allen aktuell Zugewiesenen direkt Zugriff geben
+            for z in v.zuweisungen.all():
+                try:
+                    profile = UserProfile.objects.get(keycloak_id=z.user_keycloak_id)
+                    if profile.discord_id:
+                        discord_client.grant_channel_access(channel_id, profile.discord_id)
+                except UserProfile.DoesNotExist:
+                    pass
+    elif not v.discord_channel_aktiv and v.discord_channel_id:
+        if discord_client.delete_channel(v.discord_channel_id):
+            v.discord_channel_id = ''
+            actions.append('channel_deleted')
+
+    # ── Scheduled Event ──
+    if v.discord_event_aktiv and not v.discord_event_id:
+        if v.datum_von and v.datum_bis:
+            ev_id, err = discord_client.create_scheduled_event(
+                v.titel,
+                v.datum_von.isoformat(),
+                v.datum_bis.isoformat(),
+                description=v.beschreibung or '',
+                location=v.ort or '',
+            )
+            if ev_id:
+                v.discord_event_id = ev_id
+                actions.append('event_created')
+            elif err:
+                actions.append(f'event_failed: {err[:120]}')
+    elif not v.discord_event_aktiv and v.discord_event_id:
+        if discord_client.delete_scheduled_event(v.discord_event_id):
+            v.discord_event_id = ''
+            actions.append('event_deleted')
+
+    # ── Info-Nachricht ──
+    # Wenn Channel oder Event aktiv ist, soll auch die Info-Nachricht
+    # existieren (kann später separat abgeschaltet werden über payload).
+    want_info = v.discord_channel_aktiv or v.discord_event_aktiv
+    if want_info and not v.discord_info_nachricht_id:
+        msg_id = discord_client.post_info_message(v)
+        if msg_id:
+            v.discord_info_nachricht_id = msg_id
+            actions.append('info_posted')
+    elif want_info and v.discord_info_nachricht_id:
+        # Inhalt aktualisieren falls Titel/Datum sich geändert haben
+        if discord_client.edit_info_message(v, v.discord_info_nachricht_id):
+            actions.append('info_updated')
+    elif not want_info and v.discord_info_nachricht_id:
+        if discord_client.delete_info_message(v.discord_info_nachricht_id):
+            v.discord_info_nachricht_id = ''
+            actions.append('info_deleted')
+
+    v.save(update_fields=[
+        'discord_channel_id', 'discord_event_id', 'discord_info_nachricht_id',
+        'aktualisiert_am',
+    ])
+    return {"actions": actions, **discord_status(request, id)}
