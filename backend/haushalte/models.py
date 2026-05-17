@@ -183,6 +183,9 @@ class Artikel(models.Model):
     sortierung = models.IntegerField(default=0,
         help_text='Frei wählbare Reihenfolge — kleiner Wert zuerst')
 
+    quittung = models.FileField(upload_to='haushalt/quittungen/%Y/%m/',
+        null=True, blank=True, verbose_name='Quittung/Beleg')
+
     # Zeitstempel
     erstellt_am = models.DateTimeField(auto_now_add=True)
     aktualisiert_am = models.DateTimeField(auto_now=True)
@@ -205,3 +208,20 @@ class Artikel(models.Model):
         return self.preis * self.anzahl
     
     # Keine automatische Kategorisierung mehr - Benutzer wählt manuell
+
+
+class ArtikelKommentar(models.Model):
+    """Diskussions-Kommentar an einem Artikel."""
+    artikel = models.ForeignKey(Artikel, on_delete=models.CASCADE, related_name='kommentare')
+    user_keycloak_id = models.CharField(max_length=100, blank=True)
+    user_username = models.CharField(max_length=150, blank=True)
+    text = models.TextField()
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['erstellt_am']
+        verbose_name = 'Artikel-Kommentar'
+        verbose_name_plural = 'Artikel-Kommentare'
+
+    def __str__(self):
+        return f'{self.user_username}: {self.text[:50]}'

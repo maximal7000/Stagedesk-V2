@@ -3,7 +3,8 @@ Django Ninja API für Haushalts-Management
 GLOBAL: Alle Benutzer teilen sich die gleichen Haushalte
 """
 from typing import List, Optional
-from ninja import Router, Schema
+from ninja import Router, Schema, File
+from ninja.files import UploadedFile
 from ninja.errors import HttpError
 from django.shortcuts import get_object_or_404
 from django.http import HttpRequest
@@ -244,16 +245,142 @@ def haushalt_status_summary(request, haushalt_id: int):
 
 @haushalte_router.put("/{haushalt_id}/artikel/{artikel_id}", response=ArtikelSchema, auth=keycloak_auth)
 def update_artikel(request, haushalt_id: int, artikel_id: int, payload: ArtikelUpdateSchema):
-    """Artikel aktualisieren"""
+    """Artikel aktualisieren — loggt Status-Wechsel und größere Änderungen ins Audit."""
     require_perm(request, 'haushalte.edit')
     haushalt = get_object_or_404(Haushalt, id=haushalt_id)
     artikel = get_object_or_404(Artikel, id=artikel_id, haushalt=haushalt)
 
-    for attr, value in payload.dict(exclude_unset=True).items():
+    before = {
+        'status': artikel.status,
+        'kategorie': artikel.kategorie,
+        'name': artikel.name,
+        'preis': str(artikel.preis),
+        'anzahl': artikel.anzahl,
+    }
+    data = payload.dict(exclude_unset=True)
+    for attr, value in data.items():
         setattr(artikel, attr, value)
-
     artikel.save()
+
+    # Audit-Eintrag pro relevantes Feld, damit ein User-Verlauf entsteht
+    relevant = {k: v for k, v in data.items()
+                if k in ('status', 'kategorie', 'name', 'preis', 'anzahl', 'gekauft_am')}
+    if relevant:
+        for field, new_val in relevant.items():
+            old_val = before.get(field)
+            if str(old_val) == str(new_val):
+                continue
+            aktion = 'status_geaendert' if field == 'status' else 'aktualisiert'
+            audit_log(request, aktion, 'artikel', artikel.id,
+                      f'{artikel.name} · {field}: {old_val} → {new_val}',
+                      {'feld': field, 'alt': old_val, 'neu': str(new_val)})
     return artikel
+
+
+# ─── Kommentare am Artikel ────────────────────────────────────────
+
+class KommentarCreateSchema(Schema):
+    text: str
+
+
+@haushalte_router.get("/{haushalt_id}/artikel/{artikel_id}/kommentare", auth=keycloak_auth)
+def list_kommentare(request, haushalt_id: int, artikel_id: int):
+    require_perm(request, 'haushalte.view')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    artikel = get_object_or_404(Artikel, id=artikel_id, haushalt=haushalt)
+    return [
+        {
+            'id': k.id,
+            'text': k.text,
+            'user_username': k.user_username,
+            'erstellt_am': k.erstellt_am.isoformat() if k.erstellt_am else None,
+        }
+        for k in artikel.kommentare.all()
+    ]
+
+
+@haushalte_router.post("/{haushalt_id}/artikel/{artikel_id}/kommentare", auth=keycloak_auth)
+def add_kommentar(request, haushalt_id: int, artikel_id: int, payload: KommentarCreateSchema):
+    require_perm(request, 'haushalte.view')
+    from .models import ArtikelKommentar
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    artikel = get_object_or_404(Artikel, id=artikel_id, haushalt=haushalt)
+    k = ArtikelKommentar.objects.create(
+        artikel=artikel,
+        user_keycloak_id=request.auth.get('sub', '') if request.auth else '',
+        user_username=request.auth.get('preferred_username', '') if request.auth else '',
+        text=payload.text[:5000],
+    )
+    return {
+        'id': k.id, 'text': k.text, 'user_username': k.user_username,
+        'erstellt_am': k.erstellt_am.isoformat(),
+    }
+
+
+@haushalte_router.delete("/{haushalt_id}/artikel/{artikel_id}/kommentare/{kid}", auth=keycloak_auth)
+def delete_kommentar(request, haushalt_id: int, artikel_id: int, kid: int):
+    from .models import ArtikelKommentar
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    artikel = get_object_or_404(Artikel, id=artikel_id, haushalt=haushalt)
+    k = get_object_or_404(ArtikelKommentar, id=kid, artikel=artikel)
+    # Eigener Kommentar oder edit-Permission
+    own = k.user_keycloak_id and request.auth and k.user_keycloak_id == request.auth.get('sub', '')
+    if not own:
+        require_perm(request, 'haushalte.edit')
+    k.delete()
+    return {"status": "deleted"}
+
+
+# ─── Verlauf eines Artikels (aus Audit-Log) ──────────────────────
+
+@haushalte_router.get("/{haushalt_id}/artikel/{artikel_id}/verlauf", auth=keycloak_auth)
+def artikel_verlauf(request, haushalt_id: int, artikel_id: int):
+    require_perm(request, 'haushalte.view')
+    from inventar.models import AuditLog
+    qs = AuditLog.objects.filter(entity_type='artikel', entity_id=artikel_id).order_by('-timestamp')[:200]
+    return [
+        {
+            'id': e.id,
+            'aktion': e.aktion,
+            'aktion_display': e.get_aktion_display(),
+            'details': e.details,
+            'entity_name': e.entity_name,
+            'user_username': e.user_username,
+            'timestamp': e.timestamp.isoformat() if e.timestamp else None,
+        } for e in qs
+    ]
+
+
+# ─── Quittungs-Upload ─────────────────────────────────────────────
+
+@haushalte_router.post("/{haushalt_id}/artikel/{artikel_id}/quittung", auth=keycloak_auth)
+def upload_quittung(request, haushalt_id: int, artikel_id: int,
+                    datei: UploadedFile = File(...)):
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    artikel = get_object_or_404(Artikel, id=artikel_id, haushalt=haushalt)
+    # Alte Datei löschen falls vorhanden
+    if artikel.quittung:
+        try: artikel.quittung.delete(save=False)
+        except Exception: pass
+    artikel.quittung = datei
+    artikel.save(update_fields=['quittung'])
+    audit_log(request, 'erstellt', 'quittung', artikel.id,
+              f'{artikel.name} · Quittung hochgeladen')
+    return {"quittung_url": artikel.quittung.url if artikel.quittung else None}
+
+
+@haushalte_router.delete("/{haushalt_id}/artikel/{artikel_id}/quittung", auth=keycloak_auth)
+def delete_quittung(request, haushalt_id: int, artikel_id: int):
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    artikel = get_object_or_404(Artikel, id=artikel_id, haushalt=haushalt)
+    if artikel.quittung:
+        try: artikel.quittung.delete(save=False)
+        except Exception: pass
+    artikel.quittung = None
+    artikel.save(update_fields=['quittung'])
+    return {"status": "deleted"}
 
 
 @haushalte_router.delete("/{haushalt_id}/artikel/{artikel_id}", auth=keycloak_auth)

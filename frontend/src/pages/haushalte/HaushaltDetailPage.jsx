@@ -13,6 +13,7 @@ import {
 import apiClient from '../../lib/api';
 import EditHaushaltModal from '../../components/EditHaushaltModal';
 import ArtikelModal from '../../components/ArtikelModal';
+import ArtikelDetailsPanel from '../../components/ArtikelDetailsPanel';
 
 // Sortier-Optionen für Tabelle
 const SORT_OPTIONS = [
@@ -649,13 +650,11 @@ export default function HaushaltDetailPage() {
             onClick={() => startEditing(item)}>
             {item.name}
           </span>
-          {item.beschreibung && (
-            <button onClick={() => toggleDesc(item.id)}
-              title={descOpen ? 'Beschreibung verbergen' : 'Beschreibung anzeigen'}
-              className="ml-1.5 text-gray-500 hover:text-gray-300 align-middle">
-              <Info className="w-3.5 h-3.5 inline" />
-            </button>
-          )}
+          <button onClick={() => toggleDesc(item.id)}
+            title={descOpen ? 'Details verbergen' : 'Details (Beschreibung, Kommentare, Verlauf, Quittung)'}
+            className="ml-1.5 text-gray-500 hover:text-gray-300 align-middle">
+            <Info className="w-3.5 h-3.5 inline" />
+          </button>
         </td>
         {/* Link */}
         <td className="p-2">
@@ -705,10 +704,15 @@ export default function HaushaltDetailPage() {
           </div>
         </td>
       </tr>
-      {descOpen && item.beschreibung && (
+      {descOpen && (
         <tr className="border-b border-gray-800 bg-gray-900/40">
-          <td colSpan={10} className="px-4 py-2 text-sm text-gray-300 whitespace-pre-wrap">
-            {item.beschreibung}
+          <td colSpan={10} className="px-0 py-0">
+            <ArtikelDetailsPanel
+              haushaltId={id}
+              artikel={item}
+              canEdit={true}
+              onRefresh={fetchData}
+            />
           </td>
         </tr>
       )}
