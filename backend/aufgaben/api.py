@@ -115,7 +115,25 @@ class ReorderSchema(Schema):
     ids: List[int]
 
 
-# Reorder MUSS vor /{aid} stehen, sonst greift der id-Pattern.
+# WICHTIG: alle Literal-Routen (/users, /display, /reorder) MÜSSEN vor
+# der generischen /{aid}-Route stehen, sonst matched Ninja "users" gegen
+# {aid:int} und liefert 405 statt der erwarteten Route.
+
+@aufgaben_router.get("/users", auth=keycloak_auth)
+def list_users_for_aufgaben(request):
+    """Verfügbare User für Zuweisung."""
+    _require_perm(request, 'aufgaben.manage')
+    return [_user_dict(u) for u in UserProfile.objects.exclude(is_admin_cached=True)
+            .order_by('last_name', 'first_name', 'username')]
+
+
+@aufgaben_router.get("/display", auth=None)
+def display_aufgaben(request):
+    """Öffentlicher Read-Only-Endpoint für die Monitor-Vollbildansicht."""
+    return [_aufgabe_to_dict(a) for a in
+            Aufgabe.objects.prefetch_related('zugewiesene').all()]
+
+
 @aufgaben_router.put("/reorder", auth=keycloak_auth)
 def reorder_aufgaben(request, payload: ReorderSchema):
     """Setzt die Sortierung gemäß der übergebenen ID-Reihenfolge."""
@@ -149,20 +167,3 @@ def delete_aufgabe(request, aid: int):
     get_object_or_404(Aufgabe, id=aid).delete()
     _broadcast()
     return {"status": "deleted"}
-
-
-@aufgaben_router.get("/users", auth=keycloak_auth)
-def list_users_for_aufgaben(request):
-    """Verfügbare User für Zuweisung."""
-    _require_perm(request, 'aufgaben.manage')
-    return [_user_dict(u) for u in UserProfile.objects.exclude(is_admin_cached=True)
-            .order_by('last_name', 'first_name', 'username')]
-
-
-# ─── Öffentlicher Endpoint für Monitor-Display ──────────────────────
-
-@aufgaben_router.get("/display", auth=None)
-def display_aufgaben(request):
-    """Öffentlicher Read-Only-Endpoint für die Monitor-Vollbildansicht."""
-    return [_aufgabe_to_dict(a) for a in
-            Aufgabe.objects.prefetch_related('zugewiesene').all()]
