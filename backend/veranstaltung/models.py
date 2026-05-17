@@ -73,6 +73,14 @@ class Veranstaltung(models.Model):
     # Discord-Integration
     discord_event_id = models.CharField(max_length=100, blank=True, help_text="Discord Scheduled Event ID")
     discord_channel_id = models.CharField(max_length=100, blank=True, help_text="Discord Text-Channel ID")
+    # Soll-Zustände — die User kann unabhängig wählen ob ein Channel oder ein
+    # Event existieren soll. discord_sync() bringt den IST-Zustand auf den
+    # Soll-Zustand (anlegen / löschen).
+    discord_channel_aktiv = models.BooleanField(default=False)
+    discord_event_aktiv = models.BooleanField(default=False)
+    # Info-Nachricht in einen festen Info-Channel (DISCORD_INFO_CHANNEL_ID)
+    discord_info_nachricht_id = models.CharField(max_length=100, blank=True,
+        help_text="ID der Info-Nachricht im Discord-Info-Channel (für Edit/Delete)")
 
     # Sichtbarkeit: JSON-Liste von keycloak_ids die dieses Event NICHT sehen
     ausgeblendete_user = models.JSONField(default=list, blank=True,

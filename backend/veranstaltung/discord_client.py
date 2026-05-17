@@ -17,6 +17,7 @@ DISCORD_API = 'https://discord.com/api/v10'
 BOT_TOKEN = getattr(settings, 'DISCORD_BOT_TOKEN', '')
 GUILD_ID = getattr(settings, 'DISCORD_GUILD_ID', '')
 CATEGORY_ID = getattr(settings, 'DISCORD_CATEGORY_ID', '')
+INFO_CHANNEL_ID = getattr(settings, 'DISCORD_INFO_CHANNEL_ID', '')
 
 
 def _headers():
@@ -240,3 +241,71 @@ def notify_event_reminder(veranstaltung, hours_until: int):
     except Exception as e:
         logger.warning('notify_event_reminder error: %s', e)
     return sent
+
+
+# ─── Info-Channel: zentrale Ankündigung neuer Veranstaltungen ──────
+
+def _build_info_text(v) -> str:
+    """Plain-Text-Inhalt für die Info-Nachricht. Discord rendert das mit
+    Markdown (fette Überschrift, Aufzählung mit Emojis)."""
+    when = v.datum_von.strftime('%d.%m.%Y %H:%M') if v.datum_von else 'tba'
+    parts = [f'**Neue Veranstaltung: {v.titel}**', f'🗓 {when}']
+    if v.ort:
+        parts.append(f'📍 {v.ort}')
+    if v.beschreibung:
+        parts.append('')
+        parts.append(v.beschreibung[:1500])
+    return '\n'.join(parts)
+
+
+def post_info_message(v):
+    """Schickt eine neue Info-Nachricht in den Info-Channel und gibt die
+    message-id zurück (für späteren Edit/Delete). Returns: id-string oder None."""
+    if not is_configured() or not INFO_CHANNEL_ID:
+        return None
+    try:
+        r = requests.post(
+            f'{DISCORD_API}/channels/{INFO_CHANNEL_ID}/messages',
+            json={'content': _build_info_text(v)},
+            headers=_headers(),
+            timeout=8,
+        )
+        if r.status_code in (200, 201):
+            return r.json().get('id')
+        logger.warning('post_info_message: %s %s', r.status_code, r.text[:200])
+    except Exception as e:
+        logger.warning('post_info_message exception: %s', e)
+    return None
+
+
+def edit_info_message(v, message_id: str):
+    """Editiert eine bestehende Info-Nachricht (idempotent für Re-Sync)."""
+    if not is_configured() or not INFO_CHANNEL_ID or not message_id:
+        return False
+    try:
+        r = requests.patch(
+            f'{DISCORD_API}/channels/{INFO_CHANNEL_ID}/messages/{message_id}',
+            json={'content': _build_info_text(v)},
+            headers=_headers(),
+            timeout=8,
+        )
+        return r.status_code in (200, 201)
+    except Exception as e:
+        logger.warning('edit_info_message exception: %s', e)
+        return False
+
+
+def delete_info_message(message_id: str) -> bool:
+    """Entfernt die Info-Nachricht wieder (wenn der Soll-Zustand "aus" ist)."""
+    if not is_configured() or not INFO_CHANNEL_ID or not message_id:
+        return False
+    try:
+        r = requests.delete(
+            f'{DISCORD_API}/channels/{INFO_CHANNEL_ID}/messages/{message_id}',
+            headers=_headers(),
+            timeout=8,
+        )
+        return r.status_code in (200, 204)
+    except Exception as e:
+        logger.warning('delete_info_message exception: %s', e)
+        return False
