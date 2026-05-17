@@ -73,8 +73,14 @@ class UserProfileSchema(Schema):
     is_admin: bool
     keycloak_roles: List[str]
     permissions: List[str]
+    default_landing: str = ''
+    avatar_url: Optional[str] = None
     created_at: datetime
     last_login: Optional[datetime]
+
+    @staticmethod
+    def resolve_avatar_url(obj):
+        return obj.avatar.url if obj.avatar else None
 
     @staticmethod
     def resolve_bereiche(obj):
@@ -105,6 +111,7 @@ class UserProfileSchema(Schema):
 
 class UserProfileUpdateSchema(Schema):
     theme: Optional[str] = None
+    default_landing: Optional[str] = None
 
 
 class UserProfileAdminUpdateSchema(Schema):
