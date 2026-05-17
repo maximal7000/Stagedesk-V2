@@ -2,8 +2,8 @@
 Django Ninja API für Haushalts-Management
 GLOBAL: Alle Benutzer teilen sich die gleichen Haushalte
 """
-from typing import List
-from ninja import Router
+from typing import List, Optional
+from ninja import Router, Schema
 from ninja.errors import HttpError
 from django.shortcuts import get_object_or_404
 from django.http import HttpRequest
@@ -163,6 +163,83 @@ def reorder_artikel(request, haushalt_id: int, payload: ArtikelReorderSchema):
     for idx, aid in enumerate(payload.ids):
         Artikel.objects.filter(id=aid, haushalt=haushalt).update(sortierung=idx)
     return {"status": "ok", "count": len(payload.ids)}
+
+
+class ArtikelBulkUpdateSchema(Schema):
+    ids: List[int]
+    status: Optional[str] = None
+    kategorie: Optional[str] = None
+
+
+@haushalte_router.put("/{haushalt_id}/artikel/bulk", auth=keycloak_auth)
+def bulk_update_artikel(request, haushalt_id: int, payload: ArtikelBulkUpdateSchema):
+    """Aktualisiert mehrere Artikel auf einmal (Status / Kategorie)."""
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    qs = Artikel.objects.filter(id__in=payload.ids, haushalt=haushalt)
+    update_fields = {}
+    if payload.status:
+        update_fields['status'] = payload.status
+    if payload.kategorie:
+        update_fields['kategorie'] = payload.kategorie
+    if not update_fields:
+        return {"updated": 0}
+    count = qs.update(**update_fields)
+    audit_log(request, 'aktualisiert', 'haushalt_bulk', haushalt.id,
+              f"{count} Artikel: {', '.join(f'{k}={v}' for k, v in update_fields.items())}")
+    return {"updated": count}
+
+
+@haushalte_router.get("/{haushalt_id}/artikel.csv", auth=keycloak_auth)
+def export_artikel_csv(request, haushalt_id: int):
+    """Exportiert alle Artikel eines Haushalts als CSV."""
+    require_perm(request, 'haushalte.view')
+    from django.http import HttpResponse
+    import csv, io
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    buf = io.StringIO()
+    w = csv.writer(buf, delimiter=';')
+    w.writerow(['Status', 'Kategorie', 'Name', 'Anzahl', 'Preis', 'Gesamt',
+                'Link', 'Beschreibung', 'Erstellt', 'Gekauft'])
+    for a in haushalt.artikel.all().order_by('sortierung', '-erstellt_am'):
+        w.writerow([
+            a.get_status_display(),
+            a.get_kategorie_display(),
+            a.name,
+            a.anzahl,
+            f'{a.preis:.2f}',
+            f'{a.gesamtpreis:.2f}',
+            a.link or '',
+            (a.beschreibung or '').replace('\n', ' '),
+            a.erstellt_am.strftime('%Y-%m-%d %H:%M') if a.erstellt_am else '',
+            a.gekauft_am.strftime('%Y-%m-%d') if a.gekauft_am else '',
+        ])
+    resp = HttpResponse(buf.getvalue().encode('utf-8-sig'), content_type='text/csv; charset=utf-8')
+    safe_name = ''.join(c for c in haushalt.name if c.isalnum() or c in '-_ ').strip()
+    resp['Content-Disposition'] = f'attachment; filename="{safe_name}_artikel.csv"'
+    return resp
+
+
+@haushalte_router.get("/{haushalt_id}/status-summary", auth=keycloak_auth)
+def haushalt_status_summary(request, haushalt_id: int):
+    """Budget-Aufteilung pro Artikel-Status: zeigt wie viel beantragt,
+    bestellt, geliefert etc. ist — pro Kategorie."""
+    require_perm(request, 'haushalte.view')
+    from django.db.models import Sum, F, DecimalField
+    from django.db.models.functions import Coalesce
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    out = {'konsumitiv': {}, 'investiv': {}}
+    rows = (haushalt.artikel
+            .values('kategorie', 'status')
+            .annotate(summe=Coalesce(Sum(F('preis') * F('anzahl'),
+                                          output_field=DecimalField(max_digits=12, decimal_places=2)), 0))
+            .annotate(anzahl=Sum('anzahl')))
+    for r in rows:
+        out[r['kategorie']][r['status']] = {
+            'summe': float(r['summe'] or 0),
+            'anzahl': int(r['anzahl'] or 0),
+        }
+    return out
 
 
 @haushalte_router.put("/{haushalt_id}/artikel/{artikel_id}", response=ArtikelSchema, auth=keycloak_auth)
