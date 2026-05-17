@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import Markdown, { MarkdownHint } from '../../components/Markdown';
 
 // Sections
 import QuickInfoCard from './sections/QuickInfoCard';
@@ -247,7 +248,8 @@ export default function VeranstaltungDetailPage() {
             <div>
               <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
               <textarea value={form.beschreibung} onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
-                rows={3} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm" />
+              <MarkdownHint />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -384,7 +386,7 @@ export default function VeranstaltungDetailPage() {
             ) : null}
           </div>
         </div>
-        {data.beschreibung && <p className="mt-4 text-gray-300 whitespace-pre-wrap">{data.beschreibung}</p>}
+        {data.beschreibung && <div className="mt-4"><Markdown>{data.beschreibung}</Markdown></div>}
       </div>
 
       {/* ─── Sidebar + Content Grid ──────────────────── */}
