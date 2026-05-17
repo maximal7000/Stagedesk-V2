@@ -308,30 +308,6 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            {/* System Initialize (nur für Admins) */}
-            {isAdmin && (
-              <div className="pt-6 border-t border-gray-700">
-                <h3 className="text-lg font-semibold text-white mb-2">System initialisieren</h3>
-                <p className="text-sm text-gray-400 mb-4">
-                  Erstellt die Standard-Permissions für die Anwendung.
-                </p>
-
-                <button
-                  onClick={handleInitialize}
-                  className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors"
-                >
-                  Permissions initialisieren
-                </button>
-
-                {initResult && (
-                  <div className="mt-4 p-3 bg-gray-800 rounded-lg text-sm">
-                    <pre className="text-gray-300 overflow-auto">
-                      {JSON.stringify(initResult, null, 2)}
-                    </pre>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         )}
       </div>
