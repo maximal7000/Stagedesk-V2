@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, History, Receipt, Trash2, Upload, ExternalLink, Loader2 } from 'lucide-react';
 import apiClient from '../lib/api';
+import Markdown from './Markdown';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
@@ -81,9 +82,9 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
   return (
     <div className="bg-gray-900/60 p-3 space-y-3">
       {artikel.beschreibung && (
-        <p className="text-sm text-gray-300 whitespace-pre-wrap border-b border-gray-800 pb-2">
-          {artikel.beschreibung}
-        </p>
+        <div className="text-sm border-b border-gray-800 pb-2">
+          <Markdown>{artikel.beschreibung}</Markdown>
+        </div>
       )}
 
       {/* Tab-Buttons */}

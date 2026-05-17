@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
+import Markdown from '../../components/Markdown';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor,
   useSensor, useSensors,
@@ -187,7 +188,7 @@ function SortableAufgabe({
           <div className={`font-medium ${done ? 'text-gray-500 line-through' : 'text-white'}`}>
             {a.titel}
           </div>
-          {a.beschreibung && <p className="text-sm text-gray-400 mt-0.5">{a.beschreibung}</p>}
+          {a.beschreibung && <div className="text-sm mt-0.5"><Markdown>{a.beschreibung}</Markdown></div>}
           <div className="flex flex-wrap gap-1 mt-2">
             {a.zugewiesene.map(z => (
               <span key={z.id}

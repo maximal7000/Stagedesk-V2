@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { X, ShoppingCart, Link as LinkIcon, Loader, Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import apiClient from '../lib/api';
+import { MarkdownHint } from './Markdown';
 
 // Status-Optionen (synchron mit Backend STATUS_CHOICES).
 const STATUS_OPTIONS = [
@@ -332,9 +333,10 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
               value={formData.beschreibung}
               onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
               placeholder="Zusätzliche Details zum Artikel..."
-              rows={3}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={4}
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
             />
+            <MarkdownHint />
           </div>
 
           {/* Fehleranzeige */}
