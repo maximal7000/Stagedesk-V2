@@ -26,32 +26,83 @@ import {
   Search,
   ScrollText,
 } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
 import GlobalSearchModal from './GlobalSearchModal';
 import NotificationBell from './NotificationBell';
+import ShortcutsModal from './ShortcutsModal';
 
 export default function DashboardLayout({ children }) {
   const auth = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { effectiveTheme, isDark } = useTheme();
   const { isAdmin, hasPermission, impersonate, setImpersonate, profile } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
-  // Ctrl+K / Cmd+K öffnet die globale Suche
+  // Globale Keyboard-Shortcuts
   useEffect(() => {
+    // gedrückte g-Sequenz: Zeitstempel, damit "g h" innerhalb von ~1s greift
+    let lastG = 0;
+
+    const isTyping = (target) => {
+      if (!target) return false;
+      const tag = target.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
+    };
+
     const onKey = (e) => {
+      // Ctrl+K / Cmd+K → globale Suche (auch in Inputs)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setSearchOpen(true);
+        return;
+      }
+      // Esc: schließt offene Modals (auch in Inputs)
+      if (e.key === 'Escape') {
+        if (shortcutsOpen) setShortcutsOpen(false);
+        return;
+      }
+      // alles weitere nur, wenn nicht in einem Eingabefeld
+      if (isTyping(e.target)) return;
+      // Modifier-Kombis (außer Shift, die ist bei ? nötig) ignorieren
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // g-Sequenz für Navigation
+      const now = Date.now();
+      if (lastG && (now - lastG) < 1200) {
+        lastG = 0;
+        const target = ({
+          h: '/', v: '/veranstaltung', k: '/kalender', i: '/inventar',
+          a: '/anwesenheit', b: '/haushalte', t: '/aufgaben', c: '/kompetenzen',
+        })[e.key.toLowerCase()];
+        if (target) {
+          e.preventDefault();
+          navigate(target);
+        }
+        return;
+      }
+
+      if (e.key === '?') {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      } else if (e.key === '/') {
+        const el = document.querySelector('[data-shortcut="search"]');
+        if (el) { e.preventDefault(); el.focus(); el.select?.(); }
+      } else if (e.key === 'n') {
+        const el = document.querySelector('[data-shortcut="new"]');
+        if (el) { e.preventDefault(); el.click(); }
+      } else if (e.key === 'g') {
+        lastG = now;
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [navigate, shortcutsOpen]);
 
   const user = auth.user?.profile;
 
@@ -362,6 +413,7 @@ export default function DashboardLayout({ children }) {
       </div>
 
       <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
 }
