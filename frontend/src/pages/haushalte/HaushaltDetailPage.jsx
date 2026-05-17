@@ -315,6 +315,7 @@ export default function HaushaltDetailPage() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [lastClickedId, setLastClickedId] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [statusSummary, setStatusSummary] = useState(null);
 
@@ -338,7 +339,32 @@ export default function HaushaltDetailPage() {
   const toggleSelect = (id) => setSelectedIds((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
   });
-  const clearSelection = () => setSelectedIds(new Set());
+  // Klick mit ggf. Shift: bei Shift+Klick wird der Bereich zwischen
+  // letzter Auswahl und aktueller Zeile (innerhalb derselben sichtbaren
+  // Reihenfolge) auf den Zustand der aktuellen Zeile gesetzt.
+  const handleSelectClick = (item, event, orderedItems) => {
+    const id = item.id;
+    if (event.shiftKey && lastClickedId != null && orderedItems?.length) {
+      const ids = orderedItems.map(i => i.id);
+      const a = ids.indexOf(lastClickedId);
+      const b = ids.indexOf(id);
+      if (a !== -1 && b !== -1) {
+        const [lo, hi] = a < b ? [a, b] : [b, a];
+        const range = ids.slice(lo, hi + 1);
+        const shouldSelect = !selectedIds.has(id);
+        setSelectedIds((s) => {
+          const n = new Set(s);
+          range.forEach((rid) => { shouldSelect ? n.add(rid) : n.delete(rid); });
+          return n;
+        });
+        setLastClickedId(id);
+        return;
+      }
+    }
+    toggleSelect(id);
+    setLastClickedId(id);
+  };
+  const clearSelection = () => { setSelectedIds(new Set()); setLastClickedId(null); };
 
   const bulkSetStatus = async (status) => {
     if (selectedIds.size === 0) return;
@@ -602,7 +628,7 @@ export default function HaushaltDetailPage() {
 
   // Tabellen-Zeile Komponente — Inline-Editing wurde entfernt; Klick auf
   // Name/Preis/Anzahl oder den Bearbeiten-Button öffnet das ArtikelModal.
-  const ArtikelRow = ({ item, kategorie }) => {
+  const ArtikelRow = ({ item, kategorie, orderedItems }) => {
     const openEdit = () => setEditItem(item);
     const allKatItems = kategorie === 'konsumitiv' ? artikelKonsumitiv : artikelInvestitiv;
     const manuellOrder = (sortBy[kategorie] === 'manuell');
@@ -610,11 +636,12 @@ export default function HaushaltDetailPage() {
     return (
       <>
       <tr className="border-b border-gray-800 hover:bg-gray-800/30 group align-middle">
-        {/* Checkbox */}
+        {/* Checkbox — Shift+Klick wählt einen Bereich aus */}
         <td className="p-2 w-[32px]">
           <input type="checkbox"
             checked={selectedIds.has(item.id)}
-            onChange={() => toggleSelect(item.id)}
+            onClick={(e) => { e.preventDefault(); handleSelectClick(item, e, orderedItems); }}
+            onChange={() => {}}
             className="rounded border-gray-600 bg-gray-700 text-blue-500" />
         </td>
         {/* Status */}
@@ -756,6 +783,7 @@ export default function HaushaltDetailPage() {
         {/* Action-Bar: Add-Button + Sortierung */}
         <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
           <button onClick={() => setAddModalKategorie(kategorie)}
+            data-shortcut="new"
             className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg ${
               color === 'orange'
                 ? 'bg-orange-600 hover:bg-orange-700 text-white'
@@ -792,7 +820,7 @@ export default function HaushaltDetailPage() {
           </thead>
           <tbody>
             {sorted.map((item) => (
-              <ArtikelRow key={item.id} item={item} kategorie={kategorie} />
+              <ArtikelRow key={item.id} item={item} kategorie={kategorie} orderedItems={sorted} />
             ))}
             {sorted.length === 0 && (
               <tr><td colSpan={10} className="p-6 text-center text-gray-500 text-sm">Noch keine Artikel</td></tr>
@@ -891,6 +919,7 @@ export default function HaushaltDetailPage() {
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input type="text" placeholder="Suchen…" value={search}
+            data-shortcut="search"
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm" />
         </div>
