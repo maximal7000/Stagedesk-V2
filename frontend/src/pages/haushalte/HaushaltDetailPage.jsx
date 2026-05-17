@@ -28,13 +28,15 @@ const SORT_OPTIONS = [
 ];
 
 const STATUS_LABEL = {
+  geplant:   'Geplant',
   beantragt: 'Beantragt',
   genehmigt: 'Genehmigt',
-  bestellt: 'Bestellt',
+  bestellt:  'Bestellt',
   geliefert: 'Geliefert',
   abgelehnt: 'Abgelehnt',
 };
 const STATUS_CLASS = {
+  geplant:   'bg-gray-500/20 text-gray-300',
   beantragt: 'bg-amber-500/20 text-amber-300',
   genehmigt: 'bg-blue-500/20 text-blue-300',
   bestellt:  'bg-purple-500/20 text-purple-300',
@@ -304,6 +306,8 @@ export default function HaushaltDetailPage() {
 
   // Add-Modal pro Kategorie + Sortier-State pro Kategorie
   const [addModalKategorie, setAddModalKategorie] = useState(null);
+  // Edit-Modal: nutzt dasselbe ArtikelModal, gibt vorhandenes Item als Prop mit
+  const [editItem, setEditItem] = useState(null);
   const [sortBy, setSortBy] = useState({ konsumitiv: 'manuell', investiv: 'manuell' });
   // Welche Beschreibungen sind aufgeklappt
   const [openDesc, setOpenDesc] = useState(() => new Set());
@@ -596,23 +600,10 @@ export default function HaushaltDetailPage() {
     } catch (e) { /* still */ fetchData(); }
   };
 
-  // Tabellen-Zeile Komponente (nicht im Editing-Modus)
+  // Tabellen-Zeile Komponente — Inline-Editing wurde entfernt; Klick auf
+  // Name/Preis/Anzahl oder den Bearbeiten-Button öffnet das ArtikelModal.
   const ArtikelRow = ({ item, kategorie }) => {
-    const isEditing = editingId === item.id;
-    
-    if (isEditing) {
-      return (
-        <EditingRow
-          item={item}
-          onSave={handleSaveEditing}
-          onCancel={cancelEditing}
-          onParse={handleParseLink}
-          parsingId={parsingId}
-          savingId={savingId}
-        />
-      );
-    }
-    
+    const openEdit = () => setEditItem(item);
     const allKatItems = kategorie === 'konsumitiv' ? artikelKonsumitiv : artikelInvestitiv;
     const manuellOrder = (sortBy[kategorie] === 'manuell');
     const descOpen = openDesc.has(item.id);
@@ -647,7 +638,7 @@ export default function HaushaltDetailPage() {
         {/* Name + Beschreibung-Toggle */}
         <td className="p-2">
           <span className="text-white cursor-pointer hover:text-blue-400"
-            onClick={() => startEditing(item)}>
+            onClick={openEdit}>
             {item.name}
           </span>
           <button onClick={() => toggleDesc(item.id)}
@@ -667,10 +658,10 @@ export default function HaushaltDetailPage() {
             <span className="text-gray-600 text-sm">—</span>
           )}
         </td>
-        <td className="p-2 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
+        <td className="p-2 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={openEdit}>
           {formatPreis(item.preis)}
         </td>
-        <td className="p-2 text-center text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
+        <td className="p-2 text-center text-gray-300 cursor-pointer hover:text-blue-400" onClick={openEdit}>
           {item.anzahl}
         </td>
         <td className="p-2 text-right text-white font-medium">
@@ -693,7 +684,7 @@ export default function HaushaltDetailPage() {
         </td>
         <td className="p-2">
           <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={() => startEditing(item)}
+            <button onClick={openEdit}
               className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded">
               <Edit className="w-4 h-4" />
             </button>
@@ -1071,6 +1062,17 @@ export default function HaushaltDetailPage() {
           initialKategorie={addModalKategorie}
           onClose={() => setAddModalKategorie(null)}
           onCreated={() => { setAddModalKategorie(null); fetchData(); }}
+        />
+      )}
+
+      {/* Edit-Artikel-Modal (gleiche Komponente, nur mit vorbelegtem Item) */}
+      {editItem && (
+        <ArtikelModal
+          haushalt={haushalt}
+          initialKategorie={editItem.kategorie}
+          artikel={editItem}
+          onClose={() => setEditItem(null)}
+          onCreated={() => { setEditItem(null); fetchData(); }}
         />
       )}
     </div>

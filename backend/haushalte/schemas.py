@@ -72,7 +72,7 @@ class ArtikelCreateSchema(Schema):
     kategorie: str  # konsumitiv oder investiv - vom Benutzer gewählt
     link: Optional[str] = ""
     bild_url: Optional[str] = ""
-    status: Optional[str] = "beantragt"
+    status: Optional[str] = "geplant"
 
 
 class ArtikelUpdateSchema(Schema):
@@ -105,7 +105,7 @@ class ArtikelSchema(Schema):
     gesamtpreis: Decimal
     link: str
     bild_url: str
-    status: str = 'beantragt'
+    status: str = 'geplant'
     sortierung: int = 0
     quittung_url: Optional[str] = None
     tag_kategorie: Optional[KategorieSchema] = None
