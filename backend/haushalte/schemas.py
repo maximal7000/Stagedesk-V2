@@ -107,10 +107,15 @@ class ArtikelSchema(Schema):
     bild_url: str
     status: str = 'beantragt'
     sortierung: int = 0
+    quittung_url: Optional[str] = None
     tag_kategorie: Optional[KategorieSchema] = None
     gekauft_am: Optional[date] = None
     erstellt_am: datetime
     aktualisiert_am: datetime
+
+    @staticmethod
+    def resolve_quittung_url(obj):
+        return obj.quittung.url if obj.quittung else None
 
 
 # Link Parser Schema
