@@ -3,7 +3,7 @@
  * Kommentare, Verlauf und Quittungs-Upload.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, History, Receipt, Trash2, Upload, ExternalLink, Loader2 } from 'lucide-react';
+import { MessageSquare, History, Receipt, Trash2, Upload, ExternalLink, Loader2, Camera } from 'lucide-react';
 import apiClient from '../lib/api';
 import Markdown from './Markdown';
 
@@ -181,13 +181,22 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
             <p className="text-xs text-gray-500">Keine Quittung hochgeladen.</p>
           )}
           {canEdit && (
-            <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded cursor-pointer">
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              {artikel.quittung_url ? 'Quittung ersetzen' : 'Quittung hochladen'}
-              <input type="file" className="hidden"
-                accept="image/*,.pdf"
-                onChange={(e) => uploadQuittung(e.target.files?.[0])} />
-            </label>
+            <div className="flex items-center gap-2 flex-wrap">
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded cursor-pointer">
+                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                Foto aufnehmen
+                <input type="file" className="hidden"
+                  accept="image/*" capture="environment"
+                  onChange={(e) => uploadQuittung(e.target.files?.[0])} />
+              </label>
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded cursor-pointer">
+                <Upload className="w-4 h-4" />
+                {artikel.quittung_url ? 'Ersetzen' : 'Hochladen'}
+                <input type="file" className="hidden"
+                  accept="image/*,.pdf"
+                  onChange={(e) => uploadQuittung(e.target.files?.[0])} />
+              </label>
+            </div>
           )}
         </div>
       )}

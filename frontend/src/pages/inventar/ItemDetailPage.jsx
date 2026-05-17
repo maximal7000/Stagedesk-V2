@@ -7,7 +7,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Edit, Trash2, Save, Loader2, Package,
   QrCode, MapPin, Building, Plus, X,
-  Upload, Copy, History, AlertCircle, ImageIcon
+  Upload, Copy, History, AlertCircle, ImageIcon, Camera,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Barcode from 'react-barcode';
@@ -655,18 +655,34 @@ export default function ItemDetailPage() {
               <ImageIcon className="w-5 h-5 text-gray-400" />
               Bilder
             </h3>
-            <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg cursor-pointer">
-              {bilderUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-              Bild hochladen
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleBildUpload}
-                disabled={bilderUploading}
-                className="hidden"
-              />
-            </label>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg cursor-pointer">
+                {bilderUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                <span className="hidden sm:inline">Foto aufnehmen</span>
+                <span className="sm:hidden">Kamera</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  onChange={handleBildUpload}
+                  disabled={bilderUploading}
+                  className="hidden"
+                />
+              </label>
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer">
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Hochladen</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleBildUpload}
+                  disabled={bilderUploading}
+                  className="hidden"
+                />
+              </label>
+            </div>
           </div>
 
           {item.item_bilder && item.item_bilder.length > 0 ? (
