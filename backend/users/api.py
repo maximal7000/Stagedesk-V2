@@ -325,16 +325,87 @@ def register_session(request):
         return {"status": "skipped", "reason": "concurrent_access"}
 
 
+def _keycloak_delete_session(request, keycloak_session_id: str) -> bool:
+    """Versucht die Keycloak-Session über die Admin-API zu beenden.
+    Nutzt das Token des aufrufenden Users — funktioniert wenn dieser
+    die realm-management:manage-users-Rolle hat (Admins typischerweise)."""
+    auth_header = request.headers.get('Authorization', '') if hasattr(request, 'headers') else ''
+    if not auth_header.startswith('Bearer ') or not keycloak_session_id:
+        return False
+    token = auth_header[len('Bearer '):]
+    server = os.getenv('KEYCLOAK_SERVER_URL', '').rstrip('/')
+    realm = os.getenv('KEYCLOAK_REALM', '')
+    if not server or not realm:
+        return False
+    try:
+        r = requests.delete(
+            f"{server}/admin/realms/{realm}/sessions/{keycloak_session_id}",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return r.status_code in (204, 200)
+    except Exception:
+        return False
+
+
+def _keycloak_logout_user(request, keycloak_user_id: str) -> bool:
+    """Beendet ALLE Keycloak-Sitzungen eines Users."""
+    auth_header = request.headers.get('Authorization', '') if hasattr(request, 'headers') else ''
+    if not auth_header.startswith('Bearer ') or not keycloak_user_id:
+        return False
+    token = auth_header[len('Bearer '):]
+    server = os.getenv('KEYCLOAK_SERVER_URL', '').rstrip('/')
+    realm = os.getenv('KEYCLOAK_REALM', '')
+    if not server or not realm:
+        return False
+    try:
+        r = requests.post(
+            f"{server}/admin/realms/{realm}/users/{keycloak_user_id}/logout",
+            headers={'Authorization': f'Bearer {token}'},
+            timeout=5,
+        )
+        return r.status_code in (204, 200)
+    except Exception:
+        return False
+
+
 @users_router.delete("/me/sessions/{session_id}", auth=keycloak_auth)
 def revoke_session(request, session_id: int):
-    """Session widerrufen (Logout von anderem Gerät)"""
+    """Session widerrufen — beendet sie auch in Keycloak, damit der Refresh
+    auf dem abgemeldeten Gerät bei nächstem Reload scheitert."""
     profile = get_or_create_profile(request)
     session = get_object_or_404(UserSession, id=session_id, user_profile=profile)
-    
-    # TODO: In Keycloak die Session auch widerrufen
+    kc_ok = _keycloak_delete_session(request, session.keycloak_session_id)
     session.delete()
-    
-    return {"status": "revoked"}
+    return {"status": "revoked", "keycloak": kc_ok}
+
+
+@users_router.post("/me/sessions/revoke-all", auth=keycloak_auth)
+def revoke_all_sessions(request, keep_current: bool = True):
+    """Meldet alle Sitzungen des Users ab. Wenn keep_current=True (Default)
+    bleibt die aufrufende Sitzung erhalten — sonst wird der User auf allen
+    Geräten inkl. dem aktuellen ausgeloggt (klassisches Sicherheits-Pattern)."""
+    profile = get_or_create_profile(request)
+    current_session = request.auth.get('sid', '') if request.auth else ''
+    qs = profile.sessions.all()
+    if keep_current and current_session:
+        qs = qs.exclude(keycloak_session_id=current_session)
+    revoked = 0
+    kc_failed = 0
+    for s in qs:
+        if _keycloak_delete_session(request, s.keycloak_session_id):
+            pass
+        else:
+            kc_failed += 1
+        s.delete()
+        revoked += 1
+    # Wenn auch die aktuelle Session geschlossen werden soll, zusätzlich
+    # logout aller Sessions (sicher gegen schlecht-getrackte SIDs)
+    if not keep_current:
+        _keycloak_logout_user(request, profile.keycloak_id)
+        UserSession.objects.filter(user_profile=profile).delete()
+    return {"revoked": revoked, "keycloak_failures": kc_failed,
+            "kept_current": keep_current}
 
 
 # ========== Bereiche ==========

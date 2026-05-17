@@ -103,7 +103,8 @@ export function UserProvider({ children }) {
     }
   }, [auth.isAuthenticated]);
 
-  // Session widerrufen
+  // Session widerrufen — beendet auch die Keycloak-Session, sodass das
+  // andere Gerät bei nächstem Reload eine Neuanmeldung braucht.
   const revokeSession = useCallback(async (sessionId) => {
     try {
       await apiClient.delete(`/users/me/sessions/${sessionId}`);
@@ -114,6 +115,25 @@ export function UserProvider({ children }) {
       return false;
     }
   }, []);
+
+  // Alle Sessions (außer der aktuellen) widerrufen
+  const revokeAllSessions = useCallback(async ({ includeCurrent = false } = {}) => {
+    try {
+      const r = await apiClient.post('/users/me/sessions/revoke-all',
+        null, { params: { keep_current: !includeCurrent } });
+      if (includeCurrent) {
+        // Aktuelle Sitzung wurde mit beendet → lokal aufräumen
+        try { await auth.removeUser?.(); } catch {}
+        window.location.href = '/login';
+      } else {
+        await fetchSessions();
+      }
+      return r.data;
+    } catch (err) {
+      console.error('Alle Sessions abmelden fehlgeschlagen:', err);
+      return null;
+    }
+  }, [auth, fetchSessions]);
 
   // Theme aktualisieren
   const updateTheme = useCallback(async (newTheme) => {
@@ -190,6 +210,7 @@ export function UserProvider({ children }) {
     fetchProfile,
     fetchSessions,
     revokeSession,
+    revokeAllSessions,
     updateTheme,
     initializeSystem,
   };
