@@ -4,13 +4,42 @@
  */
 import { useState, useEffect, useRef, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, Plus, Wallet, TrendingUp, TrendingDown, 
+import {
+  ArrowLeft, Plus, Wallet, TrendingUp, TrendingDown,
   Trash2, Edit, ExternalLink, Loader2, Package, RefreshCw,
-  Wand2, Save, X, LayoutGrid, List, Columns
+  Wand2, Save, X, LayoutGrid, List, Columns,
+  ChevronUp, ChevronDown, Info, ArrowUpDown,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import EditHaushaltModal from '../../components/EditHaushaltModal';
+import ArtikelModal from '../../components/ArtikelModal';
+
+// Sortier-Optionen für Tabelle
+const SORT_OPTIONS = [
+  { v: 'manuell',  l: 'Manuell (Drag)' },
+  { v: 'name',     l: 'Name A-Z' },
+  { v: '-name',    l: 'Name Z-A' },
+  { v: '-preis',   l: 'Preis ↓' },
+  { v: 'preis',    l: 'Preis ↑' },
+  { v: '-erstellt_am', l: 'Neueste zuerst' },
+  { v: 'erstellt_am',  l: 'Älteste zuerst' },
+  { v: 'status',   l: 'Status' },
+];
+
+const STATUS_LABEL = {
+  beantragt: 'Beantragt',
+  genehmigt: 'Genehmigt',
+  bestellt: 'Bestellt',
+  geliefert: 'Geliefert',
+  abgelehnt: 'Abgelehnt',
+};
+const STATUS_CLASS = {
+  beantragt: 'bg-amber-500/20 text-amber-300',
+  genehmigt: 'bg-blue-500/20 text-blue-300',
+  bestellt:  'bg-purple-500/20 text-purple-300',
+  geliefert: 'bg-green-500/20 text-green-300',
+  abgelehnt: 'bg-red-500/20 text-red-300',
+};
 
 const POLL_INTERVAL = 5000;
 
@@ -269,8 +298,14 @@ export default function HaushaltDetailPage() {
   const [savingId, setSavingId] = useState(null);
   const [parsingId, setParsingId] = useState(null);
   
-  // Neue Zeile
+  // Neue Zeile (Inline-Edit — bleibt für Inline-Workflow erhalten)
   const [newRow, setNewRow] = useState(null);
+
+  // Add-Modal pro Kategorie + Sortier-State pro Kategorie
+  const [addModalKategorie, setAddModalKategorie] = useState(null);
+  const [sortBy, setSortBy] = useState({ konsumitiv: 'manuell', investiv: 'manuell' });
+  // Welche Beschreibungen sind aufgeklappt
+  const [openDesc, setOpenDesc] = useState(() => new Set());
 
   // Initiales Laden - nur bei ID-Wechsel
   useEffect(() => {
@@ -469,6 +504,47 @@ export default function HaushaltDetailPage() {
   const artikelKonsumitiv = artikel.filter(a => a.kategorie === 'konsumitiv');
   const artikelInvestitiv = artikel.filter(a => a.kategorie === 'investiv');
 
+  const sortItems = (items, mode) => {
+    if (mode === 'manuell') return [...items].sort((a, b) => (a.sortierung || 0) - (b.sortierung || 0));
+    const desc = mode.startsWith('-');
+    const key = desc ? mode.slice(1) : mode;
+    return [...items].sort((a, b) => {
+      const av = key === 'preis' ? parseFloat(a.preis || 0) : (a[key] || '');
+      const bv = key === 'preis' ? parseFloat(b.preis || 0) : (b[key] || '');
+      if (av < bv) return desc ? 1 : -1;
+      if (av > bv) return desc ? -1 : 1;
+      return 0;
+    });
+  };
+
+  const toggleDesc = (id) => setOpenDesc((s) => {
+    const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n;
+  });
+
+  // Reihenfolge per ↑↓ ändern + speichern
+  const moveItem = async (item, items, dir) => {
+    const sorted = [...items].sort((a, b) => (a.sortierung || 0) - (b.sortierung || 0));
+    const idx = sorted.findIndex(i => i.id === item.id);
+    const j = idx + dir;
+    if (idx < 0 || j < 0 || j >= sorted.length) return;
+    [sorted[idx], sorted[j]] = [sorted[j], sorted[idx]];
+    // optimistisch update
+    setArtikel((prev) => {
+      const otherKat = prev.filter(a => a.kategorie !== item.kategorie);
+      return [...otherKat, ...sorted.map((it, i) => ({ ...it, sortierung: i }))];
+    });
+    try {
+      await apiClient.put(`/haushalte/${id}/artikel/reorder`, { ids: sorted.map(i => i.id) });
+    } catch { fetchData(); }
+  };
+
+  const handleStatusChange = async (item, status) => {
+    try {
+      await apiClient.put(`/haushalte/${id}/artikel/${item.id}`, { status });
+      setArtikel((prev) => prev.map(a => a.id === item.id ? { ...a, status } : a));
+    } catch (e) { /* still */ fetchData(); }
+  };
+
   // Tabellen-Zeile Komponente (nicht im Editing-Modus)
   const ArtikelRow = ({ item, kategorie }) => {
     const isEditing = editingId === item.id;
@@ -486,57 +562,100 @@ export default function HaushaltDetailPage() {
       );
     }
     
+    const allKatItems = kategorie === 'konsumitiv' ? artikelKonsumitiv : artikelInvestitiv;
+    const manuellOrder = (sortBy[kategorie] === 'manuell');
+    const descOpen = openDesc.has(item.id);
     return (
-      <tr className="border-b border-gray-800 hover:bg-gray-800/30 group">
-        <td className="p-3">
-          <span 
-            className="text-white cursor-pointer hover:text-blue-400"
-            onClick={() => startEditing(item)}
-          >
+      <>
+      <tr className="border-b border-gray-800 hover:bg-gray-800/30 group align-middle">
+        {/* Status */}
+        <td className="p-2 w-[110px]">
+          <select value={item.status || 'beantragt'}
+            onChange={(e) => handleStatusChange(item, e.target.value)}
+            className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border-0 cursor-pointer ${STATUS_CLASS[item.status] || STATUS_CLASS.beantragt}`}>
+            {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900 text-white">{l}</option>)}
+          </select>
+        </td>
+        {/* Bild */}
+        <td className="p-2 w-[48px]">
+          {item.bild_url ? (
+            <img src={item.bild_url} alt="" className="w-9 h-9 object-cover rounded bg-gray-800" loading="lazy" />
+          ) : (
+            <div className="w-9 h-9 bg-gray-800 rounded flex items-center justify-center">
+              <Package className="w-4 h-4 text-gray-600" />
+            </div>
+          )}
+        </td>
+        {/* Name + Beschreibung-Toggle */}
+        <td className="p-2">
+          <span className="text-white cursor-pointer hover:text-blue-400"
+            onClick={() => startEditing(item)}>
             {item.name}
           </span>
+          {item.beschreibung && (
+            <button onClick={() => toggleDesc(item.id)}
+              title={descOpen ? 'Beschreibung verbergen' : 'Beschreibung anzeigen'}
+              className="ml-1.5 text-gray-500 hover:text-gray-300 align-middle">
+              <Info className="w-3.5 h-3.5 inline" />
+            </button>
+          )}
         </td>
-        <td className="p-3">
+        {/* Link */}
+        <td className="p-2">
           {item.link ? (
-            <a
-              href={item.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm"
-            >
-              <ExternalLink className="w-3 h-3" />
-              Link
+            <a href={item.link} target="_blank" rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm">
+              <ExternalLink className="w-3 h-3" /> Link
             </a>
           ) : (
             <span className="text-gray-600 text-sm">—</span>
           )}
         </td>
-        <td className="p-3 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
+        <td className="p-2 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
           {formatPreis(item.preis)}
         </td>
-        <td className="p-3 text-center text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
+        <td className="p-2 text-center text-gray-300 cursor-pointer hover:text-blue-400" onClick={() => startEditing(item)}>
           {item.anzahl}
         </td>
-        <td className="p-3 text-right text-white font-medium">
+        <td className="p-2 text-right text-white font-medium">
           {formatPreis(item.gesamtpreis)}
         </td>
-        <td className="p-3">
+        {/* Reorder ↑↓ (nur bei manueller Sortierung sinnvoll) */}
+        <td className="p-2 w-[60px]">
+          {manuellOrder && (
+            <div className="flex flex-col gap-0.5 items-center opacity-50 group-hover:opacity-100">
+              <button onClick={() => moveItem(item, allKatItems, -1)}
+                className="p-0.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
+                <ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => moveItem(item, allKatItems, +1)}
+                className="p-0.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </td>
+        <td className="p-2">
           <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-            <button
-              onClick={() => startEditing(item)}
-              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded"
-            >
+            <button onClick={() => startEditing(item)}
+              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded">
               <Edit className="w-4 h-4" />
             </button>
-            <button
-              onClick={() => handleDeleteArtikel(item.id)}
-              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded"
-            >
+            <button onClick={() => handleDeleteArtikel(item.id)}
+              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </td>
       </tr>
+      {descOpen && item.beschreibung && (
+        <tr className="border-b border-gray-800 bg-gray-900/40">
+          <td colSpan={9} className="px-4 py-2 text-sm text-gray-300 whitespace-pre-wrap">
+            {item.beschreibung}
+          </td>
+        </tr>
+      )}
+      </>
     );
   };
 
@@ -557,10 +676,12 @@ export default function HaushaltDetailPage() {
   };
 
   // Tabellen-Komponente
-  const ArtikelTabelle = ({ items, kategorie, color, icon: Icon, budget, ausgaben }) => (
+  const ArtikelTabelle = ({ items, kategorie, color, icon: Icon, budget, ausgaben }) => {
+    const sorted = sortItems(items, sortBy[kategorie]);
+    return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div className={`p-4 border-b border-gray-800 ${color === 'orange' ? 'bg-orange-950/20' : 'bg-green-950/20'}`}>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <Icon className={`w-5 h-5 ${color === 'orange' ? 'text-orange-400' : 'text-green-400'}`} />
             <h3 className="font-bold text-white">{kategorie === 'konsumitiv' ? 'Konsumitiv' : 'Investitiv'}</h3>
@@ -573,47 +694,62 @@ export default function HaushaltDetailPage() {
         <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mt-3">
           <div
             className={`h-full transition-all ${
-              budget > 0 && (ausgaben / budget) > 0.9 
-                ? 'bg-red-500' 
+              budget > 0 && (ausgaben / budget) > 0.9
+                ? 'bg-red-500'
                 : color === 'orange' ? 'bg-orange-500' : 'bg-green-500'
             }`}
             style={{ width: `${budget > 0 ? Math.min((ausgaben / budget) * 100, 100) : 0}%` }}
           />
         </div>
+        {/* Action-Bar: Add-Button + Sortierung */}
+        <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
+          <button onClick={() => setAddModalKategorie(kategorie)}
+            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg ${
+              color === 'orange'
+                ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                : 'bg-green-600 hover:bg-green-700 text-white'
+            }`}>
+            <Plus className="w-4 h-4" /> Artikel hinzufügen
+          </button>
+          <div className="flex items-center gap-1.5">
+            <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
+            <select value={sortBy[kategorie]}
+              onChange={(e) => setSortBy(s => ({ ...s, [kategorie]: e.target.value }))}
+              className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white">
+              {SORT_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+            </select>
+          </div>
+        </div>
       </div>
-      
+
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase tracking-wider">
-              <th className="p-3 w-[30%]">Name</th>
-              <th className="p-3 w-[20%]">Link</th>
-              <th className="p-3 w-[12%] text-right">Preis</th>
-              <th className="p-3 w-[8%] text-center">Anz.</th>
-              <th className="p-3 w-[14%] text-right">Gesamt</th>
-              <th className="p-3 w-[16%]"></th>
+              <th className="p-2 w-[110px]">Status</th>
+              <th className="p-2 w-[48px]"></th>
+              <th className="p-2">Name</th>
+              <th className="p-2 w-[100px]">Link</th>
+              <th className="p-2 w-[100px] text-right">Preis</th>
+              <th className="p-2 w-[60px] text-center">Anz.</th>
+              <th className="p-2 w-[110px] text-right">Gesamt</th>
+              <th className="p-2 w-[60px]"></th>
+              <th className="p-2 w-[80px]"></th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {sorted.map((item) => (
               <ArtikelRow key={item.id} item={item} kategorie={kategorie} />
             ))}
-            <NewRow kategorie={kategorie} />
+            {sorted.length === 0 && (
+              <tr><td colSpan={9} className="p-6 text-center text-gray-500 text-sm">Noch keine Artikel</td></tr>
+            )}
           </tbody>
         </table>
       </div>
-      
-      {(!newRow || newRow.kategorie !== kategorie) && (
-        <button
-          onClick={() => addNewRow(kategorie)}
-          className={`w-full p-3 ${color === 'orange' ? 'text-orange-400 hover:bg-orange-950/20' : 'text-green-400 hover:bg-green-950/20'} flex items-center justify-center gap-2 transition-colors border-t border-gray-800`}
-        >
-          <Plus className="w-4 h-4" />
-          Neuen Artikel hinzufügen
-        </button>
-      )}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -801,6 +937,16 @@ export default function HaushaltDetailPage() {
             setHaushalt(updated);
             setShowEditModal(false);
           }}
+        />
+      )}
+
+      {/* Add-Artikel-Modal (gleiche Komponente wie in der Haushaltsübersicht) */}
+      {addModalKategorie && (
+        <ArtikelModal
+          haushalt={haushalt}
+          initialKategorie={addModalKategorie}
+          onClose={() => setAddModalKategorie(null)}
+          onCreated={() => { setAddModalKategorie(null); fetchData(); }}
         />
       )}
     </div>
