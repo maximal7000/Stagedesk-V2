@@ -710,6 +710,38 @@ def remove_zuweisung(request, id: int, user_keycloak_id: str):
     return v
 
 
+# ========== Mitteilungen ==========
+
+class MitteilungSchema(Schema):
+    text: str
+    titel: Optional[str] = None
+    an: str = 'zugewiesene'  # 'zugewiesene' | 'angemeldete' | 'beide'
+
+
+@veranstaltung_router.post("/{id}/mitteilung", auth=keycloak_auth)
+def send_mitteilung(request, id: int, payload: MitteilungSchema):
+    """Verschickt eine freie Mitteilung (Push + In-App-Notification) an
+    Zugewiesene/Angemeldete/beide."""
+    require_permission(request, 'veranstaltung.zuweisungen')
+    v = get_object_or_404(Veranstaltung, id=id)
+    text = (payload.text or '').strip()
+    if not text:
+        raise HttpError(400, "Text fehlt")
+
+    ids = set()
+    if payload.an in ('zugewiesene', 'beide'):
+        ids.update(z.user_keycloak_id for z in v.zuweisungen.all() if z.user_keycloak_id)
+    if payload.an in ('angemeldete', 'beide'):
+        ids.update(m.user_keycloak_id for m in v.meldungen.all() if m.user_keycloak_id)
+
+    titel = (payload.titel or f"Mitteilung — {v.titel}")[:200]
+    from core.notify import notify_many
+    sent = notify_many(list(ids), 'mitteilung', titel, text, link=f"/veranstaltung/{v.id}")
+    audit_log(request, 'veranstaltung', 'mitteilung_gesendet', v.id,
+              f"an={payload.an}, empfaenger={sent}")
+    return {"empfaenger": sent}
+
+
 # ========== Meldungen ==========
 
 @veranstaltung_router.post("/{id}/melden", response=VeranstaltungSchema, auth=keycloak_auth)
