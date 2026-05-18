@@ -25,6 +25,7 @@ import AusleiheDashboardPage from './pages/inventar/AusleiheDashboardPage';
 // Veranstaltung
 import VeranstaltungenPage from './pages/veranstaltung/VeranstaltungenPage';
 import VeranstaltungDetailPage from './pages/veranstaltung/VeranstaltungDetailPage';
+import VorlagenPage from './pages/veranstaltung/VorlagenPage';
 // Haushalte
 import HaushaltePage from './pages/haushalte/HaushaltePage';
 import HaushaltDetailPage from './pages/haushalte/HaushaltDetailPage';
@@ -95,6 +96,7 @@ function AppContent() {
                   <Route path="/kompetenzen" element={<PermissionRoute permission="kompetenzen.view"><KompetenzenPage /></PermissionRoute>} />
                   <Route path="/kompetenzen/user/:userId" element={<PermissionRoute permission="kompetenzen.view_all"><KompetenzenPage /></PermissionRoute>} />
                   <Route path="/veranstaltung" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungenPage /></PermissionRoute>} />
+                  <Route path="/veranstaltung/vorlagen" element={<PermissionRoute permission="veranstaltung.view"><VorlagenPage /></PermissionRoute>} />
                   <Route path="/veranstaltung/neu" element={<PermissionRoute permission="veranstaltung.create"><VeranstaltungDetailPage /></PermissionRoute>} />
                   <Route path="/veranstaltung/:id" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungDetailPage /></PermissionRoute>} />
                   <Route path="/settings" element={<SettingsPage />} />
