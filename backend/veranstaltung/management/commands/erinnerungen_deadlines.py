@@ -17,6 +17,15 @@ class Command(BaseCommand):
     def handle(self, *args, **opts):
         from veranstaltung.models import VeranstaltungChecklisteItem
         from core.notify import notify
+        from core.jobs import track_job
+
+        with track_job('erinnerungen_deadlines') as job:
+            sent = self._run(opts)
+            job.message = f"{sent} Notifications versendet"
+
+    def _run(self, opts):
+        from veranstaltung.models import VeranstaltungChecklisteItem
+        from core.notify import notify
 
         dry_run = opts.get('dry_run', False)
         now = timezone.now()
@@ -57,3 +66,4 @@ class Command(BaseCommand):
             item.save(update_fields=['erinnerung_gesendet'])
 
         self.stdout.write(self.style.SUCCESS(f'✓ {sent} Deadline-Notifications versendet'))
+        return sent

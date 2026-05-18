@@ -37,6 +37,7 @@ import KategorienPage from './pages/kalender/KategorienPage';
 import AdminPage from './pages/admin/AdminPage';
 import MonitorAdminPage from './pages/admin/MonitorAdminPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
+import SystemAdminPage from './pages/admin/SystemAdminPage';
 import AufgabenPage from './pages/admin/AufgabenPage';
 import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
 // Anwesenheit
@@ -103,6 +104,7 @@ function AppContent() {
                   <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
                   <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
+                  <Route path="/admin/system" element={<PermissionRoute adminOnly><SystemAdminPage /></PermissionRoute>} />
                   <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
                   <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminPage /></PermissionRoute>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
