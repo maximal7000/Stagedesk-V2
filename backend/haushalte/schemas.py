@@ -108,6 +108,7 @@ class ArtikelSchema(Schema):
     status: str = 'geplant'
     sortierung: int = 0
     quittung_url: Optional[str] = None
+    sammelquittungen: List[dict] = []
     tag_kategorie: Optional[KategorieSchema] = None
     gekauft_am: Optional[date] = None
     erstellt_am: datetime
@@ -116,6 +117,14 @@ class ArtikelSchema(Schema):
     @staticmethod
     def resolve_quittung_url(obj):
         return obj.quittung.url if obj.quittung else None
+
+    @staticmethod
+    def resolve_sammelquittungen(obj):
+        return [{
+            "id": q.id,
+            "name": q.name or f"Quittung #{q.id}",
+            "datei_url": q.datei.url if q.datei else None,
+        } for q in obj.sammelquittungen.all()]
 
 
 # Link Parser Schema

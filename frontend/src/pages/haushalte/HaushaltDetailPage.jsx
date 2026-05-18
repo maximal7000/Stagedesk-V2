@@ -8,12 +8,13 @@ import {
   ArrowLeft, Plus, Wallet, TrendingUp, TrendingDown,
   Trash2, Edit, ExternalLink, Loader2, Package, RefreshCw,
   Wand2, Save, X, LayoutGrid, List, Columns,
-  ChevronUp, ChevronDown, Info, ArrowUpDown, Search, FileDown,
+  ChevronUp, ChevronDown, Info, ArrowUpDown, Search, FileDown, Receipt,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import EditHaushaltModal from '../../components/EditHaushaltModal';
 import ArtikelModal from '../../components/ArtikelModal';
 import ArtikelDetailsPanel from '../../components/ArtikelDetailsPanel';
+import SammelQuittungModal from '../../components/SammelQuittungModal';
 
 // Sortier-Optionen für Tabelle
 const SORT_OPTIONS = [
@@ -318,6 +319,7 @@ export default function HaushaltDetailPage() {
   const [lastClickedId, setLastClickedId] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [statusSummary, setStatusSummary] = useState(null);
+  const [showSammelQuittung, setShowSammelQuittung] = useState(false);
 
   const fetchStatusSummary = async () => {
     try {
@@ -932,6 +934,10 @@ export default function HaushaltDetailPage() {
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
           <FileDown className="w-4 h-4" /> CSV
         </button>
+        <button onClick={() => setShowSammelQuittung(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
+          <Receipt className="w-4 h-4" /> Sammel-Quittung
+        </button>
         {selectedIds.size > 0 && (
           <>
             <span className="text-sm text-gray-400">{selectedIds.size} ausgewählt</span>
@@ -1091,6 +1097,16 @@ export default function HaushaltDetailPage() {
           initialKategorie={addModalKategorie}
           onClose={() => setAddModalKategorie(null)}
           onCreated={() => { setAddModalKategorie(null); fetchData(); }}
+        />
+      )}
+
+      {/* Sammel-Quittung Modal */}
+      {showSammelQuittung && (
+        <SammelQuittungModal
+          haushaltId={id}
+          artikel={artikel}
+          onClose={() => setShowSammelQuittung(false)}
+          onSaved={fetchData}
         />
       )}
 

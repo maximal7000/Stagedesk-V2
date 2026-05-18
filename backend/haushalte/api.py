@@ -14,7 +14,7 @@ from core.auth import keycloak_auth
 from core.audit import log as audit_log
 from users.api import is_admin
 from users.models import UserProfile
-from .models import Haushalt, Artikel, Kategorie
+from .models import Haushalt, Artikel, Kategorie, SammelQuittung
 from .schemas import (
     HaushaltSchema,
     HaushaltCreateSchema,
@@ -368,6 +368,77 @@ def upload_quittung(request, haushalt_id: int, artikel_id: int,
     audit_log(request, 'erstellt', 'quittung', artikel.id,
               f'{artikel.name} · Quittung hochgeladen')
     return {"quittung_url": artikel.quittung.url if artikel.quittung else None}
+
+
+# ─── Sammel-Quittungen (eine Quittung an mehrere Artikel) ────────
+
+@haushalte_router.get("/{haushalt_id}/sammelquittungen", auth=keycloak_auth)
+def list_sammelquittungen(request, haushalt_id: int):
+    require_perm(request, 'haushalte.view')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    return [{
+        "id": q.id,
+        "name": q.name or f"Quittung #{q.id}",
+        "datei_url": q.datei.url if q.datei else None,
+        "hochgeladen_am": q.hochgeladen_am.isoformat(),
+        "artikel_ids": list(q.artikel.values_list('id', flat=True)),
+    } for q in haushalt.sammelquittungen.prefetch_related('artikel').all()]
+
+
+class SammelQuittungArtikelSchema(Schema):
+    artikel_ids: List[int]
+
+
+@haushalte_router.post("/{haushalt_id}/sammelquittungen", auth=keycloak_auth)
+def upload_sammelquittung(request, haushalt_id: int,
+                          datei: UploadedFile = File(...),
+                          name: str = '',
+                          artikel_ids: str = ''):
+    """Lädt eine Quittung hoch und verknüpft sie mit mehreren Artikeln.
+    artikel_ids als komma-separierte Liste, z.B. '12,17,23'."""
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    kid = request.auth.get('sub', '') if request.auth else ''
+    q = SammelQuittung.objects.create(
+        haushalt=haushalt, name=name[:200], datei=datei, hochgeladen_von=kid,
+    )
+    ids = [int(x) for x in artikel_ids.split(',') if x.strip().isdigit()]
+    if ids:
+        artikel = list(Artikel.objects.filter(id__in=ids, haushalt=haushalt))
+        for a in artikel:
+            a.sammelquittungen.add(q)
+    audit_log(request, 'erstellt', 'sammelquittung', q.id,
+              f"{haushalt.name} · {len(ids)} Artikel verknüpft")
+    return {"id": q.id, "datei_url": q.datei.url, "artikel_anzahl": len(ids)}
+
+
+@haushalte_router.put("/{haushalt_id}/sammelquittungen/{quittung_id}/artikel", auth=keycloak_auth)
+def update_sammelquittung_artikel(request, haushalt_id: int, quittung_id: int,
+                                  payload: SammelQuittungArtikelSchema):
+    """Ersetzt die Artikel-Verknüpfungen einer Sammel-Quittung."""
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    q = get_object_or_404(SammelQuittung, id=quittung_id, haushalt=haushalt)
+    # Alle alten Verknüpfungen entfernen
+    for a in q.artikel.all():
+        a.sammelquittungen.remove(q)
+    # Neue setzen
+    artikel = Artikel.objects.filter(id__in=payload.artikel_ids, haushalt=haushalt)
+    for a in artikel:
+        a.sammelquittungen.add(q)
+    return {"artikel_anzahl": artikel.count()}
+
+
+@haushalte_router.delete("/{haushalt_id}/sammelquittungen/{quittung_id}", auth=keycloak_auth)
+def delete_sammelquittung(request, haushalt_id: int, quittung_id: int):
+    require_perm(request, 'haushalte.edit')
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    q = get_object_or_404(SammelQuittung, id=quittung_id, haushalt=haushalt)
+    if q.datei:
+        try: q.datei.delete(save=False)
+        except Exception: pass
+    q.delete()
+    return {"status": "deleted"}
 
 
 @haushalte_router.delete("/{haushalt_id}/artikel/{artikel_id}/quittung", auth=keycloak_auth)

@@ -178,8 +178,26 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500">Keine Quittung hochgeladen.</p>
+            <p className="text-xs text-gray-500">Keine eigene Quittung hochgeladen.</p>
           )}
+
+          {/* Sammel-Quittungen */}
+          {(artikel.sammelquittungen || []).length > 0 && (
+            <div className="pt-2 border-t border-gray-800">
+              <p className="text-[11px] text-gray-500 mb-1">Geteilte Quittungen:</p>
+              <ul className="space-y-1">
+                {artikel.sammelquittungen.map(q => (
+                  <li key={q.id}>
+                    <a href={MEDIA_BASE + q.datei_url} target="_blank" rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm">
+                      <ExternalLink className="w-3 h-3" /> {q.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {canEdit && (
             <div className="flex items-center gap-2 flex-wrap">
               <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded cursor-pointer">
