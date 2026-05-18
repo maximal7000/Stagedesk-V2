@@ -4,7 +4,7 @@
  * Live-Update via WebSocket. Kein Login nötig.
  */
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { CheckCircle2, Circle, ListChecks } from 'lucide-react';
+import { CheckCircle2, Circle, ListChecks, Square, CheckSquare } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -94,6 +94,20 @@ export default function AufgabenMonitorPage() {
                   </div>
                   {a.beschreibung && (
                     <p className="text-base text-white/60 mt-1 line-clamp-3">{a.beschreibung}</p>
+                  )}
+                  {a.subtasks?.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                      {a.subtasks.map(s => (
+                        <li key={s.id} className="flex items-center gap-2 text-lg">
+                          {s.erledigt
+                            ? <CheckSquare className="w-5 h-5 text-green-400 shrink-0" />
+                            : <Square className="w-5 h-5 text-white/40 shrink-0" />}
+                          <span className={s.erledigt ? 'text-white/40 line-through' : 'text-white/80'}>
+                            {s.titel}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
                   )}
                   {a.zugewiesene?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
