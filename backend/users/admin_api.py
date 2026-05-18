@@ -202,6 +202,45 @@ def list_backups(request):
     return out
 
 
+# ─── Background-Jobs Übersicht ─────────────────────────────────────
+
+@admin_router.get("/jobs", auth=keycloak_auth)
+def list_jobs(request, limit: int = 50):
+    """Letzte Runs von Background-Jobs (Cron, Management-Commands).
+    Quelle: AuditLog mit entity_type='job_run'."""
+    _ensure_admin(request)
+    from inventar.models import AuditLog
+    qs = AuditLog.objects.filter(entity_type='job_run').order_by('-timestamp')[:max(1, min(limit, 200))]
+    return [{
+        'id': r.id,
+        'name': r.entity_name,
+        'timestamp': r.timestamp.isoformat() if r.timestamp else None,
+        'status': (r.details or {}).get('status', '–'),
+        'message': (r.details or {}).get('message', ''),
+        'duration_ms': (r.details or {}).get('duration_ms', 0),
+    } for r in qs]
+
+
+# ─── Login-Historie (erfolgreiche Logins) ─────────────────────────
+
+@admin_router.get("/login-history", auth=keycloak_auth)
+def login_history(request, limit: int = 50):
+    """Letzte aktive Sessions / Logins."""
+    _ensure_admin(request)
+    from users.models import UserSession
+    qs = UserSession.objects.select_related('user_profile').order_by('-last_activity')[:max(1, min(limit, 200))]
+    return [{
+        'id': s.id,
+        'username': s.user_profile.username,
+        'email': s.user_profile.email,
+        'ip_address': s.ip_address,
+        'device_info': s.device_info or '',
+        'is_current': s.is_current,
+        'started_at': s.started_at.isoformat() if s.started_at else None,
+        'last_activity': s.last_activity.isoformat() if s.last_activity else None,
+    } for s in qs]
+
+
 # ─── Update-Check (aktueller git commit) ───────────────────────────
 
 @admin_router.get("/version", auth=keycloak_auth)

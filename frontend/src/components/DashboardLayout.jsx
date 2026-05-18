@@ -26,6 +26,7 @@ import {
   Search,
   ScrollText,
   ScanLine,
+  Activity,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../lib/api';
@@ -138,6 +139,7 @@ export default function DashboardLayout({ children }) {
   // Admin-Navigation
   const adminNavigation = [
     ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Shield }] : []),
+    ...(isAdmin ? [{ name: 'System', href: '/admin/system', icon: Activity }] : []),
     ...(isAdmin ? [{ name: 'Audit-Log', href: '/admin/audit', icon: ScrollText }] : []),
     ...(isAdmin || hasPermission('monitor.view') ? [{ name: 'Monitor', href: '/monitor-admin', icon: Monitor }] : []),
   ];
