@@ -185,7 +185,10 @@ class Artikel(models.Model):
         help_text='Frei wählbare Reihenfolge — kleiner Wert zuerst')
 
     quittung = models.FileField(upload_to='haushalt/quittungen/%Y/%m/',
-        null=True, blank=True, verbose_name='Quittung/Beleg')
+        null=True, blank=True, verbose_name='Quittung/Beleg',
+        help_text='Einzelne Quittung — für geteilte Quittungen siehe SammelQuittung')
+    sammelquittungen = models.ManyToManyField('SammelQuittung', blank=True,
+        related_name='artikel', verbose_name='Geteilte Quittungen')
 
     # Zeitstempel
     erstellt_am = models.DateTimeField(auto_now_add=True)
@@ -209,6 +212,23 @@ class Artikel(models.Model):
         return self.preis * self.anzahl
     
     # Keine automatische Kategorisierung mehr - Benutzer wählt manuell
+
+
+class SammelQuittung(models.Model):
+    """Quittung, die an mehrere Artikel gehängt werden kann."""
+    haushalt = models.ForeignKey(Haushalt, on_delete=models.CASCADE, related_name='sammelquittungen')
+    name = models.CharField(max_length=200, blank=True)
+    datei = models.FileField(upload_to='haushalt/sammelquittungen/%Y/%m/')
+    hochgeladen_von = models.CharField(max_length=100, blank=True)
+    hochgeladen_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-hochgeladen_am']
+        verbose_name = 'Sammel-Quittung'
+        verbose_name_plural = 'Sammel-Quittungen'
+
+    def __str__(self):
+        return self.name or f"Quittung #{self.id}"
 
 
 class ArtikelKommentar(models.Model):
