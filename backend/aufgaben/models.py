@@ -30,3 +30,21 @@ class Aufgabe(models.Model):
 
     def __str__(self):
         return self.titel
+
+
+class Subtask(models.Model):
+    """Unteraufgabe einer Aufgabe (Checkliste)."""
+    aufgabe = models.ForeignKey(Aufgabe, on_delete=models.CASCADE, related_name='subtasks')
+    titel = models.CharField(max_length=300)
+    erledigt = models.BooleanField(default=False)
+    sortierung = models.IntegerField(default=0)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    erledigt_am = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['sortierung', 'id']
+        verbose_name = 'Unteraufgabe'
+        verbose_name_plural = 'Unteraufgaben'
+
+    def __str__(self):
+        return f"{self.aufgabe_id}: {self.titel}"
