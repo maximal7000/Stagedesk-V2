@@ -4,8 +4,8 @@
  * kopiert Erinnerungen und erforderliche Kompetenzen.
  */
 import { useState, useEffect } from 'react';
-import { X, Loader2, FileText } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { X, Loader2, FileText, Settings } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import apiClient from '../lib/api';
 
@@ -66,7 +66,13 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
           {loading ? (
             <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-gray-500" /></div>
           ) : templates.length === 0 ? (
-            <p className="text-sm text-gray-500">Keine Vorlagen vorhanden. Lege Vorlagen im Django-Admin unter „Veranstaltungs-Templates" an.</p>
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">Noch keine Vorlagen vorhanden.</p>
+              <Link to="/veranstaltung/vorlagen" onClick={onClose}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">
+                <Settings className="w-4 h-4" /> Vorlagen verwalten
+              </Link>
+            </div>
           ) : (
             <>
               <div>
@@ -118,6 +124,10 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
         </div>
 
         <div className="flex gap-2 p-5 border-t border-gray-800">
+          <Link to="/veranstaltung/vorlagen" onClick={onClose}
+            className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg inline-flex items-center gap-1.5 text-sm">
+            <Settings className="w-4 h-4" /> Verwalten
+          </Link>
           <button onClick={onClose} disabled={creating}
             className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg disabled:opacity-50">
             Abbrechen
