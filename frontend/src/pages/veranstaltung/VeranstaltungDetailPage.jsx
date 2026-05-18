@@ -17,6 +17,7 @@ import Markdown, { MarkdownHint } from '../../components/Markdown';
 import QuickInfoCard from './sections/QuickInfoCard';
 import TermineSection from './sections/TermineSection';
 import MeldungSection from './sections/MeldungSection';
+import MitteilungSection from './sections/MitteilungSection';
 import ZuweisungenSection from './sections/ZuweisungenSection';
 import AusleihllistenSection from './sections/AusleihllistenSection';
 import AnwesenheitSection from './sections/AnwesenheitSection';
@@ -404,6 +405,7 @@ export default function VeranstaltungDetailPage() {
           <MeldungSection data={data} refetch={refetch} eventId={id} currentUserId={currentUserId} isAdmin={canAssign} />
           <ZuweisungenSection data={data} refetch={refetch} canEdit={canAssign} eventId={id}
             benutzer={benutzer} taetigkeitsrollen={taetigkeitsrollen} />
+          <MitteilungSection data={data} canEdit={canAssign} eventId={id} />
 
           {/* Verknüpfungen */}
           <AusleihllistenSection data={data} refetch={refetch} canEdit={canEdit} eventId={id} ausleihlisten={ausleihlisten} />
