@@ -25,13 +25,18 @@ import {
   Award,
   Search,
   ScrollText,
+  ScanLine,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import apiClient from '../lib/api';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
 import GlobalSearchModal from './GlobalSearchModal';
 import NotificationBell from './NotificationBell';
 import ShortcutsModal from './ShortcutsModal';
+import { lazy, Suspense } from 'react';
+const QRScanner = lazy(() => import('./QRScanner'));
 
 export default function DashboardLayout({ children }) {
   const auth = useAuth();
@@ -43,6 +48,15 @@ export default function DashboardLayout({ children }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+
+  const handleQRScan = async (code) => {
+    setScanOpen(false);
+    try {
+      const r = await apiClient.get(`/inventar/items/qr/${encodeURIComponent(code)}`);
+      navigate(`/inventar/${r.data.id}`);
+    } catch { toast.error('Item nicht gefunden'); }
+  };
 
   // Globale Keyboard-Shortcuts
   useEffect(() => {
@@ -392,6 +406,13 @@ export default function DashboardLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
+            {hasPermission('inventar.view') && (
+              <button onClick={() => setScanOpen(true)}
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+                title="QR-Code scannen">
+                <ScanLine className="w-5 h-5" />
+              </button>
+            )}
             <NotificationBell />
             {/* Mobile User Icon */}
             <div className="lg:hidden">
@@ -414,6 +435,12 @@ export default function DashboardLayout({ children }) {
 
       <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      {scanOpen && (
+        <Suspense fallback={null}>
+          <QRScanner onScan={handleQRScan} onClose={() => setScanOpen(false)}
+            label="Item-QR scannen" />
+        </Suspense>
+      )}
     </div>
   );
 }
