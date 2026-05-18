@@ -8,7 +8,7 @@ from ninja.errors import HttpError
 from core.auth import keycloak_auth
 from users.api import is_admin
 from users.models import UserProfile
-from .models import Aufgabe
+from .models import Aufgabe, Subtask
 
 
 aufgaben_router = Router(tags=["Aufgaben"])
@@ -49,6 +49,15 @@ def _user_dict(p) -> dict:
     }
 
 
+def _subtask_to_dict(s: Subtask) -> dict:
+    return {
+        "id": s.id,
+        "titel": s.titel,
+        "erledigt": s.erledigt,
+        "sortierung": s.sortierung,
+    }
+
+
 def _aufgabe_to_dict(a: Aufgabe) -> dict:
     return {
         "id": a.id,
@@ -57,6 +66,7 @@ def _aufgabe_to_dict(a: Aufgabe) -> dict:
         "status": a.status,
         "sortierung": a.sortierung,
         "zugewiesene": [_user_dict(u) for u in a.zugewiesene.all()],
+        "subtasks": [_subtask_to_dict(s) for s in a.subtasks.all()],
         "erstellt_am": a.erstellt_am.isoformat() if a.erstellt_am else None,
         "erledigt_am": a.erledigt_am.isoformat() if a.erledigt_am else None,
     }
@@ -96,7 +106,7 @@ def list_aufgaben(request):
     """Liste aller Aufgaben mit Zuweisungen."""
     _require_perm(request, 'aufgaben.view')
     return [_aufgabe_to_dict(a) for a in
-            Aufgabe.objects.prefetch_related('zugewiesene').all()]
+            Aufgabe.objects.prefetch_related('zugewiesene', 'subtasks').all()]
 
 
 @aufgaben_router.post("", auth=keycloak_auth)
@@ -131,7 +141,7 @@ def list_users_for_aufgaben(request):
 def display_aufgaben(request):
     """Öffentlicher Read-Only-Endpoint für die Monitor-Vollbildansicht."""
     return [_aufgabe_to_dict(a) for a in
-            Aufgabe.objects.prefetch_related('zugewiesene').all()]
+            Aufgabe.objects.prefetch_related('zugewiesene', 'subtasks').all()]
 
 
 @aufgaben_router.put("/reorder", auth=keycloak_auth)
@@ -165,5 +175,49 @@ def update_aufgabe(request, aid: int, payload: AufgabeUpdateSchema):
 def delete_aufgabe(request, aid: int):
     _require_perm(request, 'aufgaben.manage')
     get_object_or_404(Aufgabe, id=aid).delete()
+    _broadcast()
+    return {"status": "deleted"}
+
+
+# ── Subtasks ───────────────────────────────────────────────────────────
+class SubtaskCreateSchema(Schema):
+    titel: str
+
+
+class SubtaskUpdateSchema(Schema):
+    titel: Optional[str] = None
+    erledigt: Optional[bool] = None
+    sortierung: Optional[int] = None
+
+
+@aufgaben_router.post("/{aid}/subtasks", auth=keycloak_auth)
+def create_subtask(request, aid: int, payload: SubtaskCreateSchema):
+    _require_perm(request, 'aufgaben.manage')
+    aufgabe = get_object_or_404(Aufgabe, id=aid)
+    last = aufgabe.subtasks.order_by('-sortierung').first()
+    sort = (last.sortierung + 1) if last else 0
+    s = Subtask.objects.create(aufgabe=aufgabe, titel=payload.titel.strip(), sortierung=sort)
+    _broadcast()
+    return _subtask_to_dict(s)
+
+
+@aufgaben_router.put("/{aid}/subtasks/{sid}", auth=keycloak_auth)
+def update_subtask(request, aid: int, sid: int, payload: SubtaskUpdateSchema):
+    _require_perm(request, 'aufgaben.manage')
+    s = get_object_or_404(Subtask, id=sid, aufgabe_id=aid)
+    data = payload.dict(exclude_unset=True)
+    if 'erledigt' in data:
+        s.erledigt_am = timezone.now() if data['erledigt'] else None
+    for k, v in data.items():
+        setattr(s, k, v)
+    s.save()
+    _broadcast()
+    return _subtask_to_dict(s)
+
+
+@aufgaben_router.delete("/{aid}/subtasks/{sid}", auth=keycloak_auth)
+def delete_subtask(request, aid: int, sid: int):
+    _require_perm(request, 'aufgaben.manage')
+    get_object_or_404(Subtask, id=sid, aufgabe_id=aid).delete()
     _broadcast()
     return {"status": "deleted"}

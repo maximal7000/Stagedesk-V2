@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Trash2, ListChecks, Loader2, X, ExternalLink, GripVertical, CheckCircle2, Circle,
+  Square, CheckSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
@@ -85,6 +86,21 @@ export default function AufgabenPage() {
     catch { toast.error('Fehler'); }
   };
 
+  // ── Subtasks ──
+  const addSubtask = async (aid, titel) => {
+    if (!titel.trim()) return;
+    try { await apiClient.post(`/aufgaben/${aid}/subtasks`, { titel: titel.trim() }); load(); }
+    catch { toast.error('Subtask anlegen fehlgeschlagen'); }
+  };
+  const toggleSubtask = async (aid, s) => {
+    try { await apiClient.put(`/aufgaben/${aid}/subtasks/${s.id}`, { erledigt: !s.erledigt }); load(); }
+    catch { toast.error('Fehler'); }
+  };
+  const removeSubtask = async (aid, sid) => {
+    try { await apiClient.delete(`/aufgaben/${aid}/subtasks/${sid}`); load(); }
+    catch { toast.error('Fehler'); }
+  };
+
   // ── Drag&Drop via @dnd-kit (Pointer + Touch + Keyboard) ──
   const onDragEnd = async (event) => {
     const { active, over } = event;
@@ -136,6 +152,7 @@ export default function AufgabenPage() {
                 <SortableAufgabe
                   key={a.id} a={a}
                   toggleStatus={toggleStatus} toggleAssign={toggleAssign} remove={remove}
+                  addSubtask={addSubtask} toggleSubtask={toggleSubtask} removeSubtask={removeSubtask}
                   editAssignId={editAssignId} setEditAssignId={setEditAssignId}
                   users={users} search={search} setSearch={setSearch}
                 />
@@ -157,10 +174,14 @@ export default function AufgabenPage() {
 // werden, und auf Touch-Geräten bleibt das Scrollen erhalten.
 function SortableAufgabe({
   a, toggleStatus, toggleAssign, remove,
+  addSubtask, toggleSubtask, removeSubtask,
   editAssignId, setEditAssignId, users, search, setSearch,
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: a.id });
+  const [newSubtask, setNewSubtask] = useState('');
   const done = a.status === 'abgeschlossen';
+  const subtasks = a.subtasks || [];
+  const subDone = subtasks.filter(s => s.erledigt).length;
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -225,6 +246,45 @@ function SortableAufgabe({
                   );
                 })
               }
+            </div>
+          )}
+
+          {/* Subtasks-Checkliste */}
+          {(subtasks.length > 0 || !done) && (
+            <div className="mt-3 space-y-1">
+              {subtasks.length > 0 && (
+                <div className="text-[11px] text-gray-500 mb-1">
+                  Unteraufgaben — {subDone}/{subtasks.length}
+                </div>
+              )}
+              {subtasks.map((s) => (
+                <div key={s.id} className="flex items-center gap-2 group/sub">
+                  <button onClick={() => toggleSubtask(a.id, s)}
+                    className="text-gray-500 hover:text-white">
+                    {s.erledigt
+                      ? <CheckSquare className="w-4 h-4 text-green-500" />
+                      : <Square className="w-4 h-4" />}
+                  </button>
+                  <span className={`text-sm flex-1 ${s.erledigt ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
+                    {s.titel}
+                  </span>
+                  <button onClick={() => removeSubtask(a.id, s.id)}
+                    className="opacity-0 group-hover/sub:opacity-100 text-gray-500 hover:text-red-400 p-1">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+              {!done && (
+                <div className="flex items-center gap-2 mt-1">
+                  <Plus className="w-3.5 h-3.5 text-gray-600" />
+                  <input type="text" placeholder="Unteraufgabe hinzufügen…" value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); addSubtask(a.id, newSubtask); setNewSubtask(''); }
+                    }}
+                    className="flex-1 bg-transparent border-b border-gray-800 focus:border-gray-600 px-1 py-0.5 text-sm text-white placeholder-gray-600 outline-none" />
+                </div>
+              )}
             </div>
           )}
         </div>
