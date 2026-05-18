@@ -11,6 +11,7 @@ import {
   ChevronUp, ChevronDown, Info, ArrowUpDown, Search, FileDown, Receipt,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
+import { toast } from 'sonner';
 import EditHaushaltModal from '../../components/EditHaushaltModal';
 import ArtikelModal from '../../components/ArtikelModal';
 import ArtikelDetailsPanel from '../../components/ArtikelDetailsPanel';
@@ -380,14 +381,15 @@ export default function HaushaltDetailPage() {
     } catch {} finally { setBulkBusy(false); }
   };
 
-  const exportCsv = async () => {
+  const exportFile = async (format) => {
+    const ext = format === 'xlsx' ? 'xlsx' : (format === 'pdf' ? 'pdf' : 'csv');
     try {
-      const res = await apiClient.get(`/haushalte/${id}/artikel.csv`, { responseType: 'blob' });
+      const res = await apiClient.get(`/haushalte/${id}/artikel.${ext}`, { responseType: 'blob' });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement('a');
-      a.href = url; a.download = `${haushalt?.name || 'artikel'}.csv`; a.click();
+      a.href = url; a.download = `${haushalt?.name || 'artikel'}.${ext}`; a.click();
       URL.revokeObjectURL(url);
-    } catch {}
+    } catch { toast.error('Export fehlgeschlagen'); }
   };
 
   // Initiales Laden - nur bei ID-Wechsel
@@ -930,10 +932,13 @@ export default function HaushaltDetailPage() {
           <option value="">Alle Status</option>
           {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <button onClick={exportCsv}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
-          <FileDown className="w-4 h-4" /> CSV
-        </button>
+        <select onChange={(e) => { if (e.target.value) { exportFile(e.target.value); e.target.value = ''; } }}
+          className="bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg px-3 py-2 border border-gray-700">
+          <option value="">📥 Export…</option>
+          <option value="csv">CSV</option>
+          <option value="xlsx">Excel (.xlsx)</option>
+          <option value="pdf">PDF</option>
+        </select>
         <button onClick={() => setShowSammelQuittung(true)}
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
           <Receipt className="w-4 h-4" /> Sammel-Quittung

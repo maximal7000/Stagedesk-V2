@@ -221,6 +221,131 @@ def export_artikel_csv(request, haushalt_id: int):
     return resp
 
 
+@haushalte_router.get("/{haushalt_id}/artikel.xlsx", auth=keycloak_auth)
+def export_artikel_xlsx(request, haushalt_id: int):
+    """Artikel als Excel-Datei."""
+    require_perm(request, 'haushalte.view')
+    from django.http import HttpResponse
+    import openpyxl
+    from openpyxl.styles import Font, PatternFill, Alignment
+    import io
+
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = (haushalt.name or 'Artikel')[:31]
+
+    headers = ['Status', 'Kategorie', 'Name', 'Anzahl', 'Preis €', 'Gesamt €',
+               'Link', 'Beschreibung', 'Erstellt', 'Gekauft']
+    ws.append(headers)
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='1F2937', end_color='1F2937', fill_type='solid')
+    for c in ws[1]:
+        c.font = header_font; c.fill = header_fill; c.alignment = Alignment(vertical='center')
+
+    sum_total = 0
+    for a in haushalt.artikel.all().order_by('sortierung', '-erstellt_am'):
+        ws.append([
+            a.get_status_display(),
+            a.get_kategorie_display(),
+            a.name,
+            a.anzahl,
+            float(a.preis),
+            float(a.gesamtpreis),
+            a.link or '',
+            (a.beschreibung or '').replace('\n', ' '),
+            a.erstellt_am.strftime('%Y-%m-%d %H:%M') if a.erstellt_am else '',
+            a.gekauft_am.strftime('%Y-%m-%d') if a.gekauft_am else '',
+        ])
+        sum_total += float(a.gesamtpreis)
+
+    # Spaltenbreiten grob
+    widths = [12, 12, 36, 8, 10, 10, 30, 40, 18, 14]
+    for i, w in enumerate(widths, start=1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+    # Preis-Zellen formatieren
+    for row in ws.iter_rows(min_row=2, min_col=5, max_col=6):
+        for cell in row:
+            cell.number_format = '#,##0.00 €'
+    # Summenzeile
+    ws.append([])
+    summary_row = ['', '', '', 'Gesamt:', '', sum_total]
+    ws.append(summary_row)
+    last = ws.max_row
+    ws.cell(row=last, column=4).font = Font(bold=True)
+    ws.cell(row=last, column=6).font = Font(bold=True)
+    ws.cell(row=last, column=6).number_format = '#,##0.00 €'
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    safe = ''.join(c for c in haushalt.name if c.isalnum() or c in '-_ ').strip() or 'haushalt'
+    resp = HttpResponse(buf.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    resp['Content-Disposition'] = f'attachment; filename="{safe}.xlsx"'
+    return resp
+
+
+@haushalte_router.get("/{haushalt_id}/artikel.pdf", auth=keycloak_auth)
+def export_artikel_pdf(request, haushalt_id: int):
+    """Artikel als PDF-Bericht."""
+    require_perm(request, 'haushalte.view')
+    from django.http import HttpResponse
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.lib import colors
+    import io
+
+    haushalt = get_object_or_404(Haushalt, id=haushalt_id)
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=landscape(A4),
+                            leftMargin=24, rightMargin=24, topMargin=24, bottomMargin=24)
+    styles = getSampleStyleSheet()
+    elements = [
+        Paragraph(f"<b>{haushalt.name}</b>", styles['Title']),
+    ]
+    if haushalt.beschreibung:
+        elements.append(Paragraph(haushalt.beschreibung, styles['Normal']))
+    elements.append(Spacer(1, 12))
+
+    data = [['Status', 'Kategorie', 'Name', 'Anz.', 'Preis', 'Gesamt', 'Gekauft']]
+    sum_total = 0
+    for a in haushalt.artikel.all().order_by('sortierung', '-erstellt_am'):
+        data.append([
+            a.get_status_display(),
+            a.get_kategorie_display(),
+            (a.name[:50] + '…') if len(a.name) > 51 else a.name,
+            str(a.anzahl),
+            f'{float(a.preis):.2f} €',
+            f'{float(a.gesamtpreis):.2f} €',
+            a.gekauft_am.strftime('%d.%m.%Y') if a.gekauft_am else '',
+        ])
+        sum_total += float(a.gesamtpreis)
+    data.append(['', '', '', '', 'Gesamt:', f'{sum_total:.2f} €', ''])
+
+    tbl = Table(data, repeatRows=1, colWidths=[70, 80, 220, 30, 60, 70, 60])
+    tbl.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1F2937')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#9CA3AF')),
+        ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#F3F4F6')),
+        ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+        ('ALIGN', (4, 1), (5, -1), 'RIGHT'),
+        ('ALIGN', (3, 1), (3, -1), 'CENTER'),
+    ]))
+    elements.append(tbl)
+    doc.build(elements)
+    buf.seek(0)
+    safe = ''.join(c for c in haushalt.name if c.isalnum() or c in '-_ ').strip() or 'haushalt'
+    resp = HttpResponse(buf.getvalue(), content_type='application/pdf')
+    resp['Content-Disposition'] = f'attachment; filename="{safe}.pdf"'
+    return resp
+
+
 @haushalte_router.get("/{haushalt_id}/status-summary", auth=keycloak_auth)
 def haushalt_status_summary(request, haushalt_id: int):
     """Budget-Aufteilung pro Artikel-Status: zeigt wie viel beantragt,
