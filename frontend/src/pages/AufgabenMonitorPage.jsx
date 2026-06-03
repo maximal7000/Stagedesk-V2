@@ -29,6 +29,14 @@ export default function AufgabenMonitorPage() {
     return () => { document.head.removeChild(style); };
   }, []);
 
+  // Optionaler Seiten-Zoom für große/4K-Displays via ?zoom=1.5
+  useEffect(() => {
+    const z = new URLSearchParams(window.location.search).get('zoom');
+    if (!z) return;
+    document.documentElement.style.zoom = z;
+    return () => { document.documentElement.style.zoom = ''; };
+  }, []);
+
   // Uhr alle 30 s aktualisieren
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30 * 1000);
