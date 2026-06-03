@@ -141,6 +141,14 @@ export default function MonitorPage() {
     return () => { document.head.removeChild(style); };
   }, []);
 
+  // Optionaler Seiten-Zoom für große/4K-Displays via ?zoom=1.5
+  useEffect(() => {
+    const z = new URLSearchParams(window.location.search).get('zoom');
+    if (!z) return;
+    document.documentElement.style.zoom = z;
+    return () => { document.documentElement.style.zoom = ''; };
+  }, []);
+
   // Profil-Slug oder Bildschirm-Slug aus URL
   const profilSlug = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
