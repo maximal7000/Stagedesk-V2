@@ -21,6 +21,14 @@ export default function AufgabenMonitorPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Mauszeiger auf dem TV-Monitor ausblenden (Kiosk hat keine Maus)
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = '*{cursor:none !important}';
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
   // Uhr alle 30 s aktualisieren
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30 * 1000);

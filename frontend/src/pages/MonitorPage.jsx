@@ -133,6 +133,14 @@ export default function MonitorPage() {
   const [rotationIdx, setRotationIdx] = useState(0);
   const lastActivityRef = useRef(Date.now());
 
+  // Mauszeiger auf dem TV-Monitor ausblenden (Kiosk hat keine Maus)
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = '*{cursor:none !important}';
+    document.head.appendChild(style);
+    return () => { document.head.removeChild(style); };
+  }, []);
+
   // Profil-Slug oder Bildschirm-Slug aus URL
   const profilSlug = useMemo(() => {
     const params = new URLSearchParams(window.location.search);
