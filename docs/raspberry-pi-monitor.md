@@ -66,7 +66,7 @@ nano /home/pi/kiosk.sh
 
 ```bash
 #!/bin/bash
-URL="https://stagedesk.t410.de/aufgaben-monitor"   # <-- eigene URL eintragen
+URL="https://stagedesk.t410.de/aufgaben-monitor"   # <-- eigene URL (4K? siehe Abschnitt 5a: ?zoom=2)
 
 # Auf Netzwerk warten (max ~60s), damit Chromium nicht die Fehlerseite lädt
 for i in $(seq 1 30); do
@@ -226,6 +226,42 @@ Der Zeiger ist jetzt verschwunden.
 
 ---
 
+## 5a. Größe / Zoom auf großen & 4K-Fernsehern
+
+Auf einem **4K-Fernseher** rendert Chromium mit echten 3840 Pixeln → alles
+wird winzig. `cage 0.2.0` kann die Anzeige **nicht skalieren**, und
+`--force-device-scale-factor` verarbeitet das falsch (es zeigt dann nur das
+obere linke Viertel und wird mit höherem Faktor immer kleiner).
+
+**Lösung: Seiten-Zoom per URL-Parameter `?zoom=`** (in die Stagedesk-Monitor­-
+seiten eingebaut). Der bricht die Seite sauber um und füllt den Schirm.
+
+In `kiosk.sh` die URL um `?zoom=` ergänzen:
+
+```bash
+URL="https://stagedesk.t410.de/aufgaben-monitor?zoom=2"
+```
+
+- `zoom=2` ist ein guter Startwert für 4K (entspricht ~Full-HD-Größe)
+- beliebig feinjustierbar (`1.75`, `2.25`, `2.5` …) – **kein Deploy nötig**,
+  wirkt sofort nach `sudo systemctl restart kiosk.service`
+- gilt für **beide** Seiten: `…/aufgaben-monitor?zoom=2` und `…/monitor?zoom=2`
+- weitere Parameter mit `&` anhängen, z. B. `…/monitor?profil=mensa&zoom=2`
+
+> **Alternativ** kannst du den Pi auch fest auf 1080p ausgeben lassen (dann
+> ist alles normal groß ohne Zoom): in `/boot/firmware/cmdline.txt` (eine
+> Zeile!) `video=HDMI-A-1:1920x1080@60` anhängen. Den 4K-Look verliert man
+> dabei aber.
+
+### Schwarze Balken oben/unten
+
+Kommt meist vom **Fernseher selbst** (Overscan). Im TV-Menü die Bildgröße auf
+1:1 stellen: Samsung „An Bildschirm anpassen", LG „Just Scan", Sony „Full",
+Philips „Unscaled"/„1:1". Hilft das nicht, am Pi in `/boot/firmware/config.txt`
+`disable_overscan=1` setzen und neu starten.
+
+---
+
 ## 6. Bildschirm soll nie dunkel werden
 
 ```bash
@@ -354,6 +390,67 @@ wieder zur Anzeige hochfahren.
 
 ---
 
+## 11. WLAN nachträglich ändern (auch WPA2-Enterprise)
+
+Raspberry Pi OS nutzt **NetworkManager** → am einfachsten mit `nmcli`.
+
+**Normales WLAN (nur Passwort):**
+
+```bash
+sudo nmcli device wifi connect "SSID" password "WLAN-PASSWORT"
+```
+
+**WPA2-Enterprise (Benutzername + Passwort, z. B. Schul-/Uni-WLAN, PEAP):**
+
+```bash
+sudo nmcli connection add type wifi con-name "SchulWLAN" ifname wlan0 ssid "SSID" -- \
+  wifi-sec.key-mgmt wpa-eap \
+  802-1x.eap peap \
+  802-1x.phase2-auth mschapv2 \
+  802-1x.identity "BENUTZERNAME" \
+  802-1x.password "PASSWORT"
+sudo nmcli connection up "SchulWLAN"
+```
+
+Bei Zertifikatsfehlern (Validierung deaktivieren – weniger sicher, aber oft nötig):
+
+```bash
+sudo nmcli connection modify "SchulWLAN" 802-1x.phase1-peapver 0 802-1x.system-ca-certs no
+sudo nmcli connection up "SchulWLAN"
+```
+
+Manche Netze brauchen eine anonyme Identität bzw. einen anderen EAP-Typ:
+
+```bash
+sudo nmcli connection modify "SchulWLAN" 802-1x.anonymous-identity "anonymous@DOMAIN"
+# z. B. TTLS statt PEAP:  802-1x.eap ttls  802-1x.phase2-auth pap
+```
+
+**Gespeicherte Verbindungen verwalten:**
+
+```bash
+nmcli connection show                      # alle anzeigen
+sudo nmcli connection delete "ALTER_NAME"  # altes WLAN löschen
+```
+
+### Neue IP nach dem Netzwechsel finden
+
+SSH bricht beim Wechsel ab und die alte IP gilt nicht mehr. Am einfachsten
+über den **Hostnamen** verbinden (unabhängig von der IP, per mDNS):
+
+```bash
+ssh pi@rpi-monitor-mensa.local
+```
+
+Geht das nicht, im Router unter „DHCP-Clients" nachsehen oder vom PC scannen
+(eigenes Subnetz via `ip route | grep default` ermitteln):
+
+```bash
+nmap -sn 192.168.1.0/24 | grep -i -B2 raspberry
+```
+
+---
+
 ## Schnelle Fehlersuche
 
 | Symptom | Ursache / Lösung |
@@ -364,4 +461,6 @@ wieder zur Anzeige hochfahren.
 | Schwarzer Bildschirm, `Failed to spawn client: Permission denied` | `chmod +x /home/pi/kiosk.sh` |
 | Mauszeiger sichtbar | `default`-Cursor-Theme blank machen (Abschnitt 5b) + Service neu starten |
 | Seite hängt nach WLAN-Ausfall | `netwatch.sh` (Abschnitt 8) |
+| Alles winzig auf 4K-TV | URL-Param `?zoom=2` nutzen (Abschnitt 5a), **nicht** `--force-device-scale-factor` |
+| Neue IP nach WLAN-Wechsel unbekannt | über `pi@<hostname>.local` verbinden (Abschnitt 11) |
 | Host-Key-Warnung nach Neu-Flashen | auf dem PC `ssh-keygen -R <IP>` |
