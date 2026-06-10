@@ -344,6 +344,36 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     }
 
 
+@monitor_router.get("/clock")
+def get_clock_data(request):
+    """Schlanker öffentlicher Endpunkt für externe Uhr-/Status-Displays:
+    ON-AIR-Status + nächste Veranstaltungen. Kein Login nötig."""
+    now = timezone.now()
+    on_air = MonitorConfig.objects.filter(ist_on_air=True).exists()
+    cfg = MonitorConfig.get()
+    on_air_text = cfg.on_air_text if cfg else 'ON AIR'
+
+    from veranstaltung.models import Veranstaltung
+    events = (Veranstaltung.objects
+              .exclude(status='abgesagt')
+              .filter(datum_bis__gte=now)
+              .order_by('datum_von')[:5])
+    veranstaltungen = [{
+        'titel': v.titel,
+        'ort': v.ort or '',
+        'datum_von': v.datum_von,
+        'datum_bis': v.datum_bis,
+        'status': v.effektiv_status,
+        'ist_laufend': v.effektiv_status == 'laufend',
+    } for v in events]
+
+    return {
+        'on_air': on_air,
+        'on_air_text': on_air_text,
+        'veranstaltungen': veranstaltungen,
+    }
+
+
 # ═══ ON AIR Endpunkt (Token-Auth) ════════════════════════════════
 
 @monitor_router.post("/onair", response={200: dict, 401: dict, 403: dict})
