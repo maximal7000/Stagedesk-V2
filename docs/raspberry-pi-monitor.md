@@ -376,6 +376,81 @@ Taucht der Fernseher in der Liste auf, funktioniert die Verbindung physisch.
 
 ---
 
+## 9a. (Alternative) iiyama-Signage-Display per LAN→RS232 (SICP)
+
+Manche Displays **schalten sich per CEC nicht aus** (Einschalten geht, Standby
+wird ignoriert) — z. B. iiyama **ProLite LE5540UHS-B1**. Diese Signage-Displays
+haben aber eine **RS-232/LAN-Steuerung** (SICP-Protokoll), die zuverlässig ist.
+Der Clou: Man braucht **kein** Netzwerkkabel ins LAN — ein **direktes Ethernet-
+Kabel vom Pi (`eth0`) zum LAN-Port des Displays** genügt, weil beide nebeneinander
+stehen. Das Display bridgt „LAN→RS232".
+
+### 1. Verkabelung + Display-OSD
+
+- **Kabel:** Pi `eth0` ↔ Display-LAN-Port (normales Ethernet, Auto-MDIX)
+- **OSD → Advanced Option:** „HDMI with One Wire" (CEC) darf aus bleiben
+- **OSD → „RS232 routing":** auf **LAN→RS232**
+- **OSD → Netzwerk/Ethernet:** **Static IP** `192.168.100.2`, Maske `255.255.255.0`,
+  LAN-Steuerung aktivieren, **Monitor-ID `0`**
+
+### 2. Pi: feste IP auf `eth0` (stört WLAN/Internet nicht)
+
+```bash
+sudo nmcli con add type ethernet ifname eth0 con-name tv-link ip4 192.168.100.1/24
+sudo nmcli con modify tv-link ipv4.never-default yes ipv4.method manual connection.autoconnect yes
+sudo nmcli con up tv-link      # sobald das Kabel steckt
+```
+
+### 3. Das SICP-Protokoll
+
+- **TCP-Port:** `5000`  ·  **Frame:** `A6 <id> 00 00 00 <len> 01 <daten…> <XOR>`
+- **Power OFF (Standby):** `A6 00 00 00 00 04 01 18 01 BA`
+- **Power ON:**            `A6 00 00 00 00 04 01 18 02 B9`
+- **Status abfragen (get-power):** Kommando `0x19` → Antwort­byte `02` = an, `01` = Standby
+
+Schnelltest (Skript anlegen, `off`/`on`):
+
+```bash
+cat > /home/pi/tv.py <<'PY'
+import socket, sys, functools
+mode = sys.argv[1] if len(sys.argv) > 1 else "off"
+data = [0x18, 0x02 if mode == "on" else 0x01]
+pkt  = [0xA6, 0, 0, 0, 0, len(data)+2, 0x01] + data
+pkt.append(functools.reduce(lambda a, c: a ^ c, pkt, 0))
+s = socket.create_connection(("192.168.100.2", 5000), timeout=5)
+s.sendall(bytes(pkt)); print("Antwort:", s.recv(64).hex()); s.close()
+PY
+python3 /home/pi/tv.py off
+python3 /home/pi/tv.py on
+```
+
+Antwort, die mit `21` beginnt = ACK vom Display (Befehl angenommen).
+
+### 4. In den Stagedesk-Power-Dienst einbauen
+
+Statt der CEC-Variante (Abschnitt 9) nutzt `/opt/stagedesk/stagedesk-power.py`
+hier die **SICP-Klasse** (`SicpDisplay`): identischer WebSocket-Client, aber
+`power_on/power_off/get_power_status` schicken die obigen SICP-Frames per TCP an
+`DISPLAY_IP:5000`. Konfiguration oben im Skript:
+
+```python
+DISPLAY_IP   = "192.168.100.2"
+DISPLAY_PORT = 5000
+MONITOR_ID   = 0
+```
+
+Rest (Service, Log, Autostart) wie in Abschnitt 9. Danach:
+
+```bash
+sudo systemctl restart stagedesk-power.service
+journalctl -u stagedesk-power.service -f     # "Power-Status: on/standby"
+```
+
+> **Protokoll-Quelle:** iiyama „LExx40UHS RS232 & LAN Commands" (Application Note)
+> bzw. das Open-Source-Projekt `dersimn/sicp_mqtt`.
+
+---
+
 ## 10. Endabnahme
 
 ```bash
@@ -463,4 +538,6 @@ nmap -sn 192.168.1.0/24 | grep -i -B2 raspberry
 | Seite hängt nach WLAN-Ausfall | `netwatch.sh` (Abschnitt 8) |
 | Alles winzig auf 4K-TV | URL-Param `?zoom=2` nutzen (Abschnitt 5a), **nicht** `--force-device-scale-factor` |
 | Neue IP nach WLAN-Wechsel unbekannt | über `pi@<hostname>.local` verbinden (Abschnitt 11) |
+| CEC schaltet TV **ein** aber nicht **aus** | Panel unterstützt CEC-Standby nicht → LAN→RS232 / SICP nutzen (Abschnitt 9a) |
+| `cec-client` → `errno=16` (busy) | `stagedesk-power.service` belegt `/dev/cec0` → vorher `sudo systemctl stop stagedesk-power.service` |
 | Host-Key-Warnung nach Neu-Flashen | auf dem PC `ssh-keygen -R <IP>` |
