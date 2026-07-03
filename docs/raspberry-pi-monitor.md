@@ -376,78 +376,78 @@ Taucht der Fernseher in der Liste auf, funktioniert die Verbindung physisch.
 
 ---
 
-## 9a. (Alternative) iiyama-Signage-Display per LAN→RS232 (SICP)
+## 9a. iiyama-Signage (LE5540UHS): Power per **Hybrid** SICP-Aus + CEC-Ein
 
-Manche Displays **schalten sich per CEC nicht aus** (Einschalten geht, Standby
-wird ignoriert) — z. B. iiyama **ProLite LE5540UHS-B1**. Diese Signage-Displays
-haben aber eine **RS-232/LAN-Steuerung** (SICP-Protokoll), die zuverlässig ist.
-Der Clou: Man braucht **kein** Netzwerkkabel ins LAN — ein **direktes Ethernet-
-Kabel vom Pi (`eth0`) zum LAN-Port des Displays** genügt, weil beide nebeneinander
-stehen. Das Display bridgt „LAN→RS232".
+Das iiyama **ProLite LE5540UHS-B1** (Android-Signage) hat zwei Eigenheiten:
+- **CEC** kann das Panel **einschalten**, aber **nicht ausschalten** (Standby wird ignoriert).
+- **SICP über LAN** kann **ausschalten**, aber **nicht einschalten** — im Standby
+  schaltet das Display seinen Netzwerk-Port ab (auch WOL wacht es nicht auf).
 
-### 1. Verkabelung + Display-OSD
+Lösung: **beides kombinieren** → **AUS per SICP (LAN), AN per HDMI-CEC**. Beide
+Verbindungen sind ohnehin da (Pi-HDMI → Display, Pi-`eth0` → Display-LAN).
 
-- **Kabel:** Pi `eth0` ↔ Display-LAN-Port (normales Ethernet, Auto-MDIX)
-- **OSD → Advanced Option:** „HDMI with One Wire" (CEC) darf aus bleiben
-- **OSD → „RS232 routing":** auf **LAN→RS232**
-- **OSD → Netzwerk/Ethernet:** **Static IP** `192.168.100.2`, Maske `255.255.255.0`,
-  LAN-Steuerung aktivieren, **Monitor-ID `0`**
+### 1. Verkabelung
 
-### 2. Pi: feste IP auf `eth0` (stört WLAN/Internet nicht)
+- **HDMI:** Pi → Display (hast du schon, für die Anzeige)
+- **Ethernet:** Pi `eth0` ↔ Display-LAN-Port (direktes Kabel, kein Switch nötig, Auto-MDIX)
 
-```bash
-sudo nmcli con add type ethernet ifname eth0 con-name tv-link ip4 192.168.100.1/24
-sudo nmcli con modify tv-link ipv4.never-default yes ipv4.method manual connection.autoconnect yes
-sudo nmcli con up tv-link      # sobald das Kabel steckt
-```
+### 2. Display-OSD
 
-### 3. Das SICP-Protokoll
+- **Bild-OSD (HOME) → Erw. Einst.:** „RS232 routing" = **LAN→RS232**
+- **Android-Menü** (wichtig, versteckt!): **HOME-Taste, dann `1668`** mit den Zahlentasten
+  → öffnet die Android-Einstellungen. Dann:
+  - **Network → Ethernet:** **Enable**, Connection Type **DHCP** (empfohlen) oder Static
+  - **Signage Display → Server settings → SICP Network Port:** `5000`
+- **Display danach neu starten** (Power aus/an) — der SICP-Dienst läuft erst nach
+  einem Reboot sauber.
 
-- **TCP-Port:** `5000`  ·  **Frame:** `A6 <id> 00 00 00 <len> 01 <daten…> <XOR>`
-- **Power OFF (Standby):** `A6 00 00 00 00 04 01 18 01 BA`
-- **Power ON:**            `A6 00 00 00 00 04 01 18 02 B9`
-- **Status abfragen (get-power):** Kommando `0x19` → Antwort­byte `02` = an, `01` = Standby
+### 3. Pi-Netzwerk: `eth0` + DHCP-Server mit fester Zuordnung
 
-Schnelltest (Skript anlegen, `off`/`on`):
+Der Pi gibt dem Display per DHCP immer dieselbe IP (`192.168.100.2`) — dazu die
+**MAC des Displays** (steht im Info-Menü, `HOME` → `77`) eintragen:
 
 ```bash
-cat > /home/pi/tv.py <<'PY'
-import socket, sys, functools
-mode = sys.argv[1] if len(sys.argv) > 1 else "off"
-data = [0x18, 0x02 if mode == "on" else 0x01]
-pkt  = [0xA6, 0, 0, 0, 0, len(data)+2, 0x01] + data
-pkt.append(functools.reduce(lambda a, c: a ^ c, pkt, 0))
-s = socket.create_connection(("192.168.100.2", 5000), timeout=5)
-s.sendall(bytes(pkt)); print("Antwort:", s.recv(64).hex()); s.close()
-PY
-python3 /home/pi/tv.py off
-python3 /home/pi/tv.py on
+sudo nmcli con add type ethernet ifname eth0 con-name tv-link
+sudo nmcli con modify tv-link ipv4.method shared ipv4.addresses 192.168.100.1/24 ipv4.never-default yes
+echo "dhcp-host=AA:BB:CC:DD:EE:FF,192.168.100.2" | sudo tee /etc/NetworkManager/dnsmasq-shared.d/tv.conf
+sudo nmcli con up tv-link
 ```
 
-Antwort, die mit `21` beginnt = ACK vom Display (Befehl angenommen).
+(`AA:BB:…` = MAC des Displays.) Alternativ am Display **Static IP** `192.168.100.2 / 255.255.255.0`
+setzen und am Pi `ipv4.method manual ipv4.addresses 192.168.100.1/24`.
 
-### 4. In den Stagedesk-Power-Dienst einbauen
+Erreichbarkeit prüfen (Android beantwortet **kein** Ping, aber ARP):
 
-Statt der CEC-Variante (Abschnitt 9) nutzt `/opt/stagedesk/stagedesk-power.py`
-hier die **SICP-Klasse** (`SicpDisplay`): identischer WebSocket-Client, aber
-`power_on/power_off/get_power_status` schicken die obigen SICP-Frames per TCP an
-`DISPLAY_IP:5000`. Konfiguration oben im Skript:
-
-```python
-DISPLAY_IP   = "192.168.100.2"
-DISPLAY_PORT = 5000
-MONITOR_ID   = 0
+```bash
+sudo arping -I eth0 -c3 192.168.100.2      # Reply = Display im Netz
 ```
 
-Rest (Service, Log, Autostart) wie in Abschnitt 9. Danach:
+### 4. Die Befehle
+
+- **AUS (SICP, TCP 5000):** Frame `A6 <id> 00 00 00 <len> 01 <daten> <XOR>`,
+  Power-Off = `A6 00 00 00 00 04 01 18 01 BA`
+- **AN (HDMI-CEC):** `on 0` **und** `as` (Active Source / One Touch Play — das `as`
+  ist der Trick, ohne das weckt CEC oft nicht):
+  ```bash
+  echo "on 0" | cec-client -s -d 1 ; sleep 1 ; echo "as" | cec-client -s -d 1
+  ```
+- **Status:** SICP-Port erreichbar = **an**, nicht erreichbar = **Standby**.
+
+### 5. Power-Dienst (Hybrid-Skript)
+
+`/opt/stagedesk/stagedesk-power.py` nutzt die Klasse `Display`:
+`power_off()` → SICP über LAN, `power_on()` → `cec-client on 0` + `as`,
+plus 60-s-Status-Heartbeat. Vorlage im Repo: **`scripts/stagedesk-power-hybrid.py`**
+(oben `WS_URL`-Slug, `DISPLAY_IP`, `MONITOR_ID` anpassen). Installation wie in
+Abschnitt 9 (nach `/opt/stagedesk/`, Service, `cec-utils` muss installiert sein).
 
 ```bash
 sudo systemctl restart stagedesk-power.service
 journalctl -u stagedesk-power.service -f     # "Power-Status: on/standby"
 ```
 
-> **Protokoll-Quelle:** iiyama „LExx40UHS RS232 & LAN Commands" (Application Note)
-> bzw. das Open-Source-Projekt `dersimn/sicp_mqtt`.
+> **Merke:** SICP-Aus + CEC-Ein, weil das Panel jeweils nur eine Richtung kann.
+> **Protokoll-Quelle:** iiyama „LExx40UHS RS232 & LAN Commands" · `dersimn/sicp_mqtt`.
 
 ---
 
