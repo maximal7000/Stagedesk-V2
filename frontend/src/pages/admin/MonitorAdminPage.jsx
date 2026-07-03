@@ -316,6 +316,7 @@ export default function MonitorAdminPage() {
       power_zeitplan: bs.power_zeitplan || [],
       ferien_modus: !!bs.ferien_modus,
       power_ausnahmen: bs.power_ausnahmen || [],
+      power_modus: bs.power_modus || 'auto',
     };
     try {
       await apiClient.put(`/monitor/bildschirme/${bs.id}`, payload);
