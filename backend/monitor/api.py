@@ -316,6 +316,7 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     config_data['logo_url_resolved'] = config.get_logo_url()
     config_data['pdf_url_resolved'] = config.get_pdf_url()
     config_data['hintergrundbild_url_resolved'] = config.get_hintergrundbild_url()
+    config_data['bild_url_resolved'] = config.get_bild_url()
 
     # Wenn on_air_vollbild aktiv → ON AIR Display Profil-Config mitliefern
     on_air_profil = None
@@ -520,6 +521,9 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
     if 'aktives_hintergrundbild_id' in data:
         val = data.pop('aktives_hintergrundbild_id')
         config.aktives_hintergrundbild_id = val if val else None
+    if 'aktives_bild_id' in data:
+        val = data.pop('aktives_bild_id')
+        config.aktives_bild_id = val if val else None
 
     for key, value in data.items():
         setattr(config, key, value)

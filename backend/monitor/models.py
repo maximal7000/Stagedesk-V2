@@ -52,8 +52,14 @@ class MonitorConfig(models.Model):
         ('onair', 'ON AIR Display'),
         ('abfahrten', 'Abfahrtsmonitor (ÖPNV)'),
         ('baukasten', 'Widget-Baukasten (frei)'),
+        ('pdf_vollbild', 'PDF-Vollbild'),
+        ('bild_vollbild', 'Bild-Vollbild'),
     ]
     layout_modus = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='standard')
+
+    # Bei Vollbild-Layouts (PDF/Bild): den Standard-Header (Titel/Logo) oben anzeigen.
+    vollbild_header = models.BooleanField(default=False,
+        help_text="Vollbild-Layouts: Standard-Header (Titel/Logo) oben einblenden")
 
     # ─── Baukasten-Layout ────────────────
     layout_widgets = models.JSONField(default=list, blank=True,
@@ -107,6 +113,24 @@ class MonitorConfig(models.Model):
     aktive_pdf = models.ForeignKey(
         MonitorDatei, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='als_aktive_pdf'
+    )
+    # PDF-Vollbild-Konfiguration (layout_modus='pdf_vollbild')
+    PDF_MODUS_CHOICES = [
+        ('durchschalten', 'Seiten automatisch durchschalten'),
+        ('statisch', 'Feste Seite anzeigen'),
+        ('seiten', 'Nur bestimmte Seiten'),
+    ]
+    pdf_modus = models.CharField(max_length=20, choices=PDF_MODUS_CHOICES, default='durchschalten')
+    pdf_intervall = models.IntegerField(default=10, help_text="Sekunden pro Seite (Durchschalten)")
+    pdf_pro_ansicht = models.IntegerField(default=1, help_text="Seiten pro Ansicht (1 oder 2)")
+    pdf_seiten = models.CharField(max_length=200, blank=True, default='',
+        help_text="Seiten-Auswahl, z.B. '1,3,5-7'. Leer = alle.")
+    pdf_statische_seite = models.IntegerField(default=1, help_text="Feste Seite (Modus 'statisch')")
+
+    # ─── Bild-Vollbild (layout_modus='bild_vollbild') ───
+    aktives_bild = models.ForeignKey(
+        MonitorDatei, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='als_aktives_bild'
     )
 
     # ─── Theme ─────────────────────────────
@@ -320,6 +344,11 @@ class MonitorConfig(models.Model):
     def get_hintergrundbild_url(self):
         if self.aktives_hintergrundbild and self.aktives_hintergrundbild.datei:
             return self.aktives_hintergrundbild.datei.url
+        return ''
+
+    def get_bild_url(self):
+        if self.aktives_bild and self.aktives_bild.datei:
+            return self.aktives_bild.datei.url
         return ''
 
     def __str__(self):

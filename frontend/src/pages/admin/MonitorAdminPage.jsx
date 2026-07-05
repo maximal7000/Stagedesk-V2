@@ -207,6 +207,7 @@ export default function MonitorAdminPage() {
     'zeige_countdown','zeige_ticker','ticker_text','ticker_geschwindigkeit',
     'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
     'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
+    'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id',
     'zeige_webuntis','webuntis_url','webuntis_zoom','webuntis_dark_mode',
     'zeige_hintergrundbild','aktives_hintergrundbild_id',
     'zeige_qr_code','qr_code_url','qr_code_label',
@@ -1197,6 +1198,8 @@ export default function MonitorAdminPage() {
                   <option value="onair">ON AIR Display</option>
                   <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
                   <option value="baukasten">Widget-Baukasten (frei)</option>
+                  <option value="pdf_vollbild">PDF-Vollbild</option>
+                  <option value="bild_vollbild">Bild-Vollbild</option>
                 </select>
               </div>
             </div>
@@ -1232,6 +1235,110 @@ export default function MonitorAdminPage() {
                   <Activity className="w-3.5 h-3.5 inline mr-1" />
                   Abfahrtsmonitor: Zeigt Bus- und Bahnabfahrten in Echtzeit. Stationen und Filter unter &quot;ÖPNV Abfahrten&quot; konfigurieren.
                 </p>
+              </div>
+            )}
+
+            {(monitorConfig.layout_modus === 'pdf_vollbild' || monitorConfig.layout_modus === 'bild_vollbild') && (
+              <div className="p-3 bg-orange-900/10 border border-orange-500/20 rounded-lg space-y-4">
+                <p className="text-xs text-orange-300">
+                  <FileText className="w-3.5 h-3.5 inline mr-1" />
+                  Vollbild-Layout: {monitorConfig.layout_modus === 'pdf_vollbild' ? 'PDF' : 'Bild'} füllt den ganzen Bildschirm.
+                </p>
+
+                <div className="flex items-center gap-3">
+                  <Toggle checked={!!monitorConfig.vollbild_header} onChange={v => updateConfig('vollbild_header', v)} disabled={!canEdit} />
+                  <div>
+                    <p className="text-sm text-white">Header oben anzeigen</p>
+                    <p className="text-[11px] text-gray-500">Titel + Logo aus dem Standard-Layout als Überschrift</p>
+                  </div>
+                </div>
+
+                {monitorConfig.layout_modus === 'pdf_vollbild' && (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-xs text-gray-400 font-medium">PDF-Datei</label>
+                        {canEdit && <UploadButton typ="pdf" label="PDF hochladen" />}
+                      </div>
+                      {pdfs.length ? (
+                        <div className="space-y-1.5">
+                          {pdfs.map(pdf => (
+                            <div key={pdf.id} onClick={() => canEdit && updateConfig('aktive_pdf_id', monitorConfig.aktive_pdf_id === pdf.id ? null : pdf.id)}
+                              className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-sm ${monitorConfig.aktive_pdf_id === pdf.id ? 'border-orange-500 bg-orange-900/20 text-white' : 'border-gray-700 bg-gray-800/50 text-gray-300'}`}>
+                              <FileText className="w-4 h-4 text-orange-400" />{pdf.name}
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="text-gray-500 text-xs">Noch keine PDFs — oben hochladen.</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Seiten-Modus</label>
+                        <select value={monitorConfig.pdf_modus || 'durchschalten'} onChange={e => updateConfig('pdf_modus', e.target.value)} disabled={!canEdit}
+                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm">
+                          <option value="durchschalten">Automatisch durchschalten</option>
+                          <option value="statisch">Feste Seite</option>
+                          <option value="seiten">Nur bestimmte Seiten</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Seiten pro Ansicht</label>
+                        <select value={monitorConfig.pdf_pro_ansicht || 1} onChange={e => updateConfig('pdf_pro_ansicht', parseInt(e.target.value))} disabled={!canEdit}
+                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm">
+                          <option value={1}>1 Seite</option>
+                          <option value={2}>2 Seiten nebeneinander</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {monitorConfig.pdf_modus === 'durchschalten' && (
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Intervall pro Seite: {monitorConfig.pdf_intervall || 10}s</label>
+                        <input type="range" min={3} max={120} value={monitorConfig.pdf_intervall || 10}
+                          onChange={e => updateConfig('pdf_intervall', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-orange-500" />
+                      </div>
+                    )}
+                    {monitorConfig.pdf_modus === 'statisch' && (
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Feste Seite</label>
+                        <input type="number" min={1} value={monitorConfig.pdf_statische_seite || 1}
+                          onChange={e => updateConfig('pdf_statische_seite', parseInt(e.target.value) || 1)} disabled={!canEdit}
+                          className="w-32 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm" />
+                      </div>
+                    )}
+                    {(monitorConfig.pdf_modus === 'seiten' || monitorConfig.pdf_modus === 'durchschalten') && (
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">
+                          Seiten-Auswahl{monitorConfig.pdf_modus === 'durchschalten' ? ' (optional)' : ''}
+                        </label>
+                        <input type="text" placeholder="z.B. 1,3,5-7 — leer = alle" value={monitorConfig.pdf_seiten || ''}
+                          onChange={e => updateConfig('pdf_seiten', e.target.value)} disabled={!canEdit}
+                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm" />
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {monitorConfig.layout_modus === 'bild_vollbild' && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-xs text-gray-400 font-medium">Bild auswählen</label>
+                      {canEdit && <UploadButton typ="bild" label="Bild hochladen" />}
+                    </div>
+                    {bilder.length ? (
+                      <div className="grid grid-cols-4 gap-2">
+                        {bilder.map(b => (
+                          <div key={b.id} onClick={() => canEdit && updateConfig('aktives_bild_id', monitorConfig.aktives_bild_id === b.id ? null : b.id)}
+                            className={`relative rounded-lg overflow-hidden border cursor-pointer ${monitorConfig.aktives_bild_id === b.id ? 'border-orange-500 ring-2 ring-orange-500/40' : 'border-gray-700'}`}>
+                            <img src={`${MEDIA_BASE}${b.datei_url}`} alt={b.name} className="w-full h-20 object-cover" />
+                            {monitorConfig.aktives_bild_id === b.id && <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] bg-orange-500 text-white rounded">Aktiv</span>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-gray-500 text-xs">Noch keine Bilder — oben hochladen.</p>}
+                  </div>
+                )}
               </div>
             )}
 
