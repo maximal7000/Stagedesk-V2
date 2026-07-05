@@ -60,12 +60,12 @@ export default function PdfFullscreen({
   useEffect(() => {
     if (!pdf) return;
     const n = pdf.numPages;
-    const per = proAnsicht === 2 ? 2 : 1;
+    const per = Math.min(Math.max(1, proAnsicht || 1), 3);
 
     if (modus === 'statisch') {
       const start = Math.min(Math.max(1, statischeSeite || 1), n);
-      const grp = [start];
-      if (per === 2 && start + 1 <= n) grp.push(start + 1);
+      const grp = [];
+      for (let p = start; p < start + per && p <= n; p++) grp.push(p);
       setViews([grp]); setViewIdx(0);
       return;
     }
@@ -102,9 +102,9 @@ export default function PdfFullscreen({
     if (!pdf || !pages || !container) return;
     let cancelled = false;
     const dpr = window.devicePixelRatio || 1;
-    const gap = pages.length > 1 ? 16 : 0;
+    const gaps = (pages.length - 1) * 16;
     const availH = container.clientHeight;
-    const availW = (container.clientWidth - gap) / pages.length;
+    const availW = (container.clientWidth - gaps) / pages.length;
 
     pages.forEach((pageNum, i) => {
       pdf.getPage(pageNum).then(page => {

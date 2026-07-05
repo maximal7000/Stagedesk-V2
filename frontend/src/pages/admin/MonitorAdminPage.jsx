@@ -1288,6 +1288,7 @@ export default function MonitorAdminPage() {
                           className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm">
                           <option value={1}>1 Seite</option>
                           <option value={2}>2 Seiten nebeneinander</option>
+                          <option value={3}>3 Seiten nebeneinander</option>
                         </select>
                       </div>
                     </div>
