@@ -4,7 +4,7 @@
  *           Wetter, WebUntis, Slideshow, PDF, Ticker, Themes, Uhr,
  *           Multi-Profil (?profil=slug), Stundenplan-Vollbild Layout
  */
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import {
   Radio, Calendar, Clock, MapPin, AlertTriangle, Info, Megaphone,
   Sun, Moon, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import BaukastenRenderer from '../components/monitor/BaukastenRenderer';
 import CameraStream from '../components/monitor/CameraStream';
+const PdfFullscreen = lazy(() => import('../components/monitor/PdfFullscreen'));
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
@@ -585,6 +586,68 @@ export default function MonitorPage() {
             )}
           </div>
         )}
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ═══ VOLLBILD-LAYOUTS (PDF / Bild) ════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════
+  const vollbildHeader = config?.vollbild_header && (
+    <div className="flex items-center gap-5 px-10 py-5 shrink-0"
+         style={{ borderBottom: `3px solid ${accent}` }}>
+      {config?.zeige_logo && logoUrl && (
+        <img src={logoUrl} alt="" className="h-16 object-contain" />
+      )}
+      <div>
+        <h1 className="text-4xl font-bold text-white tracking-tight">{config?.titel || 'Stagedesk'}</h1>
+        {config?.untertitel && (
+          <p className="text-white/50 text-lg mt-1">{config.untertitel}</p>
+        )}
+      </div>
+    </div>
+  );
+
+  if (config?.layout_modus === 'pdf_vollbild') {
+    return (
+      <div className="fixed inset-0 flex flex-col" style={{ background: bgColor }}>
+        {vollbildHeader}
+        <div className="flex-1 min-h-0 p-4">
+          {pdfUrl ? (
+            <Suspense fallback={<div className="w-full h-full flex items-center justify-center text-white/40 text-2xl">PDF wird geladen …</div>}>
+              <PdfFullscreen
+                url={pdfUrl}
+                modus={config?.pdf_modus || 'durchschalten'}
+                intervall={config?.pdf_intervall || 10}
+                proAnsicht={config?.pdf_pro_ansicht || 1}
+                seiten={config?.pdf_seiten || ''}
+                statischeSeite={config?.pdf_statische_seite || 1}
+              />
+            </Suspense>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white/40 text-3xl">
+              Keine PDF ausgewählt
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (config?.layout_modus === 'bild_vollbild') {
+    const bildUrl = config?.bild_url_resolved
+      ? (config.bild_url_resolved.startsWith('http') ? config.bild_url_resolved : `${MEDIA_BASE}${config.bild_url_resolved}`)
+      : '';
+    return (
+      <div className="fixed inset-0 flex flex-col" style={{ background: bgColor }}>
+        {vollbildHeader}
+        <div className="flex-1 min-h-0 flex items-center justify-center p-4">
+          {bildUrl ? (
+            <img src={bildUrl} alt="" className="max-w-full max-h-full object-contain" />
+          ) : (
+            <div className="text-white/40 text-3xl">Kein Bild ausgewählt</div>
+          )}
+        </div>
       </div>
     );
   }

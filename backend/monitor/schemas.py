@@ -63,6 +63,13 @@ class MonitorConfigSchema(Schema):
     slideshow_intervall: int
     zeige_pdf: bool
     aktive_pdf_id: Optional[int] = None
+    vollbild_header: bool = False
+    pdf_modus: str = 'durchschalten'
+    pdf_intervall: int = 10
+    pdf_pro_ansicht: int = 1
+    pdf_seiten: str = ''
+    pdf_statische_seite: int = 1
+    aktives_bild_id: Optional[int] = None
     theme_preset: str
     zeige_webuntis: bool
     webuntis_url: str
@@ -160,6 +167,13 @@ class MonitorConfigUpdateSchema(Schema):
     slideshow_intervall: Optional[int] = None
     zeige_pdf: Optional[bool] = None
     aktive_pdf_id: Optional[int] = None
+    vollbild_header: Optional[bool] = None
+    pdf_modus: Optional[str] = None
+    pdf_intervall: Optional[int] = None
+    pdf_pro_ansicht: Optional[int] = None
+    pdf_seiten: Optional[str] = None
+    pdf_statische_seite: Optional[int] = None
+    aktives_bild_id: Optional[int] = None
     theme_preset: Optional[str] = None
     zeige_webuntis: Optional[bool] = None
     webuntis_url: Optional[str] = None
