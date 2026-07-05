@@ -45,6 +45,15 @@ server {
         try_files $uri /index.html;
     }
 
+    # .mjs als JavaScript ausliefern (sonst laedt z.B. der pdf.js-Worker nicht,
+    # weil nginx .mjs sonst als application/octet-stream sendet und der Browser
+    # ES-Module-Scripts mit falschem MIME ablehnt).
+    location ~ \.mjs$ {
+        root /opt/stagedesk/frontend/dist;
+        types { application/javascript mjs; }
+        try_files $uri =404;
+    }
+
     listen 443 ssl;
     ssl_certificate /etc/letsencrypt/live/tag.t410.de/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/tag.t410.de/privkey.pem;
