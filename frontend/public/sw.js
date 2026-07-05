@@ -8,7 +8,7 @@
  *
  * Cache-Versionierung: bei Inhaltsänderung CACHE-Namen erhöhen.
  */
-const CACHE = 'stagedesk-v1';
+const CACHE = 'stagedesk-v2';
 const APP_SHELL = ['/', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
