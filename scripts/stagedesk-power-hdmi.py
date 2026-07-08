@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
 """
-Stagedesk Power Control — WebSocket Client (HDMI-DPMS)
-Schaltet den HDMI-Ausgang des Pi selbst an/aus (wlr-randr unter cage) und
-meldet den Status. Für Monitore, die direkt am Pi-HDMI hängen (kein CEC/
-Netzwerk-Display). Status-Heartbeat alle STATUS_INTERVAL Sekunden.
-
-Voraussetzung: wlr-randr installiert (sudo apt install wlr-randr), Kiosk läuft
-unter cage (Wayland-Socket in /run/user/1000).
+Stagedesk Power Control — WebSocket Client (HDMI-DPMS + Watchdog)
+Schaltet den HDMI-Ausgang des Pi an/aus (wlr-randr unter cage) und meldet den
+Status. cage aktiviert einen abgeschalteten Ausgang nach kurzer Zeit von selbst
+wieder — daher hält ein Watchdog den Ausgang aus, solange 'aus' gewünscht ist.
 """
 
 import os
@@ -22,8 +19,9 @@ from websocket import WebSocketApp, WebSocketConnectionClosedException
 
 # ─── Konfiguration ────────────────────────────────────────────────
 WS_URL      = "wss://stagedesk.t410.de/ws/monitor/pi/<SLUG>/"
-OUTPUT      = "HDMI-A-1"           # Ausgang (siehe: wlr-randr)
+OUTPUT      = "HDMI-A-1"
 RUNTIME_DIR = "/run/user/1000"
+WATCHDOG_INTERVAL = 3      # s — Re-Assert von --off solange 'aus' gewünscht
 STATUS_INTERVAL = 60
 RECONNECT_DELAY_MIN = 5
 RECONNECT_DELAY_MAX = 60
@@ -39,10 +37,11 @@ log = logging.getLogger("stagedesk")
 
 
 class HdmiDisplay:
-    """Schaltet den HDMI-Ausgang per wlr-randr (cage/Wayland)."""
+    """Schaltet den HDMI-Ausgang per wlr-randr; Watchdog hält 'aus' stabil."""
 
     def __init__(self):
-        self._last = "unknown"
+        self._want = "on"      # gewünschter Zustand: 'on' | 'standby'
+        threading.Thread(target=self._watchdog, daemon=True).start()
 
     def _env(self):
         e = dict(os.environ)
@@ -54,33 +53,32 @@ class HdmiDisplay:
 
     def _wlr(self, *args):
         try:
-            return subprocess.run(["wlr-randr", *args], env=self._env(),
-                                  capture_output=True, text=True, timeout=10)
+            subprocess.run(["wlr-randr", *args], env=self._env(),
+                           capture_output=True, text=True, timeout=10)
         except Exception as e:
             log.error(f"wlr-randr Fehler: {e}")
-            return None
+
+    def _watchdog(self):
+        # Solange 'aus' gewünscht ist, den Ausgang immer wieder abschalten
+        # (cage re-aktiviert ihn sonst nach ~15s von selbst).
+        while True:
+            if self._want == "standby":
+                self._wlr("--output", OUTPUT, "--off")
+            time.sleep(WATCHDOG_INTERVAL)
 
     def power_on(self):
         log.info("HDMI-Ausgang AN")
+        self._want = "on"
         self._wlr("--output", OUTPUT, "--on")
-        self._last = "on"
 
     def power_off(self):
         log.info("HDMI-Ausgang AUS")
+        self._want = "standby"
         self._wlr("--output", OUTPUT, "--off")
-        self._last = "standby"
 
     def get_power_status(self) -> str:
-        r = self._wlr()
-        if r and r.returncode == 0 and r.stdout:
-            cur = None
-            for line in r.stdout.splitlines():
-                if line and not line.startswith(" "):
-                    cur = line
-                if "Enabled:" in line and OUTPUT in (cur or ""):
-                    self._last = "on" if "yes" in line else "standby"
-                    break
-        return self._last
+        # Gewünschten (stabilen) Zustand melden — die Hardware flappt sonst.
+        return self._want
 
     def stop(self):
         pass

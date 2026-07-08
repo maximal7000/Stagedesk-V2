@@ -479,9 +479,15 @@ Status liest man aus der Zeile `Enabled: yes/no` des Ausgangs.
 
 ### 3. Power-Dienst (HDMI-Skript)
 
+> **Wichtig:** cage **reaktiviert** einen mit `--off` abgeschalteten Ausgang nach
+> ~15 s von selbst wieder (Hotplug beim Monitor-Standby). Deshalb enthält das
+> Skript einen **Watchdog**, der `--off` alle paar Sekunden wiederholt, solange
+> „aus" gewünscht ist — sonst geht der Monitor immer wieder an. Der gemeldete
+> Status ist der **gewünschte** Zustand (stabil), nicht der flackernde Hardware-Wert.
+
 Vorlage im Repo: **`scripts/stagedesk-power-hdmi.py`** (Klasse `HdmiDisplay`):
-`power_off()` → `wlr-randr --output <OUTPUT> --off`, `power_on()` → `--on`,
-Status über `Enabled: yes/no`, plus 60-s-Heartbeat. Oben im Skript anpassen:
+`power_off()` → `wlr-randr --output <OUTPUT> --off` (+ Watchdog),
+`power_on()` → `--on`, plus 60-s-Heartbeat. Oben im Skript anpassen:
 
 ```python
 WS_URL = "wss://stagedesk.t410.de/ws/monitor/pi/<SLUG>/"
