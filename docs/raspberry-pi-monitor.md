@@ -451,6 +451,57 @@ journalctl -u stagedesk-power.service -f     # "Power-Status: on/standby"
 
 ---
 
+## 9b. (Alternative) Normaler Monitor am Pi-HDMI: Power per HDMI-DPMS
+
+Wenn ein **ganz normaler Monitor direkt am Pi-HDMI** hängt (kein CEC, kein
+Netzwerk-Display), schaltet der Pi einfach **seinen eigenen HDMI-Ausgang**
+an/aus (DPMS über `wlr-randr` unter cage). Der Kiosk (Chromium) läuft dabei
+weiter — nur das Bild wird ab-/zugeschaltet.
+
+### 1. wlr-randr installieren & Ausgang finden
+
+```bash
+sudo apt install -y wlr-randr
+export XDG_RUNTIME_DIR=/run/user/1000
+export WAYLAND_DISPLAY=$(basename $(ls /run/user/1000/wayland-* | grep -v '\.lock' | head -1))
+wlr-randr        # Ausgangsname merken, meist HDMI-A-1
+```
+
+### 2. Schalten testen (Monitor wird kurz schwarz)
+
+```bash
+wlr-randr --output HDMI-A-1 --off    # -> Enabled: no
+wlr-randr --output HDMI-A-1 --on     # -> Enabled: yes
+```
+
+Geht `--off` (Enabled: no), unterstützt cage die Ausgangs-Abschaltung. Den
+Status liest man aus der Zeile `Enabled: yes/no` des Ausgangs.
+
+### 3. Power-Dienst (HDMI-Skript)
+
+Vorlage im Repo: **`scripts/stagedesk-power-hdmi.py`** (Klasse `HdmiDisplay`):
+`power_off()` → `wlr-randr --output <OUTPUT> --off`, `power_on()` → `--on`,
+Status über `Enabled: yes/no`, plus 60-s-Heartbeat. Oben im Skript anpassen:
+
+```python
+WS_URL = "wss://stagedesk.t410.de/ws/monitor/pi/<SLUG>/"
+OUTPUT = "HDMI-A-1"      # aus wlr-randr
+```
+
+Installation wie in Abschnitt 9 (nach `/opt/stagedesk/`, Service). Der Dienst
+läuft als User `pi` und greift über `XDG_RUNTIME_DIR=/run/user/1000` auf den
+cage-Ausgang zu.
+
+```bash
+sudo systemctl restart stagedesk-power.service
+journalctl -u stagedesk-power.service -f     # "Status gemeldet: on/standby"
+```
+
+> **Wann welche Variante?**  Abschnitt 9 = CEC (TV per HDMI wecken/schlafen) ·
+> 9a = iiyama-Signage (SICP+CEC) · 9b = normaler Monitor am Pi-HDMI (DPMS).
+
+---
+
 ## 10. Endabnahme
 
 ```bash
