@@ -451,60 +451,62 @@ journalctl -u stagedesk-power.service -f     # "Power-Status: on/standby"
 
 ---
 
-## 9b. (Alternative) Normaler Monitor am Pi-HDMI: Power per HDMI-DPMS
+## 9b. Normaler Monitor am Pi-HDMI: Power per **DDC/CI** (empfohlen)
 
-Wenn ein **ganz normaler Monitor direkt am Pi-HDMI** hängt (kein CEC, kein
-Netzwerk-Display), schaltet der Pi einfach **seinen eigenen HDMI-Ausgang**
-an/aus (DPMS über `wlr-randr` unter cage). Der Kiosk (Chromium) läuft dabei
-weiter — nur das Bild wird ab-/zugeschaltet.
+Ein **ganz normaler Monitor ohne CEC** (direkt am Pi-HDMI) lässt sich am
+saubersten per **DDC/CI** steuern: Der Pi sendet dem Monitor über die HDMI-
+Datenleitung direkt einen Power-Befehl (wie der Ein/Aus-Knopf am Monitor).
+Kiosk/cage laufen dabei **unberührt** weiter — kein Flackern.
 
-### 1. wlr-randr installieren & Ausgang finden
+> **Warum nicht einfach den Pi-HDMI-Ausgang per DPMS (`wlr-randr --off`)?**
+> cage **reaktiviert** einen abgeschalteten Ausgang nach ~15 s von selbst
+> (Hotplug beim Monitor-Standby) → der Monitor flackert an/aus. DDC/CI umgeht
+> das komplett. (Die DPMS-Variante liegt als `scripts/stagedesk-power-hdmi.py`
+> bei, ist aber nur Notlösung, wenn der Monitor kein DDC/CI kann.)
 
-```bash
-sudo apt install -y wlr-randr
-export XDG_RUNTIME_DIR=/run/user/1000
-export WAYLAND_DISPLAY=$(basename $(ls /run/user/1000/wayland-* | grep -v '\.lock' | head -1))
-wlr-randr        # Ausgangsname merken, meist HDMI-A-1
-```
-
-### 2. Schalten testen (Monitor wird kurz schwarz)
+### 1. ddcutil einrichten & Monitor prüfen
 
 ```bash
-wlr-randr --output HDMI-A-1 --off    # -> Enabled: no
-wlr-randr --output HDMI-A-1 --on     # -> Enabled: yes
+sudo apt install -y ddcutil
+sudo usermod -aG i2c pi                                   # DDC-Zugriff ohne sudo
+echo i2c-dev | sudo tee /etc/modules-load.d/i2c-dev.conf  # Modul bei Boot laden
+sudo modprobe i2c-dev
+ddcutil detect            # Monitor muss auftauchen (Model, I2C bus)
+ddcutil getvcp D6         # "Power mode" — wird der VCP-Code D6 unterstützt?
 ```
 
-Geht `--off` (Enabled: no), unterstützt cage die Ausgangs-Abschaltung. Den
-Status liest man aus der Zeile `Enabled: yes/no` des Ausgangs.
+### 2. Schalten testen (Monitor geht wirklich aus/an)
 
-### 3. Power-Dienst (HDMI-Skript)
+```bash
+ddcutil setvcp D6 04      # AUS  (04 = Off/DPMS off)
+ddcutil setvcp D6 01      # AN
+```
 
-> **Wichtig:** cage **reaktiviert** einen mit `--off` abgeschalteten Ausgang nach
-> ~15 s von selbst wieder (Hotplug beim Monitor-Standby). Deshalb enthält das
-> Skript einen **Watchdog**, der `--off` alle paar Sekunden wiederholt, solange
-> „aus" gewünscht ist — sonst geht der Monitor immer wieder an. Der gemeldete
-> Status ist der **gewünschte** Zustand (stabil), nicht der flackernde Hardware-Wert.
+Geht der Monitor bei `04` aus **und** bei `01` wieder an, ist DDC/CI der Weg.
+Weckt `01` den Monitor aus `04` nicht, stattdessen **`02` (Standby)** als
+Aus-Wert nehmen (leichterer Schlaf, zuverlässiger beim Aufwecken).
 
-Vorlage im Repo: **`scripts/stagedesk-power-hdmi.py`** (Klasse `HdmiDisplay`):
-`power_off()` → `wlr-randr --output <OUTPUT> --off` (+ Watchdog),
-`power_on()` → `--on`, plus 60-s-Heartbeat. Oben im Skript anpassen:
+### 3. Power-Dienst (DDC-Skript)
+
+Vorlage im Repo: **`scripts/stagedesk-power-ddc.py`** (Klasse `DdcDisplay`):
+`power_off()` → `ddcutil setvcp D6 04`, `power_on()` → `D6 01`, Status =
+gewünschter Zustand, plus 60-s-Heartbeat. Oben anpassen:
 
 ```python
-WS_URL = "wss://stagedesk.t410.de/ws/monitor/pi/<SLUG>/"
-OUTPUT = "HDMI-A-1"      # aus wlr-randr
+WS_URL  = "wss://stagedesk.t410.de/ws/monitor/pi/<SLUG>/"
+VAL_OFF = "04"      # ggf. "02" (Standby), falls Aufwecken zickt
 ```
 
 Installation wie in Abschnitt 9 (nach `/opt/stagedesk/`, Service). Der Dienst
-läuft als User `pi` und greift über `XDG_RUNTIME_DIR=/run/user/1000` auf den
-cage-Ausgang zu.
+läuft als User `pi` (in Gruppe `i2c`) und braucht kein sudo.
 
 ```bash
 sudo systemctl restart stagedesk-power.service
-journalctl -u stagedesk-power.service -f     # "Status gemeldet: on/standby"
+journalctl -u stagedesk-power.service -f     # "DDC/CI → Monitor AUS/AN"
 ```
 
-> **Wann welche Variante?**  Abschnitt 9 = CEC (TV per HDMI wecken/schlafen) ·
-> 9a = iiyama-Signage (SICP+CEC) · 9b = normaler Monitor am Pi-HDMI (DPMS).
+> **Wann welche Variante?**  Abschnitt 9 = CEC (TV per HDMI) · 9a = iiyama-Signage
+> (SICP+CEC) · 9b = normaler Monitor ohne CEC (DDC/CI; DPMS nur als Notlösung).
 
 ---
 
