@@ -32,6 +32,27 @@ const weatherIcons = {
 };
 
 
+// ═══ WebUntis-Iframe — Zoom + Dark-Mode, wiederverwendbar ═══
+function WebUntisFrame({ url, zoom = 100, dark = false }) {
+  const z = zoom || 100;
+  return (
+    <iframe
+      src={url}
+      className="w-full h-full border-0"
+      title="WebUntis Stundenplan"
+      sandbox="allow-scripts allow-same-origin"
+      style={{
+        transform: `scale(${z / 100})`,
+        transformOrigin: 'top left',
+        width: `${10000 / z}%`,
+        height: `${10000 / z}%`,
+        ...(dark ? { filter: 'invert(0.88) hue-rotate(180deg)' } : {}),
+      }}
+    />
+  );
+}
+
+
 // ═══ ON AIR Komponente — Größe, Position, Farbe konfigurierbar ═══
 function OnAirIndicator({ config, accent }) {
   if (!config?.zeige_onair || !config?.ist_on_air) return null;
@@ -335,8 +356,8 @@ export default function MonitorPage() {
         </div>
       )}
 
-      {/* KLAUSUR — nur aktiv wenn bildschirm-Slug vorhanden und Klausur läuft */}
-      {klausur && !config?.notfall_aktiv && (
+      {/* KLAUSUR — Vollbild-Overlay; im Splitscreen unterdrückt (dort eigene Seite) */}
+      {klausur && !config?.notfall_aktiv && config?.layout_modus !== 'split' && (
         <div
           className="fixed inset-0 z-[95] flex items-center justify-center"
           style={{ background: klausur.farbe || '#1e40af' }}
@@ -461,19 +482,8 @@ export default function MonitorPage() {
           {/* WebUntis Iframe — Vollbild */}
           {config?.zeige_webuntis && config?.webuntis_url ? (
             <div className="flex-1 min-w-0">
-              <iframe
-                src={config.webuntis_url}
-                className="w-full h-full border-0"
-                title="WebUntis Stundenplan"
-                sandbox="allow-scripts allow-same-origin"
-                style={{
-                  transform: `scale(${(config.webuntis_zoom || 100) / 100})`,
-                  transformOrigin: 'top left',
-                  width: `${10000 / (config.webuntis_zoom || 100)}%`,
-                  height: `${10000 / (config.webuntis_zoom || 100)}%`,
-                  ...(config.webuntis_dark_mode ? { filter: 'invert(0.88) hue-rotate(180deg)' } : {}),
-                }}
-              />
+              <WebUntisFrame url={config.webuntis_url} zoom={config.webuntis_zoom}
+                             dark={config.webuntis_dark_mode} />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
@@ -648,6 +658,92 @@ export default function MonitorPage() {
             <div className="text-white/40 text-3xl">Kein Bild ausgewählt</div>
           )}
         </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ═══ SPLITSCREEN LAYOUT ═══════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════════
+  if (config?.layout_modus === 'split') {
+    const renderSplitSide = (kind) => {
+      switch (kind) {
+        case 'webuntis': {
+          const untisUrl = config?.webuntis_url_1tag || config?.webuntis_url;
+          return untisUrl ? (
+            <WebUntisFrame url={untisUrl} zoom={config.webuntis_zoom} dark={config.webuntis_dark_mode} />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white/30 text-2xl">
+              Kein WebUntis-Link
+            </div>
+          );
+        }
+        case 'klausur':
+          return klausur ? (
+            <div className="w-full h-full flex items-center justify-center p-10"
+                 style={{ background: klausur.farbe || '#1e40af' }}>
+              <div className="text-center max-w-3xl">
+                <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white/10 text-white/90 text-base tracking-[0.3em] uppercase mb-8">
+                  <AlignLeft className="w-5 h-5" /> Klausur
+                </div>
+                <h1 className="text-5xl font-black text-white mb-6 leading-tight">{klausur.titel}</h1>
+                {klausur.text && (
+                  <p className="text-xl text-white/85 leading-relaxed whitespace-pre-line">{klausur.text}</p>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-white/25 text-2xl"
+                 style={{ background: bgColor }}>
+              Keine Klausur aktiv
+            </div>
+          );
+        case 'onair': {
+          const oaLive = config?.ist_on_air;
+          const oaColor = config?.on_air_farbe || accent;
+          return (
+            <div className="w-full h-full flex items-center justify-center"
+                 style={{ background: oaLive ? oaColor : '#0a0a0a' }}>
+              {oaLive ? (
+                <h1 className={`text-white font-black tracking-tight text-center px-6 ${config?.on_air_blinken !== false ? 'animate-on-air-pulse' : ''}`}
+                    style={{ fontSize: 'clamp(3rem, 9vw, 9rem)' }}>
+                  {config?.on_air_text || 'ON AIR'}
+                </h1>
+              ) : (
+                <div className="text-white/20 text-4xl font-light tracking-widest uppercase">Standby</div>
+              )}
+            </div>
+          );
+        }
+        case 'uhr':
+          return (
+            <div className="w-full h-full flex flex-col items-center justify-center" style={{ background: bgColor }}>
+              <div className="text-white font-black tabular-nums tracking-tight" style={{ fontSize: 'clamp(4rem, 12vw, 12rem)' }}>
+                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+              </div>
+              <div className="text-white/50 text-2xl mt-2">
+                {time.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+              </div>
+            </div>
+          );
+        default:
+          return <div className="w-full h-full" style={{ background: bgColor }} />;
+      }
+    };
+    const linksProzent = Math.min(80, Math.max(20, config?.split_links_prozent || 50));
+    return (
+      <div className="fixed inset-0 flex flex-col" style={{ background: bgColor }}>
+        {vollbildHeader}
+        <div className="flex-1 min-h-0 flex">
+          <div className="min-w-0 overflow-hidden" style={{ width: `${linksProzent}%` }}>
+            {renderSplitSide(config?.split_links || 'klausur')}
+          </div>
+          <div className="w-px bg-white/15 shrink-0" />
+          <div className="min-w-0 overflow-hidden flex-1">
+            {renderSplitSide(config?.split_rechts || 'webuntis')}
+          </div>
+        </div>
+        {overlays}
       </div>
     );
   }
@@ -1348,19 +1444,8 @@ export default function MonitorPage() {
                   <h2 className="text-sm font-semibold text-purple-400 uppercase tracking-wider">Stundenplan</h2>
                 </div>
                 <div className="flex-1 rounded-xl overflow-hidden border border-white/10 bg-white/[0.02]">
-                  <iframe
-                    src={config.webuntis_url}
-                    className="w-full h-full border-0"
-                    title="WebUntis Stundenplan"
-                    sandbox="allow-scripts allow-same-origin"
-                    style={{
-                      transform: `scale(${(config.webuntis_zoom || 100) / 100})`,
-                      transformOrigin: 'top left',
-                      width: `${10000 / (config.webuntis_zoom || 100)}%`,
-                      height: `${10000 / (config.webuntis_zoom || 100)}%`,
-                      ...(config.webuntis_dark_mode ? { filter: 'invert(0.88) hue-rotate(180deg)' } : {}),
-                    }}
-                  />
+                  <WebUntisFrame url={config.webuntis_url} zoom={config.webuntis_zoom}
+                                 dark={config.webuntis_dark_mode} />
                 </div>
               </div>
             )}
