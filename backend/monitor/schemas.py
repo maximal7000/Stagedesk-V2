@@ -70,9 +70,13 @@ class MonitorConfigSchema(Schema):
     pdf_seiten: str = ''
     pdf_statische_seite: int = 1
     aktives_bild_id: Optional[int] = None
+    split_links: str = 'klausur'
+    split_rechts: str = 'webuntis'
+    split_links_prozent: int = 50
     theme_preset: str
     zeige_webuntis: bool
     webuntis_url: str
+    webuntis_url_1tag: str = ''
     webuntis_zoom: int
     webuntis_dark_mode: bool
     zeige_hintergrundbild: bool
@@ -174,9 +178,13 @@ class MonitorConfigUpdateSchema(Schema):
     pdf_seiten: Optional[str] = None
     pdf_statische_seite: Optional[int] = None
     aktives_bild_id: Optional[int] = None
+    split_links: Optional[str] = None
+    split_rechts: Optional[str] = None
+    split_links_prozent: Optional[int] = None
     theme_preset: Optional[str] = None
     zeige_webuntis: Optional[bool] = None
     webuntis_url: Optional[str] = None
+    webuntis_url_1tag: Optional[str] = None
     webuntis_zoom: Optional[int] = None
     webuntis_dark_mode: Optional[bool] = None
     zeige_hintergrundbild: Optional[bool] = None

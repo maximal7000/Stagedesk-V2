@@ -54,12 +54,28 @@ class MonitorConfig(models.Model):
         ('baukasten', 'Widget-Baukasten (frei)'),
         ('pdf_vollbild', 'PDF-Vollbild'),
         ('bild_vollbild', 'Bild-Vollbild'),
+        ('split', 'Splitscreen'),
     ]
     layout_modus = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='standard')
 
     # Bei Vollbild-Layouts (PDF/Bild): den Standard-Header (Titel/Logo) oben anzeigen.
     vollbild_header = models.BooleanField(default=False,
         help_text="Vollbild-Layouts: Standard-Header (Titel/Logo) oben einblenden")
+
+    # ─── Splitscreen (layout_modus='split') ───
+    SPLIT_INHALT_CHOICES = [
+        ('klausur',  'Klausur'),
+        ('onair',    'On Air'),
+        ('webuntis', 'WebUntis'),
+        ('uhr',      'Uhr'),
+        ('leer',     'Leer'),
+    ]
+    split_links = models.CharField(max_length=20, choices=SPLIT_INHALT_CHOICES, default='klausur',
+        help_text="Inhalt der linken Split-Seite")
+    split_rechts = models.CharField(max_length=20, choices=SPLIT_INHALT_CHOICES, default='webuntis',
+        help_text="Inhalt der rechten Split-Seite")
+    split_links_prozent = models.IntegerField(default=50,
+        help_text="Breite der linken Seite in Prozent (20–80)")
 
     # ─── Baukasten-Layout ────────────────
     layout_widgets = models.JSONField(default=list, blank=True,
@@ -145,6 +161,8 @@ class MonitorConfig(models.Model):
     # ─── WebUntis ──────────────────────────
     zeige_webuntis = models.BooleanField(default=False)
     webuntis_url = models.URLField(blank=True)
+    webuntis_url_1tag = models.URLField(blank=True,
+        help_text="Kompakter Link (nur 1 Tag) — wird im Splitscreen genutzt")
     webuntis_zoom = models.IntegerField(default=100, help_text="Zoom in Prozent")
     webuntis_dark_mode = models.BooleanField(default=False)
 

@@ -24,7 +24,7 @@ const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 // ─── Collapsible Section ────────────────────────────────────────
 function Section({ id, title, description, icon: Icon, iconColor, open, onToggle, badge, statusDot, children }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+    <div id={`section-${id}`} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden scroll-mt-32">
       <button onClick={() => onToggle(id)}
         className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-800/40 transition-colors group">
         <div className="flex items-center gap-3">
@@ -107,6 +107,12 @@ export default function MonitorAdminPage() {
     bildschirme: false,
   });
   const toggleSection = (id) => setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+  const jumpToSection = (id) => {
+    setOpenSections(prev => ({ ...prev, [id]: true }));
+    requestAnimationFrame(() => {
+      document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   // Permissions
   const canView = isAdmin || hasPermission('monitor.view');
@@ -208,7 +214,8 @@ export default function MonitorAdminPage() {
     'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
     'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
     'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id',
-    'zeige_webuntis','webuntis_url','webuntis_zoom','webuntis_dark_mode',
+    'zeige_webuntis','webuntis_url','webuntis_url_1tag','webuntis_zoom','webuntis_dark_mode',
+    'split_links','split_rechts','split_links_prozent',
     'zeige_hintergrundbild','aktives_hintergrundbild_id',
     'zeige_qr_code','qr_code_url','qr_code_label',
     'zeige_freitext','freitext_titel','freitext_inhalt',
@@ -660,6 +667,49 @@ export default function MonitorAdminPage() {
             )}
           </div>
         </div>
+
+        {/* Sprungnavigation — layout-relevante Sektionen hervorgehoben */}
+        {(() => {
+          const lm = monitorConfig?.layout_modus || 'standard';
+          const relevantMap = {
+            standard: ['profil', 'widgets', 'medien', 'theme', 'ankuendigungen'],
+            baukasten: ['profil', 'baukasten', 'widgets', 'medien'],
+            stundenplan: ['profil', 'widgets'],
+            onair: ['profil', 'onair'],
+            abfahrten: ['profil', 'oepnv'],
+            pdf_vollbild: ['profil', 'medien'],
+            bild_vollbild: ['profil', 'medien'],
+            split: ['profil', 'widgets', 'onair'],
+          };
+          const relevant = new Set(relevantMap[lm] || relevantMap.standard);
+          const navItems = [
+            { id: 'bildschirme', label: 'Bildschirme' },
+            { id: 'profil', label: 'Profil' },
+            { id: 'allgemein', label: 'Allgemein' },
+            { id: 'onair', label: 'ON AIR' },
+            { id: 'widgets', label: 'Widgets' },
+            { id: 'theme', label: 'Theme' },
+            { id: 'medien', label: 'Medien' },
+            { id: 'ankuendigungen', label: 'Ankündigungen' },
+            ...(lm === 'abfahrten' ? [{ id: 'oepnv', label: 'ÖPNV' }] : []),
+            ...(lm === 'baukasten' ? [{ id: 'baukasten', label: 'Baukasten' }] : []),
+            { id: 'api', label: 'API' },
+          ];
+          return (
+            <div className="max-w-6xl mx-auto mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+              {navItems.map(n => (
+                <button key={n.id} onClick={() => jumpToSection(n.id)}
+                  className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    relevant.has(n.id)
+                      ? 'bg-purple-600/20 text-purple-300 hover:bg-purple-600/30'
+                      : 'bg-gray-800/60 text-gray-500 hover:text-gray-300 hover:bg-gray-800'
+                  }`}>
+                  {n.label}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ═══ Bildschirme ═══ */}
@@ -1200,6 +1250,7 @@ export default function MonitorAdminPage() {
                   <option value="baukasten">Widget-Baukasten (frei)</option>
                   <option value="pdf_vollbild">PDF-Vollbild</option>
                   <option value="bild_vollbild">Bild-Vollbild</option>
+                  <option value="split">Splitscreen</option>
                 </select>
               </div>
             </div>
@@ -1237,6 +1288,75 @@ export default function MonitorAdminPage() {
                 </p>
               </div>
             )}
+
+            {monitorConfig.layout_modus === 'split' && (() => {
+              const INHALTE = [
+                { v: 'klausur', l: 'Klausur' },
+                { v: 'onair', l: 'On Air' },
+                { v: 'webuntis', l: 'WebUntis' },
+                { v: 'uhr', l: 'Uhr' },
+                { v: 'leer', l: 'Leer' },
+              ];
+              const links = monitorConfig.split_links || 'klausur';
+              const rechts = monitorConfig.split_rechts || 'webuntis';
+              const prozent = monitorConfig.split_links_prozent || 50;
+              const hatWebuntis = links === 'webuntis' || rechts === 'webuntis';
+              return (
+                <div className="p-3 bg-teal-900/10 border border-teal-500/20 rounded-lg space-y-4">
+                  <p className="text-xs text-teal-300">
+                    <LayoutGrid className="w-3.5 h-3.5 inline mr-1" />
+                    Splitscreen: zwei frei wählbare Inhalte nebeneinander.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Linke Seite</label>
+                      <select value={links} onChange={e => updateConfig('split_links', e.target.value)} disabled={!canEdit}
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm">
+                        {INHALTE.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-400 mb-1">Rechte Seite</label>
+                      <select value={rechts} onChange={e => updateConfig('split_rechts', e.target.value)} disabled={!canEdit}
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm">
+                        {INHALTE.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">
+                      Aufteilung: {prozent}% / {100 - prozent}%
+                    </label>
+                    <input type="range" min={20} max={80} step={5} value={prozent}
+                      onChange={e => updateConfig('split_links_prozent', parseInt(e.target.value))}
+                      disabled={!canEdit} className="w-full accent-teal-500" />
+                  </div>
+
+                  {hatWebuntis && (
+                    <div className="space-y-2 pt-2 border-t border-teal-500/10">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">WebUntis-Link (1 Tag, für Split)</label>
+                        <input type="url" value={monitorConfig.webuntis_url_1tag || ''}
+                          onChange={e => updateConfig('webuntis_url_1tag', e.target.value)} disabled={!canEdit}
+                          placeholder="https://…webuntis.com/… (kompakte 1-Tages-Ansicht)"
+                          className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm" />
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          Leer = normaler WebUntis-Link (unter &quot;Widgets → WebUntis&quot;) wird genutzt.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {(links === 'klausur' || rechts === 'klausur') && (
+                    <p className="text-[11px] text-amber-400">
+                      Klausur wird nur angezeigt, wenn der Monitor per Bildschirm (Slug) läuft und eine Klausur aktiv ist.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
 
             {(monitorConfig.layout_modus === 'pdf_vollbild' || monitorConfig.layout_modus === 'bild_vollbild') && (
               <div className="p-3 bg-orange-900/10 border border-orange-500/20 rounded-lg space-y-4">
@@ -1719,9 +1839,18 @@ export default function MonitorAdminPage() {
               {monitorConfig.zeige_webuntis && (
                 <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
                   <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Calendar className="w-4 h-4 text-purple-400" /> WebUntis iFrame</h4>
-                  <input type="url" value={monitorConfig.webuntis_url} onChange={e => updateConfig('webuntis_url', e.target.value)}
-                    disabled={!canEdit} placeholder="https://neilo.webuntis.com/..."
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Link (2 Tage) — Vollbild-Stundenplan &amp; Widget</label>
+                    <input type="url" value={monitorConfig.webuntis_url} onChange={e => updateConfig('webuntis_url', e.target.value)}
+                      disabled={!canEdit} placeholder="https://neilo.webuntis.com/..."
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Link (1 Tag, kompakt) — für Splitscreen</label>
+                    <input type="url" value={monitorConfig.webuntis_url_1tag || ''} onChange={e => updateConfig('webuntis_url_1tag', e.target.value)}
+                      disabled={!canEdit} placeholder="https://neilo.webuntis.com/... (leer = 2-Tage-Link)"
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-500 mb-1">Zoom: {monitorConfig.webuntis_zoom}%</label>
