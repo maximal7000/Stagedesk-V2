@@ -25,14 +25,16 @@ const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 // Aktiver Admin-Bereich (Hub-Navigation). Sections rendern nur im passenden Bereich.
 const AreaContext = createContext(null);
 
-// ─── Collapsible Section ────────────────────────────────────────
-function Section({ id, area, title, description, icon: Icon, iconColor, open, onToggle, badge, statusDot, children }) {
+// ─── Section — collapsible; oder `plain` (immer offen, kein Aufklappen) ───
+function Section({ id, area, plain, title, description, icon: Icon, iconColor, open, onToggle, badge, statusDot, children }) {
   const activeArea = useContext(AreaContext);
   if (area && activeArea && area !== activeArea) return null;
+  const isOpen = plain ? true : open;
+  const HeaderTag = plain ? 'div' : 'button';
   return (
     <div id={`section-${id}`} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden scroll-mt-32">
-      <button onClick={() => onToggle(id)}
-        className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-800/40 transition-colors group">
+      <HeaderTag {...(plain ? {} : { onClick: () => onToggle(id) })}
+        className={`w-full px-5 py-4 flex items-center justify-between ${plain ? '' : 'hover:bg-gray-800/40 transition-colors group'}`}>
         <div className="flex items-center gap-3">
           <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconColor || 'bg-gray-800'}`}>
             <Icon className="w-4.5 h-4.5 text-white" />
@@ -46,9 +48,9 @@ function Section({ id, area, title, description, icon: Icon, iconColor, open, on
             {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
           </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${open ? '' : '-rotate-90'}`} />
-      </button>
-      {open && <div className="px-5 pb-5 space-y-4 border-t border-gray-800/50 pt-4">{children}</div>}
+        {!plain && <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${open ? '' : '-rotate-90'}`} />}
+      </HeaderTag>
+      {isOpen && <div className="px-5 pb-5 space-y-4 border-t border-gray-800/50 pt-4">{children}</div>}
     </div>
   );
 }
@@ -106,6 +108,10 @@ export default function MonitorAdminPage() {
 
   // Events (aktivierbare Modi)
   const [events, setEvents] = useState([]);
+
+  // Klausur-Vorlagen (selbst erstellbar) + globale Einstellungen
+  const [klausurVorlagen, setKlausurVorlagen] = useState([]);
+  const [globalSettings, setGlobalSettings] = useState(null);
 
   // Sections
   const [searchParams, setSearchParams] = useSearchParams();
@@ -234,6 +240,34 @@ export default function MonitorAdminPage() {
     } catch { toast.error('Fehler'); }
   };
 
+  const fetchKlausurVorlagen = useCallback(async () => {
+    try { const res = await apiClient.get('/monitor/klausur-vorlagen'); setKlausurVorlagen(res.data); } catch {}
+  }, []);
+  const saveKlausurVorlage = async (v) => {
+    try {
+      const body = {
+        name: v.name, dauer_minuten: v.dauer_minuten || 90, titel: v.titel || 'Klausur', text: v.text || '',
+        farbe: v.farbe || '#1e40af', anzeige_modus: v.anzeige_modus || 'vollbild',
+        webuntis_link_id: v.webuntis_link_id || null, split_seite: v.split_seite || 'links', split_prozent: v.split_prozent || 50,
+      };
+      if (v.id) await apiClient.put(`/monitor/klausur-vorlagen/${v.id}`, body);
+      else await apiClient.post('/monitor/klausur-vorlagen', body);
+      await fetchKlausurVorlagen();
+      toast.success('Vorlage gespeichert');
+    } catch { toast.error('Fehler beim Speichern'); }
+  };
+  const deleteKlausurVorlage = async (id) => {
+    try { await apiClient.delete(`/monitor/klausur-vorlagen/${id}`); await fetchKlausurVorlagen(); } catch { toast.error('Fehler'); }
+  };
+
+  const fetchGlobalSettings = useCallback(async () => {
+    try { const res = await apiClient.get('/monitor/global-settings'); setGlobalSettings(res.data); } catch {}
+  }, []);
+  const saveGlobalSettings = async () => {
+    try { await apiClient.put('/monitor/global-settings', globalSettings); toast.success('Globale Einstellungen gespeichert'); }
+    catch { toast.error('Fehler beim Speichern'); }
+  };
+
   const fetchConfigForProfile = useCallback(async (profileId) => {
     try {
       const [configRes, ankRes, dateiRes] = await Promise.all([
@@ -255,13 +289,15 @@ export default function MonitorAdminPage() {
       fetchKlausuren();
       fetchWebuntisLinks();
       fetchEvents();
+      fetchKlausurVorlagen();
+      fetchGlobalSettings();
       if (profs.length > 0) {
         const std = profs.find(p => p.ist_standard) || profs[0];
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
     })();
-  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents]);
+  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents, fetchKlausurVorlagen, fetchGlobalSettings]);
 
   // Switch profile
   const switchProfile = (id) => {
@@ -791,12 +827,11 @@ export default function MonitorAdminPage() {
         <div><label className="block text-xs text-gray-500 mb-1">Geschwindigkeit: {c.ticker_geschwindigkeit} px/s</label>
           <input type="range" min={10} max={200} value={c.ticker_geschwindigkeit} onChange={e => updateConfig('ticker_geschwindigkeit', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-blue-500" /></div>
       </>);
-      case 'zeige_wetter': return settingsCard(<CloudSun className="w-4 h-4 text-yellow-400" />, 'Wetter', <div className="grid grid-cols-2 gap-3">
+      case 'zeige_wetter': return settingsCard(<CloudSun className="w-4 h-4 text-yellow-400" />, 'Wetter', <>
         <div><label className="block text-xs text-gray-500 mb-1">Stadt</label>
           <input type="text" value={c.wetter_stadt} onChange={e => updateConfig('wetter_stadt', e.target.value)} disabled={!canEdit} placeholder="z.B. Lübeck" className={inp} /></div>
-        <div><label className="block text-xs text-gray-500 mb-1">OpenWeatherMap API-Key</label>
-          <input type="password" value={c.wetter_api_key} onChange={e => updateConfig('wetter_api_key', e.target.value)} disabled={!canEdit} placeholder="API-Key" className={inp} /></div>
-      </div>);
+        <p className="text-[11px] text-gray-500">API-Key wird einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
+      </>);
       case 'zeige_webuntis': return settingsCard(<Calendar className="w-4 h-4 text-purple-400" />, 'WebUntis iFrame', <>
         <div className="grid grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (2 Tage)</label>
@@ -841,20 +876,9 @@ export default function MonitorAdminPage() {
         <textarea value={c.freitext_inhalt} onChange={e => updateConfig('freitext_inhalt', e.target.value)} disabled={!canEdit} placeholder="Inhalt..." rows={3} className={`${inp} resize-none`} />
       </>);
       case 'zeige_raumplan': return settingsCard(<LayoutGrid className="w-4 h-4 text-indigo-400" />, 'Raumplan (WebUntis API)', <>
-        <div className="grid grid-cols-3 gap-3">
-          <div><label className="block text-xs text-gray-500 mb-1">Server</label>
-            <input type="text" value={c.raumplan_server} onChange={e => updateConfig('raumplan_server', e.target.value)} disabled={!canEdit} placeholder="katharineum.webuntis.com" className={inp} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">Schule</label>
-            <input type="text" value={c.raumplan_schule} onChange={e => updateConfig('raumplan_schule', e.target.value)} disabled={!canEdit} placeholder="katharineum" className={inp} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">Raum-Kürzel</label>
-            <input type="text" value={c.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)} disabled={!canEdit} placeholder="Aul" className={inp} /></div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className="block text-xs text-gray-500 mb-1">Benutzername (optional)</label>
-            <input type="text" value={c.raumplan_benutzername} onChange={e => updateConfig('raumplan_benutzername', e.target.value)} disabled={!canEdit} placeholder="Leer = Anonym" className={inp} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">Passwort (optional)</label>
-            <input type="password" value={c.raumplan_passwort} onChange={e => updateConfig('raumplan_passwort', e.target.value)} disabled={!canEdit} placeholder="Passwort" className={inp} /></div>
-        </div>
+        <div><label className="block text-xs text-gray-500 mb-1">Raum-Kürzel (pro Ansicht)</label>
+          <input type="text" value={c.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)} disabled={!canEdit} placeholder="z.B. Aul" className={inp} /></div>
+        <p className="text-[11px] text-gray-500">Server, Schule und Login werden einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
       </>);
       case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-amber-400" />, 'Eigener Countdown', <div className="grid grid-cols-2 gap-3">
         <div><label className="block text-xs text-gray-500 mb-1">Event-Name</label>
@@ -926,32 +950,24 @@ export default function MonitorAdminPage() {
               <Monitor className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Monitor-Konfiguration</h1>
-              {hasChanges ? (
+              <h1 className="text-lg font-bold text-white">Monitor</h1>
+              {activeArea === 'ansichten' && hasChanges ? (
                 <p className="text-xs text-amber-400 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   Ungespeicherte Änderungen
                 </p>
-              ) : savedAt && Date.now() - savedAt < 4000 ? (
+              ) : activeArea === 'ansichten' && savedAt && Date.now() - savedAt < 4000 ? (
                 <p className="text-xs text-green-400 flex items-center gap-1">
                   <Check className="w-3 h-3" /> Gespeichert
                 </p>
-              ) : activeProfile ? (
-                <p className="text-xs text-gray-500">{activeProfile.name}</p>
-              ) : null}
+              ) : (
+                <p className="text-xs text-gray-500 capitalize">{areaNav.find(a => a.id === activeArea)?.label}</p>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowPreview(!showPreview)}
-              className={`p-2.5 rounded-xl transition-colors ${showPreview ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'}`}
-              title="Live-Vorschau">
-              <Eye className="w-4 h-4" />
-            </button>
-            <a href={`/monitor${monitorConfig?.slug ? `?profil=${monitorConfig.slug}` : ''}`} target="_blank" rel="noopener noreferrer"
-              className="p-2.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl" title="In neuem Tab öffnen">
-              <ExternalLink className="w-4 h-4" />
-            </a>
-            {canEdit && (
+            {/* Speichern nur im Bereich „Ansichten" (speichert die Profil-Konfiguration) */}
+            {activeArea === 'ansichten' && canEdit && (
               <button onClick={handleSaveMonitorConfig} disabled={monitorSaving || !monitorConfig || !hasChanges}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
                   hasChanges
@@ -989,7 +1005,7 @@ export default function MonitorAdminPage() {
       <div className="space-y-4 min-w-0">
 
       {/* ═══ Bildschirme ═══ */}
-      <Section id="bildschirme" area="bildschirme" title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
+      <Section id="bildschirme" area="bildschirme" plain title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
         icon={Monitor} iconColor="bg-indigo-600/30" open={openSections.bildschirme} onToggle={toggleSection}
         badge={bildschirme.length || null}>
 
@@ -1274,31 +1290,23 @@ export default function MonitorAdminPage() {
           )}
         </div>
 
-        {/* Schnellvorlagen */}
+        {/* Eigene Vorlagen — anklicken füllt das Formular vor */}
         {canEdit && !showNewKlausur && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] text-gray-500">Schnellvorlage:</span>
-            {[
-              { label: '90 Min · Vollbild', mins: 90, modus: 'vollbild' },
-              { label: '90 Min · Splitscreen', mins: 90, modus: 'split' },
-              { label: '45 Min · Vollbild', mins: 45, modus: 'vollbild' },
-            ].map(t => (
-              <button key={t.label} onClick={() => {
-                  const now = new Date();
-                  const bis = new Date(now.getTime() + t.mins * 60000);
-                  setKlausurTemplate({
-                    titel: 'Klausur', text: '', farbe: '#1e40af',
-                    aktiv_von: now.toISOString(), aktiv_bis: bis.toISOString(),
-                    bildschirm_ids: [], anzeige_modus: t.modus, webuntis_link_id: null,
-                    split_seite: 'links', split_prozent: 50,
-                  });
-                  setShowNewKlausur(true);
-                }}
-                className="px-2.5 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700">
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <KlausurVorlagenBar
+            vorlagen={klausurVorlagen} webuntisLinks={webuntisLinks}
+            onApply={(v) => {
+              const now = new Date();
+              const bis = new Date(now.getTime() + (v.dauer_minuten || 90) * 60000);
+              setKlausurTemplate({
+                titel: v.titel || 'Klausur', text: v.text || '', farbe: v.farbe || '#1e40af',
+                aktiv_von: now.toISOString(), aktiv_bis: bis.toISOString(),
+                bildschirm_ids: [], anzeige_modus: v.anzeige_modus || 'vollbild',
+                webuntis_link_id: v.webuntis_link_id || null,
+                split_seite: v.split_seite || 'links', split_prozent: v.split_prozent || 50,
+              });
+              setShowNewKlausur(true);
+            }}
+            onSave={saveKlausurVorlage} onDelete={deleteKlausurVorlage} />
         )}
 
         {showNewKlausur && (
@@ -1332,14 +1340,6 @@ export default function MonitorAdminPage() {
       </div>
       )}
 
-      {/* ─── Trenner: Profil-Konfiguration (nur Ansichten) ─────── */}
-      {activeArea === 'ansichten' && (
-      <div className="flex items-center gap-3 py-2">
-        <div className="flex-1 h-px bg-gray-800" />
-        <span className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Profil-Konfiguration</span>
-        <div className="flex-1 h-px bg-gray-800" />
-      </div>
-      )}
 
       {!monitorConfig ? (
         <div className="flex items-center justify-center py-20">
@@ -1349,8 +1349,22 @@ export default function MonitorAdminPage() {
         <>
           {activeArea === 'ansichten' && (
           <>
-          {/* ═══ Profil-Tabs ═══ */}
+          {/* ═══ Ansichten-Tabs ═══ */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Ansichten</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => setShowPreview(!showPreview)}
+                  className={`p-1.5 rounded-lg transition-colors ${showPreview ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                  title="Live-Vorschau ein/aus">
+                  <Eye className="w-4 h-4" />
+                </button>
+                <a href={`/monitor${monitorConfig?.slug ? `?profil=${monitorConfig.slug}` : ''}`} target="_blank" rel="noopener noreferrer"
+                  className="p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-lg" title="In neuem Tab öffnen">
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
             <div className="flex items-center gap-2 overflow-x-auto">
               {profiles.map(p => (
                 <button key={p.id} onClick={() => switchProfile(p.id)}
@@ -1369,7 +1383,7 @@ export default function MonitorAdminPage() {
               {canEdit && (
                 <button onClick={() => setShowNewProfile(true)}
                   className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-gray-500 hover:text-white hover:bg-gray-800 border border-dashed border-gray-700 transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Neues Profil
+                  <Plus className="w-3.5 h-3.5" /> Neue Ansicht
                 </button>
               )}
             </div>
@@ -1377,7 +1391,7 @@ export default function MonitorAdminPage() {
             {/* Profil-Aktionen (nur mit Bearbeiten-Recht) */}
             {canEdit && activeProfile && (
               <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-800/60">
-                <span className="text-[11px] text-gray-500 mr-1">Aktives Profil:</span>
+                <span className="text-[11px] text-gray-500 mr-1">Aktive Ansicht:</span>
                 <button onClick={handleDuplicateProfile} title="Duplizieren"
                   className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700">
                   <Copy className="w-3.5 h-3.5" /> Duplizieren
@@ -1574,13 +1588,13 @@ export default function MonitorAdminPage() {
           )}
 
           {/* ═══ Profil & Zeitplan ═══ */}
-          <Section id="profil" area="ansichten" title="Profil & Zeitplan" description="Name, Layout-Modus und automatische Zeitsteuerung"
+          <Section id="profil" area="ansichten" title="Ansicht & Zeitplan" description="Name, Layout-Modus und automatische Zeitsteuerung"
             icon={CalendarClock} iconColor="bg-green-600/30" open={openSections.profil} onToggle={toggleSection}
             badge={monitorConfig.zeitplan?.length || null}>
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Profil-Name</label>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">Name der Ansicht</label>
                 <input type="text" value={monitorConfig.name} onChange={e => updateConfig('name', e.target.value)}
                   disabled={!canEdit}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
@@ -2157,285 +2171,6 @@ export default function MonitorAdminPage() {
               </div>
             ))}
 
-            {/* ── Widget Settings (alt — entfernt, jetzt inline) ── */}
-            {false && (
-            <div className="space-y-3 border-t border-gray-800 pt-4">
-              <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Widget-Einstellungen</p>
-
-              {monitorConfig.zeige_ticker && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Type className="w-4 h-4 text-blue-400" /> Ticker</h4>
-                  <input type="text" value={monitorConfig.ticker_text} onChange={e => updateConfig('ticker_text', e.target.value)}
-                    disabled={!canEdit} placeholder="Text der durchläuft..."
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Geschwindigkeit: {monitorConfig.ticker_geschwindigkeit} px/s</label>
-                    <input type="range" min={10} max={200} value={monitorConfig.ticker_geschwindigkeit}
-                      onChange={e => updateConfig('ticker_geschwindigkeit', parseInt(e.target.value))}
-                      disabled={!canEdit} className="w-full accent-blue-500" />
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_wetter && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><CloudSun className="w-4 h-4 text-yellow-400" /> Wetter</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Stadt</label>
-                      <input type="text" value={monitorConfig.wetter_stadt} onChange={e => updateConfig('wetter_stadt', e.target.value)}
-                        disabled={!canEdit} placeholder="z.B. Lübeck"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">OpenWeatherMap API-Key</label>
-                      <input type="password" value={monitorConfig.wetter_api_key} onChange={e => updateConfig('wetter_api_key', e.target.value)}
-                        disabled={!canEdit} placeholder="API-Key"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_webuntis && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Calendar className="w-4 h-4 text-purple-400" /> WebUntis iFrame</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (2 Tage)</label>
-                      <select value={monitorConfig.webuntis_link_id || ''} disabled={!canEdit}
-                        onChange={e => updateConfig('webuntis_link_id', e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
-                        <option value="">— eigener Link unten —</option>
-                        {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (1 Tag)</label>
-                      <select value={monitorConfig.webuntis_link_1tag_id || ''} disabled={!canEdit}
-                        onChange={e => updateConfig('webuntis_link_1tag_id', e.target.value ? parseInt(e.target.value) : null)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
-                        <option value="">— eigener Link unten —</option>
-                        {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-gray-500">Gespeicherte Links (Bibliothek weiter unten) haben Vorrang. Sonst eigene Links:</p>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Eigener Link (2 Tage) — Vollbild &amp; Widget</label>
-                    <input type="url" value={monitorConfig.webuntis_url} onChange={e => updateConfig('webuntis_url', e.target.value)}
-                      disabled={!canEdit} placeholder="https://neilo.webuntis.com/..."
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Eigener Link (1 Tag, kompakt) — für Splitscreen</label>
-                    <input type="url" value={monitorConfig.webuntis_url_1tag || ''} onChange={e => updateConfig('webuntis_url_1tag', e.target.value)}
-                      disabled={!canEdit} placeholder="https://neilo.webuntis.com/... (leer = 2-Tage-Link)"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Zoom: {monitorConfig.webuntis_zoom}%</label>
-                      <input type="range" min={50} max={150} value={monitorConfig.webuntis_zoom}
-                        onChange={e => updateConfig('webuntis_zoom', parseInt(e.target.value))}
-                        disabled={!canEdit} className="w-full accent-purple-500" />
-                    </div>
-                    <div className="flex items-end">
-                      <button onClick={() => canEdit && updateConfig('webuntis_dark_mode', !monitorConfig.webuntis_dark_mode)}
-                        disabled={!canEdit}
-                        className={`px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
-                          monitorConfig.webuntis_dark_mode ? 'bg-blue-600/20 border-blue-500/40 text-blue-300' : 'bg-gray-800 border-gray-700 text-gray-400'
-                        }`}>
-                        <Moon className="w-4 h-4 inline mr-1" /> Dark-Mode
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_qr_code && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><QrCode className="w-4 h-4 text-emerald-400" /> QR-Code</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">URL</label>
-                      <input type="url" value={monitorConfig.qr_code_url} onChange={e => updateConfig('qr_code_url', e.target.value)}
-                        disabled={!canEdit} placeholder="https://..."
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Beschriftung</label>
-                      <input type="text" value={monitorConfig.qr_code_label} onChange={e => updateConfig('qr_code_label', e.target.value)}
-                        disabled={!canEdit} placeholder="z.B. Event-Anmeldung"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_kamera && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Activity className="w-4 h-4 text-cyan-400" /> Kamera-Stream</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Titel</label>
-                      <input type="text" value={monitorConfig.kamera_titel || ''} onChange={e => updateConfig('kamera_titel', e.target.value)}
-                        disabled={!canEdit} placeholder="z.B. Saal" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Typ</label>
-                      <select value={monitorConfig.kamera_typ || 'img'} onChange={e => updateConfig('kamera_typ', e.target.value)}
-                        disabled={!canEdit} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
-                        <option value="img">MJPEG / Bild-Stream</option>
-                        <option value="video">HLS / MP4</option>
-                        <option value="iframe">iframe / Embed</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Stream-URL</label>
-                    <input type="url" value={monitorConfig.kamera_url || ''} onChange={e => updateConfig('kamera_url', e.target.value)}
-                      disabled={!canEdit} placeholder="http://kamera.lan/stream.mjpg"
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_freitext && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><AlignLeft className="w-4 h-4 text-teal-400" /> Freier Textblock</h4>
-                  <input type="text" value={monitorConfig.freitext_titel} onChange={e => updateConfig('freitext_titel', e.target.value)}
-                    disabled={!canEdit} placeholder="Titel"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                  <textarea value={monitorConfig.freitext_inhalt} onChange={e => updateConfig('freitext_inhalt', e.target.value)}
-                    disabled={!canEdit} placeholder="Inhalt..." rows={3}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 resize-none disabled:opacity-50" />
-                </div>
-              )}
-
-              {monitorConfig.zeige_raumplan && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><LayoutGrid className="w-4 h-4 text-indigo-400" /> Raumplan (WebUntis API)</h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Server</label>
-                      <input type="text" value={monitorConfig.raumplan_server} onChange={e => updateConfig('raumplan_server', e.target.value)}
-                        disabled={!canEdit} placeholder="katharineum.webuntis.com"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Schule</label>
-                      <input type="text" value={monitorConfig.raumplan_schule} onChange={e => updateConfig('raumplan_schule', e.target.value)}
-                        disabled={!canEdit} placeholder="katharineum"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Raum-Kürzel</label>
-                      <input type="text" value={monitorConfig.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)}
-                        disabled={!canEdit} placeholder="Aul"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Benutzername (optional)</label>
-                      <input type="text" value={monitorConfig.raumplan_benutzername} onChange={e => updateConfig('raumplan_benutzername', e.target.value)}
-                        disabled={!canEdit} placeholder="Leer = Anonym"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Passwort (optional)</label>
-                      <input type="password" value={monitorConfig.raumplan_passwort} onChange={e => updateConfig('raumplan_passwort', e.target.value)}
-                        disabled={!canEdit} placeholder="Passwort"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_eigener_countdown && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Timer className="w-4 h-4 text-amber-400" /> Eigener Countdown</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Event-Name</label>
-                      <input type="text" value={monitorConfig.eigener_countdown_name} onChange={e => updateConfig('eigener_countdown_name', e.target.value)}
-                        disabled={!canEdit} placeholder="z.B. Schulkonzert"
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 mb-1">Datum & Uhrzeit</label>
-                      <input type="datetime-local" value={monitorConfig.eigener_countdown_datum ? monitorConfig.eigener_countdown_datum.slice(0, 16) : ''}
-                        onChange={e => updateConfig('eigener_countdown_datum', e.target.value ? e.target.value + ':00Z' : null)}
-                        disabled={!canEdit}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_bildschirmschoner && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><MonitorOff className="w-4 h-4 text-cyan-400" /> Bildschirmschoner</h4>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Timeout: {monitorConfig.bildschirmschoner_timeout} Minuten</label>
-                    <input type="range" min={1} max={60} value={monitorConfig.bildschirmschoner_timeout}
-                      onChange={e => updateConfig('bildschirmschoner_timeout', parseInt(e.target.value))}
-                      disabled={!canEdit} className="w-full accent-cyan-500" />
-                  </div>
-                </div>
-              )}
-
-              {monitorConfig.zeige_seitenrotation && (
-                <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><RotateCw className="w-4 h-4 text-pink-400" /> Seitenrotation</h4>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">Intervall: {monitorConfig.seitenrotation_intervall} Sekunden</label>
-                    <input type="range" min={5} max={120} value={monitorConfig.seitenrotation_intervall}
-                      onChange={e => updateConfig('seitenrotation_intervall', parseInt(e.target.value))}
-                      disabled={!canEdit} className="w-full accent-pink-500" />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-2">Seiten zum Rotieren</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                      {[
-                        { id: 'main', label: 'Hauptansicht' },
-                        { id: 'veranstaltungen', label: 'Veranstaltungen' },
-                        { id: 'ankuendigungen', label: 'Ankündigungen' },
-                        { id: 'raumplan', label: 'Raumplan' },
-                        { id: 'wetter', label: 'Wetter' },
-                        { id: 'slideshow', label: 'Slideshow' },
-                        { id: 'pdf', label: 'PDF' },
-                        { id: 'freitext', label: 'Freier Text' },
-                      ].map(page => {
-                        const selected = (monitorConfig.seitenrotation_seiten || []).includes(page.id);
-                        return (
-                          <button key={page.id}
-                            onClick={() => {
-                              if (!canEdit) return;
-                              const seiten = monitorConfig.seitenrotation_seiten || [];
-                              updateConfig('seitenrotation_seiten', selected ? seiten.filter(s => s !== page.id) : [...seiten, page.id]);
-                            }}
-                            disabled={!canEdit}
-                            className={`p-2 rounded-lg text-xs border transition-colors disabled:opacity-50 ${
-                              selected ? 'bg-pink-600/20 border-pink-500/40 text-pink-300' : 'bg-gray-800 border-gray-700 text-gray-400'
-                            }`}>
-                            {page.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {!monitorConfig.zeige_ticker && !monitorConfig.zeige_wetter && !monitorConfig.zeige_webuntis &&
-               !monitorConfig.zeige_qr_code && !monitorConfig.zeige_freitext && !monitorConfig.zeige_raumplan &&
-               !monitorConfig.zeige_eigener_countdown && !monitorConfig.zeige_bildschirmschoner && !monitorConfig.zeige_seitenrotation && (
-                <p className="text-sm text-gray-600 text-center py-4">Aktiviere Widgets mit zusätzlichen Einstellungen, um sie hier zu konfigurieren.</p>
-              )}
-            </div>
-            )}
           </Section>
 
           {/* ═══ Theme & Farben ═══ */}
@@ -2699,7 +2434,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Events (aktivierbare Modi) ═══ */}
-          <Section id="events" area="events" title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
+          <Section id="events" area="events" plain title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
             icon={Radio} iconColor="bg-violet-600/30" open={openSections.events} onToggle={toggleSection}
             badge={events.length}
             statusDot={events.some(e => e.aktiv) ? 'bg-violet-400 animate-pulse' : null}>
@@ -3352,7 +3087,52 @@ export default function MonitorAdminPage() {
           )}
 
           {/* ═══ API & Token ═══ */}
-          <Section id="api" area="einstellungen" title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."
+          <Section id="globalsettings" area="einstellungen" plain title="Globale Zugänge" description="Einmal eintragen — gilt für alle Ansichten (Wetter-Key, Raumplan-Login)"
+            icon={Key} iconColor="bg-emerald-600/30" open badge={null}>
+            {globalSettings ? (
+              <>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">OpenWeatherMap API-Key (Wetter)</label>
+                  <input type="password" value={globalSettings.wetter_api_key || ''} disabled={!canEdit}
+                    onChange={e => setGlobalSettings({ ...globalSettings, wetter_api_key: e.target.value })}
+                    placeholder="API-Key" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Raumplan-Server</label>
+                    <input type="text" value={globalSettings.raumplan_server || ''} disabled={!canEdit}
+                      onChange={e => setGlobalSettings({ ...globalSettings, raumplan_server: e.target.value })}
+                      placeholder="katharineum.webuntis.com" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Raumplan-Schule</label>
+                    <input type="text" value={globalSettings.raumplan_schule || ''} disabled={!canEdit}
+                      onChange={e => setGlobalSettings({ ...globalSettings, raumplan_schule: e.target.value })}
+                      placeholder="katharineum" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Raumplan-Benutzer (optional)</label>
+                    <input type="text" value={globalSettings.raumplan_benutzername || ''} disabled={!canEdit}
+                      onChange={e => setGlobalSettings({ ...globalSettings, raumplan_benutzername: e.target.value })}
+                      placeholder="Leer = Anonym" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-400 mb-1">Raumplan-Passwort (optional)</label>
+                    <input type="password" value={globalSettings.raumplan_passwort || ''} disabled={!canEdit}
+                      onChange={e => setGlobalSettings({ ...globalSettings, raumplan_passwort: e.target.value })}
+                      placeholder="Passwort" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
+                  </div>
+                </div>
+                {canEdit && (
+                  <button onClick={saveGlobalSettings} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg">
+                    <Save className="w-4 h-4" /> Speichern
+                  </button>
+                )}
+              </>
+            ) : <p className="text-sm text-gray-500">Lädt …</p>}
+          </Section>
+
+          <Section id="api" area="einstellungen" plain title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."
             icon={Key} iconColor="bg-gray-600/30" open={openSections.api} onToggle={toggleSection}>
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">API-Token (für dieses Profil)</label>
@@ -3699,6 +3479,15 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
               <input type="datetime-local" value={toLocal(draft.aktiv_bis)} onChange={e => setDraft({ ...draft, aktiv_bis: toIso(e.target.value) })}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
             </div>
+            <div className="col-span-2 flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-gray-500">Schnell:</span>
+              <button type="button" onClick={() => setDraft({ ...draft, aktiv_von: new Date().toISOString() })} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 text-xs hover:bg-gray-700">Ab = jetzt</button>
+              {[2, 4, 8].map(h => (
+                <button key={h} type="button" onClick={() => setDraft({ ...draft, aktiv_bis: new Date((draft.aktiv_von ? new Date(draft.aktiv_von) : new Date()).getTime() + h * 3600000).toISOString() })}
+                  className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 text-xs hover:bg-gray-700">bis +{h} h</button>
+              ))}
+              <button type="button" onClick={() => setDraft({ ...draft, aktiv_von: null, aktiv_bis: null })} className="px-2 py-0.5 rounded bg-gray-800 text-gray-400 text-xs hover:bg-gray-700">leeren</button>
+            </div>
             <p className="col-span-2 text-[11px] text-gray-500">Leer = nur manuell per „Aktivieren". Mit Zeitfenster schaltet das Event automatisch ein und wieder aus.</p>
           </div>
 
@@ -3799,6 +3588,95 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+
+// ─── Klausur-Vorlagen (selbst erstellbar) ────────────────────
+function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete }) {
+  const [manage, setManage] = useState(false);
+  const [draft, setDraft] = useState(null); // {id?, name, dauer_minuten, anzeige_modus, farbe, split_seite, split_prozent, webuntis_link_id}
+  const newDraft = () => ({ name: '', dauer_minuten: 90, anzeige_modus: 'vollbild', farbe: '#1e40af', split_seite: 'links', split_prozent: 50, webuntis_link_id: null });
+  const save = async () => { if (!draft.name.trim()) { toast.error('Name nötig'); return; } await onSave(draft); setDraft(null); };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-gray-500">Vorlage:</span>
+        {vorlagen.length === 0 && <span className="text-[11px] text-gray-600">— noch keine —</span>}
+        {vorlagen.map(v => (
+          <button key={v.id} onClick={() => onApply(v)}
+            className="px-2.5 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700">
+            {v.name}
+          </button>
+        ))}
+        <button onClick={() => setManage(m => !m)} className="px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-white">
+          {manage ? 'fertig' : 'Vorlagen verwalten'}
+        </button>
+      </div>
+
+      {manage && (
+        <div className="p-3 bg-gray-800/40 rounded-xl border border-gray-700 space-y-3">
+          {!draft && (
+            <button onClick={() => setDraft(newDraft())} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs rounded-lg">
+              <Plus className="w-3.5 h-3.5" /> Neue Vorlage
+            </button>
+          )}
+          {draft && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Name (z.B. Deutsch-Abi 300 Min)" autoFocus
+                  className="col-span-2 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm" />
+                <div>
+                  <label className="block text-[11px] text-gray-500 mb-0.5">Dauer (Min)</label>
+                  <input type="number" min={5} value={draft.dauer_minuten} onChange={e => setDraft({ ...draft, dauer_minuten: parseInt(e.target.value) || 90 })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm" />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-gray-500 mb-0.5">Anzeige</label>
+                  <select value={draft.anzeige_modus} onChange={e => setDraft({ ...draft, anzeige_modus: e.target.value })}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
+                    <option value="vollbild">Vollbild</option>
+                    <option value="split">Splitscreen</option>
+                    <option value="standard">Kein Zwang</option>
+                  </select>
+                </div>
+              </div>
+              {draft.anzeige_modus === 'split' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="col-span-2">
+                    <label className="block text-[11px] text-gray-500 mb-0.5">Stundenplan-Link</label>
+                    <select value={draft.webuntis_link_id || ''} onChange={e => setDraft({ ...draft, webuntis_link_id: e.target.value ? parseInt(e.target.value) : null })}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
+                      <option value="">— Link des Profils —</option>
+                      {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
+                  </div>
+                  <select value={draft.split_seite} onChange={e => setDraft({ ...draft, split_seite: e.target.value })}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
+                    <option value="links">Klausur links</option><option value="rechts">Klausur rechts</option>
+                  </select>
+                  <input type="number" min={20} max={80} value={draft.split_prozent} onChange={e => setDraft({ ...draft, split_prozent: parseInt(e.target.value) || 50 })}
+                    className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm" placeholder="% Klausur" />
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <input type="color" value={draft.farbe} onChange={e => setDraft({ ...draft, farbe: e.target.value })} className="h-8 w-12 bg-gray-800 border border-gray-700 rounded" />
+                <button onClick={save} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg flex items-center gap-1"><Save className="w-3.5 h-3.5" /> Speichern</button>
+                <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 text-white text-xs rounded-lg">Abbrechen</button>
+              </div>
+            </div>
+          )}
+          {vorlagen.map(v => (
+            <div key={v.id} className="flex items-center gap-2 text-xs text-gray-300">
+              <span className="w-2 h-2 rounded-full" style={{ background: v.farbe }} />
+              <span className="flex-1">{v.name} · {v.dauer_minuten} Min · {v.anzeige_modus}</span>
+              <button onClick={() => setDraft({ ...v })} className="p-1 text-gray-400 hover:text-blue-400"><Edit className="w-3.5 h-3.5" /></button>
+              <button onClick={() => onDelete(v.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -3937,6 +3815,15 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
           <input type="datetime-local" value={bis} onChange={e => setBis(e.target.value)}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
         </div>
+      </div>
+      {/* Zeit-Schnellbuttons */}
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px] text-gray-500">Schnell:</span>
+        <button type="button" onClick={() => setVon(toLocalInput(new Date()))} className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 text-xs hover:bg-gray-700">Von = jetzt</button>
+        {[45, 60, 90, 120].map(m => (
+          <button key={m} type="button" onClick={() => setBis(toLocalInput(new Date((von ? new Date(von) : new Date()).getTime() + m * 60000)))}
+            className="px-2 py-0.5 rounded bg-gray-800 text-gray-300 text-xs hover:bg-gray-700">Bis +{m} min</button>
+        ))}
       </div>
       <div>
         <label className="block text-xs text-gray-400 mb-2">Auf welchen Bildschirmen?</label>

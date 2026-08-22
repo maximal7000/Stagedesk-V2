@@ -444,3 +444,46 @@ class MonitorEventUpdateSchema(Schema):
     aktiv_von: Optional[datetime] = None
     aktiv_bis: Optional[datetime] = None
     zuweisungen: Optional[List[EventZuweisungSchema]] = None
+
+
+# ─── Klausur-Vorlagen ────────────────────────────────────────
+class KlausurVorlageSchema(Schema):
+    id: int
+    name: str
+    dauer_minuten: int
+    titel: str
+    text: str = ''
+    farbe: str
+    anzeige_modus: str
+    webuntis_link_id: Optional[int] = None
+    split_seite: str
+    split_prozent: int
+
+
+class KlausurVorlageCreateSchema(Schema):
+    name: str
+    dauer_minuten: int = 90
+    titel: str = 'Klausur'
+    text: str = ''
+    farbe: str = '#1e40af'
+    anzeige_modus: str = 'vollbild'
+    webuntis_link_id: Optional[int] = None
+    split_seite: str = 'links'
+    split_prozent: int = 50
+
+
+# ─── Globale Einstellungen ───────────────────────────────────
+class GlobalSettingsSchema(Schema):
+    wetter_api_key: str = ''
+    raumplan_server: str = ''
+    raumplan_schule: str = ''
+    raumplan_benutzername: str = ''
+    raumplan_passwort: str = ''
+
+
+class GlobalSettingsUpdateSchema(Schema):
+    wetter_api_key: Optional[str] = None
+    raumplan_server: Optional[str] = None
+    raumplan_schule: Optional[str] = None
+    raumplan_benutzername: Optional[str] = None
+    raumplan_passwort: Optional[str] = None

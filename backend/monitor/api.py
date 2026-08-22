@@ -19,7 +19,7 @@ from users.models import UserProfile
 from ninja.errors import HttpError
 from .models import (
     MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur, WebUntisLink,
-    MonitorEvent, EventBildschirm,
+    MonitorEvent, EventBildschirm, KlausurVorlage, MonitorGlobalSettings,
 )
 
 
@@ -44,6 +44,8 @@ from .schemas import (
     KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
     MonitorEventSchema, MonitorEventCreateSchema, MonitorEventUpdateSchema,
+    KlausurVorlageSchema, KlausurVorlageCreateSchema,
+    GlobalSettingsSchema, GlobalSettingsUpdateSchema,
 )
 from . import oepnv
 
@@ -52,7 +54,9 @@ monitor_router = Router(tags=["Monitor"])
 
 def _fetch_weather(config):
     """Wetter von OpenWeatherMap holen und cachen (15 Min)"""
-    if not config.zeige_wetter or not config.wetter_stadt or not config.wetter_api_key:
+    gs = MonitorGlobalSettings.load()
+    api_key = gs.wetter_api_key or config.wetter_api_key   # global hat Vorrang
+    if not config.zeige_wetter or not config.wetter_stadt or not api_key:
         return None
 
     # Cache noch gültig?
@@ -65,7 +69,7 @@ def _fetch_weather(config):
         url = (
             f"https://api.openweathermap.org/data/2.5/weather"
             f"?q={urllib.parse.quote(config.wetter_stadt)}"
-            f"&appid={config.wetter_api_key}"
+            f"&appid={api_key}"
             f"&units=metric&lang=de"
         )
         req = urllib.request.Request(url)
@@ -90,7 +94,10 @@ def _fetch_weather(config):
 
 def _fetch_raumplan(config):
     """Raumplan von WebUntis JSONRPC API holen und cachen (15 Min)"""
-    if not config.zeige_raumplan or not config.raumplan_server or not config.raumplan_schule:
+    gs = MonitorGlobalSettings.load()
+    server = gs.raumplan_server or config.raumplan_server        # global hat Vorrang
+    schule = gs.raumplan_schule or config.raumplan_schule
+    if not config.zeige_raumplan or not server or not schule:
         return None
 
     # Cache noch gültig?
@@ -99,7 +106,7 @@ def _fetch_raumplan(config):
         if age < 900:
             return config.raumplan_cache
 
-    base_url = f"https://{config.raumplan_server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(config.raumplan_schule)}"
+    base_url = f"https://{server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(schule)}"
 
     def _rpc(method, params=None, cookie_jar=None):
         body = json.dumps({
@@ -115,9 +122,9 @@ def _fetch_raumplan(config):
     try:
         jar = http.cookiejar.CookieJar()
 
-        # 1. Authentifizieren (anonym oder mit Credentials)
-        user = config.raumplan_benutzername or "#anonymous#"
-        pwd = config.raumplan_passwort or ""
+        # 1. Authentifizieren (anonym oder mit Credentials; global hat Vorrang)
+        user = gs.raumplan_benutzername or config.raumplan_benutzername or "#anonymous#"
+        pwd = gs.raumplan_passwort or config.raumplan_passwort or ""
         auth_resp = _rpc("authenticate", {"user": user, "password": pwd, "client": "stagedesk"}, jar)
         if "error" in auth_resp:
             return config.raumplan_cache or None
@@ -867,3 +874,52 @@ def deactivate_event(request, id: int):
     event.aktiv = False
     event.save(update_fields=['aktiv'])
     return event
+
+
+# ═══ Admin: Klausur-Vorlagen ═════════════════════════════════════
+
+@monitor_router.get("/klausur-vorlagen", response=list[KlausurVorlageSchema], auth=keycloak_auth)
+def list_klausur_vorlagen(request):
+    _require_perm(request, 'monitor.view')
+    return KlausurVorlage.objects.all()
+
+
+@monitor_router.post("/klausur-vorlagen", response=KlausurVorlageSchema, auth=keycloak_auth)
+def create_klausur_vorlage(request, payload: KlausurVorlageCreateSchema):
+    _require_perm(request, 'monitor.edit')
+    return KlausurVorlage.objects.create(**payload.dict())
+
+
+@monitor_router.put("/klausur-vorlagen/{id}", response=KlausurVorlageSchema, auth=keycloak_auth)
+def update_klausur_vorlage(request, id: int, payload: KlausurVorlageCreateSchema):
+    _require_perm(request, 'monitor.edit')
+    v = get_object_or_404(KlausurVorlage, id=id)
+    for key, value in payload.dict().items():
+        setattr(v, key, value)
+    v.save()
+    return v
+
+
+@monitor_router.delete("/klausur-vorlagen/{id}", auth=keycloak_auth)
+def delete_klausur_vorlage(request, id: int):
+    _require_perm(request, 'monitor.edit')
+    get_object_or_404(KlausurVorlage, id=id).delete()
+    return {"success": True}
+
+
+# ═══ Admin: Globale Einstellungen (Wetter/Raumplan-Zugang) ═══════
+
+@monitor_router.get("/global-settings", response=GlobalSettingsSchema, auth=keycloak_auth)
+def get_global_settings(request):
+    _require_perm(request, 'monitor.view')
+    return MonitorGlobalSettings.load()
+
+
+@monitor_router.put("/global-settings", response=GlobalSettingsSchema, auth=keycloak_auth)
+def update_global_settings(request, payload: GlobalSettingsUpdateSchema):
+    _require_perm(request, 'monitor.edit')
+    gs = MonitorGlobalSettings.load()
+    for key, value in payload.dict(exclude_unset=True).items():
+        setattr(gs, key, value)
+    gs.save()
+    return gs
