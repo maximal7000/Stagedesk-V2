@@ -396,3 +396,48 @@ class KlausurDisplaySchema(Schema):
     anzeige_modus: str = 'vollbild'
     split_seite: str = 'links'
     split_prozent: int = 50
+
+
+# ─── Events ──────────────────────────────────────────────────
+class EventZuweisungSchema(Schema):
+    bildschirm_id: int
+    profil_id: int
+    bildschirm_name: str = ''
+    profil_name: str = ''
+
+
+class MonitorEventSchema(Schema):
+    id: int
+    name: str
+    beschreibung: str = ''
+    farbe: str
+    aktiv: bool
+    aktiv_von: Optional[datetime] = None
+    aktiv_bis: Optional[datetime] = None
+    zuweisungen: List[EventZuweisungSchema] = []
+
+    @staticmethod
+    def resolve_zuweisungen(obj):
+        return [
+            {'bildschirm_id': z.bildschirm_id, 'profil_id': z.profil_id,
+             'bildschirm_name': z.bildschirm.name, 'profil_name': z.profil.name}
+            for z in obj.zuweisungen.select_related('bildschirm', 'profil').all()
+        ]
+
+
+class MonitorEventCreateSchema(Schema):
+    name: str
+    beschreibung: str = ''
+    farbe: str = '#7c3aed'
+    aktiv_von: Optional[datetime] = None
+    aktiv_bis: Optional[datetime] = None
+    zuweisungen: List[EventZuweisungSchema] = []
+
+
+class MonitorEventUpdateSchema(Schema):
+    name: Optional[str] = None
+    beschreibung: Optional[str] = None
+    farbe: Optional[str] = None
+    aktiv_von: Optional[datetime] = None
+    aktiv_bis: Optional[datetime] = None
+    zuweisungen: Optional[List[EventZuweisungSchema]] = None

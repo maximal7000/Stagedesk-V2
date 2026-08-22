@@ -515,8 +515,26 @@ class Bildschirm(models.Model):
                 return True
         return False
 
+    def get_active_event_profil(self):
+        """Profil eines aktiven Events für diesen Bildschirm (hat Vorrang vor Zeitplan).
+        Manuell aktivierte Events (aktiv=True) gehen vor Zeitfenster-Events."""
+        now = timezone.now()
+        zuweisungen = (self.event_zuweisungen
+                       .select_related('event', 'profil')
+                       .order_by('-event__aktiv', '-event__erstellt_am'))
+        for z in zuweisungen:
+            ev = z.event
+            aktiv = ev.aktiv or (ev.aktiv_von and ev.aktiv_bis and ev.aktiv_von <= now <= ev.aktiv_bis)
+            if aktiv and z.profil_id:
+                return z.profil
+        return None
+
     def get_active_profil(self):
-        """Aktives Profil anhand des Zeitplans bestimmen."""
+        """Aktives Profil bestimmen: aktives Event > Zeitplan > Default."""
+        event_profil = self.get_active_event_profil()
+        if event_profil:
+            return event_profil
+
         now = timezone.localtime()
         wochentag = now.weekday()
         zeit = now.strftime('%H:%M')
@@ -628,3 +646,53 @@ class Ankuendigung(models.Model):
 
     def __str__(self):
         return self.titel
+
+
+class MonitorEvent(models.Model):
+    """Benannter, aktivierbarer Modus. Während er aktiv ist, zeigen die
+    zugewiesenen Bildschirme eine andere Ansicht (Profil); danach kehren sie
+    automatisch zur normalen Auflösung (Zeitplan/Default) zurück."""
+    name = models.CharField(max_length=120)
+    beschreibung = models.CharField(max_length=300, blank=True)
+    farbe = models.CharField(max_length=7, default='#7c3aed', help_text="Akzentfarbe (Hex)")
+    aktiv = models.BooleanField(default=False, help_text="Manuell aktiviert")
+    aktiv_von = models.DateTimeField(null=True, blank=True,
+        help_text="Optional: automatisch aktiv ab (leer = nur manuell)")
+    aktiv_bis = models.DateTimeField(null=True, blank=True,
+        help_text="Optional: automatisch aktiv bis")
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    bildschirme = models.ManyToManyField(Bildschirm, through='EventBildschirm',
+        related_name='events', blank=True)
+
+    class Meta:
+        ordering = ['-aktiv', 'name']
+        verbose_name = 'Event'
+        verbose_name_plural = 'Events'
+
+    @property
+    def ist_aktiv_jetzt(self):
+        if self.aktiv:
+            return True
+        now = timezone.now()
+        if self.aktiv_von and self.aktiv_bis:
+            return self.aktiv_von <= now <= self.aktiv_bis
+        return False
+
+    def __str__(self):
+        return self.name
+
+
+class EventBildschirm(models.Model):
+    """Zuweisung: welches Profil ein Bildschirm während eines Events zeigt."""
+    event = models.ForeignKey(MonitorEvent, on_delete=models.CASCADE, related_name='zuweisungen')
+    bildschirm = models.ForeignKey(Bildschirm, on_delete=models.CASCADE, related_name='event_zuweisungen')
+    profil = models.ForeignKey(MonitorConfig, on_delete=models.CASCADE, related_name='event_zuweisungen')
+
+    class Meta:
+        unique_together = ('event', 'bildschirm')
+        verbose_name = 'Event-Bildschirm-Zuweisung'
+        verbose_name_plural = 'Event-Bildschirm-Zuweisungen'
+
+    def __str__(self):
+        return f"{self.event.name}: {self.bildschirm.name} → {self.profil.name}"

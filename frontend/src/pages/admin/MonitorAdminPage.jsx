@@ -96,6 +96,9 @@ export default function MonitorAdminPage() {
   // WebUntis-Link-Bibliothek
   const [webuntisLinks, setWebuntisLinks] = useState([]);
 
+  // Events (aktivierbare Modi)
+  const [events, setEvents] = useState([]);
+
   // Sections
   const [openSections, setOpenSections] = useState({
     profil: true,
@@ -107,6 +110,7 @@ export default function MonitorAdminPage() {
     medien: false,
     ankuendigungen: false,
     webuntislinks: false,
+    events: false,
     api: false,
     bildschirme: false,
   });
@@ -175,6 +179,42 @@ export default function MonitorAdminPage() {
     } catch { toast.error('Fehler beim Löschen'); }
   };
 
+  const fetchEvents = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/monitor/events');
+      setEvents(res.data);
+    } catch {}
+  }, []);
+
+  const saveEvent = async (ev) => {
+    try {
+      const body = {
+        name: ev.name, beschreibung: ev.beschreibung || '', farbe: ev.farbe || '#7c3aed',
+        zuweisungen: (ev.zuweisungen || []).map(z => ({ bildschirm_id: z.bildschirm_id, profil_id: z.profil_id })),
+      };
+      if (ev.id) await apiClient.put(`/monitor/events/${ev.id}`, body);
+      else await apiClient.post('/monitor/events', body);
+      await fetchEvents();
+      toast.success('Event gespeichert');
+    } catch { toast.error('Fehler beim Speichern'); }
+  };
+
+  const deleteEvent = async (id) => {
+    try {
+      await apiClient.delete(`/monitor/events/${id}`);
+      await fetchEvents();
+      toast.success('Event gelöscht');
+    } catch { toast.error('Fehler beim Löschen'); }
+  };
+
+  const toggleEventActive = async (ev) => {
+    try {
+      await apiClient.post(`/monitor/events/${ev.id}/${ev.aktiv ? 'deaktivieren' : 'aktivieren'}`);
+      await fetchEvents();
+      toast.success(ev.aktiv ? 'Event deaktiviert' : 'Event aktiviert');
+    } catch { toast.error('Fehler'); }
+  };
+
   const fetchConfigForProfile = useCallback(async (profileId) => {
     try {
       const [configRes, ankRes, dateiRes] = await Promise.all([
@@ -195,13 +235,14 @@ export default function MonitorAdminPage() {
       fetchBildschirme();
       fetchKlausuren();
       fetchWebuntisLinks();
+      fetchEvents();
       if (profs.length > 0) {
         const std = profs.find(p => p.ist_standard) || profs[0];
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
     })();
-  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks]);
+  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents]);
 
   // Switch profile
   const switchProfile = (id) => {
@@ -720,6 +761,7 @@ export default function MonitorAdminPage() {
             { id: 'widgets', label: 'Widgets' },
             { id: 'theme', label: 'Theme' },
             { id: 'medien', label: 'Medien' },
+            { id: 'events', label: 'Events' },
             { id: 'ankuendigungen', label: 'Ankündigungen' },
             { id: 'webuntislinks', label: 'WebUntis-Links' },
             ...(lm === 'abfahrten' ? [{ id: 'oepnv', label: 'ÖPNV' }] : []),
@@ -2355,6 +2397,15 @@ export default function MonitorAdminPage() {
             </div>
           </Section>
 
+          {/* ═══ Events (aktivierbare Modi) ═══ */}
+          <Section id="events" title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
+            icon={Radio} iconColor="bg-violet-600/30" open={openSections.events} onToggle={toggleSection}
+            badge={events.length}
+            statusDot={events.some(e => e.aktiv) ? 'bg-violet-400 animate-pulse' : null}>
+            <EventManager events={events} bildschirme={bildschirme} profiles={profiles} canEdit={canEdit}
+              onSave={saveEvent} onDelete={deleteEvent} onToggleActive={toggleEventActive} />
+          </Section>
+
           {/* ═══ WebUntis-Link-Bibliothek ═══ */}
           <Section id="webuntislinks" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
             icon={Calendar} iconColor="bg-purple-600/30" open={openSections.webuntislinks} onToggle={toggleSection}
@@ -3250,6 +3301,115 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
   );
 }
 
+
+
+// ─── Events (aktivierbare Modi) ──────────────────────────────
+function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete, onToggleActive }) {
+  const [draft, setDraft] = useState(null); // {id?, name, farbe, beschreibung, zuweisungen:[{bildschirm_id,profil_id}]}
+  const start = (ev) => setDraft(ev
+    ? { ...ev, zuweisungen: (ev.zuweisungen || []).map(z => ({ bildschirm_id: z.bildschirm_id, profil_id: z.profil_id })) }
+    : { name: '', farbe: '#7c3aed', beschreibung: '', zuweisungen: [] });
+  const profilFor = (bsId) => draft.zuweisungen.find(z => z.bildschirm_id === bsId)?.profil_id || '';
+  const setProfil = (bsId, profilId) => setDraft(d => {
+    const rest = d.zuweisungen.filter(z => z.bildschirm_id !== bsId);
+    return { ...d, zuweisungen: profilId ? [...rest, { bildschirm_id: bsId, profil_id: profilId }] : rest };
+  });
+  const save = async () => {
+    if (!draft.name.trim()) { toast.error('Name nötig'); return; }
+    await onSave(draft);
+    setDraft(null);
+  };
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500">
+        Ein Event weist Bildschirmen andere Ansichten zu. Beim Aktivieren schalten die Monitore um,
+        beim Deaktivieren automatisch zurück zu Zeitplan/Standard.
+      </p>
+      {canEdit && !draft && (
+        <button onClick={() => start(null)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg">
+          <Plus className="w-4 h-4" /> Neues Event
+        </button>
+      )}
+
+      {draft && (
+        <div className="p-4 bg-gray-800/40 rounded-xl border border-violet-500/30 space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-400 mb-1">Name</label>
+              <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
+                placeholder="z.B. Tag der offenen Tür" autoFocus
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Farbe</label>
+              <input type="color" value={draft.farbe} onChange={e => setDraft({ ...draft, farbe: e.target.value })}
+                className="w-full h-10 bg-gray-800 border border-gray-700 rounded-lg" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-400 mb-2">Ansicht pro Bildschirm (während des Events)</label>
+            {bildschirme.length === 0 ? (
+              <p className="text-xs text-gray-500 italic">Keine Bildschirme angelegt.</p>
+            ) : (
+              <div className="space-y-2">
+                {bildschirme.map(bs => (
+                  <div key={bs.id} className="flex items-center gap-3">
+                    <span className="text-sm text-gray-300 w-40 shrink-0 truncate">{bs.name}</span>
+                    <select value={profilFor(bs.id)} onChange={e => setProfil(bs.id, e.target.value ? parseInt(e.target.value) : null)}
+                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
+                      <option value="">— unverändert —</option>
+                      {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={save} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg">
+              <Save className="w-4 h-4" /> Speichern
+            </button>
+            <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">Abbrechen</button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {events.map(ev => (
+          <div key={ev.id} className={`p-3 rounded-xl border flex items-center gap-3 ${
+            ev.aktiv ? 'bg-violet-900/20 border-violet-500/40' : 'bg-gray-800/20 border-gray-700/40'}`}>
+            <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ev.farbe }} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-white text-sm">{ev.name}</span>
+                {ev.aktiv && <span className="px-2 py-0.5 text-[10px] bg-violet-500/30 text-violet-200 rounded-full">aktiv</span>}
+              </div>
+              <div className="text-xs text-gray-500">{(ev.zuweisungen || []).length} Bildschirm(e) zugewiesen</div>
+            </div>
+            {canEdit && (
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => onToggleActive(ev)}
+                  className={`px-3 py-1.5 text-xs rounded-lg font-medium ${
+                    ev.aktiv ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
+                  {ev.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                </button>
+                <button onClick={() => start(ev)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
+                <button onClick={() => onDelete(ev.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            )}
+          </div>
+        ))}
+        {events.length === 0 && !draft && (
+          <div className="p-8 text-center text-gray-500 border border-gray-800 rounded-xl">
+            <Radio className="w-10 h-10 mx-auto mb-2 opacity-20" />
+            <p className="text-sm">Noch keine Events — z.B. „Tag der offenen Tür" anlegen und bei Bedarf aktivieren.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 
 // ─── WebUntis-Link-Bibliothek ────────────────────────────────
