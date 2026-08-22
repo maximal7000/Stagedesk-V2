@@ -512,13 +512,8 @@ export default function MonitorPage() {
       <div className="fixed inset-0 overflow-hidden select-none flex flex-col" style={{ background: bgColor }}>
         {overlays}
 
-        {/* Uhr — floating oben rechts */}
-        {config?.zeige_uhr && (
-          <div className="absolute top-4 right-3 z-30 font-mono text-2xl font-bold tabular-nums tracking-wider"
-            style={{ color: '#da1f3d' }}>
-            {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          </div>
-        )}
+        {/* Uhr — floating oben rechts (im Dark-Mode wie das Iframe invertiert) */}
+        {config?.zeige_uhr && <StundenplanUhr time={time} dark={config?.webuntis_dark_mode} />}
 
         {/* Hauptbereich: WebUntis + optionaler Raumplan */}
         <div className="flex-1 flex overflow-hidden min-h-0">
