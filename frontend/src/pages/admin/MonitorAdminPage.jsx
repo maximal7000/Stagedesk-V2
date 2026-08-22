@@ -2072,7 +2072,7 @@ export default function MonitorAdminPage() {
                         style={{ color: f, fontSize: monitorConfig.on_air_split ? '2rem' : '3rem', textShadow: `0 0 40px ${f}60` }}>
                         {monitorConfig.on_air_text || 'ON AIR'}
                       </div>
-                      {monitorConfig.zeige_uhr && <div className="font-mono text-sm mt-3 tracking-widest" style={{ color: `${f}55` }}>12:34:56</div>}
+                      {monitorConfig.zeige_uhr && <div className="font-mono text-sm mt-3 tracking-widest font-bold animate-pulse" style={{ color: f, textShadow: `0 0 12px ${f}90` }}>12:34:56</div>}
                     </div>
                   );
                   if (monitorConfig.on_air_split) {

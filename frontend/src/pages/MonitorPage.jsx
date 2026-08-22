@@ -71,10 +71,10 @@ function OnAirFullscreen({
           {text}
         </h1>
         {zeigeUhr && uhrzeit && (
-          <div className="font-mono mt-8 tabular-nums tracking-[0.3em] font-bold"
+          <div className="font-mono mt-8 tabular-nums tracking-[0.3em] font-bold animate-pulse"
             style={{
-              color: '#fff', fontSize: 'clamp(2.5rem, 7vw, 6rem)', textIndent: '0.3em',
-              textShadow: `0 0 30px ${farbe}, 0 0 70px ${farbe}80`,
+              color: farbe, fontSize: 'clamp(1.75rem, 4vw, 3.5rem)', textIndent: '0.3em',
+              textShadow: `0 0 25px ${farbe}90`,
             }}>
             {uhrzeit}
           </div>
