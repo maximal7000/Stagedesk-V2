@@ -316,6 +316,8 @@ class BildschirmListSchema(Schema):
     name: str
     slug: str
     default_profil_id: Optional[int] = None
+    override_profil_id: Optional[int] = None
+    override_bis: Optional[datetime] = None
     zeitplan: list = []
     power_zeitplan: list = []
     ferien_modus: bool = False
@@ -337,6 +339,8 @@ class BildschirmUpdateSchema(Schema):
     name: Optional[str] = None
     slug: Optional[str] = None
     default_profil_id: Optional[int] = None
+    override_profil_id: Optional[int] = None
+    override_bis: Optional[datetime] = None
     zeitplan: Optional[list] = None
     power_zeitplan: Optional[list] = None
     ferien_modus: Optional[bool] = None
