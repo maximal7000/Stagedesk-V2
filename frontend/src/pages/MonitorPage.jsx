@@ -61,14 +61,15 @@ function StundenplanUhr({ time, dark }) {
   // Im Dark-Mode denselben Invert-Filter wie das Iframe anwenden, damit die
   // Farbe exakt zur (invertierten) Titelzeile passt.
   return (
-    <div className="absolute top-2 right-4 z-30 font-bold tabular-nums"
+    <div className="absolute top-2 right-4 z-30 tabular-nums"
       style={{
         color: '#da1f3d',
-        fontSize: '1.8rem',
+        fontSize: '1.9rem',
+        fontWeight: 400,
         lineHeight: 1,
         filter: dark ? 'invert(0.88) hue-rotate(180deg)' : undefined,
       }}>
-      {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+      {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
     </div>
   );
 }
