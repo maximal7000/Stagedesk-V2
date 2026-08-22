@@ -64,7 +64,7 @@ function StundenplanUhr({ time, dark }) {
     <div className="absolute top-2 right-4 z-30 tabular-nums"
       style={{
         color: '#da1f3d',
-        fontSize: '1.9rem',
+        fontSize: '2.1rem',
         fontWeight: 400,
         lineHeight: 1,
         filter: dark ? 'invert(0.88) hue-rotate(180deg)' : undefined,
