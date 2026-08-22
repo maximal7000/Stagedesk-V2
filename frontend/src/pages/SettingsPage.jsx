@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import {
   Sun, Moon, Monitor, Smartphone, Laptop, Globe,
   Shield, Key, Loader2, LogOut, CheckCircle, XCircle, AlertCircle, Bell, User, Upload, Trash2,
-  Calendar, Copy, RefreshCw,
+  Calendar, Copy, RefreshCw, ChevronRight, ChevronLeft,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTheme } from '../contexts/ThemeContext';
@@ -28,6 +28,7 @@ export default function SettingsPage() {
   } = useUser();
   
   const [activeTab, setActiveTab] = useState('appearance');
+  const [mobileDetail, setMobileDetail] = useState(false); // mobil: Liste vs. Detail
   const [saving, setSaving] = useState(false);
   const [initResult, setInitResult] = useState(null);
 
@@ -74,37 +75,55 @@ export default function SettingsPage() {
     return Globe;
   };
 
+  const activeTabName = tabs.find(t => t.id === activeTab)?.name || 'Einstellungen';
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Einstellungen</h1>
-        <p className="text-gray-400 mt-1">Verwalte deine persönlichen Einstellungen</p>
+    <div className="max-w-6xl mx-auto">
+      {/* Kopf — mobil mit Zurück-Pfeil im Detail */}
+      <div className="mb-6 flex items-center gap-2">
+        {mobileDetail && (
+          <button onClick={() => setMobileDetail(false)}
+            className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white rounded-lg">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        )}
+        <div>
+          <h1 className="text-2xl font-bold text-white">
+            <span className="md:hidden">{mobileDetail ? activeTabName : 'Einstellungen'}</span>
+            <span className="hidden md:inline">Einstellungen</span>
+          </h1>
+          <p className="text-gray-400 mt-1 hidden md:block">Verwalte deine persönlichen Einstellungen</p>
+        </div>
       </div>
 
-      {/* Tabs — auf engen Bildschirmen horizontal scrollbar statt page-overflow */}
-      <div className="border-b border-gray-800 -mx-4 sm:mx-0">
-        <nav className="flex gap-1 sm:gap-4 px-4 sm:px-0 overflow-x-auto whitespace-nowrap">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 sm:px-4 py-3 border-b-2 transition-colors shrink-0 ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-500'
-                    : 'border-transparent text-gray-400 hover:text-white'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {tab.name}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
+      <div className="md:flex md:gap-6 md:items-start">
+        {/* Nav-Liste (wie System-Einstellungen) */}
+        <aside className={`md:w-60 md:shrink-0 md:sticky md:top-4 ${mobileDetail ? 'hidden md:block' : 'block'}`}>
+          <nav className="space-y-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const active = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id); setMobileDetail(true); }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                    active
+                      ? 'md:bg-blue-600/15 md:text-blue-400 text-gray-200 bg-gray-800/60'
+                      : 'text-gray-300 hover:bg-gray-800/70'
+                  }`}
+                >
+                  <Icon className={`w-5 h-5 shrink-0 ${active ? 'md:text-blue-400' : 'text-gray-400'}`} />
+                  <span className="flex-1 font-medium">{tab.name}</span>
+                  <ChevronRight className="w-4 h-4 text-gray-500 md:hidden" />
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
 
-      {/* Tab Content */}
+        {/* Detail-Inhalt */}
+        <main className={`flex-1 min-w-0 ${mobileDetail ? 'block' : 'hidden md:block'}`}>
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
         {/* Profile Tab */}
         {activeTab === 'profile' && <ProfileTab />}
@@ -347,6 +366,8 @@ export default function SettingsPage() {
 
           </div>
         )}
+      </div>
+        </main>
       </div>
     </div>
   );

@@ -704,15 +704,20 @@ def get_notification_config(request):
     }
 
 
+class NotifyGlobalSchema(Schema):
+    disabled: List[str] = []
+
+
 @users_router.put("/notification-config/global", auth=keycloak_auth)
-def set_notification_global(request, payload: dict):
+def set_notification_global(request, payload: NotifyGlobalSchema):
     """Global (Admin): welche Kategorien systemweit NICHT verschickt werden."""
+    from ninja.errors import HttpError
     if not is_admin(request):
-        return 403, {"error": "Keine Berechtigung"}
+        raise HttpError(403, "Keine Berechtigung")
     import json as _json
     from users.models import Notification
     valid = {c[0] for c in Notification.KIND_CHOICES}
-    disabled = [k for k in (payload.get('disabled') or []) if k in valid]
+    disabled = [k for k in (payload.disabled or []) if k in valid]
     profile = get_or_create_profile(request)
     GlobalSettings.set_value('notify_disabled_kinds', _json.dumps(disabled),
                              'Systemweit deaktivierte Benachrichtigungs-Kategorien', profile)
