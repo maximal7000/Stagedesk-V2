@@ -61,12 +61,9 @@ function StundenplanUhr({ time, dark }) {
   // Im Dark-Mode denselben Invert-Filter wie das Iframe anwenden, damit die
   // Farbe exakt zur (invertierten) Titelzeile passt.
   return (
-    <div className="absolute top-3 right-3 z-30 px-3 py-1 rounded-lg font-mono text-2xl font-bold tabular-nums tracking-wider"
+    <div className="absolute top-4 right-3 z-30 font-mono text-2xl font-bold tabular-nums tracking-wider"
       style={{
-        background: 'rgba(255,255,255,0.9)',
         color: '#da1f3d',
-        backdropFilter: 'blur(4px)',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
         // Im Dark-Mode dieselbe Transformation wie das Iframe → Uhr kippt einfach mit
         filter: dark ? 'invert(0.88) hue-rotate(180deg)' : undefined,
       }}>
