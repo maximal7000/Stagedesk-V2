@@ -112,6 +112,11 @@ class UserProfile(models.Model):
     default_landing = models.CharField(max_length=200, blank=True, default='',
                                        help_text='Startseite nach Login, z.B. /veranstaltung')
 
+    # Benachrichtigungen: Liste der Kategorien (Notification.kind), die dieser
+    # Nutzer NICHT bekommen möchte. Leer = alle Kategorien aktiv.
+    notify_disabled = models.JSONField(default=list, blank=True,
+        help_text='Deaktivierte Benachrichtigungs-Kategorien (kind), z.B. ["kompetenz"]')
+
     # Profilbild — wird statt der Initialen genutzt wenn vorhanden.
     avatar = models.ImageField(upload_to='avatars/%Y/', null=True, blank=True)
 
