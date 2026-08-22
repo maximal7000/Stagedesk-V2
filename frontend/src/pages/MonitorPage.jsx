@@ -71,8 +71,11 @@ function OnAirFullscreen({
           {text}
         </h1>
         {zeigeUhr && uhrzeit && (
-          <div className="font-mono text-3xl mt-10 tabular-nums tracking-[0.3em]"
-            style={{ color: `${farbe}40`, textIndent: '0.3em' }}>
+          <div className="font-mono mt-8 tabular-nums tracking-[0.3em] font-bold"
+            style={{
+              color: '#fff', fontSize: 'clamp(2.5rem, 7vw, 6rem)', textIndent: '0.3em',
+              textShadow: `0 0 30px ${farbe}, 0 0 70px ${farbe}80`,
+            }}>
             {uhrzeit}
           </div>
         )}
@@ -463,14 +466,20 @@ export default function MonitorPage() {
           Kein Stundenplan-Link
         </div>
       );
+      const oaSeite = (
+        <OnAirFullscreen farbe={onAirFarbe} text={onAirText} zeigeUhr={zeigeUhr} uhrzeit={uhrzeit}
+          fontSize="clamp(2.5rem, 8vw, 8rem)" />
+      );
+      const onAirRechts = (config?.on_air_split_seite || 'rechts') === 'rechts';
       return (
         <div className="fixed inset-0 flex" style={{ background: '#000' }}>
           <div className="min-w-0 overflow-hidden" style={{ width: `${oaProzent}%` }}>
-            <OnAirFullscreen farbe={onAirFarbe} text={onAirText} zeigeUhr={zeigeUhr} uhrzeit={uhrzeit}
-              fontSize="clamp(2.5rem, 8vw, 8rem)" />
+            {onAirRechts ? untisSeite : oaSeite}
           </div>
           <div className="w-px bg-white/15 shrink-0" />
-          <div className="min-w-0 overflow-hidden flex-1">{untisSeite}</div>
+          <div className="min-w-0 overflow-hidden flex-1">
+            {onAirRechts ? oaSeite : untisSeite}
+          </div>
           {overlays}
         </div>
       );
@@ -513,7 +522,7 @@ export default function MonitorPage() {
         Kein Stundenplan-Link
       </div>
     );
-    const klausurLinks = (klausur.split_seite || 'links') === 'links';
+    const klausurLinks = (klausur.split_seite || 'rechts') === 'links';
     return (
       <div className="fixed inset-0 flex" style={{ background: bgColor }}>
         <div className="min-w-0 overflow-hidden" style={{ width: `${klausurLinks ? kProzent : 100 - kProzent}%` }}>

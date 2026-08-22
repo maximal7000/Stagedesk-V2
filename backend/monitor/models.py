@@ -89,9 +89,9 @@ class MonitorConfig(models.Model):
         ('uhr',      'Uhr'),
         ('leer',     'Leer'),
     ]
-    split_links = models.CharField(max_length=20, choices=SPLIT_INHALT_CHOICES, default='klausur',
+    split_links = models.CharField(max_length=20, choices=SPLIT_INHALT_CHOICES, default='webuntis',
         help_text="Inhalt der linken Split-Seite")
-    split_rechts = models.CharField(max_length=20, choices=SPLIT_INHALT_CHOICES, default='webuntis',
+    split_rechts = models.CharField(max_length=20, choices=SPLIT_INHALT_CHOICES, default='klausur',
         help_text="Inhalt der rechten Split-Seite")
     split_links_prozent = models.IntegerField(default=50,
         help_text="Breite der linken Seite in Prozent (20–80)")
@@ -304,6 +304,9 @@ class MonitorConfig(models.Model):
     on_air_vollbild = models.BooleanField(default=False, help_text="Bei ON AIR automatisch Vollbild-Anzeige")
     on_air_split = models.BooleanField(default=False,
         help_text="Bei ON AIR Splitscreen (ON AIR + Stundenplan) statt reinem Vollbild")
+    ON_AIR_SEITE_CHOICES = [('links', 'Links'), ('rechts', 'Rechts')]
+    on_air_split_seite = models.CharField(max_length=6, choices=ON_AIR_SEITE_CHOICES, default='rechts',
+        help_text="Auf welcher Seite ON AIR im Splitscreen steht")
 
     # ─── Kamera ────────────────────────────
     zeige_kamera = models.BooleanField(default=False)
@@ -602,7 +605,7 @@ class Klausur(models.Model):
         null=True, blank=True, related_name='als_klausur_link',
         help_text="Stundenplan-Link für den Split während der Klausur")
     split_seite = models.CharField(max_length=6, choices=[('links', 'Links'), ('rechts', 'Rechts')],
-        default='links', help_text="Auf welcher Seite die Klausur steht (Split)")
+        default='rechts', help_text="Auf welcher Seite die Klausur steht (Split)")
     split_prozent = models.IntegerField(default=50, help_text="Breite der Klausur-Seite in Prozent")
 
     erstellt_am = models.DateTimeField(auto_now_add=True)
@@ -717,7 +720,7 @@ class KlausurVorlage(models.Model):
     farbe = models.CharField(max_length=7, default='#1e40af')
     anzeige_modus = models.CharField(max_length=10, choices=Klausur.ANZEIGE_CHOICES, default='vollbild')
     webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL, null=True, blank=True, related_name='als_vorlage_link')
-    split_seite = models.CharField(max_length=6, default='links')
+    split_seite = models.CharField(max_length=6, default='rechts')
     split_prozent = models.IntegerField(default=50)
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
