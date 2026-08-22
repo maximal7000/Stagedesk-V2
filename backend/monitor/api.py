@@ -38,26 +38,23 @@ def _require_perm(request, code: str):
     raise HttpError(403, "Keine Berechtigung")
 
 
-def _actor_name(request, via_token=False):
-    """Lesbarer Name des Auslösers für das Audit-Log."""
-    if via_token:
-        return 'API-Token'
-    a = getattr(request, 'auth', None) or {}
-    return a.get('preferred_username') or a.get('name') or a.get('email') or a.get('sub', '') or 'unbekannt'
-
-
 def _log_audit(request, aktion, detail='', via_token=False):
-    from .models import MonitorAuditLog
-    try:
-        MonitorAuditLog.objects.create(
-            benutzer=_actor_name(request, via_token)[:150], aktion=aktion[:60], detail=str(detail)[:200])
-    except Exception:
-        pass  # Audit darf die eigentliche Aktion nie blockieren
+    """Schreibt in den globalen Audit-Log (core.audit → inventar.AuditLog)."""
+    from core.audit import log as _corelog
+    low = aktion.lower()
+    if 'deaktiv' in low or ' aus' in low:
+        a = 'status_geaendert'
+    elif 'aktiv' in low or ' an' in low:
+        a = 'aktiviert'
+    else:
+        a = 'status_geaendert'
+    name = f"{aktion}: {detail}" if detail else aktion
+    _corelog(request, a, 'monitor', 0, name, {'via': 'token'} if via_token else None)
 from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
     MonitorProfileListSchema, MonitorProfileCreateSchema,
     AnkuendigungSchema, AnkuendigungCreateSchema,
-    MonitorDateiSchema, OnAirSchema, NotfallSchema, AuditLogSchema, ConfigVersionSchema,
+    MonitorDateiSchema, OnAirSchema, NotfallSchema, ConfigVersionSchema,
     BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
     KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
@@ -1046,13 +1043,6 @@ def deactivate_event(request, id: int):
     event.save(update_fields=['aktiv'])
     _log_audit(request, 'Event deaktiviert', event.name)
     return event
-
-
-@monitor_router.get("/audit-log", response=list[AuditLogSchema], auth=keycloak_auth)
-def list_audit_log(request):
-    _require_perm(request, 'monitor.view')
-    from .models import MonitorAuditLog
-    return list(MonitorAuditLog.objects.all()[:50])
 
 
 # ═══ Admin: Klausur-Vorlagen ═════════════════════════════════════
