@@ -2,6 +2,7 @@
 Monitor API — öffentliche + Admin-Endpunkte (Multi-Profil)
 """
 import json
+import re
 import uuid
 import urllib.request
 import urllib.parse
@@ -50,6 +51,56 @@ from .schemas import (
 from . import oepnv
 
 monitor_router = Router(tags=["Monitor"])
+
+_HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+
+
+def _clamp_int(v, lo, hi):
+    try:
+        return max(lo, min(hi, int(v)))
+    except (TypeError, ValueError):
+        return None
+
+
+def _validate_config_data(data: dict) -> dict:
+    """Serverseitige Validierung/Sanitisierung der Config-Update-Daten.
+    Klemmt Zahlenbereiche, verwirft ungültige Hex-Farben, prüft Zeitfenster."""
+    for key, lo, hi in [
+        ('split_links_prozent', 20, 80), ('split_prozent', 20, 80),
+        ('bild_fokus_x', 0, 100), ('bild_fokus_y', 0, 100),
+        ('webuntis_zoom', 25, 400), ('refresh_intervall', 3, 3600),
+    ]:
+        if key in data and data[key] is not None:
+            c = _clamp_int(data[key], lo, hi)
+            if c is not None:
+                data[key] = c
+    # Hex-Farben: ungültige verwerfen (alter Wert bleibt). on_air_farbe darf leer sein.
+    for key in ['hintergrund_farbe', 'akzent_farbe', 'on_air_farbe']:
+        if key in data and data[key]:
+            if not _HEX_RE.match(str(data[key])):
+                data.pop(key)
+    # Zeitplan: von < bis erzwingen
+    if 'zeitplan' in data and isinstance(data['zeitplan'], list):
+        for e in data['zeitplan']:
+            if isinstance(e, dict):
+                von, bis = e.get('von'), e.get('bis')
+                if von and bis and str(von) >= str(bis):
+                    raise HttpError(422, f"Zeitfenster ungültig: {von} muss vor {bis} liegen")
+    return data
+
+
+def _validate_klausur_data(data: dict) -> dict:
+    """Klausur-Daten prüfen: Zeitraum von<bis, split_prozent, Hex-Farbe."""
+    von, bis = data.get('aktiv_von'), data.get('aktiv_bis')
+    if von and bis and von >= bis:
+        raise HttpError(422, "Klausur: Ende muss nach dem Beginn liegen")
+    if 'split_prozent' in data and data['split_prozent'] is not None:
+        c = _clamp_int(data['split_prozent'], 20, 80)
+        if c is not None:
+            data['split_prozent'] = c
+    if data.get('farbe') and not _HEX_RE.match(str(data['farbe'])):
+        data.pop('farbe')
+    return data
 
 
 def _fetch_weather(config):
@@ -529,6 +580,7 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
         config = MonitorConfig.get()
 
     data = payload.dict(exclude_unset=True)
+    data = _validate_config_data(data)
 
     # FK-Felder separat behandeln
     if 'aktives_logo_id' in data:
@@ -783,6 +835,7 @@ def list_klausuren(request):
 def create_klausur(request, payload: KlausurCreateSchema):
     _require_perm(request, 'monitor.edit')
     data = payload.dict()
+    _validate_klausur_data(data)
     bildschirm_ids = data.pop('bildschirm_ids', [])
     k = Klausur.objects.create(**data)
     if bildschirm_ids:
@@ -795,6 +848,7 @@ def update_klausur(request, id: int, payload: KlausurUpdateSchema):
     _require_perm(request, 'monitor.edit')
     k = get_object_or_404(Klausur, id=id)
     data = payload.dict(exclude_unset=True)
+    _validate_klausur_data(data)
     bildschirm_ids = data.pop('bildschirm_ids', None)
     for key, value in data.items():
         setattr(k, key, value)
