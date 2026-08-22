@@ -57,15 +57,18 @@ function WebUntisFrame({ url, zoom = 100, dark = false }) {
 // Berücksichtigt den WebUntis-Dark-Mode, damit die Uhr auf hellem wie dunklem
 // Stundenplan gut lesbar bleibt.
 function StundenplanUhr({ time, dark }) {
+  // Wie der WebUntis-Titel „Vertretungen: …" (rot), ohne eigenes Kästchen.
+  // Im Dark-Mode denselben Invert-Filter wie das Iframe anwenden, damit die
+  // Farbe exakt zur (invertierten) Titelzeile passt.
   return (
-    <div className="absolute top-3 right-3 z-30 px-3 py-1 rounded-lg font-mono text-2xl font-bold tabular-nums tracking-wider"
+    <div className="absolute top-2 right-4 z-30 font-bold tabular-nums"
       style={{
-        background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)',
-        color: dark ? '#ffffff' : '#da1f3d',
-        backdropFilter: 'blur(4px)',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+        color: '#da1f3d',
+        fontSize: '1.8rem',
+        lineHeight: 1,
+        filter: dark ? 'invert(0.88) hue-rotate(180deg)' : undefined,
       }}>
-      {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+      {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
     </div>
   );
 }
