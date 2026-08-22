@@ -53,6 +53,33 @@ function WebUntisFrame({ url, zoom = 100, dark = false }) {
 }
 
 
+// ═══ Uhr-Overlay für die Stundenplan-/WebUntis-Seite (auch im Splitscreen) ═══
+// Berücksichtigt den WebUntis-Dark-Mode, damit die Uhr auf hellem wie dunklem
+// Stundenplan gut lesbar bleibt.
+function StundenplanUhr({ time, dark }) {
+  return (
+    <div className="absolute top-3 right-3 z-30 px-3 py-1 rounded-lg font-mono text-2xl font-bold tabular-nums tracking-wider"
+      style={{
+        background: dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.9)',
+        color: dark ? '#ffffff' : '#da1f3d',
+        backdropFilter: 'blur(4px)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+      }}>
+      {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+    </div>
+  );
+}
+
+// ═══ WebUntis-Seite mit Uhr-Overlay (für Splitscreen-Layouts) ═══
+function WebUntisPane({ url, zoom, dark, time }) {
+  return (
+    <div className="relative w-full h-full">
+      <WebUntisFrame url={url} zoom={zoom} dark={dark} />
+      <StundenplanUhr time={time} dark={dark} />
+    </div>
+  );
+}
+
 // ═══ ON AIR Vollbild-Optik — wiederverwendbar (Layout, Override, Split) ═══
 function OnAirFullscreen({
   farbe = '#da1f3d', text = 'ON AIR', zeigeUhr = false, uhrzeit = '',
@@ -384,7 +411,7 @@ export default function MonitorPage() {
       const untisUrl = config?.webuntis_url_1tag_resolved || config?.webuntis_url_resolved || config?.webuntis_url;
       const oaProzent = Math.min(80, Math.max(20, config?.split_links_prozent || 50));
       const untisSeite = untisUrl ? (
-        <WebUntisFrame url={untisUrl} zoom={config?.webuntis_zoom} dark={config?.webuntis_dark_mode} />
+        <WebUntisPane url={untisUrl} zoom={config?.webuntis_zoom} dark={config?.webuntis_dark_mode} time={time} />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-white/25 text-2xl" style={{ background: bgColor }}>
           Kein Stundenplan-Link
@@ -440,7 +467,7 @@ export default function MonitorPage() {
       </div>
     );
     const untisSeite = kUntis ? (
-      <WebUntisFrame url={kUntis} zoom={config?.webuntis_zoom} dark={config?.webuntis_dark_mode} />
+      <WebUntisPane url={kUntis} zoom={config?.webuntis_zoom} dark={config?.webuntis_dark_mode} time={time} />
     ) : (
       <div className="w-full h-full flex items-center justify-center text-white/30 text-2xl" style={{ background: bgColor }}>
         Kein Stundenplan-Link
@@ -673,7 +700,7 @@ export default function MonitorPage() {
         case 'webuntis': {
           const untisUrl = config?.webuntis_url_1tag_resolved || config?.webuntis_url_resolved;
           return untisUrl ? (
-            <WebUntisFrame url={untisUrl} zoom={config.webuntis_zoom} dark={config.webuntis_dark_mode} />
+            <WebUntisPane url={untisUrl} zoom={config.webuntis_zoom} dark={config.webuntis_dark_mode} time={time} />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/30 text-2xl">
               Kein WebUntis-Link
