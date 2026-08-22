@@ -2,7 +2,7 @@
  * Monitor-Konfiguration — Admin-Seite (Multi-Profil)
  * Features: Profil-Management, Zeitplan-Editor, Layout-Modi, ON AIR Anpassung
  */
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { toast } from 'sonner';
 import {
   Save, Loader2, Moon, AlertCircle, ChevronDown,
@@ -21,8 +21,13 @@ const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
 
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
+// Aktiver Admin-Bereich (Hub-Navigation). Sections rendern nur im passenden Bereich.
+const AreaContext = createContext(null);
+
 // ─── Collapsible Section ────────────────────────────────────────
-function Section({ id, title, description, icon: Icon, iconColor, open, onToggle, badge, statusDot, children }) {
+function Section({ id, area, title, description, icon: Icon, iconColor, open, onToggle, badge, statusDot, children }) {
+  const activeArea = useContext(AreaContext);
+  if (area && activeArea && area !== activeArea) return null;
   return (
     <div id={`section-${id}`} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden scroll-mt-32">
       <button onClick={() => onToggle(id)}
@@ -100,6 +105,7 @@ export default function MonitorAdminPage() {
   const [events, setEvents] = useState([]);
 
   // Sections
+  const [activeArea, setActiveArea] = useState('uebersicht');
   const [openSections, setOpenSections] = useState({
     profil: true,
     allgemein: false,
@@ -115,12 +121,6 @@ export default function MonitorAdminPage() {
     bildschirme: false,
   });
   const toggleSection = (id) => setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
-  const jumpToSection = (id) => {
-    setOpenSections(prev => ({ ...prev, [id]: true }));
-    requestAnimationFrame(() => {
-      document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  };
 
   // Permissions
   const canView = isAdmin || hasPermission('monitor.view');
@@ -696,6 +696,7 @@ export default function MonitorAdminPage() {
   const activeProfile = profiles.find(p => p.id === activeProfileId);
 
   return (
+    <AreaContext.Provider value={activeArea}>
     <div className="max-w-6xl mx-auto space-y-4">
       {/* ═══ Sticky Header ═══ */}
       <div className="sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800/50">
@@ -739,54 +740,38 @@ export default function MonitorAdminPage() {
           </div>
         </div>
 
-        {/* Sprungnavigation — layout-relevante Sektionen hervorgehoben */}
+        {/* Bereichs-Navigation (Hub) */}
         {(() => {
-          const lm = monitorConfig?.layout_modus || 'standard';
-          const relevantMap = {
-            standard: ['profil', 'widgets', 'medien', 'theme', 'ankuendigungen'],
-            baukasten: ['profil', 'baukasten', 'widgets', 'medien'],
-            stundenplan: ['profil', 'widgets', 'webuntislinks'],
-            onair: ['profil', 'onair'],
-            abfahrten: ['profil', 'oepnv'],
-            pdf_vollbild: ['profil', 'medien'],
-            bild_vollbild: ['profil', 'medien'],
-            split: ['profil', 'widgets', 'onair', 'webuntislinks'],
-          };
-          const relevant = new Set(relevantMap[lm] || relevantMap.standard);
-          const navItems = [
-            { id: 'bildschirme', label: 'Bildschirme' },
-            { id: 'profil', label: 'Profil' },
-            { id: 'allgemein', label: 'Allgemein' },
-            { id: 'onair', label: 'ON AIR' },
-            { id: 'widgets', label: 'Widgets' },
-            { id: 'theme', label: 'Theme' },
-            { id: 'medien', label: 'Medien' },
-            { id: 'events', label: 'Events' },
-            { id: 'ankuendigungen', label: 'Ankündigungen' },
-            { id: 'webuntislinks', label: 'WebUntis-Links' },
-            ...(lm === 'abfahrten' ? [{ id: 'oepnv', label: 'ÖPNV' }] : []),
-            ...(lm === 'baukasten' ? [{ id: 'baukasten', label: 'Baukasten' }] : []),
-            { id: 'api', label: 'API' },
+          const areas = [
+            { id: 'uebersicht', label: 'Übersicht', icon: Activity },
+            { id: 'ansichten', label: 'Ansichten', icon: LayoutGrid },
+            { id: 'bildschirme', label: 'Bildschirme', icon: Monitor },
+            { id: 'inhalte', label: 'Inhalte', icon: Megaphone },
+            { id: 'events', label: 'Events', icon: Radio },
+            { id: 'einstellungen', label: 'Einstellungen', icon: Settings },
           ];
           return (
             <div className="max-w-6xl mx-auto mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-              {navItems.map(n => (
-                <button key={n.id} onClick={() => jumpToSection(n.id)}
-                  className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                    relevant.has(n.id)
-                      ? 'bg-purple-600/20 text-purple-300 hover:bg-purple-600/30'
-                      : 'bg-gray-800/60 text-gray-500 hover:text-gray-300 hover:bg-gray-800'
-                  }`}>
-                  {n.label}
-                </button>
-              ))}
+              {areas.map(a => {
+                const Ico = a.icon;
+                const active = activeArea === a.id;
+                return (
+                  <button key={a.id} onClick={() => setActiveArea(a.id)}
+                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      active ? 'bg-purple-600 text-white' : 'bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-800'
+                    }`}>
+                    <Ico className="w-4 h-4" /> {a.label}
+                    {a.id === 'events' && events.some(e => e.aktiv) && <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse" />}
+                  </button>
+                );
+              })}
             </div>
           );
         })()}
       </div>
 
       {/* ═══ Bildschirme ═══ */}
-      <Section id="bildschirme" title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
+      <Section id="bildschirme" area="bildschirme" title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
         icon={Monitor} iconColor="bg-indigo-600/30" open={openSections.bildschirme} onToggle={toggleSection}
         badge={bildschirme.length || null}>
 
@@ -1047,7 +1032,8 @@ export default function MonitorAdminPage() {
         )}
       </Section>
 
-      {/* ═══ Klausuren — pro Bildschirm ═══ */}
+      {/* ═══ Klausuren — pro Bildschirm (Bereich: Inhalte) ═══ */}
+      {activeArea === 'inhalte' && (
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -1099,13 +1085,16 @@ export default function MonitorAdminPage() {
           </div>
         )}
       </div>
+      )}
 
-      {/* ─── Trenner: Profil-Konfiguration ─────── */}
+      {/* ─── Trenner: Profil-Konfiguration (nur Ansichten) ─────── */}
+      {activeArea === 'ansichten' && (
       <div className="flex items-center gap-3 py-2">
         <div className="flex-1 h-px bg-gray-800" />
         <span className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">Profil-Konfiguration</span>
         <div className="flex-1 h-px bg-gray-800" />
       </div>
+      )}
 
       {!monitorConfig ? (
         <div className="flex items-center justify-center py-20">
@@ -1113,6 +1102,8 @@ export default function MonitorAdminPage() {
         </div>
       ) : (
         <>
+          {activeArea === 'ansichten' && (
+          <>
           {/* ═══ Profil-Tabs ═══ */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
             <div className="flex items-center gap-2 overflow-x-auto">
@@ -1204,8 +1195,11 @@ export default function MonitorAdminPage() {
               </div>
             </div>
           )}
+          </>
+          )}
 
-
+          {activeArea === 'uebersicht' && (
+          <>
           {/* ═══ Status Dashboard ═══ */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className={`rounded-xl p-3.5 border transition-colors ${monitorConfig.ist_on_air ? 'bg-red-900/20 border-red-600/50' : 'bg-gray-900 border-gray-800'}`}>
@@ -1294,9 +1288,11 @@ export default function MonitorAdminPage() {
               )}
             </div>
           </div>
+          </>
+          )}
 
           {/* ═══ Profil & Zeitplan ═══ */}
-          <Section id="profil" title="Profil & Zeitplan" description="Name, Layout-Modus und automatische Zeitsteuerung"
+          <Section id="profil" area="ansichten" title="Profil & Zeitplan" description="Name, Layout-Modus und automatische Zeitsteuerung"
             icon={CalendarClock} iconColor="bg-green-600/30" open={openSections.profil} onToggle={toggleSection}
             badge={monitorConfig.zeitplan?.length || null}>
 
@@ -1634,7 +1630,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Baukasten-Editor (nur bei layout_modus='baukasten') ═══ */}
           {monitorConfig.layout_modus === 'baukasten' && (
-            <Section id="baukasten" title="Widget-Baukasten" description="Widgets per Drag &amp; Drop platzieren"
+            <Section id="baukasten" area="ansichten" title="Widget-Baukasten" description="Widgets per Drag &amp; Drop platzieren"
               icon={LayoutGrid} iconColor="bg-cyan-600/30" open={openSections.baukasten !== false} onToggle={toggleSection}
               badge={(monitorConfig.layout_widgets || []).length || null}>
               <BaukastenEditor
@@ -1649,7 +1645,7 @@ export default function MonitorAdminPage() {
           )}
 
           {/* ═══ Allgemein ═══ */}
-          <Section id="allgemein" title="Allgemein" description="Titel, Refresh und Import/Export"
+          <Section id="allgemein" area="ansichten" title="Allgemein" description="Titel, Refresh und Import/Export"
             icon={Settings} iconColor="bg-gray-700" open={openSections.allgemein} onToggle={toggleSection}>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1690,7 +1686,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ ON AIR Anpassung ═══ */}
-          <Section id="onair" title="ON AIR Anpassung" description="Größe, Position, Farbe und Verhalten"
+          <Section id="onair" area="ansichten" title="ON AIR Anpassung" description="Größe, Position, Farbe und Verhalten"
             icon={Radio} iconColor="bg-red-600/30" open={openSections.onair} onToggle={toggleSection}>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1842,7 +1838,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Widgets ═══ */}
-          <Section id="widgets" title="Widgets & Bereiche" description={`${activeWidgets} von ${widgetKeys.length} aktiv`}
+          <Section id="widgets" area="ansichten" title="Widgets & Bereiche" description={`${activeWidgets} von ${widgetKeys.length} aktiv`}
             icon={Zap} iconColor="bg-blue-600/30" open={openSections.widgets} onToggle={toggleSection}
             statusDot={activeWidgets > 0 ? 'bg-blue-400' : 'bg-gray-600'}>
 
@@ -2152,7 +2148,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Theme & Farben ═══ */}
-          <Section id="theme" title="Theme & Farben" description="Farbschema und Design-Vorlagen"
+          <Section id="theme" area="ansichten" title="Theme & Farben" description="Farbschema und Design-Vorlagen"
             icon={Palette} iconColor="bg-purple-600/30" open={openSections.theme} onToggle={toggleSection}>
             <div>
               <label className="block text-xs text-gray-400 mb-2 font-medium">Theme-Preset</label>
@@ -2207,7 +2203,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Medien ═══ */}
-          <Section id="medien" title="Medien & Dateien" description="Logos, Bilder, PDFs und Hintergründe"
+          <Section id="medien" area="inhalte" title="Medien & Dateien" description="Logos, Bilder, PDFs und Hintergründe"
             icon={Image} iconColor="bg-pink-600/30" open={openSections.medien} onToggle={toggleSection}
             badge={monitorDateien.length}>
 
@@ -2345,7 +2341,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Ankündigungen ═══ */}
-          <Section id="ankuendigungen" title="Ankündigungen" description="Meldungen auf dem Display anzeigen"
+          <Section id="ankuendigungen" area="inhalte" title="Ankündigungen" description="Meldungen auf dem Display anzeigen"
             icon={Megaphone} iconColor="bg-amber-600/30" open={openSections.ankuendigungen} onToggle={toggleSection}
             badge={monitorAnkuendigungen.length}>
 
@@ -2398,7 +2394,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Events (aktivierbare Modi) ═══ */}
-          <Section id="events" title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
+          <Section id="events" area="events" title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
             icon={Radio} iconColor="bg-violet-600/30" open={openSections.events} onToggle={toggleSection}
             badge={events.length}
             statusDot={events.some(e => e.aktiv) ? 'bg-violet-400 animate-pulse' : null}>
@@ -2407,7 +2403,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ WebUntis-Link-Bibliothek ═══ */}
-          <Section id="webuntislinks" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
+          <Section id="webuntislinks" area="inhalte" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
             icon={Calendar} iconColor="bg-purple-600/30" open={openSections.webuntislinks} onToggle={toggleSection}
             badge={webuntisLinks.length}>
             <WebUntisLinkManager links={webuntisLinks} canEdit={canEdit}
@@ -2416,7 +2412,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ ÖPNV Abfahrten (nur bei Abfahrtsmonitor-Layout) ═══ */}
           {monitorConfig.layout_modus === 'abfahrten' && (
-          <Section id="oepnv" title="ÖPNV Abfahrten" description="Stationen und Filter für den Abfahrtsmonitor"
+          <Section id="oepnv" area="ansichten" title="ÖPNV Abfahrten" description="Stationen und Filter für den Abfahrtsmonitor"
             icon={Activity} iconColor="bg-blue-600/30" open={openSections.oepnv} onToggle={toggleSection}
             badge={monitorConfig.oepnv_stationen?.length || 0}>
 
@@ -3051,7 +3047,7 @@ export default function MonitorAdminPage() {
           )}
 
           {/* ═══ API & Token ═══ */}
-          <Section id="api" title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."
+          <Section id="api" area="einstellungen" title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."
             icon={Key} iconColor="bg-gray-600/30" open={openSections.api} onToggle={toggleSection}>
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">API-Token (für dieses Profil)</label>
@@ -3087,6 +3083,7 @@ export default function MonitorAdminPage() {
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleUploadFile}
         accept={uploadTyp === 'pdf' ? '.pdf' : 'image/*'} />
     </div>
+    </AreaContext.Provider>
   );
 }
 
