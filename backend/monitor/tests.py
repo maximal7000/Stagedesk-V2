@@ -79,3 +79,21 @@ class ConfigValidationTest(TestCase):
     def test_klausur_ende_vor_beginn_wirft(self):
         with self.assertRaises(HttpError):
             _validate_klausur_data({'aktiv_von': '2026-01-02T10:00', 'aktiv_bis': '2026-01-02T09:00'})
+
+
+class SoftDeleteTest(TestCase):
+
+    def test_geloeschte_default_ansicht_wird_nicht_zurueckgegeben(self):
+        default = MonitorConfig.objects.create(name='D', slug='d')
+        bs = Bildschirm.objects.create(name='B', slug='b', default_profil=default)
+        default.geloescht_am = timezone.now()
+        default.save()
+        # gelöschte Default-Ansicht darf nicht mehr angezeigt werden
+        self.assertIsNone(bs.get_active_profil().geloescht_am)
+
+    def test_get_ueberspringt_geloeschte(self):
+        MonitorConfig.objects.create(name='Std', slug='std', ist_standard=True)
+        MonitorConfig.objects.create(
+            name='Z', slug='z', geloescht_am=timezone.now(),
+            zeitplan=[{'profil_id': 999, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}])
+        self.assertNotEqual(MonitorConfig.get().slug, 'z')

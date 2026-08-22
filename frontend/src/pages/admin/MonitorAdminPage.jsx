@@ -147,6 +147,8 @@ export default function MonitorAdminPage() {
   const [klausurVorlagen, setKlausurVorlagen] = useState([]);
   const [globalSettings, setGlobalSettings] = useState(null);
   const [auditLog, setAuditLog] = useState([]);
+  const [configVersions, setConfigVersions] = useState([]);
+  const [papierkorb, setPapierkorb] = useState({ ansichten: [], medien: [] });
 
   // Sections
   const [searchParams, setSearchParams] = useSearchParams();
@@ -322,6 +324,26 @@ export default function MonitorAdminPage() {
   const fetchAuditLog = useCallback(async () => {
     try { const res = await apiClient.get('/monitor/audit-log'); setAuditLog(res.data); } catch {}
   }, []);
+  const fetchPapierkorb = useCallback(async () => {
+    try { const res = await apiClient.get('/monitor/papierkorb'); setPapierkorb(res.data); } catch {}
+  }, []);
+  const restorePapierkorb = async (art, id) => {
+    try { await apiClient.post(`/monitor/papierkorb/wiederherstellen?art=${art}&id=${id}`); await fetchPapierkorb();
+      if (art === 'ansicht') fetchProfiles(); else fetchConfigForProfile(activeProfileId);
+      toast.success('Wiederhergestellt'); } catch { toast.error('Fehler'); }
+  };
+  const purgePapierkorb = async (art, id) => {
+    if (!confirm('Endgültig löschen? Das kann nicht rückgängig gemacht werden.')) return;
+    try { await apiClient.delete(`/monitor/papierkorb/endgueltig?art=${art}&id=${id}`); await fetchPapierkorb(); toast.success('Endgültig gelöscht'); }
+    catch { toast.error('Fehler'); }
+  };
+  const fetchConfigVersions = useCallback(async (profileId) => {
+    try { const res = await apiClient.get(`/monitor/config/versionen?profil_id=${profileId}`); setConfigVersions(res.data); } catch { setConfigVersions([]); }
+  }, []);
+  const restoreConfigVersion = async (versionId) => {
+    try { await apiClient.post(`/monitor/config/restore?version_id=${versionId}`); await fetchConfigForProfile(activeProfileId); fetchConfigVersions(activeProfileId); toast.success('Version wiederhergestellt'); }
+    catch { toast.error('Fehler beim Wiederherstellen'); }
+  };
   const saveGlobalSettings = async () => {
     try { await apiClient.put('/monitor/global-settings', globalSettings); toast.success('Globale Einstellungen gespeichert'); }
     catch { toast.error('Fehler beim Speichern'); }
@@ -338,8 +360,9 @@ export default function MonitorAdminPage() {
       setOriginalConfig(configRes.data);
       setMonitorAnkuendigungen(ankRes.data);
       setMonitorDateien(dateiRes.data);
+      fetchConfigVersions(profileId);
     } catch {}
-  }, []);
+  }, [fetchConfigVersions]);
 
   useEffect(() => {
     (async () => {
@@ -351,13 +374,14 @@ export default function MonitorAdminPage() {
       fetchKlausurVorlagen();
       fetchGlobalSettings();
       fetchAuditLog();
+      fetchPapierkorb();
       if (profs.length > 0) {
         const std = profs.find(p => p.ist_standard) || profs[0];
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
     })();
-  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents, fetchKlausurVorlagen, fetchGlobalSettings, fetchAuditLog]);
+  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents, fetchKlausurVorlagen, fetchGlobalSettings, fetchAuditLog, fetchPapierkorb]);
 
   // Switch profile
   const switchProfile = (id) => {
@@ -497,7 +521,8 @@ export default function MonitorAdminPage() {
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
-      toast.success('Ansicht gelöscht');
+      fetchPapierkorb();
+      toast.success('Ansicht in den Papierkorb verschoben');
     } catch { toast.error('Fehler beim Löschen'); }
   };
 
@@ -748,6 +773,8 @@ export default function MonitorAdminPage() {
     try {
       await apiClient.delete(`/monitor/dateien/${id}`);
       fetchConfigForProfile(activeProfileId);
+      fetchPapierkorb();
+      toast.success('In den Papierkorb verschoben');
     } catch { toast.error('Fehler'); }
   };
 
@@ -2214,6 +2241,28 @@ export default function MonitorAdminPage() {
               )}
             </div>
 
+            {/* Versionen / Rollback */}
+            {canEdit && configVersions.length > 0 && (
+              <div className="pt-3 border-t border-gray-800">
+                <div className="flex items-center gap-2 mb-2">
+                  <RotateCw className="w-3.5 h-3.5 text-gray-400" />
+                  <h4 className="text-sm font-semibold text-white">Versionen</h4>
+                  <span className="text-xs text-gray-500">letzte Speicherstände dieser Ansicht</span>
+                </div>
+                <div className="space-y-1 max-h-40 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+                  {configVersions.map(v => (
+                    <div key={v.id} className="flex items-center justify-between text-xs bg-gray-800/40 rounded px-3 py-1.5">
+                      <span className="text-gray-400 tabular-nums">
+                        {new Date(v.erstellt_am).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </span>
+                      <button onClick={() => restoreConfigVersion(v.id)}
+                        className="px-2 py-0.5 rounded bg-gray-700 text-gray-200 hover:bg-gray-600">Wiederherstellen</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Löschen erfolgt über die Toolbar oben (Aktive Ansicht → Löschen) */}
           </Section>
 
@@ -3397,6 +3446,38 @@ export default function MonitorAdminPage() {
                     <span className="text-white font-medium shrink-0">{e.aktion}</span>
                     {e.detail && <span className="text-gray-400 truncate">{e.detail}</span>}
                     <span className="text-gray-500 text-xs ml-auto shrink-0">{e.benutzer}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Section>
+
+          <Section id="papierkorb" area="einstellungen" plain title="Papierkorb" description="Gelöschte Ansichten & Medien wiederherstellen oder endgültig entfernen"
+            icon={Trash2} iconColor="bg-gray-600/30" open badge={(papierkorb.ansichten.length + papierkorb.medien.length) || null}>
+            {papierkorb.ansichten.length === 0 && papierkorb.medien.length === 0 ? (
+              <p className="text-sm text-gray-500">Papierkorb ist leer.</p>
+            ) : (
+              <div className="space-y-3">
+                {papierkorb.ansichten.map(a => (
+                  <div key={`a${a.id}`} className="flex items-center gap-3 bg-gray-800/40 rounded-lg px-3 py-2 text-sm">
+                    <LayoutGrid className="w-4 h-4 text-purple-400 shrink-0" />
+                    <span className="text-white truncate flex-1">{a.name}</span>
+                    <span className="text-gray-500 text-xs shrink-0">Ansicht</span>
+                    {canEdit && <>
+                      <button onClick={() => restorePapierkorb('ansicht', a.id)} className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-200 hover:bg-gray-600">Wiederherstellen</button>
+                      <button onClick={() => purgePapierkorb('ansicht', a.id)} className="p-1.5 text-gray-500 hover:text-red-400 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </>}
+                  </div>
+                ))}
+                {papierkorb.medien.map(m => (
+                  <div key={`m${m.id}`} className="flex items-center gap-3 bg-gray-800/40 rounded-lg px-3 py-2 text-sm">
+                    <Image className="w-4 h-4 text-pink-400 shrink-0" />
+                    <span className="text-white truncate flex-1">{m.name}</span>
+                    <span className="text-gray-500 text-xs shrink-0">{m.typ}</span>
+                    {canEdit && <>
+                      <button onClick={() => restorePapierkorb('medium', m.id)} className="px-2 py-1 text-xs rounded bg-gray-700 text-gray-200 hover:bg-gray-600">Wiederherstellen</button>
+                      <button onClick={() => purgePapierkorb('medium', m.id)} className="p-1.5 text-gray-500 hover:text-red-400 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                    </>}
                   </div>
                 ))}
               </div>

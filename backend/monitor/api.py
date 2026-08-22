@@ -57,7 +57,7 @@ from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
     MonitorProfileListSchema, MonitorProfileCreateSchema,
     AnkuendigungSchema, AnkuendigungCreateSchema,
-    MonitorDateiSchema, OnAirSchema, NotfallSchema, AuditLogSchema,
+    MonitorDateiSchema, OnAirSchema, NotfallSchema, AuditLogSchema, ConfigVersionSchema,
     BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
     KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
@@ -535,7 +535,7 @@ def toggle_notfall(request, payload: NotfallSchema):
 @monitor_router.get("/profile", response=list[MonitorProfileListSchema], auth=keycloak_auth)
 def list_profiles(request):
     _require_perm(request, 'monitor.view')
-    return MonitorConfig.objects.order_by('sortierung', 'name')
+    return MonitorConfig.objects.filter(geloescht_am__isnull=True).order_by('sortierung', 'name')
 
 
 @monitor_router.post("/profile", auth=keycloak_auth)
@@ -578,7 +578,8 @@ def delete_profile(request, id: int):
     config = get_object_or_404(MonitorConfig, id=id)
     if config.ist_standard:
         return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
-    config.delete()
+    config.geloescht_am = timezone.now()
+    config.save(update_fields=['geloescht_am', 'aktualisiert_am'])
     return {"success": True}
 
 
@@ -592,6 +593,23 @@ def get_config(request, profil_id: int = None):
     return MonitorConfig.get()
 
 
+_VERSION_DENY = {'id', 'api_token', 'slug', 'erstellt_am', 'aktualisiert_am'}
+
+
+def _snapshot_config(config):
+    """Aktuellen Zustand als Version sichern; nur die letzten 15 behalten."""
+    from .models import MonitorConfigVersion
+    try:
+        daten = json.loads(json.dumps(MonitorConfigSchema.from_orm(config).dict(), default=str))
+        daten.pop('api_token', None)
+        MonitorConfigVersion.objects.create(config=config, daten=daten)
+        alte = list(MonitorConfigVersion.objects.filter(config=config).values_list('id', flat=True)[15:])
+        if alte:
+            MonitorConfigVersion.objects.filter(id__in=alte).delete()
+    except Exception:
+        pass  # Versionierung darf das Speichern nie blockieren
+
+
 @monitor_router.put("/config", response=MonitorConfigSchema, auth=keycloak_auth)
 def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = None):
     _require_perm(request, 'monitor.edit')
@@ -599,6 +617,8 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
         config = get_object_or_404(MonitorConfig, id=profil_id)
     else:
         config = MonitorConfig.get()
+
+    _snapshot_config(config)  # Zustand vor der Änderung sichern
 
     data = payload.dict(exclude_unset=True)
     data = _validate_config_data(data)
@@ -629,6 +649,31 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
     return config
 
 
+@monitor_router.get("/config/versionen", response=list[ConfigVersionSchema], auth=keycloak_auth)
+def list_config_versionen(request, profil_id: int):
+    _require_perm(request, 'monitor.view')
+    from .models import MonitorConfigVersion
+    return list(MonitorConfigVersion.objects.filter(config_id=profil_id)[:15])
+
+
+@monitor_router.post("/config/restore", response=MonitorConfigSchema, auth=keycloak_auth)
+def restore_config_version(request, version_id: int):
+    _require_perm(request, 'monitor.edit')
+    from .models import MonitorConfigVersion
+    version = get_object_or_404(MonitorConfigVersion, id=version_id)
+    config = version.config
+    _snapshot_config(config)  # aktuellen Stand vor dem Zurücksetzen ebenfalls sichern
+    for key, value in (version.daten or {}).items():
+        if key in _VERSION_DENY or not hasattr(config, key):
+            continue
+        try:
+            setattr(config, key, value)
+        except Exception:
+            continue
+    config.save()
+    return config
+
+
 @monitor_router.post("/config/regenerate-token", auth=keycloak_auth)
 def regenerate_token(request, profil_id: int = None):
     _require_perm(request, 'monitor.edit')
@@ -646,7 +691,7 @@ def regenerate_token(request, profil_id: int = None):
 @monitor_router.get("/dateien", response=list[MonitorDateiSchema], auth=keycloak_auth)
 def list_dateien(request, typ: str = None):
     _require_perm(request, 'monitor.view')
-    qs = MonitorDatei.objects.all()
+    qs = MonitorDatei.objects.filter(geloescht_am__isnull=True)
     if typ:
         qs = qs.filter(typ=typ)
     return qs
@@ -670,10 +715,57 @@ def upload_datei(request, datei: UploadedFile = File(...), name: str = Form(""),
 def delete_datei(request, id: int):
     _require_perm(request, 'monitor.edit')
     d = get_object_or_404(MonitorDatei, id=id)
-    # Datei vom Dateisystem entfernen
-    if d.datei:
-        d.datei.delete(save=False)
-    d.delete()
+    # Soft-Delete → Papierkorb (Datei bleibt für Wiederherstellung erhalten)
+    d.geloescht_am = timezone.now()
+    d.save(update_fields=['geloescht_am'])
+    return {"success": True}
+
+
+# ═══ Admin: Papierkorb (Soft-Delete) ═════════════════════════════
+
+@monitor_router.get("/papierkorb", auth=keycloak_auth)
+def get_papierkorb(request):
+    _require_perm(request, 'monitor.view')
+    ansichten = [
+        {'id': c.id, 'name': c.name, 'geloescht_am': c.geloescht_am}
+        for c in MonitorConfig.objects.filter(geloescht_am__isnull=False).order_by('-geloescht_am')
+    ]
+    medien = [
+        {'id': d.id, 'name': d.name, 'typ': d.typ, 'geloescht_am': d.geloescht_am}
+        for d in MonitorDatei.objects.filter(geloescht_am__isnull=False).order_by('-geloescht_am')
+    ]
+    return {'ansichten': ansichten, 'medien': medien}
+
+
+@monitor_router.post("/papierkorb/wiederherstellen", auth=keycloak_auth)
+def restore_papierkorb(request, art: str, id: int):
+    _require_perm(request, 'monitor.edit')
+    if art == 'ansicht':
+        obj = get_object_or_404(MonitorConfig, id=id)
+        obj.geloescht_am = None
+        obj.save(update_fields=['geloescht_am', 'aktualisiert_am'])
+    elif art == 'medium':
+        obj = get_object_or_404(MonitorDatei, id=id)
+        obj.geloescht_am = None
+        obj.save(update_fields=['geloescht_am'])
+    else:
+        raise HttpError(400, "Unbekannte Art")
+    return {"success": True}
+
+
+@monitor_router.delete("/papierkorb/endgueltig", auth=keycloak_auth)
+def delete_papierkorb_permanent(request, art: str, id: int):
+    _require_perm(request, 'monitor.edit')
+    if art == 'ansicht':
+        obj = get_object_or_404(MonitorConfig, id=id, geloescht_am__isnull=False)
+        obj.delete()
+    elif art == 'medium':
+        obj = get_object_or_404(MonitorDatei, id=id, geloescht_am__isnull=False)
+        if obj.datei:
+            obj.datei.delete(save=False)
+        obj.delete()
+    else:
+        raise HttpError(400, "Unbekannte Art")
     return {"success": True}
 
 
