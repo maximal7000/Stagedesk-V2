@@ -93,6 +93,9 @@ export default function MonitorAdminPage() {
   const [klausuren, setKlausuren] = useState([]);
   const [showNewKlausur, setShowNewKlausur] = useState(false);
 
+  // WebUntis-Link-Bibliothek
+  const [webuntisLinks, setWebuntisLinks] = useState([]);
+
   // Sections
   const [openSections, setOpenSections] = useState({
     profil: true,
@@ -103,6 +106,7 @@ export default function MonitorAdminPage() {
     theme: false,
     medien: false,
     ankuendigungen: false,
+    webuntislinks: false,
     api: false,
     bildschirme: false,
   });
@@ -146,6 +150,31 @@ export default function MonitorAdminPage() {
     } catch {}
   }, []);
 
+  const fetchWebuntisLinks = useCallback(async () => {
+    try {
+      const res = await apiClient.get('/monitor/webuntis-links');
+      setWebuntisLinks(res.data);
+    } catch {}
+  }, []);
+
+  const saveWebuntisLink = async (link) => {
+    try {
+      const body = { name: link.name, url: link.url, notiz: link.notiz || '' };
+      if (link.id) await apiClient.put(`/monitor/webuntis-links/${link.id}`, body);
+      else await apiClient.post('/monitor/webuntis-links', body);
+      await fetchWebuntisLinks();
+      toast.success('Link gespeichert');
+    } catch { toast.error('Fehler beim Speichern'); }
+  };
+
+  const deleteWebuntisLink = async (id) => {
+    try {
+      await apiClient.delete(`/monitor/webuntis-links/${id}`);
+      await fetchWebuntisLinks();
+      toast.success('Link gelöscht');
+    } catch { toast.error('Fehler beim Löschen'); }
+  };
+
   const fetchConfigForProfile = useCallback(async (profileId) => {
     try {
       const [configRes, ankRes, dateiRes] = await Promise.all([
@@ -165,13 +194,14 @@ export default function MonitorAdminPage() {
       const profs = await fetchProfiles();
       fetchBildschirme();
       fetchKlausuren();
+      fetchWebuntisLinks();
       if (profs.length > 0) {
         const std = profs.find(p => p.ist_standard) || profs[0];
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
     })();
-  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren]);
+  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks]);
 
   // Switch profile
   const switchProfile = (id) => {
@@ -214,7 +244,7 @@ export default function MonitorAdminPage() {
     'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
     'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
     'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id',
-    'zeige_webuntis','webuntis_url','webuntis_url_1tag','webuntis_zoom','webuntis_dark_mode',
+    'zeige_webuntis','webuntis_url','webuntis_url_1tag','webuntis_link_id','webuntis_link_1tag_id','webuntis_zoom','webuntis_dark_mode',
     'split_links','split_rechts','split_links_prozent',
     'zeige_hintergrundbild','aktives_hintergrundbild_id',
     'zeige_qr_code','qr_code_url','qr_code_label',
@@ -674,12 +704,12 @@ export default function MonitorAdminPage() {
           const relevantMap = {
             standard: ['profil', 'widgets', 'medien', 'theme', 'ankuendigungen'],
             baukasten: ['profil', 'baukasten', 'widgets', 'medien'],
-            stundenplan: ['profil', 'widgets'],
+            stundenplan: ['profil', 'widgets', 'webuntislinks'],
             onair: ['profil', 'onair'],
             abfahrten: ['profil', 'oepnv'],
             pdf_vollbild: ['profil', 'medien'],
             bild_vollbild: ['profil', 'medien'],
-            split: ['profil', 'widgets', 'onair'],
+            split: ['profil', 'widgets', 'onair', 'webuntislinks'],
           };
           const relevant = new Set(relevantMap[lm] || relevantMap.standard);
           const navItems = [
@@ -691,6 +721,7 @@ export default function MonitorAdminPage() {
             { id: 'theme', label: 'Theme' },
             { id: 'medien', label: 'Medien' },
             { id: 'ankuendigungen', label: 'Ankündigungen' },
+            { id: 'webuntislinks', label: 'WebUntis-Links' },
             ...(lm === 'abfahrten' ? [{ id: 'oepnv', label: 'ÖPNV' }] : []),
             ...(lm === 'baukasten' ? [{ id: 'baukasten', label: 'Baukasten' }] : []),
             { id: 'api', label: 'API' },
@@ -1001,6 +1032,7 @@ export default function MonitorAdminPage() {
           <KlausurForm
             initial={null}
             bildschirme={bildschirme}
+            webuntisLinks={webuntisLinks}
             onSave={handleCreateKlausur}
             onCancel={() => setShowNewKlausur(false)}
           />
@@ -1015,6 +1047,7 @@ export default function MonitorAdminPage() {
             {klausuren.map(k => (
               <KlausurCard
                 key={k.id} klausur={k} bildschirme={bildschirme}
+                webuntisLinks={webuntisLinks}
                 canEdit={canEdit}
                 onLocalChange={(patch) => updateKlausurLocal(k.id, patch)}
                 onSave={(payload) => handleUpdateKlausur(k.id, payload)}
@@ -1839,14 +1872,35 @@ export default function MonitorAdminPage() {
               {monitorConfig.zeige_webuntis && (
                 <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
                   <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Calendar className="w-4 h-4 text-purple-400" /> WebUntis iFrame</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (2 Tage)</label>
+                      <select value={monitorConfig.webuntis_link_id || ''} disabled={!canEdit}
+                        onChange={e => updateConfig('webuntis_link_id', e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
+                        <option value="">— eigener Link unten —</option>
+                        {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (1 Tag)</label>
+                      <select value={monitorConfig.webuntis_link_1tag_id || ''} disabled={!canEdit}
+                        onChange={e => updateConfig('webuntis_link_1tag_id', e.target.value ? parseInt(e.target.value) : null)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
+                        <option value="">— eigener Link unten —</option>
+                        {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500">Gespeicherte Links (Bibliothek weiter unten) haben Vorrang. Sonst eigene Links:</p>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Link (2 Tage) — Vollbild-Stundenplan &amp; Widget</label>
+                    <label className="block text-xs text-gray-500 mb-1">Eigener Link (2 Tage) — Vollbild &amp; Widget</label>
                     <input type="url" value={monitorConfig.webuntis_url} onChange={e => updateConfig('webuntis_url', e.target.value)}
                       disabled={!canEdit} placeholder="https://neilo.webuntis.com/..."
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
                   </div>
                   <div>
-                    <label className="block text-xs text-gray-500 mb-1">Link (1 Tag, kompakt) — für Splitscreen</label>
+                    <label className="block text-xs text-gray-500 mb-1">Eigener Link (1 Tag, kompakt) — für Splitscreen</label>
                     <input type="url" value={monitorConfig.webuntis_url_1tag || ''} onChange={e => updateConfig('webuntis_url_1tag', e.target.value)}
                       disabled={!canEdit} placeholder="https://neilo.webuntis.com/... (leer = 2-Tage-Link)"
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50" />
@@ -2299,6 +2353,14 @@ export default function MonitorAdminPage() {
                 </div>
               )}
             </div>
+          </Section>
+
+          {/* ═══ WebUntis-Link-Bibliothek ═══ */}
+          <Section id="webuntislinks" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
+            icon={Calendar} iconColor="bg-purple-600/30" open={openSections.webuntislinks} onToggle={toggleSection}
+            badge={webuntisLinks.length}>
+            <WebUntisLinkManager links={webuntisLinks} canEdit={canEdit}
+              onSave={saveWebuntisLink} onDelete={deleteWebuntisLink} />
           </Section>
 
           {/* ═══ ÖPNV Abfahrten (nur bei Abfahrtsmonitor-Layout) ═══ */}
@@ -3190,8 +3252,72 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
 
 
 
+// ─── WebUntis-Link-Bibliothek ────────────────────────────────
+function WebUntisLinkManager({ links, canEdit, onSave, onDelete }) {
+  const [draft, setDraft] = useState(null); // {id?, name, url, notiz}
+  const start = (link) => setDraft(link ? { ...link } : { name: '', url: '', notiz: '' });
+  const save = async () => {
+    if (!draft.name.trim() || !draft.url.trim()) { toast.error('Name und URL nötig'); return; }
+    await onSave(draft);
+    setDraft(null);
+  };
+  return (
+    <div className="space-y-3">
+      {canEdit && !draft && (
+        <button onClick={() => start(null)}
+          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
+          <Plus className="w-4 h-4" /> Neuer Link
+        </button>
+      )}
+      {draft && (
+        <div className="p-4 bg-gray-800/40 rounded-xl border border-gray-700 space-y-3">
+          <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
+            placeholder="Name (z.B. Klasse 10a — 1 Tag)"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+          <input type="url" value={draft.url} onChange={e => setDraft({ ...draft, url: e.target.value })}
+            placeholder="https://neilo.webuntis.com/..."
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+          <input type="text" value={draft.notiz || ''} onChange={e => setDraft({ ...draft, notiz: e.target.value })}
+            placeholder="Notiz (optional)"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+          <div className="flex items-center gap-2">
+            <button onClick={save} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg">
+              <Save className="w-4 h-4" /> Speichern
+            </button>
+            <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">Abbrechen</button>
+          </div>
+        </div>
+      )}
+      <div className="divide-y divide-gray-800 border border-gray-800 rounded-xl overflow-hidden">
+        {links.map(l => (
+          <div key={l.id} className="p-3 flex items-start justify-between bg-gray-800/20 hover:bg-gray-800/30 transition-colors">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-white text-sm">{l.name}</div>
+              <div className="text-xs text-gray-500 truncate">{l.url}</div>
+              {l.notiz && <div className="text-xs text-gray-600 mt-0.5">{l.notiz}</div>}
+            </div>
+            {canEdit && (
+              <div className="flex items-center gap-1 ml-3 shrink-0">
+                <button onClick={() => start(l)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
+                <button onClick={() => onDelete(l.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            )}
+          </div>
+        ))}
+        {links.length === 0 && !draft && (
+          <div className="p-8 text-center text-gray-500">
+            <Calendar className="w-10 h-10 mx-auto mb-2 opacity-20" />
+            <p className="text-sm">Noch keine Links — hier einmal anlegen und im Profil/Klausur auswählen.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 // ─── Klausur-Form ────────────────────────────────────────────
-function KlausurForm({ initial, bildschirme, onSave, onCancel }) {
+function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCancel }) {
   const pad = (n) => String(n).padStart(2, '0');
   const toLocalInput = (d) => {
     const x = new Date(d);
@@ -3205,6 +3331,10 @@ function KlausurForm({ initial, bildschirme, onSave, onCancel }) {
   const [bis, setBis] = useState(initial ? toLocalInput(initial.aktiv_bis) : toLocalInput(in1h));
   const [farbe, setFarbe] = useState(initial?.farbe || '#1e40af');
   const [bildschirmIds, setBildschirmIds] = useState(initial?.bildschirm_ids || []);
+  const [anzeigeModus, setAnzeigeModus] = useState(initial?.anzeige_modus || 'vollbild');
+  const [webuntisLinkId, setWebuntisLinkId] = useState(initial?.webuntis_link_id || null);
+  const [splitSeite, setSplitSeite] = useState(initial?.split_seite || 'links');
+  const [splitProzent, setSplitProzent] = useState(initial?.split_prozent || 50);
 
   const toggleBs = (id) => setBildschirmIds(prev =>
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
@@ -3217,6 +3347,10 @@ function KlausurForm({ initial, bildschirme, onSave, onCancel }) {
       aktiv_von: new Date(von).toISOString(),
       aktiv_bis: new Date(bis).toISOString(),
       farbe, bildschirm_ids: bildschirmIds,
+      anzeige_modus: anzeigeModus,
+      webuntis_link_id: webuntisLinkId,
+      split_seite: splitSeite,
+      split_prozent: splitProzent,
     });
   };
 
@@ -3271,6 +3405,42 @@ function KlausurForm({ initial, bildschirme, onSave, onCancel }) {
           </div>
         )}
       </div>
+      <div className="pt-2 border-t border-blue-500/20 space-y-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Anzeige während der Klausur</label>
+          <select value={anzeigeModus} onChange={e => setAnzeigeModus(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+            <option value="vollbild">Vollbild (Klausur-Hinweis)</option>
+            <option value="split">Splitscreen (Klausur + Stundenplan)</option>
+            <option value="standard">Kein Zwang (Profil-Layout)</option>
+          </select>
+        </div>
+        {anzeigeModus === 'split' && (
+          <div className="grid grid-cols-2 gap-3 p-3 bg-gray-800/40 rounded-lg">
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-400 mb-1">Stundenplan-Link (WebUntis)</label>
+              <select value={webuntisLinkId || ''} onChange={e => setWebuntisLinkId(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm">
+                <option value="">— Link des Profils nutzen —</option>
+                {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Klausur-Seite</label>
+              <select value={splitSeite} onChange={e => setSplitSeite(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm">
+                <option value="links">Links</option>
+                <option value="rechts">Rechts</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Breite Klausur: {splitProzent}%</label>
+              <input type="range" min={20} max={80} step={5} value={splitProzent}
+                onChange={e => setSplitProzent(parseInt(e.target.value))} className="w-full accent-blue-500" />
+            </div>
+          </div>
+        )}
+      </div>
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-500/20">
         <button onClick={onCancel} className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
         <button onClick={submit} disabled={!titel.trim() || bildschirmIds.length === 0}
@@ -3283,7 +3453,7 @@ function KlausurForm({ initial, bildschirme, onSave, onCancel }) {
 }
 
 // ─── Klausur-Card (editierbar inline) ───────────────────────
-function KlausurCard({ klausur, bildschirme, canEdit, onSave, onDelete }) {
+function KlausurCard({ klausur, bildschirme, webuntisLinks = [], canEdit, onSave, onDelete }) {
   const [editing, setEditing] = useState(false);
   const von = new Date(klausur.aktiv_von);
   const bis = new Date(klausur.aktiv_bis);
@@ -3296,6 +3466,7 @@ function KlausurCard({ klausur, bildschirme, canEdit, onSave, onDelete }) {
       <KlausurForm
         initial={klausur}
         bildschirme={bildschirme}
+        webuntisLinks={webuntisLinks}
         onSave={(payload) => { onSave(payload); setEditing(false); }}
         onCancel={() => setEditing(false)}
       />

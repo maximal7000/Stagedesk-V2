@@ -17,7 +17,7 @@ from core.auth import keycloak_auth
 from users.api import is_admin
 from users.models import UserProfile
 from ninja.errors import HttpError
-from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur
+from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur, WebUntisLink
 
 
 def _require_perm(request, code: str):
@@ -39,6 +39,7 @@ from .schemas import (
     MonitorDateiSchema, OnAirSchema, NotfallSchema,
     BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
     KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
+    WebUntisLinkSchema, WebUntisLinkCreateSchema,
 )
 from . import oepnv
 
@@ -249,9 +250,14 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     if bs_obj:
         k = bs_obj.get_active_klausur()
         if k:
+            k_link = k.webuntis_link.url if k.webuntis_link else ''
             klausur = {
                 'titel': k.titel, 'text': k.text,
                 'farbe': k.farbe, 'aktiv_bis': k.aktiv_bis,
+                'anzeige_modus': k.anzeige_modus,
+                'split_seite': k.split_seite,
+                'split_prozent': k.split_prozent,
+                'webuntis_url': k_link,
             }
 
     # Ankündigungen: nur aktive + im Zeitfenster
@@ -317,6 +323,8 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     config_data['pdf_url_resolved'] = config.get_pdf_url()
     config_data['hintergrundbild_url_resolved'] = config.get_hintergrundbild_url()
     config_data['bild_url_resolved'] = config.get_bild_url()
+    config_data['webuntis_url_resolved'] = config.get_webuntis_url()
+    config_data['webuntis_url_1tag_resolved'] = config.get_webuntis_url_1tag()
 
     # Wenn on_air_vollbild aktiv → ON AIR Display Profil-Config mitliefern
     on_air_profil = None
@@ -524,6 +532,12 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
     if 'aktives_bild_id' in data:
         val = data.pop('aktives_bild_id')
         config.aktives_bild_id = val if val else None
+    if 'webuntis_link_id' in data:
+        val = data.pop('webuntis_link_id')
+        config.webuntis_link_id = val if val else None
+    if 'webuntis_link_1tag_id' in data:
+        val = data.pop('webuntis_link_1tag_id')
+        config.webuntis_link_1tag_id = val if val else None
 
     for key, value in data.items():
         setattr(config, key, value)
@@ -608,6 +622,37 @@ def delete_ankuendigung(request, id: int):
     _require_perm(request, 'monitor.edit')
     a = get_object_or_404(Ankuendigung, id=id)
     a.delete()
+    return {"success": True}
+
+
+# ═══ Admin: WebUntis-Link-Bibliothek ═════════════════════════════
+
+@monitor_router.get("/webuntis-links", response=list[WebUntisLinkSchema], auth=keycloak_auth)
+def list_webuntis_links(request):
+    _require_perm(request, 'monitor.view')
+    return WebUntisLink.objects.all()
+
+
+@monitor_router.post("/webuntis-links", response=WebUntisLinkSchema, auth=keycloak_auth)
+def create_webuntis_link(request, payload: WebUntisLinkCreateSchema):
+    _require_perm(request, 'monitor.edit')
+    return WebUntisLink.objects.create(**payload.dict())
+
+
+@monitor_router.put("/webuntis-links/{id}", response=WebUntisLinkSchema, auth=keycloak_auth)
+def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
+    _require_perm(request, 'monitor.edit')
+    link = get_object_or_404(WebUntisLink, id=id)
+    for key, value in payload.dict().items():
+        setattr(link, key, value)
+    link.save()
+    return link
+
+
+@monitor_router.delete("/webuntis-links/{id}", auth=keycloak_auth)
+def delete_webuntis_link(request, id: int):
+    _require_perm(request, 'monitor.edit')
+    get_object_or_404(WebUntisLink, id=id).delete()
     return {"success": True}
 
 

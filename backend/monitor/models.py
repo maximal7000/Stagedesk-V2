@@ -36,6 +36,24 @@ class MonitorDatei(models.Model):
         return f"{self.get_typ_display()}: {self.name}"
 
 
+class WebUntisLink(models.Model):
+    """Benannter, wiederverwendbarer WebUntis-Link (Bibliothek).
+    Wird von Profilen und Klausuren per FK referenziert, damit man Links
+    einmal benennt und dann überall auswählt statt neu einzutippen."""
+    name = models.CharField(max_length=120)
+    url = models.URLField(max_length=800)
+    notiz = models.CharField(max_length=300, blank=True)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'WebUntis-Link'
+        verbose_name_plural = 'WebUntis-Links'
+
+    def __str__(self):
+        return self.name
+
+
 class MonitorConfig(models.Model):
     """Konfiguration für ein Monitor-Profil (Multi-Profil-fähig)"""
 
@@ -163,6 +181,13 @@ class MonitorConfig(models.Model):
     webuntis_url = models.URLField(blank=True)
     webuntis_url_1tag = models.URLField(blank=True,
         help_text="Kompakter Link (nur 1 Tag) — wird im Splitscreen genutzt")
+    # Optionale Referenzen auf die Link-Bibliothek (haben Vorrang vor den URL-Feldern)
+    webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='als_profil_link',
+        help_text="Gespeicherter Link (2 Tage) — überschreibt webuntis_url")
+    webuntis_link_1tag = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='als_profil_link_1tag',
+        help_text="Gespeicherter Link (1 Tag) — überschreibt webuntis_url_1tag")
     webuntis_zoom = models.IntegerField(default=100, help_text="Zoom in Prozent")
     webuntis_dark_mode = models.BooleanField(default=False)
 
@@ -369,6 +394,18 @@ class MonitorConfig(models.Model):
             return self.aktives_bild.datei.url
         return ''
 
+    def get_webuntis_url(self):
+        """Gespeicherter Link (2 Tage) hat Vorrang, sonst Freitext-URL."""
+        if self.webuntis_link and self.webuntis_link.url:
+            return self.webuntis_link.url
+        return self.webuntis_url
+
+    def get_webuntis_url_1tag(self):
+        """Gespeicherter Link (1 Tag) hat Vorrang, sonst Freitext-URL."""
+        if self.webuntis_link_1tag and self.webuntis_link_1tag.url:
+            return self.webuntis_link_1tag.url
+        return self.webuntis_url_1tag
+
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
@@ -524,6 +561,22 @@ class Klausur(models.Model):
         Bildschirm, related_name='klausuren', blank=True,
         help_text="Auf welchen Bildschirmen angezeigt"
     )
+
+    # ─── Anzeige während der Klausur ───
+    ANZEIGE_CHOICES = [
+        ('vollbild', 'Vollbild (Klausur-Hinweis)'),
+        ('split', 'Splitscreen (Klausur + Stundenplan)'),
+        ('standard', 'Kein Zwang (Profil-Layout)'),
+    ]
+    anzeige_modus = models.CharField(max_length=10, choices=ANZEIGE_CHOICES, default='vollbild',
+        help_text="Wie der Bildschirm während der Klausur aussieht")
+    webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='als_klausur_link',
+        help_text="Stundenplan-Link für den Split während der Klausur")
+    split_seite = models.CharField(max_length=6, choices=[('links', 'Links'), ('rechts', 'Rechts')],
+        default='links', help_text="Auf welcher Seite die Klausur steht (Split)")
+    split_prozent = models.IntegerField(default=50, help_text="Breite der Klausur-Seite in Prozent")
+
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     class Meta:

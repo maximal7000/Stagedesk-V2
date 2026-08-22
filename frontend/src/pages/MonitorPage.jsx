@@ -53,6 +53,36 @@ function WebUntisFrame({ url, zoom = 100, dark = false }) {
 }
 
 
+// ═══ ON AIR Vollbild-Optik — wiederverwendbar (Layout, Override, Split) ═══
+function OnAirFullscreen({
+  farbe = '#da1f3d', text = 'ON AIR', zeigeUhr = false, uhrzeit = '',
+  logoUrl = '', fontSize = 'clamp(4rem, 16vw, 12rem)',
+}) {
+  return (
+    <div className="w-full h-full overflow-hidden select-none flex items-center justify-center"
+      style={{ background: `radial-gradient(ellipse at center, ${farbe}08 0%, #000 70%)` }}>
+      <div className="text-center relative">
+        <h1 className="font-black uppercase tracking-[0.4em] leading-none select-none animate-on-air-pulse"
+          style={{
+            color: farbe, fontSize,
+            textShadow: `0 0 60px ${farbe}50, 0 0 120px ${farbe}25, 0 4px 0 ${farbe}30`,
+            textIndent: '0.4em', '--on-air-color': farbe,
+          }}>
+          {text}
+        </h1>
+        {zeigeUhr && uhrzeit && (
+          <div className="font-mono text-3xl mt-10 tabular-nums tracking-[0.3em]"
+            style={{ color: `${farbe}40`, textIndent: '0.3em' }}>
+            {uhrzeit}
+          </div>
+        )}
+        {logoUrl && <img src={logoUrl} alt="" className="h-10 mx-auto mt-8 opacity-10" />}
+      </div>
+    </div>
+  );
+}
+
+
 // ═══ ON AIR Komponente — Größe, Position, Farbe konfigurierbar ═══
 function OnAirIndicator({ config, accent }) {
   if (!config?.zeige_onair || !config?.ist_on_air) return null;
@@ -356,8 +386,10 @@ export default function MonitorPage() {
         </div>
       )}
 
-      {/* KLAUSUR — Vollbild-Overlay; im Splitscreen unterdrückt (dort eigene Seite) */}
-      {klausur && !config?.notfall_aktiv && config?.layout_modus !== 'split' && (
+      {/* KLAUSUR — Vollbild-Overlay; nur bei anzeige_modus 'vollbild'
+          (split-Modus rendert eigenen geteilten Bildschirm, 'standard' zeigt nichts extra) */}
+      {klausur && !config?.notfall_aktiv && (klausur.anzeige_modus || 'vollbild') === 'vollbild'
+        && config?.layout_modus !== 'split' && (
         <div
           className="fixed inset-0 z-[95] flex items-center justify-center"
           style={{ background: klausur.farbe || '#1e40af' }}
@@ -420,26 +452,54 @@ export default function MonitorPage() {
     const zeigeUhr = oaCfg.zeige_uhr ?? config.zeige_uhr;
 
     return (
-      <div className="fixed inset-0 overflow-hidden select-none flex items-center justify-center"
-        style={{ background: `radial-gradient(ellipse at center, ${onAirFarbe}08 0%, #000 70%)` }}>
+      <div className="fixed inset-0 overflow-hidden select-none">
         {overlays}
-        <div className="text-center relative">
-          <h1 className="text-[12rem] font-black uppercase tracking-[0.5em] leading-none select-none animate-on-air-pulse"
-            style={{
-              color: onAirFarbe,
-              textShadow: `0 0 60px ${onAirFarbe}50, 0 0 120px ${onAirFarbe}25, 0 4px 0 ${onAirFarbe}30`,
-              textIndent: '0.5em',
-              '--on-air-color': onAirFarbe,
-            }}>
-            {onAirText}
-          </h1>
-          {zeigeUhr && (
-            <div className="font-mono text-3xl mt-14 tabular-nums tracking-[0.3em]"
-              style={{ color: `${onAirFarbe}40`, textIndent: '0.3em' }}>
-              {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-            </div>
+        <OnAirFullscreen farbe={onAirFarbe} text={onAirText} zeigeUhr={zeigeUhr}
+          uhrzeit={time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} />
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // ═══ KLAUSUR-AUTO-SPLIT ═══════════════════════════════════════════
+  // Aktive Klausur mit anzeige_modus='split' erzwingt den geteilten Bildschirm
+  // (Klausur-Hinweis + Stundenplan), unabhängig vom Profil-Layout.
+  // ═══════════════════════════════════════════════════════════════════
+  if (klausur && !config?.notfall_aktiv && klausur.anzeige_modus === 'split') {
+    const kProzent = Math.min(80, Math.max(20, klausur.split_prozent || 50));
+    const kUntis = klausur.webuntis_url || config?.webuntis_url_1tag_resolved || config?.webuntis_url_resolved;
+    const klausurSeite = (
+      <div className="w-full h-full flex items-center justify-center p-10"
+           style={{ background: klausur.farbe || '#1e40af' }}>
+        <div className="text-center max-w-3xl">
+          <div className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-white/10 text-white/90 text-base tracking-[0.3em] uppercase mb-8">
+            <AlignLeft className="w-5 h-5" /> Klausur
+          </div>
+          <h1 className="text-5xl font-black text-white mb-6 leading-tight">{klausur.titel}</h1>
+          {klausur.text && (
+            <p className="text-xl text-white/85 leading-relaxed whitespace-pre-line">{klausur.text}</p>
           )}
         </div>
+      </div>
+    );
+    const untisSeite = kUntis ? (
+      <WebUntisFrame url={kUntis} zoom={config?.webuntis_zoom} dark={config?.webuntis_dark_mode} />
+    ) : (
+      <div className="w-full h-full flex items-center justify-center text-white/30 text-2xl" style={{ background: bgColor }}>
+        Kein Stundenplan-Link
+      </div>
+    );
+    const klausurLinks = (klausur.split_seite || 'links') === 'links';
+    return (
+      <div className="fixed inset-0 flex" style={{ background: bgColor }}>
+        <div className="min-w-0 overflow-hidden" style={{ width: `${klausurLinks ? kProzent : 100 - kProzent}%` }}>
+          {klausurLinks ? klausurSeite : untisSeite}
+        </div>
+        <div className="w-px bg-white/15 shrink-0" />
+        <div className="min-w-0 overflow-hidden flex-1">
+          {klausurLinks ? untisSeite : klausurSeite}
+        </div>
+        {overlays}
       </div>
     );
   }
@@ -548,54 +608,36 @@ export default function MonitorPage() {
     const isLive = config.ist_on_air;
     const onAirText = config.on_air_text || 'ON AIR';
 
+    if (isLive) {
+      return (
+        <div className="fixed inset-0 overflow-hidden select-none">
+          {overlays}
+          <OnAirFullscreen farbe={onAirFarbe} text={onAirText}
+            zeigeUhr={config?.zeige_uhr}
+            uhrzeit={time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            logoUrl={config?.zeige_logo ? logoUrl : ''} />
+        </div>
+      );
+    }
     return (
       <div className="fixed inset-0 overflow-hidden select-none flex items-center justify-center"
-        style={{ background: `radial-gradient(ellipse at center, ${isLive ? onAirFarbe + '08' : '#0a0a0a'} 0%, #000 70%)` }}>
+        style={{ background: 'radial-gradient(ellipse at center, #0a0a0a 0%, #000 70%)' }}>
         {overlays}
-
-        {isLive ? (
-          <div className="text-center relative">
-            {/* Main text — pulsating glow, textIndent balances trailing letter-spacing */}
-            <h1 className="text-[12rem] font-black uppercase tracking-[0.5em] leading-none select-none animate-on-air-pulse"
-              style={{
-                color: onAirFarbe,
-                textShadow: `0 0 60px ${onAirFarbe}50, 0 0 120px ${onAirFarbe}25, 0 4px 0 ${onAirFarbe}30`,
-                textIndent: '0.5em',
-                '--on-air-color': onAirFarbe,
-              }}>
-              {onAirText}
-            </h1>
-
-            {/* Clock */}
-            {config?.zeige_uhr && (
-              <div className="font-mono text-3xl mt-14 tabular-nums tracking-[0.3em]"
-                style={{ color: `${onAirFarbe}40`, textIndent: '0.3em' }}>
-                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </div>
-            )}
-
-            {/* Logo */}
-            {config?.zeige_logo && logoUrl && (
-              <img src={logoUrl} alt="" className="h-10 mx-auto mt-8 opacity-10" />
-            )}
+        <div className="text-center">
+          {config?.zeige_logo && logoUrl && (
+            <img src={logoUrl} alt="" className="h-20 mx-auto mb-10 opacity-10" />
+          )}
+          <div className="text-white/[0.06] text-5xl font-black tracking-[0.5em] uppercase">
+            {onAirText}
           </div>
-        ) : (
-          <div className="text-center">
-            {config?.zeige_logo && logoUrl && (
-              <img src={logoUrl} alt="" className="h-20 mx-auto mb-10 opacity-10" />
-            )}
-            <div className="text-white/[0.06] text-5xl font-black tracking-[0.5em] uppercase">
-              {onAirText}
+          <div className="w-20 h-px mx-auto mt-6 bg-white/[0.04]" />
+          <div className="text-white/[0.04] text-xs mt-4 uppercase tracking-[0.3em]">Standby</div>
+          {config?.zeige_uhr && (
+            <div className="text-white/[0.08] font-mono text-xl mt-10 tabular-nums tracking-[0.2em]">
+              {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </div>
-            <div className="w-20 h-px mx-auto mt-6 bg-white/[0.04]" />
-            <div className="text-white/[0.04] text-xs mt-4 uppercase tracking-[0.3em]">Standby</div>
-            {config?.zeige_uhr && (
-              <div className="text-white/[0.08] font-mono text-xl mt-10 tabular-nums tracking-[0.2em]">
-                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   }
@@ -669,7 +711,7 @@ export default function MonitorPage() {
     const renderSplitSide = (kind) => {
       switch (kind) {
         case 'webuntis': {
-          const untisUrl = config?.webuntis_url_1tag || config?.webuntis_url;
+          const untisUrl = config?.webuntis_url_1tag_resolved || config?.webuntis_url_resolved;
           return untisUrl ? (
             <WebUntisFrame url={untisUrl} zoom={config.webuntis_zoom} dark={config.webuntis_dark_mode} />
           ) : (
@@ -701,17 +743,12 @@ export default function MonitorPage() {
         case 'onair': {
           const oaLive = config?.ist_on_air;
           const oaColor = config?.on_air_farbe || accent;
-          return (
-            <div className="w-full h-full flex items-center justify-center"
-                 style={{ background: oaLive ? oaColor : '#0a0a0a' }}>
-              {oaLive ? (
-                <h1 className={`text-white font-black tracking-tight text-center px-6 ${config?.on_air_blinken !== false ? 'animate-on-air-pulse' : ''}`}
-                    style={{ fontSize: 'clamp(3rem, 9vw, 9rem)' }}>
-                  {config?.on_air_text || 'ON AIR'}
-                </h1>
-              ) : (
-                <div className="text-white/20 text-4xl font-light tracking-widest uppercase">Standby</div>
-              )}
+          return oaLive ? (
+            <OnAirFullscreen farbe={oaColor} text={config?.on_air_text || 'ON AIR'}
+              fontSize="clamp(2.5rem, 8vw, 8rem)" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center" style={{ background: '#0a0a0a' }}>
+              <div className="text-white/20 text-4xl font-light tracking-widest uppercase">Standby</div>
             </div>
           );
         }

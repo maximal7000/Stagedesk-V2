@@ -19,6 +19,20 @@ class MonitorDateiSchema(Schema):
         return obj.datei.url if obj.datei else ''
 
 
+class WebUntisLinkSchema(Schema):
+    id: int
+    name: str
+    url: str
+    notiz: str = ''
+    erstellt_am: datetime
+
+
+class WebUntisLinkCreateSchema(Schema):
+    name: str
+    url: str
+    notiz: str = ''
+
+
 class MonitorProfileListSchema(Schema):
     """Kurze Profil-Übersicht für die Liste"""
     id: int
@@ -77,6 +91,8 @@ class MonitorConfigSchema(Schema):
     zeige_webuntis: bool
     webuntis_url: str
     webuntis_url_1tag: str = ''
+    webuntis_link_id: Optional[int] = None
+    webuntis_link_1tag_id: Optional[int] = None
     webuntis_zoom: int
     webuntis_dark_mode: bool
     zeige_hintergrundbild: bool
@@ -185,6 +201,8 @@ class MonitorConfigUpdateSchema(Schema):
     zeige_webuntis: Optional[bool] = None
     webuntis_url: Optional[str] = None
     webuntis_url_1tag: Optional[str] = None
+    webuntis_link_id: Optional[int] = None
+    webuntis_link_1tag_id: Optional[int] = None
     webuntis_zoom: Optional[int] = None
     webuntis_dark_mode: Optional[bool] = None
     zeige_hintergrundbild: Optional[bool] = None
@@ -334,6 +352,10 @@ class KlausurSchema(Schema):
     aktiv_bis: datetime
     farbe: str
     bildschirm_ids: List[int] = []
+    anzeige_modus: str = 'vollbild'
+    webuntis_link_id: Optional[int] = None
+    split_seite: str = 'links'
+    split_prozent: int = 50
 
     @staticmethod
     def resolve_bildschirm_ids(obj):
@@ -347,6 +369,10 @@ class KlausurCreateSchema(Schema):
     aktiv_bis: datetime
     farbe: str = '#1e40af'
     bildschirm_ids: List[int] = []
+    anzeige_modus: str = 'vollbild'
+    webuntis_link_id: Optional[int] = None
+    split_seite: str = 'links'
+    split_prozent: int = 50
 
 
 class KlausurUpdateSchema(Schema):
@@ -356,6 +382,10 @@ class KlausurUpdateSchema(Schema):
     aktiv_bis: Optional[datetime] = None
     farbe: Optional[str] = None
     bildschirm_ids: Optional[List[int]] = None
+    anzeige_modus: Optional[str] = None
+    webuntis_link_id: Optional[int] = None
+    split_seite: Optional[str] = None
+    split_prozent: Optional[int] = None
 
 
 class KlausurDisplaySchema(Schema):
@@ -363,3 +393,6 @@ class KlausurDisplaySchema(Schema):
     text: str
     farbe: str
     aktiv_bis: datetime
+    anzeige_modus: str = 'vollbild'
+    split_seite: str = 'links'
+    split_prozent: int = 50
