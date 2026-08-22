@@ -61,6 +61,7 @@ class MonitorConfig(models.Model):
     name = models.CharField(max_length=100, default='Standard')
     slug = models.SlugField(max_length=50, unique=True)
     ist_standard = models.BooleanField(default=True)
+    sortierung = models.IntegerField(default=0, help_text="Reihenfolge in der Profil-Liste")
     zeitplan = models.JSONField(default=list, blank=True,
         help_text='[{"tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]')
 
@@ -346,7 +347,7 @@ class MonitorConfig(models.Model):
         zeit = now.strftime('%H:%M')
 
         # Alle Profile laden, NICHT-Standard zuerst prüfen
-        for config in cls.objects.order_by('ist_standard', 'name'):
+        for config in cls.objects.order_by('ist_standard', 'sortierung', 'name'):
             zeitplan = config.zeitplan
             if not zeitplan or not isinstance(zeitplan, list) or len(zeitplan) == 0:
                 continue
