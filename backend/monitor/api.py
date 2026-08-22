@@ -17,7 +17,10 @@ from core.auth import keycloak_auth
 from users.api import is_admin
 from users.models import UserProfile
 from ninja.errors import HttpError
-from .models import MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur, WebUntisLink
+from .models import (
+    MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur, WebUntisLink,
+    MonitorEvent, EventBildschirm,
+)
 
 
 def _require_perm(request, code: str):
@@ -40,6 +43,7 @@ from .schemas import (
     BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
     KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
+    MonitorEventSchema, MonitorEventCreateSchema, MonitorEventUpdateSchema,
 )
 from . import oepnv
 
@@ -796,3 +800,70 @@ def delete_klausur(request, id: int):
     k = get_object_or_404(Klausur, id=id)
     k.delete()
     return {"success": True}
+
+
+# ═══ Admin: Events (aktivierbare Modi) ═══════════════════════════
+
+def _apply_event_zuweisungen(event, zuweisungen):
+    """Setzt die Bildschirm→Profil-Zuweisungen eines Events neu."""
+    event.zuweisungen.all().delete()
+    for z in zuweisungen or []:
+        d = z if isinstance(z, dict) else z.dict()
+        if d.get('bildschirm_id') and d.get('profil_id'):
+            EventBildschirm.objects.create(
+                event=event, bildschirm_id=d['bildschirm_id'], profil_id=d['profil_id'])
+
+
+@monitor_router.get("/events", response=list[MonitorEventSchema], auth=keycloak_auth)
+def list_events(request):
+    _require_perm(request, 'monitor.view')
+    return MonitorEvent.objects.all()
+
+
+@monitor_router.post("/events", response=MonitorEventSchema, auth=keycloak_auth)
+def create_event(request, payload: MonitorEventCreateSchema):
+    _require_perm(request, 'monitor.edit')
+    data = payload.dict()
+    zuweisungen = data.pop('zuweisungen', [])
+    event = MonitorEvent.objects.create(**data)
+    _apply_event_zuweisungen(event, zuweisungen)
+    return event
+
+
+@monitor_router.put("/events/{id}", response=MonitorEventSchema, auth=keycloak_auth)
+def update_event(request, id: int, payload: MonitorEventUpdateSchema):
+    _require_perm(request, 'monitor.edit')
+    event = get_object_or_404(MonitorEvent, id=id)
+    data = payload.dict(exclude_unset=True)
+    zuweisungen = data.pop('zuweisungen', None)
+    for key, value in data.items():
+        setattr(event, key, value)
+    event.save()
+    if zuweisungen is not None:
+        _apply_event_zuweisungen(event, zuweisungen)
+    return event
+
+
+@monitor_router.delete("/events/{id}", auth=keycloak_auth)
+def delete_event(request, id: int):
+    _require_perm(request, 'monitor.edit')
+    get_object_or_404(MonitorEvent, id=id).delete()
+    return {"success": True}
+
+
+@monitor_router.post("/events/{id}/aktivieren", response=MonitorEventSchema, auth=keycloak_auth)
+def activate_event(request, id: int):
+    _require_perm(request, 'monitor.edit')
+    event = get_object_or_404(MonitorEvent, id=id)
+    event.aktiv = True
+    event.save(update_fields=['aktiv'])
+    return event
+
+
+@monitor_router.post("/events/{id}/deaktivieren", response=MonitorEventSchema, auth=keycloak_auth)
+def deactivate_event(request, id: int):
+    _require_perm(request, 'monitor.edit')
+    event = get_object_or_404(MonitorEvent, id=id)
+    event.aktiv = False
+    event.save(update_fields=['aktiv'])
+    return event
