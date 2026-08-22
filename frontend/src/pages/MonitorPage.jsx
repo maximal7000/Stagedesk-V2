@@ -442,20 +442,44 @@ export default function MonitorPage() {
   // ═══════════════════════════════════════════════════════════════════
   // ═══ ON AIR VOLLBILD OVERRIDE ═══════════════════════════════════════
   // ═══════════════════════════════════════════════════════════════════
-  // Wenn on_air_vollbild aktiv und ON AIR eingeschaltet → ON AIR Display Layout zeigen
-  // Greift für ALLE Layouts (standard, stundenplan, abfahrten) — überspringt layout_modus='onair' (hat es schon)
-  // Übernimmt Config vom ON AIR Display Profil (falls vorhanden)
-  if (config?.on_air_vollbild && config?.ist_on_air && config?.layout_modus !== 'onair') {
+  // ON AIR ist immer Vollbild-Optik (keine Banner/Ecken mehr). Greift für ALLE
+  // Layouts außer 'onair' (hat es schon) und 'split' (regelt es selbst).
+  // on_air_split → ON AIR zusätzlich als Splitscreen (ON AIR + Stundenplan).
+  if (config?.zeige_onair && config?.ist_on_air
+      && config?.layout_modus !== 'onair' && config?.layout_modus !== 'split') {
     const oaCfg = data?.on_air_profil || {};
     const onAirFarbe = oaCfg.on_air_farbe || config.on_air_farbe || '#da1f3d';
     const onAirText = oaCfg.on_air_text || config.on_air_text || 'ON AIR';
     const zeigeUhr = oaCfg.zeige_uhr ?? config.zeige_uhr;
+    const uhrzeit = time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    if (config?.on_air_split) {
+      const untisUrl = config?.webuntis_url_1tag_resolved || config?.webuntis_url_resolved || config?.webuntis_url;
+      const oaProzent = Math.min(80, Math.max(20, config?.split_links_prozent || 50));
+      const untisSeite = untisUrl ? (
+        <WebUntisFrame url={untisUrl} zoom={config?.webuntis_zoom} dark={config?.webuntis_dark_mode} />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center text-white/25 text-2xl" style={{ background: bgColor }}>
+          Kein Stundenplan-Link
+        </div>
+      );
+      return (
+        <div className="fixed inset-0 flex" style={{ background: '#000' }}>
+          <div className="min-w-0 overflow-hidden" style={{ width: `${oaProzent}%` }}>
+            <OnAirFullscreen farbe={onAirFarbe} text={onAirText} zeigeUhr={zeigeUhr} uhrzeit={uhrzeit}
+              fontSize="clamp(2.5rem, 8vw, 8rem)" />
+          </div>
+          <div className="w-px bg-white/15 shrink-0" />
+          <div className="min-w-0 overflow-hidden flex-1">{untisSeite}</div>
+          {overlays}
+        </div>
+      );
+    }
 
     return (
       <div className="fixed inset-0 overflow-hidden select-none">
         {overlays}
-        <OnAirFullscreen farbe={onAirFarbe} text={onAirText} zeigeUhr={zeigeUhr}
-          uhrzeit={time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} />
+        <OnAirFullscreen farbe={onAirFarbe} text={onAirText} zeigeUhr={zeigeUhr} uhrzeit={uhrzeit} />
       </div>
     );
   }
@@ -539,10 +563,10 @@ export default function MonitorPage() {
         {/* Hauptbereich: WebUntis + optionaler Raumplan */}
         <div className="flex-1 flex overflow-hidden min-h-0">
 
-          {/* WebUntis Iframe — Vollbild */}
-          {config?.zeige_webuntis && config?.webuntis_url ? (
+          {/* WebUntis Iframe — Vollbild (nutzt gespeicherten Link oder Freitext-URL) */}
+          {(config?.webuntis_url_resolved || config?.webuntis_url) ? (
             <div className="flex-1 min-w-0">
-              <WebUntisFrame url={config.webuntis_url} zoom={config.webuntis_zoom}
+              <WebUntisFrame url={config.webuntis_url_resolved || config.webuntis_url} zoom={config.webuntis_zoom}
                              dark={config.webuntis_dark_mode} />
             </div>
           ) : (
@@ -690,12 +714,15 @@ export default function MonitorPage() {
     const bildUrl = config?.bild_url_resolved
       ? (config.bild_url_resolved.startsWith('http') ? config.bild_url_resolved : `${MEDIA_BASE}${config.bild_url_resolved}`)
       : '';
+    const fit = config?.bild_fit || 'contain';
     return (
       <div className="fixed inset-0 flex flex-col" style={{ background: bgColor }}>
         {vollbildHeader}
-        <div className="flex-1 min-h-0 flex items-center justify-center p-4">
+        <div className={`flex-1 min-h-0 flex items-center justify-center ${fit === 'contain' ? 'p-4' : ''}`}>
           {bildUrl ? (
-            <img src={bildUrl} alt="" className="max-w-full max-h-full object-contain" />
+            <img src={bildUrl} alt=""
+              className={fit === 'contain' ? 'max-w-full max-h-full object-contain' : 'w-full h-full'}
+              style={fit === 'cover' ? { objectFit: 'cover' } : fit === 'fill' ? { objectFit: 'fill' } : undefined} />
           ) : (
             <div className="text-white/40 text-3xl">Kein Bild ausgewählt</div>
           )}
@@ -745,7 +772,8 @@ export default function MonitorPage() {
           const oaColor = config?.on_air_farbe || accent;
           return oaLive ? (
             <OnAirFullscreen farbe={oaColor} text={config?.on_air_text || 'ON AIR'}
-              fontSize="clamp(2.5rem, 8vw, 8rem)" />
+              fontSize="clamp(2.5rem, 8vw, 8rem)" zeigeUhr={config?.zeige_uhr}
+              uhrzeit={time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })} />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ background: '#0a0a0a' }}>
               <div className="text-white/20 text-4xl font-light tracking-widest uppercase">Standby</div>
@@ -1184,7 +1212,7 @@ export default function MonitorPage() {
   const hasLeft = (config?.zeige_veranstaltungen && veranstaltungen.length > 0) || eigenerCountdown;
   const hasMiddle = (config?.zeige_ankuendigungen && ankuendigungen.length > 0) || hasFreitext || hasRaumplan;
   const hasKamera = config?.zeige_kamera && config?.kamera_url;
-  const hasRight = (config?.zeige_webuntis && config?.webuntis_url) || (config?.zeige_pdf && pdfUrl) || (config?.zeige_slideshow && bilder.length > 0) || hasQrCode || hasKamera;
+  const hasRight = (config?.zeige_webuntis && (config?.webuntis_url_resolved || config?.webuntis_url)) || (config?.zeige_pdf && pdfUrl) || (config?.zeige_slideshow && bilder.length > 0) || hasQrCode || hasKamera;
 
   const WetterIcon = wetter?.icon ? (weatherIcons[wetter.icon] || Cloud) : Cloud;
   const hasTicker = config?.zeige_ticker && config?.ticker_text;
@@ -1474,14 +1502,14 @@ export default function MonitorPage() {
           <div className={`${hasLeft || hasMiddle ? (hasLeft && hasMiddle ? 'w-1/3' : 'w-1/2') : 'flex-1'} flex flex-col overflow-hidden`}>
 
             {/* WebUntis */}
-            {config?.zeige_webuntis && config?.webuntis_url && (
+            {config?.zeige_webuntis && (config?.webuntis_url_resolved || config?.webuntis_url) && (
               <div className="flex-1 flex flex-col overflow-hidden mb-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Calendar className="w-4 h-4 text-purple-400" />
                   <h2 className="text-sm font-semibold text-purple-400 uppercase tracking-wider">Stundenplan</h2>
                 </div>
                 <div className="flex-1 rounded-xl overflow-hidden border border-white/10 bg-white/[0.02]">
-                  <WebUntisFrame url={config.webuntis_url} zoom={config.webuntis_zoom}
+                  <WebUntisFrame url={config.webuntis_url_resolved || config.webuntis_url} zoom={config.webuntis_zoom}
                                  dark={config.webuntis_dark_mode} />
                 </div>
               </div>

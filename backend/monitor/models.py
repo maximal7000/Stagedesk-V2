@@ -167,6 +167,13 @@ class MonitorConfig(models.Model):
         MonitorDatei, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='als_aktives_bild'
     )
+    BILD_FIT_CHOICES = [
+        ('contain', 'Einpassen (ganzes Bild sichtbar)'),
+        ('cover',   'Füllen (Bildschirm ausfüllen, ggf. beschnitten)'),
+        ('fill',    'Strecken (verzerrt auf Bildschirmgröße)'),
+    ]
+    bild_fit = models.CharField(max_length=10, choices=BILD_FIT_CHOICES, default='contain',
+        help_text="Wie das Bild auf den Bildschirm skaliert wird")
 
     # ─── Theme ─────────────────────────────
     THEME_CHOICES = [
@@ -295,6 +302,8 @@ class MonitorConfig(models.Model):
     on_air_blinken = models.BooleanField(default=True)
     on_air_farbe = models.CharField(max_length=7, blank=True, help_text="Leer = Akzentfarbe")
     on_air_vollbild = models.BooleanField(default=False, help_text="Bei ON AIR automatisch Vollbild-Anzeige")
+    on_air_split = models.BooleanField(default=False,
+        help_text="Bei ON AIR Splitscreen (ON AIR + Stundenplan) statt reinem Vollbild")
 
     # ─── Kamera ────────────────────────────
     zeige_kamera = models.BooleanField(default=False)

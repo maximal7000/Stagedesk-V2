@@ -86,6 +86,7 @@ class MonitorConfigSchema(Schema):
     pdf_seiten: str = ''
     pdf_statische_seite: int = 1
     aktives_bild_id: Optional[int] = None
+    bild_fit: str = 'contain'
     split_links: str = 'klausur'
     split_rechts: str = 'webuntis'
     split_links_prozent: int = 50
@@ -148,6 +149,7 @@ class MonitorConfigSchema(Schema):
     on_air_blinken: bool
     on_air_farbe: str
     on_air_vollbild: bool
+    on_air_split: bool = False
     api_token: str
     refresh_intervall: int
     zeige_kamera: bool = False
@@ -197,6 +199,7 @@ class MonitorConfigUpdateSchema(Schema):
     pdf_seiten: Optional[str] = None
     pdf_statische_seite: Optional[int] = None
     aktives_bild_id: Optional[int] = None
+    bild_fit: Optional[str] = None
     split_links: Optional[str] = None
     split_rechts: Optional[str] = None
     split_links_prozent: Optional[int] = None
@@ -257,6 +260,7 @@ class MonitorConfigUpdateSchema(Schema):
     on_air_blinken: Optional[bool] = None
     on_air_farbe: Optional[str] = None
     on_air_vollbild: Optional[bool] = None
+    on_air_split: Optional[bool] = None
     refresh_intervall: Optional[int] = None
     zeige_kamera: Optional[bool] = None
     kamera_url: Optional[str] = None
