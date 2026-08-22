@@ -898,7 +898,7 @@ export default function MonitorAdminPage() {
         <p className="text-[11px] text-gray-500">API-Key wird einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
       </>);
       case 'zeige_webuntis': return settingsCard(<Calendar className="w-4 h-4 text-purple-400" />, 'WebUntis iFrame', <>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (2 Tage)</label>
             <select value={c.webuntis_link_id || ''} disabled={!canEdit} onChange={e => updateConfig('webuntis_link_id', e.target.value ? parseInt(e.target.value) : null)} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
               <option value="">— eigener Link unten —</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
@@ -911,7 +911,7 @@ export default function MonitorAdminPage() {
           <input type="url" value={c.webuntis_url} onChange={e => updateConfig('webuntis_url', e.target.value)} disabled={!canEdit} placeholder="https://neilo.webuntis.com/..." className={inp} /></div>
         <div><label className="block text-xs text-gray-500 mb-1">Eigener Link (1 Tag, kompakt)</label>
           <input type="url" value={c.webuntis_url_1tag || ''} onChange={e => updateConfig('webuntis_url_1tag', e.target.value)} disabled={!canEdit} placeholder="leer = 2-Tage-Link" className={inp} /></div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Zoom: {c.webuntis_zoom}%</label>
             <input type="range" min={50} max={150} value={c.webuntis_zoom} onChange={e => updateConfig('webuntis_zoom', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-purple-500" /></div>
           <div className="flex items-end">
@@ -919,14 +919,14 @@ export default function MonitorAdminPage() {
               className={`px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${c.webuntis_dark_mode ? 'bg-blue-600/20 border-blue-500/40 text-blue-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}><Moon className="w-4 h-4 inline mr-1" /> Dark-Mode</button></div>
         </div>
       </>);
-      case 'zeige_qr_code': return settingsCard(<QrCode className="w-4 h-4 text-emerald-400" />, 'QR-Code', <div className="grid grid-cols-2 gap-3">
+      case 'zeige_qr_code': return settingsCard(<QrCode className="w-4 h-4 text-emerald-400" />, 'QR-Code', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><label className="block text-xs text-gray-500 mb-1">URL</label>
           <input type="url" value={c.qr_code_url} onChange={e => updateConfig('qr_code_url', e.target.value)} disabled={!canEdit} placeholder="https://..." className={inp} /></div>
         <div><label className="block text-xs text-gray-500 mb-1">Beschriftung</label>
           <input type="text" value={c.qr_code_label} onChange={e => updateConfig('qr_code_label', e.target.value)} disabled={!canEdit} placeholder="z.B. Event-Anmeldung" className={inp} /></div>
       </div>);
       case 'zeige_kamera': return settingsCard(<Activity className="w-4 h-4 text-cyan-400" />, 'Kamera-Stream', <>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Titel</label>
             <input type="text" value={c.kamera_titel || ''} onChange={e => updateConfig('kamera_titel', e.target.value)} disabled={!canEdit} placeholder="z.B. Saal" className={inp} /></div>
           <div><label className="block text-xs text-gray-500 mb-1">Typ</label>
@@ -945,7 +945,7 @@ export default function MonitorAdminPage() {
           <input type="text" value={c.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)} disabled={!canEdit} placeholder="z.B. Aul" className={inp} /></div>
         <p className="text-[11px] text-gray-500">Server, Schule und Login werden einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
       </>);
-      case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-amber-400" />, 'Eigener Countdown', <div className="grid grid-cols-2 gap-3">
+      case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-amber-400" />, 'Eigener Countdown', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><label className="block text-xs text-gray-500 mb-1">Event-Name</label>
           <input type="text" value={c.eigener_countdown_name} onChange={e => updateConfig('eigener_countdown_name', e.target.value)} disabled={!canEdit} placeholder="z.B. Schulkonzert" className={inp} /></div>
         <div><label className="block text-xs text-gray-500 mb-1">Datum &amp; Uhrzeit</label>
@@ -1122,7 +1122,7 @@ export default function MonitorAdminPage() {
           return (
             <div className="p-4 border border-indigo-500/20 rounded-xl bg-gray-800/20 space-y-4">
               {/* Name & Slug */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Name</label>
                   <input type="text" value={bs.name} disabled={!canEdit}
@@ -1191,6 +1191,7 @@ export default function MonitorAdminPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
+                    <ZeitplanTimeline zeitplan={bsZeitplan} profiles={profiles} />
                     {bsZeitplan.map((entry, idx) => (
                       <div key={idx} className="p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
                         <div className="flex items-center gap-3 flex-wrap">
@@ -1503,7 +1504,7 @@ export default function MonitorAdminPage() {
             {/* New Profile Dialog */}
             {showNewProfile && (
               <div className="mt-3 p-4 border border-gray-700 rounded-xl bg-gray-800/30 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Name</label>
                     <input type="text" value={newProfileName} onChange={e => setNewProfileName(e.target.value)}
@@ -1795,7 +1796,7 @@ export default function MonitorAdminPage() {
                     Splitscreen: zwei frei wählbare Inhalte nebeneinander.
                   </p>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-gray-400 mb-1">Linke Seite</label>
                       <select value={links} onChange={e => updateConfig('split_links', e.target.value)} disabled={!canEdit}
@@ -1879,7 +1880,7 @@ export default function MonitorAdminPage() {
                       ) : <p className="text-gray-500 text-xs">Noch keine PDFs — oben hochladen.</p>}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs text-gray-400 mb-1">Seiten-Modus</label>
                         <select value={monitorConfig.pdf_modus || 'durchschalten'} onChange={e => updateConfig('pdf_modus', e.target.value)} disabled={!canEdit}
@@ -2033,6 +2034,7 @@ export default function MonitorAdminPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <ZeitplanTimeline zeitplan={monitorConfig.zeitplan} profiles={profiles} />
                   {(monitorConfig.zeitplan || []).map((entry, idx) => (
                     <div key={idx} className="p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
                       <div className="flex items-center gap-3">
@@ -2098,7 +2100,7 @@ export default function MonitorAdminPage() {
           {/* ═══ Allgemein ═══ */}
           <Section id="allgemein" area="ansichten" title="Allgemein" description="Titel, Refresh und Import/Export"
             icon={Settings} iconColor="bg-gray-700" open={openSections.allgemein} onToggle={toggleSection}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">Titel</label>
                 <input type="text" value={monitorConfig.titel} onChange={e => updateConfig('titel', e.target.value)}
@@ -2139,7 +2141,7 @@ export default function MonitorAdminPage() {
           {/* ═══ ON AIR Anpassung ═══ */}
           <Section id="onair" area="ansichten" title="ON AIR Anpassung" description="Text, Farbe, Blinken und Splitscreen"
             icon={Radio} iconColor="bg-red-600/30" open={openSections.onair} onToggle={toggleSection}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">ON AIR Text</label>
                 <input type="text" value={monitorConfig.on_air_text} onChange={e => updateConfig('on_air_text', e.target.value)}
@@ -2295,7 +2297,7 @@ export default function MonitorAdminPage() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">Hintergrundfarbe</label>
                 <div className="flex gap-2">
@@ -3010,7 +3012,7 @@ export default function MonitorAdminPage() {
             )}
 
             {/* Einstellungen */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">Vorausschau (Min.)</label>
                 <input type="number" value={monitorConfig.oepnv_dauer} onChange={e => updateConfig('oepnv_dauer', parseInt(e.target.value) || 60)}
@@ -3028,7 +3030,7 @@ export default function MonitorAdminPage() {
             {/* Anzeige-Optionen */}
             <div>
               <label className="block text-xs text-gray-400 mb-2 font-medium">Anzeige-Optionen</label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {[
                   { key: 'oepnv_zeige_via', label: 'Zwischenhalte (Via) anzeigen', desc: 'Zeigt Halte unter dem Ziel' },
                   { key: 'oepnv_zeige_relativ', label: 'Relative Zeit ("in X min")', desc: 'Countdown neben Abfahrtszeit' },
@@ -3194,7 +3196,7 @@ export default function MonitorAdminPage() {
                     onChange={e => setGlobalSettings({ ...globalSettings, wetter_api_key: e.target.value })}
                     placeholder="API-Key" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50" />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Raumplan-Server</label>
                     <input type="text" value={globalSettings.raumplan_server || ''} disabled={!canEdit}
@@ -3297,6 +3299,42 @@ export default function MonitorAdminPage() {
       </div>
     </div>
     </AreaContext.Provider>
+  );
+}
+
+// ─── Zeitplan-Wochen-Timeline (kompakte visuelle Übersicht) ───
+function ZeitplanTimeline({ zeitplan, profiles }) {
+  const entries = (zeitplan || []).filter(e => e && e.profil_id);
+  if (entries.length === 0) return null;
+  const START = 6, END = 22, SPAN = (END - START) * 60;
+  const toMin = (t) => { const [h, m] = (t || '00:00').split(':').map(Number); return h * 60 + (m || 0); };
+  const palette = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#0891b2', '#db2777', '#4f46e5'];
+  const colorFor = (id) => palette[(id || 0) % palette.length];
+  const nameFor = (id) => profiles.find(p => p.id === id)?.name || '—';
+  return (
+    <div className="mb-3 p-2 bg-gray-800/30 rounded-lg border border-gray-700/40">
+      <div className="grid grid-cols-7 gap-1">
+        {WOCHENTAGE.map((d, di) => (
+          <div key={di} className="text-center">
+            <div className="text-[10px] text-gray-500 mb-1">{d}</div>
+            <div className="relative bg-gray-900/60 rounded overflow-hidden" style={{ height: 110 }}>
+              {entries.filter(e => (e.tage || []).includes(di)).map((e, i) => {
+                const top = Math.max(0, (toMin(e.von) - START * 60) / SPAN * 100);
+                const h = Math.min(100 - top, (toMin(e.bis) - toMin(e.von)) / SPAN * 100);
+                return (
+                  <div key={i} className="absolute left-0.5 right-0.5 rounded text-[8px] leading-tight text-white overflow-hidden px-0.5 py-px"
+                    style={{ top: `${top}%`, height: `${Math.max(7, h)}%`, background: colorFor(e.profil_id) }}
+                    title={`${nameFor(e.profil_id)}: ${e.von}–${e.bis}`}>
+                    {nameFor(e.profil_id)}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex justify-between text-[9px] text-gray-600 mt-1"><span>{START}:00</span><span>{END}:00 Uhr</span></div>
+    </div>
   );
 }
 
@@ -3578,7 +3616,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
 
       {draft && (
         <div className="p-4 bg-gray-800/40 rounded-xl border border-violet-500/30 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="col-span-2">
               <label className="block text-xs text-gray-400 mb-1">Name</label>
               <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
@@ -3593,7 +3631,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
           </div>
 
           {/* Zeitplanung (optional) */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs text-gray-400 mb-1">Automatisch aktiv ab (optional)</label>
               <input type="datetime-local" value={toLocal(draft.aktiv_von)} onChange={e => setDraft({ ...draft, aktiv_von: toIso(e.target.value) })}
@@ -3924,7 +3962,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
 
   return (
     <div className="p-4 border border-blue-500/30 rounded-xl bg-blue-900/10 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1">Titel</label>
           <input type="text" value={titel} onChange={e => setTitel(e.target.value)} autoFocus
@@ -3951,7 +3989,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
           placeholder="z.B. Bitte Ruhe — Klausur läuft bis 10:30"
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1">Von</label>
           <input type="datetime-local" value={von} onChange={e => setVon(e.target.value)}
@@ -4002,7 +4040,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
           </select>
         </div>
         {anzeigeModus === 'split' && (
-          <div className="grid grid-cols-2 gap-3 p-3 bg-gray-800/40 rounded-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-gray-800/40 rounded-lg">
             <div className="col-span-2">
               <label className="block text-xs text-gray-400 mb-1">Stundenplan-Link (WebUntis)</label>
               <select value={webuntisLinkId || ''} onChange={e => setWebuntisLinkId(e.target.value ? parseInt(e.target.value) : null)}
