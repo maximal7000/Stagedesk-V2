@@ -150,6 +150,7 @@ class MonitorConfigSchema(Schema):
     on_air_farbe: str
     on_air_vollbild: bool
     on_air_split: bool = False
+    on_air_split_seite: str = 'rechts'
     api_token: str
     refresh_intervall: int
     zeige_kamera: bool = False
@@ -261,6 +262,7 @@ class MonitorConfigUpdateSchema(Schema):
     on_air_farbe: Optional[str] = None
     on_air_vollbild: Optional[bool] = None
     on_air_split: Optional[bool] = None
+    on_air_split_seite: Optional[str] = None
     refresh_intervall: Optional[int] = None
     zeige_kamera: Optional[bool] = None
     kamera_url: Optional[str] = None

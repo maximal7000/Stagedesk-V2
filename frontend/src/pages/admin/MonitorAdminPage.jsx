@@ -266,7 +266,7 @@ export default function MonitorAdminPage() {
       const body = {
         name: v.name, dauer_minuten: v.dauer_minuten || 90, titel: v.titel || 'Klausur', text: v.text || '',
         farbe: v.farbe || '#1e40af', anzeige_modus: v.anzeige_modus || 'vollbild',
-        webuntis_link_id: v.webuntis_link_id || null, split_seite: v.split_seite || 'links', split_prozent: v.split_prozent || 50,
+        webuntis_link_id: v.webuntis_link_id || null, split_seite: v.split_seite || 'rechts', split_prozent: v.split_prozent || 50,
       };
       if (v.id) await apiClient.put(`/monitor/klausur-vorlagen/${v.id}`, body);
       else await apiClient.post('/monitor/klausur-vorlagen', body);
@@ -379,7 +379,7 @@ export default function MonitorAdminPage() {
     'oepnv_zeige_via','oepnv_zeige_relativ','oepnv_farbcodierung','oepnv_highlight_naechste',
     'oepnv_auto_scroll','oepnv_stoerungsbanner','oepnv_schriftgroesse','oepnv_layout_spalten',
     'oepnv_streik_aktiv','oepnv_streik_text','oepnv_streik_linien','oepnv_streik_typen',
-    'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild','on_air_split',
+    'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild','on_air_split','on_air_split_seite',
     'refresh_intervall',
     'zeige_kamera','kamera_url','kamera_titel','kamera_typ',
     'layout_widgets','baukasten_spalten','baukasten_zeilenhoehe',
@@ -1319,7 +1319,7 @@ export default function MonitorAdminPage() {
                 aktiv_von: now.toISOString(), aktiv_bis: bis.toISOString(),
                 bildschirm_ids: [], anzeige_modus: v.anzeige_modus || 'vollbild',
                 webuntis_link_id: v.webuntis_link_id || null,
-                split_seite: v.split_seite || 'links', split_prozent: v.split_prozent || 50,
+                split_seite: v.split_seite || 'rechts', split_prozent: v.split_prozent || 50,
               });
               setShowNewKlausur(true);
             }}
@@ -2034,9 +2034,26 @@ export default function MonitorAdminPage() {
               <Toggle checked={monitorConfig.on_air_split} onChange={v => updateConfig('on_air_split', v)} disabled={!canEdit} />
               <div>
                 <span className="text-sm text-white">Bei ON AIR Splitscreen</span>
-                <p className="text-xs text-gray-500 mt-0.5">Statt reinem Vollbild: ON AIR links, Stundenplan rechts (Breite = Split-Verhältnis)</p>
+                <p className="text-xs text-gray-500 mt-0.5">Statt reinem Vollbild: ON AIR + Stundenplan nebeneinander (Breite = Split-Verhältnis)</p>
               </div>
             </div>
+
+            {/* Seite für ON AIR im Split */}
+            {monitorConfig.on_air_split && (
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5 font-medium">ON AIR Seite</label>
+                <div className="grid grid-cols-2 gap-2 max-w-xs">
+                  {[{ v: 'links', l: 'Links' }, { v: 'rechts', l: 'Rechts' }].map(o => (
+                    <button key={o.v} onClick={() => canEdit && updateConfig('on_air_split_seite', o.v)} disabled={!canEdit}
+                      className={`py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
+                        (monitorConfig.on_air_split_seite || 'rechts') === o.v
+                          ? 'bg-red-600/20 border-red-500/40 text-red-300'
+                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-800/80'
+                      }`}>{o.l}</button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <p className="text-[11px] text-gray-500">
               ON AIR wird immer als Vollbild-Optik gezeigt (überschreibt das Layout, solange ON AIR aktiv ist).
@@ -2060,11 +2077,14 @@ export default function MonitorAdminPage() {
                   );
                   if (monitorConfig.on_air_split) {
                     const p = Math.min(80, Math.max(20, monitorConfig.split_links_prozent || 50));
+                    const onAirRechts = (monitorConfig.on_air_split_seite || 'rechts') === 'rechts';
+                    const onairPane = <div className="w-full h-full flex items-center justify-center" style={{ background: 'radial-gradient(ellipse at center, ' + f + '10 0%, #000 70%)' }}>{onair}</div>;
+                    const untisPane = <div className="w-full h-full flex items-center justify-center text-white/25 text-xs bg-white/[0.02]">Stundenplan</div>;
                     return (
                       <div className="absolute inset-0 flex">
-                        <div className="flex items-center justify-center" style={{ width: `${p}%`, background: 'radial-gradient(ellipse at center, ' + f + '10 0%, #000 70%)' }}>{onair}</div>
+                        <div style={{ width: `${p}%` }}>{onAirRechts ? untisPane : onairPane}</div>
                         <div className="w-px bg-white/15" />
-                        <div className="flex-1 flex items-center justify-center text-white/25 text-xs bg-white/[0.02]">Stundenplan</div>
+                        <div className="flex-1">{onAirRechts ? onairPane : untisPane}</div>
                       </div>
                     );
                   }
@@ -3538,7 +3558,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
 function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete }) {
   const [manage, setManage] = useState(false);
   const [draft, setDraft] = useState(null); // {id?, name, dauer_minuten, anzeige_modus, farbe, split_seite, split_prozent, webuntis_link_id}
-  const newDraft = () => ({ name: '', dauer_minuten: 90, anzeige_modus: 'vollbild', farbe: '#1e40af', split_seite: 'links', split_prozent: 50, webuntis_link_id: null });
+  const newDraft = () => ({ name: '', dauer_minuten: 90, anzeige_modus: 'vollbild', farbe: '#1e40af', split_seite: 'rechts', split_prozent: 50, webuntis_link_id: null });
   const save = async () => { if (!draft.name.trim()) { toast.error('Name nötig'); return; } await onSave(draft); setDraft(null); };
   return (
     <div className="space-y-2">
@@ -3704,7 +3724,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
   const [bildschirmIds, setBildschirmIds] = useState(initial?.bildschirm_ids || []);
   const [anzeigeModus, setAnzeigeModus] = useState(initial?.anzeige_modus || 'vollbild');
   const [webuntisLinkId, setWebuntisLinkId] = useState(initial?.webuntis_link_id || null);
-  const [splitSeite, setSplitSeite] = useState(initial?.split_seite || 'links');
+  const [splitSeite, setSplitSeite] = useState(initial?.split_seite || 'rechts');
   const [splitProzent, setSplitProzent] = useState(initial?.split_prozent || 50);
 
   const toggleBs = (id) => setBildschirmIds(prev =>
