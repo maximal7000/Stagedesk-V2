@@ -934,7 +934,7 @@ export default function MonitorAdminPage() {
 
   return (
     <AreaContext.Provider value={activeArea}>
-    <div className="max-w-7xl mx-auto flex gap-5">
+    <div className="max-w-[1800px] mx-auto flex gap-5">
       {/* ═══ Seitenleiste (Desktop) ═══ */}
       <aside className="hidden md:flex flex-col gap-1 w-52 shrink-0 sticky top-4 self-start">
         <div className="flex items-center gap-2 px-2 py-3 mb-1">
