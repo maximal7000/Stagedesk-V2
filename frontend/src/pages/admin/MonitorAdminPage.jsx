@@ -1338,10 +1338,30 @@ export default function MonitorAdminPage() {
             )}
           </div>
           {canEdit && (
-            <button onClick={() => { setKlausurTemplate(null); setShowNewKlausur(true); }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
-              <Plus className="w-3.5 h-3.5" /> Neue Klausur
-            </button>
+            <div className="flex items-center gap-2">
+              {klausuren.length > 0 && (
+                <button onClick={() => {
+                  const last = [...klausuren].sort((a, b) => new Date(b.aktiv_von) - new Date(a.aktiv_von))[0];
+                  const now = new Date();
+                  const dauer = (new Date(last.aktiv_bis) - new Date(last.aktiv_von)) || 90 * 60000;
+                  setKlausurTemplate({
+                    titel: last.titel, text: last.text || '', farbe: last.farbe || '#1e40af',
+                    aktiv_von: now.toISOString(), aktiv_bis: new Date(now.getTime() + dauer).toISOString(),
+                    bildschirm_ids: last.bildschirm_ids || [], anzeige_modus: last.anzeige_modus || 'vollbild',
+                    webuntis_link_id: last.webuntis_link_id || null,
+                    split_seite: last.split_seite || 'rechts', split_prozent: last.split_prozent || 50,
+                  });
+                  setShowNewKlausur(true);
+                }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700/60 hover:bg-gray-700 border border-gray-600/60 text-gray-200 text-sm rounded-lg" title="Übernimmt Titel, Text, Farbe, Dauer und Bildschirme der letzten Klausur">
+                  <Copy className="w-3.5 h-3.5" /> Aus letzter
+                </button>
+              )}
+              <button onClick={() => { setKlausurTemplate(null); setShowNewKlausur(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+                <Plus className="w-3.5 h-3.5" /> Neue Klausur
+              </button>
+            </div>
           )}
         </div>
 
@@ -3702,8 +3722,15 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
                     className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm" placeholder="% Klausur" />
                 </div>
               )}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <input type="color" value={draft.farbe} onChange={e => setDraft({ ...draft, farbe: e.target.value })} className="h-8 w-12 bg-gray-800 border border-gray-700 rounded" />
+                <div className="flex items-center gap-1.5">
+                  {['#1e40af', '#b91c1c', '#15803d', '#a16207', '#7c3aed', '#0f766e'].map(c => (
+                    <button key={c} type="button" onClick={() => setDraft({ ...draft, farbe: c })} title={c}
+                      className={`w-5 h-5 rounded-full border-2 ${(draft.farbe || '').toLowerCase() === c ? 'border-white' : 'border-transparent'}`}
+                      style={{ background: c }} />
+                  ))}
+                </div>
                 <button onClick={save} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg flex items-center gap-1"><Save className="w-3.5 h-3.5" /> Speichern</button>
                 <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 text-white text-xs rounded-lg">Abbrechen</button>
               </div>
@@ -3836,8 +3863,17 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Farbe</label>
-          <input type="color" value={farbe} onChange={e => setFarbe(e.target.value)}
-            className="w-full h-10 bg-gray-800 border border-gray-700 rounded-lg" />
+          <div className="flex items-center gap-2">
+            <input type="color" value={farbe} onChange={e => setFarbe(e.target.value)}
+              className="h-10 w-14 bg-gray-800 border border-gray-700 rounded-lg shrink-0" />
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {['#1e40af', '#b91c1c', '#15803d', '#a16207', '#7c3aed', '#0f766e'].map(c => (
+                <button key={c} type="button" onClick={() => setFarbe(c)} title={c}
+                  className={`w-6 h-6 rounded-full border-2 ${farbe.toLowerCase() === c ? 'border-white' : 'border-transparent'}`}
+                  style={{ background: c }} />
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <div>
