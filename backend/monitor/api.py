@@ -456,7 +456,7 @@ def toggle_notfall(request, payload: NotfallSchema):
 @monitor_router.get("/profile", response=list[MonitorProfileListSchema], auth=keycloak_auth)
 def list_profiles(request):
     _require_perm(request, 'monitor.view')
-    return MonitorConfig.objects.all()
+    return MonitorConfig.objects.order_by('sortierung', 'name')
 
 
 @monitor_router.post("/profile", auth=keycloak_auth)

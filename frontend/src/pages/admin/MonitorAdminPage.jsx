@@ -78,6 +78,7 @@ export default function MonitorAdminPage() {
   const [editingAnkuendigung, setEditingAnkuendigung] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [savedAt, setSavedAt] = useState(0);
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileLayout, setNewProfileLayout] = useState('standard');
@@ -98,6 +99,7 @@ export default function MonitorAdminPage() {
   // Klausuren
   const [klausuren, setKlausuren] = useState([]);
   const [showNewKlausur, setShowNewKlausur] = useState(false);
+  const [klausurTemplate, setKlausurTemplate] = useState(null);
 
   // WebUntis-Link-Bibliothek
   const [webuntisLinks, setWebuntisLinks] = useState([]);
@@ -206,6 +208,7 @@ export default function MonitorAdminPage() {
     try {
       const body = {
         name: ev.name, beschreibung: ev.beschreibung || '', farbe: ev.farbe || '#7c3aed',
+        aktiv_von: ev.aktiv_von || null, aktiv_bis: ev.aktiv_bis || null,
         zuweisungen: (ev.zuweisungen || []).map(z => ({ bildschirm_id: z.bildschirm_id, profil_id: z.profil_id })),
       };
       if (ev.id) await apiClient.put(`/monitor/events/${ev.id}`, body);
@@ -279,6 +282,13 @@ export default function MonitorAdminPage() {
     return () => window.removeEventListener('keydown', handler);
   });
 
+  // Schutz vor Datenverlust: Warnung beim Verlassen mit ungespeicherten Änderungen
+  useEffect(() => {
+    const warn = (e) => { if (hasChanges) { e.preventDefault(); e.returnValue = ''; } };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [hasChanges]);
+
   if (!canView) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -334,6 +344,7 @@ export default function MonitorAdminPage() {
       setMonitorConfig(res.data);
       setOriginalConfig(res.data);
       fetchProfiles();
+      setSavedAt(Date.now());
       toast.success('Konfiguration gespeichert');
     } catch (e) {
       console.error('Monitor save error:', e.response?.data || e.message);
@@ -375,6 +386,40 @@ export default function MonitorAdminPage() {
       }
       toast.success('Profil gelöscht');
     } catch { toast.error('Fehler beim Löschen'); }
+  };
+
+  const handleDuplicateProfile = async () => {
+    if (!activeProfile) return;
+    try {
+      const res = await apiClient.post('/monitor/profile', {
+        name: `${activeProfile.name} (Kopie)`,
+        layout_modus: monitorConfig?.layout_modus || 'standard',
+        clone_from_id: activeProfileId,
+      });
+      await fetchProfiles();
+      setActiveProfileId(res.data.id);
+      fetchConfigForProfile(res.data.id);
+      toast.success(`Profil "${res.data.name}" erstellt`);
+    } catch { toast.error('Fehler beim Duplizieren'); }
+  };
+
+  // Aktives Profil in der Reihenfolge verschieben (Tausch der sortierung mit Nachbar)
+  const moveProfile = async (dir) => {
+    const ordered = [...profiles].sort((a, b) => (a.sortierung - b.sortierung) || a.name.localeCompare(b.name));
+    const idx = ordered.findIndex(p => p.id === activeProfileId);
+    const swap = ordered[idx + dir];
+    if (idx < 0 || !swap) return;
+    const cur = ordered[idx];
+    try {
+      // sortierung normalisieren + tauschen
+      const sCur = cur.sortierung ?? idx;
+      const sSwap = swap.sortierung ?? (idx + dir);
+      await Promise.all([
+        apiClient.put(`/monitor/config?profil_id=${cur.id}`, { sortierung: sSwap }),
+        apiClient.put(`/monitor/config?profil_id=${swap.id}`, { sortierung: sCur }),
+      ]);
+      await fetchProfiles();
+    } catch { toast.error('Reihenfolge konnte nicht geändert werden'); }
   };
 
   // ═══ Bildschirm CRUD ═══
@@ -433,6 +478,7 @@ export default function MonitorAdminPage() {
       await apiClient.post('/monitor/klausuren', payload);
       await fetchKlausuren();
       setShowNewKlausur(false);
+      setKlausurTemplate(null);
       toast.success('Klausur erstellt');
     } catch { toast.error('Fehler beim Erstellen'); }
   };
@@ -552,6 +598,23 @@ export default function MonitorAdminPage() {
       await apiClient.delete(`/monitor/dateien/${id}`);
       fetchConfigForProfile(activeProfileId);
     } catch { toast.error('Fehler'); }
+  };
+
+  // Drag-&-Drop-Upload: Typ automatisch (PDF → pdf, sonst bild)
+  const uploadDroppedFiles = async (files) => {
+    if (!canEdit || !files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const file of files) {
+        const typ = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'bild';
+        const fd = new FormData();
+        fd.append('datei', file); fd.append('name', file.name); fd.append('typ', typ);
+        await apiClient.post('/monitor/dateien', fd);
+      }
+      fetchConfigForProfile(activeProfileId);
+      toast.success(files.length > 1 ? `${files.length} Dateien hochgeladen` : 'Datei hochgeladen');
+    } catch { toast.error('Upload fehlgeschlagen'); }
+    finally { setUploading(false); }
   };
 
   const handleExportConfig = () => {
@@ -864,12 +927,18 @@ export default function MonitorAdminPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold text-white">Monitor-Konfiguration</h1>
-              {hasChanges && (
+              {hasChanges ? (
                 <p className="text-xs text-amber-400 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   Ungespeicherte Änderungen
                 </p>
-              )}
+              ) : savedAt && Date.now() - savedAt < 4000 ? (
+                <p className="text-xs text-green-400 flex items-center gap-1">
+                  <Check className="w-3 h-3" /> Gespeichert
+                </p>
+              ) : activeProfile ? (
+                <p className="text-xs text-gray-500">{activeProfile.name}</p>
+              ) : null}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1198,20 +1267,47 @@ export default function MonitorAdminPage() {
             )}
           </div>
           {canEdit && (
-            <button onClick={() => setShowNewKlausur(true)}
+            <button onClick={() => { setKlausurTemplate(null); setShowNewKlausur(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
               <Plus className="w-3.5 h-3.5" /> Neue Klausur
             </button>
           )}
         </div>
 
+        {/* Schnellvorlagen */}
+        {canEdit && !showNewKlausur && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] text-gray-500">Schnellvorlage:</span>
+            {[
+              { label: '90 Min · Vollbild', mins: 90, modus: 'vollbild' },
+              { label: '90 Min · Splitscreen', mins: 90, modus: 'split' },
+              { label: '45 Min · Vollbild', mins: 45, modus: 'vollbild' },
+            ].map(t => (
+              <button key={t.label} onClick={() => {
+                  const now = new Date();
+                  const bis = new Date(now.getTime() + t.mins * 60000);
+                  setKlausurTemplate({
+                    titel: 'Klausur', text: '', farbe: '#1e40af',
+                    aktiv_von: now.toISOString(), aktiv_bis: bis.toISOString(),
+                    bildschirm_ids: [], anzeige_modus: t.modus, webuntis_link_id: null,
+                    split_seite: 'links', split_prozent: 50,
+                  });
+                  setShowNewKlausur(true);
+                }}
+                className="px-2.5 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700">
+                {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {showNewKlausur && (
           <KlausurForm
-            initial={null}
+            initial={klausurTemplate}
             bildschirme={bildschirme}
             webuntisLinks={webuntisLinks}
             onSave={handleCreateKlausur}
-            onCancel={() => setShowNewKlausur(false)}
+            onCancel={() => { setShowNewKlausur(false); setKlausurTemplate(null); }}
           />
         )}
 
@@ -1277,6 +1373,25 @@ export default function MonitorAdminPage() {
                 </button>
               )}
             </div>
+
+            {/* Profil-Aktionen (nur mit Bearbeiten-Recht) */}
+            {canEdit && activeProfile && (
+              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-gray-800/60">
+                <span className="text-[11px] text-gray-500 mr-1">Aktives Profil:</span>
+                <button onClick={handleDuplicateProfile} title="Duplizieren"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700">
+                  <Copy className="w-3.5 h-3.5" /> Duplizieren
+                </button>
+                <button onClick={() => moveProfile(-1)} title="Nach vorne" className="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700">◀</button>
+                <button onClick={() => moveProfile(1)} title="Nach hinten" className="p-1.5 rounded-lg bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700">▶</button>
+                {!activeProfile.ist_standard && (
+                  <button onClick={() => handleDeleteProfile(activeProfileId)} title="Löschen"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-gray-800 text-gray-400 hover:text-red-400 hover:bg-gray-700 ml-auto">
+                    <Trash2 className="w-3.5 h-3.5" /> Löschen
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* New Profile Dialog */}
             {showNewProfile && (
@@ -2382,6 +2497,20 @@ export default function MonitorAdminPage() {
           <Section id="medien" area="inhalte" title="Medien & Dateien" description="Logos, Bilder, PDFs und Hintergründe"
             icon={Image} iconColor="bg-pink-600/30" open={openSections.medien} onToggle={toggleSection}
             badge={monitorDateien.length}>
+
+            {/* Drag-&-Drop-Upload */}
+            {canEdit && (
+              <div onDragOver={e => { e.preventDefault(); }}
+                onDrop={e => { e.preventDefault(); uploadDroppedFiles(Array.from(e.dataTransfer.files || [])); }}
+                className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-500 hover:border-pink-500/50 hover:text-gray-400 transition-colors">
+                {uploading ? (
+                  <span className="flex items-center justify-center gap-2 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Lädt hoch …</span>
+                ) : (
+                  <><UploadCloud className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Dateien hierher ziehen (Bilder → Slideshow, PDF → PDF)</p></>
+                )}
+              </div>
+            )}
 
             {/* Logos */}
             <div className="space-y-3">
@@ -3509,10 +3638,16 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
 
 // ─── Events (aktivierbare Modi) ──────────────────────────────
 function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete, onToggleActive }) {
-  const [draft, setDraft] = useState(null); // {id?, name, farbe, beschreibung, zuweisungen:[{bildschirm_id,profil_id}]}
+  const [draft, setDraft] = useState(null); // {id?, name, farbe, beschreibung, aktiv_von, aktiv_bis, zuweisungen:[...]}
+  const [previewId, setPreviewId] = useState(null); // Event-Karte mit aufgeklappter Vorschau
+  const profileSlug = (id) => profiles.find(p => p.id === id)?.slug;
+  const profileName = (id) => profiles.find(p => p.id === id)?.name || '—';
+  const toLocal = (iso) => iso ? iso.slice(0, 16) : '';
+  const toIso = (local) => local ? new Date(local).toISOString() : null;
+  const fmt = (iso) => { try { return new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
   const start = (ev) => setDraft(ev
     ? { ...ev, zuweisungen: (ev.zuweisungen || []).map(z => ({ bildschirm_id: z.bildschirm_id, profil_id: z.profil_id })) }
-    : { name: '', farbe: '#7c3aed', beschreibung: '', zuweisungen: [] });
+    : { name: '', farbe: '#7c3aed', beschreibung: '', aktiv_von: null, aktiv_bis: null, zuweisungen: [] });
   const profilFor = (bsId) => draft.zuweisungen.find(z => z.bildschirm_id === bsId)?.profil_id || '';
   const setProfil = (bsId, profilId) => setDraft(d => {
     const rest = d.zuweisungen.filter(z => z.bildschirm_id !== bsId);
@@ -3551,22 +3686,47 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
                 className="w-full h-10 bg-gray-800 border border-gray-700 rounded-lg" />
             </div>
           </div>
+
+          {/* Zeitplanung (optional) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">Automatisch aktiv ab (optional)</label>
+              <input type="datetime-local" value={toLocal(draft.aktiv_von)} onChange={e => setDraft({ ...draft, aktiv_von: toIso(e.target.value) })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-1">bis (optional)</label>
+              <input type="datetime-local" value={toLocal(draft.aktiv_bis)} onChange={e => setDraft({ ...draft, aktiv_bis: toIso(e.target.value) })}
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            </div>
+            <p className="col-span-2 text-[11px] text-gray-500">Leer = nur manuell per „Aktivieren". Mit Zeitfenster schaltet das Event automatisch ein und wieder aus.</p>
+          </div>
+
           <div>
             <label className="block text-xs text-gray-400 mb-2">Ansicht pro Bildschirm (während des Events)</label>
             {bildschirme.length === 0 ? (
               <p className="text-xs text-gray-500 italic">Keine Bildschirme angelegt.</p>
             ) : (
               <div className="space-y-2">
-                {bildschirme.map(bs => (
-                  <div key={bs.id} className="flex items-center gap-3">
-                    <span className="text-sm text-gray-300 w-40 shrink-0 truncate">{bs.name}</span>
-                    <select value={profilFor(bs.id)} onChange={e => setProfil(bs.id, e.target.value ? parseInt(e.target.value) : null)}
-                      className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
-                      <option value="">— unverändert —</option>
-                      {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                    </select>
-                  </div>
-                ))}
+                {bildschirme.map(bs => {
+                  const pid = profilFor(bs.id);
+                  const slug = pid ? profileSlug(pid) : null;
+                  return (
+                    <div key={bs.id} className="flex items-center gap-3">
+                      <span className="text-sm text-gray-300 w-40 shrink-0 truncate">{bs.name}</span>
+                      <select value={pid} onChange={e => setProfil(bs.id, e.target.value ? parseInt(e.target.value) : null)}
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
+                        <option value="">— unverändert —</option>
+                        {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      </select>
+                      {slug && (
+                        <div className="hidden sm:block w-28 shrink-0 rounded overflow-hidden border border-gray-700 bg-black" style={{ aspectRatio: '16/9' }} title="Vorschau">
+                          <iframe src={`/monitor?profil=${slug}`} className="w-full h-full border-0" style={{ pointerEvents: 'none' }} loading="lazy" title={`Vorschau ${bs.name}`} />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -3581,25 +3741,53 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
 
       <div className="space-y-2">
         {events.map(ev => (
-          <div key={ev.id} className={`p-3 rounded-xl border flex items-center gap-3 ${
+          <div key={ev.id} className={`p-3 rounded-xl border ${
             ev.aktiv ? 'bg-violet-900/20 border-violet-500/40' : 'bg-gray-800/20 border-gray-700/40'}`}>
-            <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ev.farbe }} />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-white text-sm">{ev.name}</span>
-                {ev.aktiv && <span className="px-2 py-0.5 text-[10px] bg-violet-500/30 text-violet-200 rounded-full">aktiv</span>}
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ev.farbe }} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-white text-sm">{ev.name}</span>
+                  {ev.aktiv && <span className="px-2 py-0.5 text-[10px] bg-violet-500/30 text-violet-200 rounded-full">aktiv</span>}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {(ev.zuweisungen || []).length} Bildschirm(e)
+                  {ev.aktiv_von && ev.aktiv_bis && <> · läuft automatisch {fmt(ev.aktiv_von)}–{fmt(ev.aktiv_bis)}</>}
+                </div>
               </div>
-              <div className="text-xs text-gray-500">{(ev.zuweisungen || []).length} Bildschirm(e) zugewiesen</div>
-            </div>
-            {canEdit && (
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => onToggleActive(ev)}
-                  className={`px-3 py-1.5 text-xs rounded-lg font-medium ${
-                    ev.aktiv ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
-                  {ev.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                <button onClick={() => setPreviewId(previewId === ev.id ? null : ev.id)}
+                  className="px-2.5 py-1.5 text-xs rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700">
+                  {previewId === ev.id ? 'Vorschau ▲' : 'Vorschau ▼'}
                 </button>
-                <button onClick={() => start(ev)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
-                <button onClick={() => onDelete(ev.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                {canEdit && (
+                  <>
+                    <button onClick={() => onToggleActive(ev)}
+                      className={`px-3 py-1.5 text-xs rounded-lg font-medium ${
+                        ev.aktiv ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
+                      {ev.aktiv ? 'Deaktivieren' : 'Aktivieren'}
+                    </button>
+                    <button onClick={() => start(ev)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => onDelete(ev.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                  </>
+                )}
+              </div>
+            </div>
+            {previewId === ev.id && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                {(ev.zuweisungen || []).length === 0 && <p className="text-xs text-gray-500">Keine Zuweisungen.</p>}
+                {(ev.zuweisungen || []).map(z => {
+                  const slug = profileSlug(z.profil_id);
+                  const bs = bildschirme.find(b => b.id === z.bildschirm_id);
+                  return (
+                    <div key={z.bildschirm_id} className="rounded-lg overflow-hidden border border-gray-700">
+                      <div className="px-2 py-1 text-[11px] text-gray-400 bg-gray-800/60 truncate">{bs?.name || 'Bildschirm'} → {profileName(z.profil_id)}</div>
+                      <div className="bg-black" style={{ aspectRatio: '16/9' }}>
+                        {slug && <iframe src={`/monitor?profil=${slug}`} className="w-full h-full border-0" style={{ pointerEvents: 'none' }} loading="lazy" title={`Vorschau ${bs?.name}`} />}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

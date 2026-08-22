@@ -39,6 +39,7 @@ class MonitorProfileListSchema(Schema):
     name: str
     slug: str
     ist_standard: bool
+    sortierung: int = 0
     zeitplan: list = []
     layout_modus: str
     ist_on_air: bool
@@ -51,6 +52,7 @@ class MonitorConfigSchema(Schema):
     name: str
     slug: str
     ist_standard: bool
+    sortierung: int = 0
     zeitplan: list = []
     layout_modus: str
     titel: str
@@ -161,6 +163,7 @@ class MonitorConfigUpdateSchema(Schema):
     name: Optional[str] = None
     slug: Optional[str] = None
     ist_standard: Optional[bool] = None
+    sortierung: Optional[int] = None
     zeitplan: Optional[list] = None
     layout_modus: Optional[str] = None
     titel: Optional[str] = None
