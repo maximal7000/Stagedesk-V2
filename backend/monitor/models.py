@@ -697,3 +697,46 @@ class EventBildschirm(models.Model):
 
     def __str__(self):
         return f"{self.event.name}: {self.bildschirm.name} → {self.profil.name}"
+
+
+class KlausurVorlage(models.Model):
+    """Selbst erstellbare Vorlage für Klausuren (füllt das Formular vor)."""
+    name = models.CharField(max_length=120)
+    dauer_minuten = models.IntegerField(default=90, help_text="Dauer ab jetzt")
+    titel = models.CharField(max_length=200, default='Klausur')
+    text = models.TextField(blank=True)
+    farbe = models.CharField(max_length=7, default='#1e40af')
+    anzeige_modus = models.CharField(max_length=10, choices=Klausur.ANZEIGE_CHOICES, default='vollbild')
+    webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL, null=True, blank=True, related_name='als_vorlage_link')
+    split_seite = models.CharField(max_length=6, default='links')
+    split_prozent = models.IntegerField(default=50)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['name']
+        verbose_name = 'Klausur-Vorlage'
+        verbose_name_plural = 'Klausur-Vorlagen'
+
+    def __str__(self):
+        return self.name
+
+
+class MonitorGlobalSettings(models.Model):
+    """Einmalige, globale Zugänge (statt pro Profil): Wetter-Key, Raumplan-Login."""
+    wetter_api_key = models.CharField(max_length=64, blank=True, default='')
+    raumplan_server = models.CharField(max_length=200, blank=True, default='')
+    raumplan_schule = models.CharField(max_length=200, blank=True, default='')
+    raumplan_benutzername = models.CharField(max_length=200, blank=True, default='')
+    raumplan_passwort = models.CharField(max_length=200, blank=True, default='')
+
+    class Meta:
+        verbose_name = 'Globale Monitor-Einstellung'
+        verbose_name_plural = 'Globale Monitor-Einstellungen'
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
+    def __str__(self):
+        return 'Globale Monitor-Einstellungen'
