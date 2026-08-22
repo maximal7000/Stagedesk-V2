@@ -128,6 +128,7 @@ export default function MonitorAdminPage() {
   // Klausur-Vorlagen (selbst erstellbar) + globale Einstellungen
   const [klausurVorlagen, setKlausurVorlagen] = useState([]);
   const [globalSettings, setGlobalSettings] = useState(null);
+  const [auditLog, setAuditLog] = useState([]);
 
   // Sections
   const [searchParams, setSearchParams] = useSearchParams();
@@ -291,6 +292,9 @@ export default function MonitorAdminPage() {
   const fetchGlobalSettings = useCallback(async () => {
     try { const res = await apiClient.get('/monitor/global-settings'); setGlobalSettings(res.data); } catch {}
   }, []);
+  const fetchAuditLog = useCallback(async () => {
+    try { const res = await apiClient.get('/monitor/audit-log'); setAuditLog(res.data); } catch {}
+  }, []);
   const saveGlobalSettings = async () => {
     try { await apiClient.put('/monitor/global-settings', globalSettings); toast.success('Globale Einstellungen gespeichert'); }
     catch { toast.error('Fehler beim Speichern'); }
@@ -319,13 +323,14 @@ export default function MonitorAdminPage() {
       fetchEvents();
       fetchKlausurVorlagen();
       fetchGlobalSettings();
+      fetchAuditLog();
       if (profs.length > 0) {
         const std = profs.find(p => p.ist_standard) || profs[0];
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
     })();
-  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents, fetchKlausurVorlagen, fetchGlobalSettings]);
+  }, [fetchProfiles, fetchConfigForProfile, fetchBildschirme, fetchKlausuren, fetchWebuntisLinks, fetchEvents, fetchKlausurVorlagen, fetchGlobalSettings, fetchAuditLog]);
 
   // Switch profile
   const switchProfile = (id) => {
@@ -3229,6 +3234,26 @@ export default function MonitorAdminPage() {
                 )}
               </>
             ) : <p className="text-sm text-gray-500">Lädt …</p>}
+          </Section>
+
+          <Section id="auditlog" area="einstellungen" plain title="Protokoll" description="Wer hat wann ON AIR / Notfall / Events geschaltet"
+            icon={Activity} iconColor="bg-gray-600/30" open badge={auditLog.length || null}>
+            {auditLog.length === 0 ? (
+              <p className="text-sm text-gray-500">Noch keine Einträge.</p>
+            ) : (
+              <div className="divide-y divide-gray-800 -my-1">
+                {auditLog.map(e => (
+                  <div key={e.id} className="flex items-center gap-3 py-2 text-sm">
+                    <span className="text-gray-500 tabular-nums text-xs shrink-0 w-28">
+                      {new Date(e.zeitpunkt).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-white font-medium shrink-0">{e.aktion}</span>
+                    {e.detail && <span className="text-gray-400 truncate">{e.detail}</span>}
+                    <span className="text-gray-500 text-xs ml-auto shrink-0">{e.benutzer}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </Section>
 
           <Section id="api" area="einstellungen" plain title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."

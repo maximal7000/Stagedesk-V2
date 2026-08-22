@@ -36,11 +36,28 @@ def _require_perm(request, code: str):
         except UserProfile.DoesNotExist:
             pass
     raise HttpError(403, "Keine Berechtigung")
+
+
+def _actor_name(request, via_token=False):
+    """Lesbarer Name des Auslösers für das Audit-Log."""
+    if via_token:
+        return 'API-Token'
+    a = getattr(request, 'auth', None) or {}
+    return a.get('preferred_username') or a.get('name') or a.get('email') or a.get('sub', '') or 'unbekannt'
+
+
+def _log_audit(request, aktion, detail='', via_token=False):
+    from .models import MonitorAuditLog
+    try:
+        MonitorAuditLog.objects.create(
+            benutzer=_actor_name(request, via_token)[:150], aktion=aktion[:60], detail=str(detail)[:200])
+    except Exception:
+        pass  # Audit darf die eigentliche Aktion nie blockieren
 from .schemas import (
     MonitorConfigSchema, MonitorConfigUpdateSchema,
     MonitorProfileListSchema, MonitorProfileCreateSchema,
     AnkuendigungSchema, AnkuendigungCreateSchema,
-    MonitorDateiSchema, OnAirSchema, NotfallSchema,
+    MonitorDateiSchema, OnAirSchema, NotfallSchema, AuditLogSchema,
     BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
     KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
@@ -460,6 +477,7 @@ def toggle_on_air(request, payload: OnAirSchema):
                 ist_on_air=payload.on_air,
                 on_air_seit=timezone.now() if payload.on_air else None,
             )
+            _log_audit(request, 'ON AIR ' + ('an' if payload.on_air else 'aus'), via_token=True)
             return 200, {"success": True, "on_air": payload.on_air}
         return 401, {"success": False, "message": "Ungültiges Token"}
 
@@ -475,6 +493,7 @@ def toggle_on_air(request, payload: OnAirSchema):
         ist_on_air=payload.on_air,
         on_air_seit=timezone.now() if payload.on_air else None,
     )
+    _log_audit(request, 'ON AIR ' + ('an' if payload.on_air else 'aus'))
     return 200, {"success": True, "on_air": payload.on_air}
 
 
@@ -491,6 +510,7 @@ def toggle_notfall(request, payload: NotfallSchema):
                 notfall_aktiv=payload.aktiv,
                 notfall_text=payload.text,
             )
+            _log_audit(request, 'Notfall ' + ('an' if payload.aktiv else 'aus'), payload.text if payload.aktiv else '', via_token=True)
             return 200, {"success": True}
         return 401, {"success": False, "message": "Ungültiges Token"}
 
@@ -506,6 +526,7 @@ def toggle_notfall(request, payload: NotfallSchema):
         notfall_aktiv=payload.aktiv,
         notfall_text=payload.text,
     )
+    _log_audit(request, 'Notfall ' + ('an' if payload.aktiv else 'aus'), payload.text if payload.aktiv else '')
     return 200, {"success": True}
 
 
@@ -921,6 +942,7 @@ def activate_event(request, id: int):
     event = get_object_or_404(MonitorEvent, id=id)
     event.aktiv = True
     event.save(update_fields=['aktiv'])
+    _log_audit(request, 'Event aktiviert', event.name)
     return event
 
 
@@ -930,7 +952,15 @@ def deactivate_event(request, id: int):
     event = get_object_or_404(MonitorEvent, id=id)
     event.aktiv = False
     event.save(update_fields=['aktiv'])
+    _log_audit(request, 'Event deaktiviert', event.name)
     return event
+
+
+@monitor_router.get("/audit-log", response=list[AuditLogSchema], auth=keycloak_auth)
+def list_audit_log(request):
+    _require_perm(request, 'monitor.view')
+    from .models import MonitorAuditLog
+    return list(MonitorAuditLog.objects.all()[:50])
 
 
 # ═══ Admin: Klausur-Vorlagen ═════════════════════════════════════
