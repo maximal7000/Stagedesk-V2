@@ -110,6 +110,16 @@ export default function MonitorPage() {
     return () => { document.head.removeChild(style); };
   }, []);
 
+  // Nächtliches Auto-Reload (~4:00, zufällige Minute) — Kiosk-Robustheit gegen Memory-Leaks
+  useEffect(() => {
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(4, Math.floor(Math.random() * 15), 0, 0);
+    if (next <= now) next.setDate(next.getDate() + 1);
+    const t = setTimeout(() => window.location.reload(), next - now);
+    return () => clearTimeout(t);
+  }, []);
+
   // Optionaler Seiten-Zoom für große/4K-Displays via ?zoom=1.5
   useEffect(() => {
     const z = new URLSearchParams(window.location.search).get('zoom');

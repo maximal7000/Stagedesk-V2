@@ -97,6 +97,8 @@ export default function MonitorAdminPage() {
   // Sie werden nur nach dem Speichern neu geladen (savedAt) — kein hartes Remount-Flackern.
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  const [tabFilter, setTabFilter] = useState('');
+  const [medienFilter, setMedienFilter] = useState('');
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileLayout, setNewProfileLayout] = useState('standard');
@@ -266,6 +268,15 @@ export default function MonitorAdminPage() {
       await apiClient.put(`/monitor/bildschirme/${bs.id}`, { override_profil_id: profilId || null, override_bis: null });
       await fetchBildschirme();
       toast.success(profilId ? 'Bildschirm umgeschaltet' : 'Override zurückgesetzt');
+    } catch { toast.error('Fehler beim Umschalten'); }
+  };
+  // Bulk: alle Bildschirme auf eine Ansicht setzen bzw. alle Overrides zurücksetzen
+  const setAllOverride = async (profilId) => {
+    try {
+      await Promise.all(bildschirme.map(bs =>
+        apiClient.put(`/monitor/bildschirme/${bs.id}`, { override_profil_id: profilId || null, override_bis: null })));
+      await fetchBildschirme();
+      toast.success(profilId ? 'Alle Bildschirme umgeschaltet' : 'Alle Overrides zurückgesetzt');
     } catch { toast.error('Fehler beim Umschalten'); }
   };
 
@@ -506,6 +517,24 @@ export default function MonitorAdminPage() {
       ]);
       await fetchProfiles();
     } catch { toast.error('Reihenfolge konnte nicht geändert werden'); }
+  };
+
+  // Drag & Drop: Reihenfolge der Ansichts-Tabs ändern und Sortierung persistieren
+  const dragProfileId = useRef(null);
+  const reorderProfiles = async (toId) => {
+    const fromId = dragProfileId.current;
+    dragProfileId.current = null;
+    if (!fromId || fromId === toId) return;
+    const ordered = [...profiles];
+    const fromIdx = ordered.findIndex(p => p.id === fromId);
+    const toIdx = ordered.findIndex(p => p.id === toId);
+    if (fromIdx < 0 || toIdx < 0) return;
+    const [moved] = ordered.splice(fromIdx, 1);
+    ordered.splice(toIdx, 0, moved);
+    try {
+      await Promise.all(ordered.map((p, i) => apiClient.put(`/monitor/config?profil_id=${p.id}`, { sortierung: i })));
+      await fetchProfiles();
+    } catch { toast.error('Reihenfolge konnte nicht gespeichert werden'); }
   };
 
   // Ansicht direkt am Tab umbenennen (Doppelklick → Inline-Feld)
@@ -801,10 +830,11 @@ export default function MonitorAdminPage() {
     updateConfig('zeitplan', zeitplan);
   };
 
-  const logos = monitorDateien.filter(d => d.typ === 'logo');
-  const bilder = monitorDateien.filter(d => d.typ === 'bild');
-  const pdfs = monitorDateien.filter(d => d.typ === 'pdf');
-  const hintergruende = monitorDateien.filter(d => d.typ === 'hintergrund');
+  const _mf = (d) => !medienFilter || (d.name || '').toLowerCase().includes(medienFilter.toLowerCase());
+  const logos = monitorDateien.filter(d => d.typ === 'logo' && _mf(d));
+  const bilder = monitorDateien.filter(d => d.typ === 'bild' && _mf(d));
+  const pdfs = monitorDateien.filter(d => d.typ === 'pdf' && _mf(d));
+  const hintergruende = monitorDateien.filter(d => d.typ === 'hintergrund' && _mf(d));
 
   // Active widget count
   const widgetKeys = [
@@ -1180,13 +1210,25 @@ export default function MonitorAdminPage() {
                     <p className="text-xs text-gray-500">Welche Ansicht wird wann angezeigt?</p>
                   </div>
                   {canEdit && (
-                    <button onClick={() => {
-                      const updated = [...bsZeitplan, { profil_id: profiles[0]?.id || null, tage: [0,1,2,3,4], von: '08:00', bis: '16:00' }];
-                      updateBildschirmLocal(bs.id, 'zeitplan', updated);
-                    }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 text-sm rounded-lg">
-                      <Plus className="w-3.5 h-3.5" /> Zeitfenster
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {bildschirme.filter(o => o.id !== bs.id && (o.zeitplan || []).length > 0).length > 0 && (
+                        <select value="" onChange={e => {
+                          const src = bildschirme.find(o => o.id === parseInt(e.target.value));
+                          if (src) updateBildschirmLocal(bs.id, 'zeitplan', JSON.parse(JSON.stringify(src.zeitplan || [])));
+                        }}
+                          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-xs" title="Zeitplan von einem anderen Bildschirm übernehmen">
+                          <option value="">Zeitplan kopieren von …</option>
+                          {bildschirme.filter(o => o.id !== bs.id && (o.zeitplan || []).length > 0).map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+                        </select>
+                      )}
+                      <button onClick={() => {
+                        const updated = [...bsZeitplan, { profil_id: profiles[0]?.id || null, tage: [0,1,2,3,4], von: '08:00', bis: '16:00' }];
+                        updateBildschirmLocal(bs.id, 'zeitplan', updated);
+                      }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 text-sm rounded-lg">
+                        <Plus className="w-3.5 h-3.5" /> Zeitfenster
+                      </button>
+                    </div>
                   )}
                 </div>
 
@@ -1455,8 +1497,15 @@ export default function MonitorAdminPage() {
                 </a>
               </div>
             </div>
+            {profiles.length > 6 && (
+              <div className="mb-2">
+                <input type="text" value={tabFilter} onChange={e => setTabFilter(e.target.value)}
+                  placeholder="Ansichten filtern …"
+                  className="w-full sm:w-64 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm" />
+              </div>
+            )}
             <div className="flex items-center gap-2 overflow-x-auto">
-              {profiles.map(p => (
+              {profiles.filter(p => !tabFilter || p.name.toLowerCase().includes(tabFilter.toLowerCase())).map(p => (
                 renamingId === p.id ? (
                   <input key={p.id} autoFocus value={renameValue}
                     onChange={e => setRenameValue(e.target.value)}
@@ -1465,7 +1514,11 @@ export default function MonitorAdminPage() {
                     className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 border border-purple-500/60 text-white w-40" />
                 ) : (
                   <button key={p.id} onClick={() => switchProfile(p.id)} onDoubleClick={() => startRename(p)}
-                    title={canEdit ? 'Doppelklick zum Umbenennen' : undefined}
+                    draggable={canEdit}
+                    onDragStart={() => { dragProfileId.current = p.id; }}
+                    onDragOver={e => e.preventDefault()}
+                    onDrop={() => reorderProfiles(p.id)}
+                    title={canEdit ? 'Doppelklick zum Umbenennen · ziehen zum Sortieren' : undefined}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                       p.id === activeProfileId
                         ? 'bg-purple-600/20 border border-purple-500/40 text-purple-300'
@@ -1593,9 +1646,23 @@ export default function MonitorAdminPage() {
           )}
           {/* ═══ Bildschirm-Cockpit — was läuft gerade wo ═══ */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
               <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Monitor className="w-4 h-4 text-indigo-400" /> Bildschirme ({bildschirme.length})</h3>
-              <button onClick={() => setActiveArea('bildschirme')} className="text-xs text-gray-400 hover:text-white">verwalten →</button>
+              <div className="flex items-center gap-2">
+                {canEdit && bildschirme.length > 1 && (
+                  <>
+                    <select value="" onChange={e => e.target.value && setAllOverride(parseInt(e.target.value))}
+                      className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs">
+                      <option value="">Alle umschalten auf …</option>
+                      {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                    {bildschirme.some(b => b.override_profil_id) && (
+                      <button onClick={() => setAllOverride(null)} className="px-2 py-1 text-xs rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600">Alle zurück</button>
+                    )}
+                  </>
+                )}
+                <button onClick={() => setActiveArea('bildschirme')} className="text-xs text-gray-400 hover:text-white">verwalten →</button>
+              </div>
             </div>
             {bildschirme.length === 0 ? (
               <div className="p-8 text-center text-gray-500 border border-gray-800 rounded-xl">
@@ -1747,6 +1814,33 @@ export default function MonitorAdminPage() {
                 </select>
               </div>
             </div>
+
+            {/* Inline-Validierung: häufige Fehlkonfigurationen vor Live warnen */}
+            {(() => {
+              const warns = [];
+              const lm = monitorConfig.layout_modus;
+              const hasUntis = monitorConfig.webuntis_link_id || monitorConfig.webuntis_url;
+              if (lm === 'abfahrten' && !(monitorConfig.oepnv_stationen || []).length)
+                warns.push('Abfahrtsmonitor ohne Stationen — unter „ÖPNV Abfahrten" mindestens eine Station eintragen.');
+              if (lm === 'stundenplan' && !hasUntis)
+                warns.push('Stundenplan-Vollbild ohne WebUntis-Link — die Anzeige bleibt sonst leer.');
+              if (lm === 'bild_vollbild' && !monitorConfig.aktives_bild_id)
+                warns.push('Bild-Vollbild ohne ausgewähltes Bild.');
+              if (lm === 'pdf_vollbild' && !monitorConfig.aktive_pdf_id)
+                warns.push('PDF-Vollbild ohne ausgewähltes PDF.');
+              if (!monitorConfig.titel || !monitorConfig.titel.trim())
+                warns.push('Kein Titel gesetzt.');
+              if (warns.length === 0) return null;
+              return (
+                <div className="p-3 bg-amber-900/10 border border-amber-500/30 rounded-lg space-y-1">
+                  {warns.map((w, i) => (
+                    <p key={i} className="text-xs text-amber-300 flex items-start gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" /> {w}
+                    </p>
+                  ))}
+                </div>
+              );
+            })()}
 
             {monitorConfig.layout_modus === 'baukasten' && (
               <div className="p-3 bg-cyan-900/10 border border-cyan-500/20 rounded-lg">
@@ -2349,6 +2443,12 @@ export default function MonitorAdminPage() {
                   <p className="text-sm">Dateien hierher ziehen (Bilder → Slideshow, PDF → PDF)</p></>
                 )}
               </div>
+            )}
+
+            {monitorDateien.length > 8 && (
+              <input type="text" value={medienFilter} onChange={e => setMedienFilter(e.target.value)}
+                placeholder="Medien nach Name filtern …"
+                className="w-full sm:w-72 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm" />
             )}
 
             {/* Logos */}
