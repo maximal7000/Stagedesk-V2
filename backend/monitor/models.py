@@ -25,6 +25,7 @@ class MonitorDatei(models.Model):
     datei = models.FileField(upload_to=monitor_upload_path)
     typ = models.CharField(max_length=20, choices=TYP_CHOICES)
     reihenfolge = models.IntegerField(default=0)
+    geloescht_am = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
     erstellt_am = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -76,6 +77,7 @@ class MonitorConfig(models.Model):
         ('split', 'Splitscreen'),
     ]
     layout_modus = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='standard')
+    geloescht_am = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
 
     # Bei Vollbild-Layouts (PDF/Bild): den Standard-Header (Titel/Logo) oben anzeigen.
     vollbild_header = models.BooleanField(default=False,
@@ -352,7 +354,7 @@ class MonitorConfig(models.Model):
         """Get active profile: by slug, by schedule, or standard fallback"""
         if slug:
             try:
-                return cls.objects.get(slug=slug)
+                return cls.objects.get(slug=slug, geloescht_am__isnull=True)
             except cls.DoesNotExist:
                 pass
 
@@ -360,8 +362,8 @@ class MonitorConfig(models.Model):
         wochentag = now.weekday()
         zeit = now.strftime('%H:%M')
 
-        # Alle Profile laden, NICHT-Standard zuerst prüfen
-        for config in cls.objects.order_by('ist_standard', 'sortierung', 'name'):
+        # Alle Profile laden, NICHT-Standard zuerst prüfen (gelöschte ausschließen)
+        for config in cls.objects.filter(geloescht_am__isnull=True).order_by('ist_standard', 'sortierung', 'name'):
             zeitplan = config.zeitplan
             if not zeitplan or not isinstance(zeitplan, list) or len(zeitplan) == 0:
                 continue
@@ -374,7 +376,7 @@ class MonitorConfig(models.Model):
                 if isinstance(tage, list) and wochentag in tage and von <= zeit <= bis:
                     return config
 
-        standard = cls.objects.filter(ist_standard=True).first()
+        standard = cls.objects.filter(ist_standard=True, geloescht_am__isnull=True).first()
         if standard:
             return standard
 
@@ -382,6 +384,9 @@ class MonitorConfig(models.Model):
             slug='standard',
             defaults={'name': 'Standard', 'ist_standard': True}
         )
+        if obj.geloescht_am is not None:
+            obj.geloescht_am = None
+            obj.save(update_fields=['geloescht_am'])
         return obj
 
     def set_on_air(self, status: bool):
@@ -554,11 +559,12 @@ class Bildschirm(models.Model):
     def get_active_profil(self):
         """Aktives Profil bestimmen: Sofort-Override > aktives Event > Zeitplan > Default."""
         # Manueller Sofort-Override (Cockpit) hat höchste Priorität
-        if self.override_profil_id and (self.override_bis is None or self.override_bis > timezone.now()):
+        if (self.override_profil_id and self.override_profil and self.override_profil.geloescht_am is None
+                and (self.override_bis is None or self.override_bis > timezone.now())):
             return self.override_profil
 
         event_profil = self.get_active_event_profil()
-        if event_profil:
+        if event_profil and event_profil.geloescht_am is None:
             return event_profil
 
         now = timezone.localtime()
@@ -576,11 +582,11 @@ class Bildschirm(models.Model):
                 if (isinstance(tage, list) and wochentag in tage
                         and von <= zeit <= bis and profil_id):
                     try:
-                        return MonitorConfig.objects.get(id=profil_id)
+                        return MonitorConfig.objects.get(id=profil_id, geloescht_am__isnull=True)
                     except MonitorConfig.DoesNotExist:
                         continue
 
-        if self.default_profil:
+        if self.default_profil and self.default_profil.geloescht_am is None:
             return self.default_profil
         return MonitorConfig.get()
 
@@ -765,6 +771,19 @@ class MonitorGlobalSettings(models.Model):
 
     def __str__(self):
         return 'Globale Monitor-Einstellungen'
+
+
+class MonitorConfigVersion(models.Model):
+    """Snapshot einer Ansicht-Konfiguration für Rollback."""
+    config = models.ForeignKey(MonitorConfig, on_delete=models.CASCADE, related_name='versionen')
+    daten = models.JSONField(default=dict)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-erstellt_am']
+
+    def __str__(self):
+        return f"Version {self.config_id} @ {self.erstellt_am:%d.%m %H:%M}"
 
 
 class MonitorAuditLog(models.Model):

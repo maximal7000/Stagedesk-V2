@@ -352,6 +352,11 @@ class BildschirmUpdateSchema(Schema):
     power_modus: Optional[str] = None
 
 
+class ConfigVersionSchema(Schema):
+    id: int
+    erstellt_am: datetime
+
+
 class AuditLogSchema(Schema):
     id: int
     zeitpunkt: datetime
