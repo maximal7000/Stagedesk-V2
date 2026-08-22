@@ -404,14 +404,14 @@ export default function MonitorAdminPage() {
       setNewProfileName('');
       setNewProfileLayout('standard');
       setCloneFromId(null);
-      toast.success(`Profil "${res.data.name}" erstellt`);
+      toast.success(`Ansicht "${res.data.name}" erstellt`);
     } catch { toast.error('Fehler beim Erstellen'); }
   };
 
   const handleDeleteProfile = async (id) => {
     const prof = profiles.find(p => p.id === id);
     if (!prof || prof.ist_standard) return;
-    if (!confirm(`Profil "${prof.name}" wirklich löschen?`)) return;
+    if (!confirm(`Ansicht "${prof.name}" wirklich löschen?`)) return;
     try {
       await apiClient.delete(`/monitor/profile/${id}`);
       const profs = await fetchProfiles();
@@ -420,7 +420,7 @@ export default function MonitorAdminPage() {
         setActiveProfileId(std.id);
         fetchConfigForProfile(std.id);
       }
-      toast.success('Profil gelöscht');
+      toast.success('Ansicht gelöscht');
     } catch { toast.error('Fehler beim Löschen'); }
   };
 
@@ -435,7 +435,7 @@ export default function MonitorAdminPage() {
       await fetchProfiles();
       setActiveProfileId(res.data.id);
       fetchConfigForProfile(res.data.id);
-      toast.success(`Profil "${res.data.name}" erstellt`);
+      toast.success(`Ansicht "${res.data.name}" dupliziert`);
     } catch { toast.error('Fehler beim Duplizieren'); }
   };
 
@@ -950,7 +950,8 @@ export default function MonitorAdminPage() {
               <Monitor className="w-5 h-5 text-purple-400" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-white">Monitor</h1>
+              <p className="text-[10px] uppercase tracking-wide text-gray-500 md:hidden">Monitor</p>
+              <h1 className="text-lg font-bold text-white capitalize">{areaNav.find(a => a.id === activeArea)?.label}</h1>
               {activeArea === 'ansichten' && hasChanges ? (
                 <p className="text-xs text-amber-400 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
@@ -960,9 +961,7 @@ export default function MonitorAdminPage() {
                 <p className="text-xs text-green-400 flex items-center gap-1">
                   <Check className="w-3 h-3" /> Gespeichert
                 </p>
-              ) : (
-                <p className="text-xs text-gray-500 capitalize">{areaNav.find(a => a.id === activeArea)?.label}</p>
-              )}
+              ) : null}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -1075,7 +1074,7 @@ export default function MonitorAdminPage() {
 
               {/* Default-Profil */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Standard-Profil (Fallback)</label>
+                <label className="block text-xs text-gray-400 mb-1">Standard-Ansicht (Fallback)</label>
                 <select value={bs.default_profil_id || ''} disabled={!canEdit}
                   onChange={e => updateBildschirmLocal(bs.id, 'default_profil_id', e.target.value ? parseInt(e.target.value) : null)}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
@@ -1108,7 +1107,7 @@ export default function MonitorAdminPage() {
                 <div className="flex items-center justify-between mb-3">
                   <div>
                     <h4 className="text-sm font-semibold text-white">Zeitplan</h4>
-                    <p className="text-xs text-gray-500">Welches Profil wird wann angezeigt?</p>
+                    <p className="text-xs text-gray-500">Welche Ansicht wird wann angezeigt?</p>
                   </div>
                   {canEdit && (
                     <button onClick={() => {
@@ -1123,7 +1122,7 @@ export default function MonitorAdminPage() {
 
                 {bsZeitplan.length === 0 ? (
                   <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-center">
-                    <p className="text-gray-500 text-sm">Kein Zeitplan — es wird immer das Standard-Profil angezeigt.</p>
+                    <p className="text-gray-500 text-sm">Kein Zeitplan — es wird immer die Standard-Ansicht angezeigt.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1833,8 +1832,8 @@ export default function MonitorAdminPage() {
             <div className="flex items-center gap-3">
               <Toggle checked={monitorConfig.ist_standard} onChange={v => updateConfig('ist_standard', v)} disabled={!canEdit} />
               <div>
-                <span className="text-sm text-white">Standard-Profil</span>
-                <p className="text-xs text-gray-500">Wird angezeigt wenn kein anderes Profil per Zeitplan aktiv ist</p>
+                <span className="text-sm text-white">Standard-Ansicht</span>
+                <p className="text-xs text-gray-500">Wird angezeigt wenn keine andere Ansicht per Zeitplan aktiv ist</p>
               </div>
             </div>
 
@@ -1842,7 +1841,7 @@ export default function MonitorAdminPage() {
             <div className="flex items-center gap-3 p-3 bg-gray-800/40 rounded-lg border border-gray-800">
               <Monitor className="w-5 h-5 text-blue-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wider text-gray-500">Monitor-URL für dieses Profil</p>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500">Monitor-URL für diese Ansicht</p>
                 <code className="text-blue-400 text-sm">{window.location.origin}/monitor?profil={monitorConfig.slug}</code>
               </div>
               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/monitor?profil=${monitorConfig.slug}`); toast.success('URL kopiert'); }}
@@ -1854,7 +1853,7 @@ export default function MonitorAdminPage() {
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h4 className="text-sm font-semibold text-white">Zeitplan</h4>
-                  <p className="text-xs text-gray-500">Wann wird dieses Profil automatisch aktiv?</p>
+                  <p className="text-xs text-gray-500">Wann wird diese Ansicht automatisch aktiv?</p>
                 </div>
                 {canEdit && (
                   <button onClick={addZeitplanEntry}
@@ -1866,7 +1865,7 @@ export default function MonitorAdminPage() {
 
               {(monitorConfig.zeitplan || []).length === 0 ? (
                 <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-center">
-                  <p className="text-gray-500 text-sm">Kein Zeitplan — Profil wird nur per URL oder als Standard angezeigt.</p>
+                  <p className="text-gray-500 text-sm">Kein Zeitplan — Ansicht wird nur per URL oder als Standard angezeigt.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1913,15 +1912,7 @@ export default function MonitorAdminPage() {
               )}
             </div>
 
-            {/* Delete Profile */}
-            {canEdit && !monitorConfig.ist_standard && (
-              <div className="pt-2 border-t border-gray-800">
-                <button onClick={() => handleDeleteProfile(activeProfileId)}
-                  className="flex items-center gap-2 px-3 py-1.5 text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg text-sm">
-                  <Trash2 className="w-3.5 h-3.5" /> Profil löschen
-                </button>
-              </div>
-            )}
+            {/* Löschen erfolgt über die Toolbar oben (Aktive Ansicht → Löschen) */}
           </Section>
 
           {/* ═══ Baukasten-Editor (nur bei layout_modus='baukasten') ═══ */}
@@ -3135,7 +3126,7 @@ export default function MonitorAdminPage() {
           <Section id="api" area="einstellungen" plain title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."
             icon={Key} iconColor="bg-gray-600/30" open={openSections.api} onToggle={toggleSection}>
             <div>
-              <label className="block text-xs text-gray-400 mb-1.5 font-medium">API-Token (für dieses Profil)</label>
+              <label className="block text-xs text-gray-400 mb-1.5 font-medium">API-Token (für diese Ansicht)</label>
               <div className="flex gap-2">
                 <div className="flex-1 relative">
                   <input type={showToken ? 'text' : 'password'} value={monitorConfig.api_token} readOnly
@@ -3153,7 +3144,7 @@ export default function MonitorAdminPage() {
               </div>
             </div>
             <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-xs space-y-2">
-              <p className="text-gray-400 font-medium mb-2">Beispiel-Requests (ON AIR betrifft alle Profile):</p>
+              <p className="text-gray-400 font-medium mb-2">Beispiel-Requests (ON AIR betrifft alle Ansichten):</p>
               <div className="font-mono text-gray-500 space-y-1.5">
                 <p><span className="text-green-400">POST</span> /api/monitor/onair <span className="text-gray-600">{'{"on_air": true}'}</span></p>
                 <p><span className="text-amber-400">POST</span> /api/monitor/notfall <span className="text-gray-600">{'{"aktiv": true, "text": "..."}'}</span></p>
@@ -3648,7 +3639,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
                     <label className="block text-[11px] text-gray-500 mb-0.5">Stundenplan-Link</label>
                     <select value={draft.webuntis_link_id || ''} onChange={e => setDraft({ ...draft, webuntis_link_id: e.target.value ? parseInt(e.target.value) : null })}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
-                      <option value="">— Link des Profils —</option>
+                      <option value="">— Link der Ansicht —</option>
                       {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                     </select>
                   </div>
@@ -3737,7 +3728,7 @@ function WebUntisLinkManager({ links, canEdit, onSave, onDelete }) {
         {links.length === 0 && !draft && (
           <div className="p-8 text-center text-gray-500">
             <Calendar className="w-10 h-10 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">Noch keine Links — hier einmal anlegen und im Profil/Klausur auswählen.</p>
+            <p className="text-sm">Noch keine Links — hier einmal anlegen und in Ansicht/Klausur auswählen.</p>
           </div>
         )}
       </div>
@@ -3851,7 +3842,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
             <option value="vollbild">Vollbild (Klausur-Hinweis)</option>
             <option value="split">Splitscreen (Klausur + Stundenplan)</option>
-            <option value="standard">Kein Zwang (Profil-Layout)</option>
+            <option value="standard">Kein Zwang (Ansicht-Layout)</option>
           </select>
         </div>
         {anzeigeModus === 'split' && (
@@ -3860,7 +3851,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
               <label className="block text-xs text-gray-400 mb-1">Stundenplan-Link (WebUntis)</label>
               <select value={webuntisLinkId || ''} onChange={e => setWebuntisLinkId(e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm">
-                <option value="">— Link des Profils nutzen —</option>
+                <option value="">— Link der Ansicht nutzen —</option>
                 {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
