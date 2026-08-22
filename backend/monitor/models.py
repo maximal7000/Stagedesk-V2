@@ -174,6 +174,8 @@ class MonitorConfig(models.Model):
     ]
     bild_fit = models.CharField(max_length=10, choices=BILD_FIT_CHOICES, default='contain',
         help_text="Wie das Bild auf den Bildschirm skaliert wird")
+    bild_fokus_x = models.IntegerField(default=50, help_text="Fokuspunkt X in Prozent (Modus Füllen)")
+    bild_fokus_y = models.IntegerField(default=50, help_text="Fokuspunkt Y in Prozent (Modus Füllen)")
 
     # ─── Theme ─────────────────────────────
     THEME_CHOICES = [

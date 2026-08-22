@@ -87,6 +87,8 @@ class MonitorConfigSchema(Schema):
     pdf_statische_seite: int = 1
     aktives_bild_id: Optional[int] = None
     bild_fit: str = 'contain'
+    bild_fokus_x: int = 50
+    bild_fokus_y: int = 50
     split_links: str = 'klausur'
     split_rechts: str = 'webuntis'
     split_links_prozent: int = 50
@@ -201,6 +203,8 @@ class MonitorConfigUpdateSchema(Schema):
     pdf_statische_seite: Optional[int] = None
     aktives_bild_id: Optional[int] = None
     bild_fit: Optional[str] = None
+    bild_fokus_x: Optional[int] = None
+    bild_fokus_y: Optional[int] = None
     split_links: Optional[str] = None
     split_rechts: Optional[str] = None
     split_links_prozent: Optional[int] = None

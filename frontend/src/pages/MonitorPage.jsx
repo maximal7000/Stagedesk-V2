@@ -643,7 +643,9 @@ export default function MonitorPage() {
           {bildUrl ? (
             <img src={bildUrl} alt=""
               className={fit === 'contain' ? 'max-w-full max-h-full object-contain' : 'w-full h-full'}
-              style={fit === 'cover' ? { objectFit: 'cover' } : fit === 'fill' ? { objectFit: 'fill' } : undefined} />
+              style={fit === 'cover'
+                ? { objectFit: 'cover', objectPosition: `${config?.bild_fokus_x ?? 50}% ${config?.bild_fokus_y ?? 50}%` }
+                : fit === 'fill' ? { objectFit: 'fill' } : undefined} />
           ) : (
             <div className="text-white/40 text-3xl">Kein Bild ausgewählt</div>
           )}

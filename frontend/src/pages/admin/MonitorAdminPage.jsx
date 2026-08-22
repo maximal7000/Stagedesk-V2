@@ -391,7 +391,7 @@ export default function MonitorAdminPage() {
     'zeige_countdown','zeige_ticker','ticker_text','ticker_geschwindigkeit',
     'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
     'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
-    'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id','bild_fit',
+    'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id','bild_fit','bild_fokus_x','bild_fokus_y',
     'zeige_webuntis','webuntis_url','webuntis_url_1tag','webuntis_link_id','webuntis_link_1tag_id','webuntis_zoom','webuntis_dark_mode',
     'split_links','split_rechts','split_links_prozent',
     'zeige_hintergrundbild','aktives_hintergrundbild_id',
@@ -1965,6 +1965,29 @@ export default function MonitorAdminPage() {
                         ))}
                       </div>
                     </div>
+                    {monitorConfig.bild_fit === 'cover' && monitorConfig.aktives_bild_id && (() => {
+                      const b = bilder.find(x => x.id === monitorConfig.aktives_bild_id);
+                      if (!b) return null;
+                      const fx = monitorConfig.bild_fokus_x ?? 50, fy = monitorConfig.bild_fokus_y ?? 50;
+                      return (
+                        <div className="mt-3">
+                          <label className="block text-xs text-gray-400 mb-1.5 font-medium">Fokuspunkt (ins Bild klicken)</label>
+                          <div className="relative inline-block max-w-full rounded-lg overflow-hidden border border-gray-700 cursor-crosshair"
+                            onClick={e => {
+                              if (!canEdit) return;
+                              const r = e.currentTarget.getBoundingClientRect();
+                              const x = Math.min(100, Math.max(0, Math.round(((e.clientX - r.left) / r.width) * 100)));
+                              const y = Math.min(100, Math.max(0, Math.round(((e.clientY - r.top) / r.height) * 100)));
+                              updateConfig('bild_fokus_x', x); updateConfig('bild_fokus_y', y);
+                            }}>
+                            <img src={`${MEDIA_BASE}${b.datei_url}`} alt="" className="block max-h-48 w-auto" />
+                            <span className="absolute w-4 h-4 -ml-2 -mt-2 rounded-full border-2 border-white bg-orange-500/70 pointer-events-none shadow"
+                              style={{ left: `${fx}%`, top: `${fy}%` }} />
+                          </div>
+                          <p className="text-[11px] text-gray-500 mt-1">Dieser Punkt bleibt sichtbar, wenn das Bild beim Füllen beschnitten wird.</p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>
