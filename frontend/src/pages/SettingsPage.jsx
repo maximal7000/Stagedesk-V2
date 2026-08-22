@@ -78,7 +78,7 @@ export default function SettingsPage() {
   const activeTabName = tabs.find(t => t.id === activeTab)?.name || 'Einstellungen';
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       {/* Kopf — mobil mit Zurück-Pfeil im Detail */}
       <div className="mb-6 flex items-center gap-2">
         {mobileDetail && (
