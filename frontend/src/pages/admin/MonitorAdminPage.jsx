@@ -259,6 +259,15 @@ export default function MonitorAdminPage() {
     } catch { toast.error('Fehler'); }
   };
 
+  // Sofort-Override eines Bildschirms setzen/zurücksetzen (Cockpit-Schnellumschaltung)
+  const setBildschirmOverride = async (bs, profilId) => {
+    try {
+      await apiClient.put(`/monitor/bildschirme/${bs.id}`, { override_profil_id: profilId || null, override_bis: null });
+      await fetchBildschirme();
+      toast.success(profilId ? 'Bildschirm umgeschaltet' : 'Override zurückgesetzt');
+    } catch { toast.error('Fehler beim Umschalten'); }
+  };
+
   const fetchKlausurVorlagen = useCallback(async () => {
     try { const res = await apiClient.get('/monitor/klausur-vorlagen'); setKlausurVorlagen(res.data); } catch {}
   }, []);
@@ -1559,6 +1568,23 @@ export default function MonitorAdminPage() {
 
           {activeArea === 'uebersicht' && (
           <>
+          {/* Schnellaktionen */}
+          {canEdit && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => { setKlausurTemplate(null); setShowNewKlausur(true); setActiveArea('inhalte'); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+                <Plus className="w-3.5 h-3.5" /> Klausur
+              </button>
+              <button onClick={() => setActiveArea('events')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-sm rounded-lg">
+                <Radio className="w-3.5 h-3.5" /> Events
+              </button>
+              <button onClick={() => setActiveArea('inhalte')}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-700/60 hover:bg-gray-700 border border-gray-600/60 text-gray-200 text-sm rounded-lg">
+                <Megaphone className="w-3.5 h-3.5" /> Ankündigung
+              </button>
+            </div>
+          )}
           {/* ═══ Bildschirm-Cockpit — was läuft gerade wo ═══ */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1585,6 +1611,11 @@ export default function MonitorAdminPage() {
                             {aktivesEvent.name}
                           </span>
                         )}
+                        {bs.override_profil_id && (
+                          <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 text-[10px] rounded font-medium bg-amber-500 text-black">
+                            Override
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center justify-between px-3 py-2">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -1595,6 +1626,21 @@ export default function MonitorAdminPage() {
                         <a href={`/monitor?bildschirm=${bs.slug}`} target="_blank" rel="noopener noreferrer"
                           className="text-gray-500 hover:text-white shrink-0" title="Groß öffnen"><Maximize2 className="w-3.5 h-3.5" /></a>
                       </div>
+                      {canEdit && (
+                        <div className="flex items-center gap-1.5 px-3 pb-2">
+                          <select value={bs.override_profil_id || ''} onChange={e => setBildschirmOverride(bs, e.target.value ? parseInt(e.target.value) : null)}
+                            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs">
+                            <option value="">Jetzt umschalten auf …</option>
+                            {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                          </select>
+                          {bs.override_profil_id && (
+                            <button onClick={() => setBildschirmOverride(bs, null)}
+                              className="px-2 py-1 text-xs rounded-lg bg-gray-700 text-gray-200 hover:bg-gray-600 shrink-0" title="Override zurücksetzen">
+                              Zurück
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

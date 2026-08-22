@@ -436,6 +436,13 @@ class Bildschirm(models.Model):
     )
     zeitplan = models.JSONField(default=list, blank=True,
         help_text='[{"profil_id": 3, "tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]')
+    # Manueller Sofort-Override (Cockpit): zeigt bis zum Zurücksetzen/Ablauf diese Ansicht.
+    override_profil = models.ForeignKey(
+        MonitorConfig, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='als_override_bildschirm',
+        help_text="Sofort-Override: erzwingt diese Ansicht (vor Event/Zeitplan)")
+    override_bis = models.DateTimeField(null=True, blank=True,
+        help_text="Optionales Ablaufdatum des Overrides; leer = bis manuell zurückgesetzt")
     power_zeitplan = models.JSONField(default=list, blank=True,
         help_text='[{"tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]. Leer = immer an.')
     ferien_modus = models.BooleanField(default=False,
@@ -543,7 +550,11 @@ class Bildschirm(models.Model):
         return None
 
     def get_active_profil(self):
-        """Aktives Profil bestimmen: aktives Event > Zeitplan > Default."""
+        """Aktives Profil bestimmen: Sofort-Override > aktives Event > Zeitplan > Default."""
+        # Manueller Sofort-Override (Cockpit) hat höchste Priorität
+        if self.override_profil_id and (self.override_bis is None or self.override_bis > timezone.now()):
+            return self.override_profil
+
         event_profil = self.get_active_event_profil()
         if event_profil:
             return event_profil

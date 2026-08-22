@@ -748,6 +748,9 @@ def update_bildschirm(request, id: int, payload: BildschirmUpdateSchema):
     if 'default_profil_id' in data:
         val = data.pop('default_profil_id')
         bs.default_profil_id = val if val else None
+    if 'override_profil_id' in data:
+        val = data.pop('override_profil_id')
+        bs.override_profil_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
     power_keys = {'zeitplan', 'power_zeitplan', 'ferien_modus', 'power_ausnahmen', 'power_modus'}
     power_changed = bool(power_keys & set(data.keys()))
