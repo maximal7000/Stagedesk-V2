@@ -3433,6 +3433,34 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
   const toLocal = (iso) => iso ? iso.slice(0, 16) : '';
   const toIso = (local) => local ? new Date(local).toISOString() : null;
   const fmt = (iso) => { try { return new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
+  // Tickende Zeit für „endet in / startet in"-Badges
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(t); }, []);
+  const humanDur = (ms) => {
+    const m = Math.max(0, Math.round(ms / 60000));
+    if (m < 60) return `${m} min`;
+    const h = Math.floor(m / 60), mm = m % 60;
+    return mm ? `${h} h ${mm} min` : `${h} h`;
+  };
+  const timeBadge = (ev) => {
+    if (!ev.aktiv_von || !ev.aktiv_bis) return null;
+    const von = new Date(ev.aktiv_von).getTime(), bis = new Date(ev.aktiv_bis).getTime();
+    if (now < von) return { text: `startet in ${humanDur(von - now)}`, cls: 'bg-blue-500/20 text-blue-300' };
+    if (now < bis) return { text: `endet in ${humanDur(bis - now)}`, cls: 'bg-amber-500/20 text-amber-300' };
+    return { text: 'abgelaufen', cls: 'bg-gray-700 text-gray-400' };
+  };
+  // Kollisionen: Events mit überlappendem Zeitfenster, die sich einen Bildschirm teilen
+  const collisionIds = (() => {
+    const ids = new Set();
+    const win = ev => ev.aktiv_von && ev.aktiv_bis;
+    const overlap = (a, b) => new Date(a.aktiv_von) < new Date(b.aktiv_bis) && new Date(b.aktiv_von) < new Date(a.aktiv_bis);
+    const shares = (a, b) => { const sa = new Set((a.zuweisungen || []).map(z => z.bildschirm_id)); return (b.zuweisungen || []).some(z => sa.has(z.bildschirm_id)); };
+    for (let i = 0; i < events.length; i++) for (let j = i + 1; j < events.length; j++) {
+      const a = events[i], b = events[j];
+      if (win(a) && win(b) && overlap(a, b) && shares(a, b)) { ids.add(a.id); ids.add(b.id); }
+    }
+    return ids;
+  })();
   const start = (ev) => setDraft(ev
     ? { ...ev, zuweisungen: (ev.zuweisungen || []).map(z => ({ bildschirm_id: z.bildschirm_id, profil_id: z.profil_id })) }
     : { name: '', farbe: '#7c3aed', beschreibung: '', aktiv_von: null, aktiv_bis: null, zuweisungen: [] });
@@ -3543,9 +3571,15 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
             <div className="flex items-center gap-3">
               <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ev.farbe }} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-white text-sm">{ev.name}</span>
                   {ev.aktiv && <span className="px-2 py-0.5 text-[10px] bg-violet-500/30 text-violet-200 rounded-full">aktiv</span>}
+                  {(() => { const b = timeBadge(ev); return b ? <span className={`px-2 py-0.5 text-[10px] rounded-full ${b.cls}`}>{b.text}</span> : null; })()}
+                  {collisionIds.has(ev.id) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-red-500/20 text-red-300 rounded-full" title="Überlappt zeitlich mit einem anderen Event auf demselben Bildschirm">
+                      <AlertTriangle className="w-3 h-3" /> Überschneidung
+                    </span>
+                  )}
                 </div>
                 <div className="text-xs text-gray-500">
                   {(ev.zuweisungen || []).length} Bildschirm(e)
