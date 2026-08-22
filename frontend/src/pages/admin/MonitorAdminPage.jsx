@@ -3,6 +3,7 @@
  * Features: Profil-Management, Zeitplan-Editor, Layout-Modi, ON AIR Anpassung
  */
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Save, Loader2, Moon, AlertCircle, ChevronDown,
@@ -76,7 +77,7 @@ export default function MonitorAdminPage() {
   const [newAnkuendigung, setNewAnkuendigung] = useState(null);
   const [editingAnkuendigung, setEditingAnkuendigung] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileLayout, setNewProfileLayout] = useState('standard');
@@ -105,7 +106,22 @@ export default function MonitorAdminPage() {
   const [events, setEvents] = useState([]);
 
   // Sections
-  const [activeArea, setActiveArea] = useState('uebersicht');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const AREAS = ['uebersicht', 'ansichten', 'bildschirme', 'inhalte', 'events', 'einstellungen'];
+  const [activeArea, setActiveAreaState] = useState(() => {
+    const b = searchParams.get('bereich');
+    return AREAS.includes(b) ? b : 'uebersicht';
+  });
+  const setActiveArea = (area) => {
+    setActiveAreaState(area);
+    setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('bereich', area); return p; }, { replace: true });
+  };
+  // Browser-Zurück/Deep-Link: URL → State
+  useEffect(() => {
+    const b = searchParams.get('bereich');
+    if (AREAS.includes(b) && b !== activeArea) setActiveAreaState(b);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [openSections, setOpenSections] = useState({
     profil: true,
     allgemein: false,
@@ -695,12 +711,153 @@ export default function MonitorAdminPage() {
   const importRef = useRef(null);
   const activeProfile = profiles.find(p => p.id === activeProfileId);
 
+  // Detaileinstellungen je Widget — direkt unter dem Schalter (inline).
+  // Widgets ohne Extra-Einstellungen (bzw. in „Medien" konfigurierte) geben null zurück.
+  const settingsCard = (icon, title, body) => (
+    <div className="p-4 bg-gray-800/30 rounded-xl space-y-3 border border-gray-700/40">
+      <h4 className="text-sm font-semibold text-white flex items-center gap-2">{icon} {title}</h4>
+      {body}
+    </div>
+  );
+  const renderWidgetSettings = (key) => {
+    const c = monitorConfig; if (!c) return null;
+    const inp = 'w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50';
+    switch (key) {
+      case 'zeige_ticker': return settingsCard(<Type className="w-4 h-4 text-blue-400" />, 'Ticker', <>
+        <input type="text" value={c.ticker_text} onChange={e => updateConfig('ticker_text', e.target.value)} disabled={!canEdit} placeholder="Text der durchläuft..." className={inp} />
+        <div><label className="block text-xs text-gray-500 mb-1">Geschwindigkeit: {c.ticker_geschwindigkeit} px/s</label>
+          <input type="range" min={10} max={200} value={c.ticker_geschwindigkeit} onChange={e => updateConfig('ticker_geschwindigkeit', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-blue-500" /></div>
+      </>);
+      case 'zeige_wetter': return settingsCard(<CloudSun className="w-4 h-4 text-yellow-400" />, 'Wetter', <div className="grid grid-cols-2 gap-3">
+        <div><label className="block text-xs text-gray-500 mb-1">Stadt</label>
+          <input type="text" value={c.wetter_stadt} onChange={e => updateConfig('wetter_stadt', e.target.value)} disabled={!canEdit} placeholder="z.B. Lübeck" className={inp} /></div>
+        <div><label className="block text-xs text-gray-500 mb-1">OpenWeatherMap API-Key</label>
+          <input type="password" value={c.wetter_api_key} onChange={e => updateConfig('wetter_api_key', e.target.value)} disabled={!canEdit} placeholder="API-Key" className={inp} /></div>
+      </div>);
+      case 'zeige_webuntis': return settingsCard(<Calendar className="w-4 h-4 text-purple-400" />, 'WebUntis iFrame', <>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (2 Tage)</label>
+            <select value={c.webuntis_link_id || ''} disabled={!canEdit} onChange={e => updateConfig('webuntis_link_id', e.target.value ? parseInt(e.target.value) : null)} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
+              <option value="">— eigener Link unten —</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
+          <div><label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (1 Tag)</label>
+            <select value={c.webuntis_link_1tag_id || ''} disabled={!canEdit} onChange={e => updateConfig('webuntis_link_1tag_id', e.target.value ? parseInt(e.target.value) : null)} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
+              <option value="">— eigener Link unten —</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
+        </div>
+        <p className="text-[11px] text-gray-500">Gespeicherte Links (Bibliothek unter „Inhalte") haben Vorrang. Sonst eigene Links:</p>
+        <div><label className="block text-xs text-gray-500 mb-1">Eigener Link (2 Tage)</label>
+          <input type="url" value={c.webuntis_url} onChange={e => updateConfig('webuntis_url', e.target.value)} disabled={!canEdit} placeholder="https://neilo.webuntis.com/..." className={inp} /></div>
+        <div><label className="block text-xs text-gray-500 mb-1">Eigener Link (1 Tag, kompakt)</label>
+          <input type="url" value={c.webuntis_url_1tag || ''} onChange={e => updateConfig('webuntis_url_1tag', e.target.value)} disabled={!canEdit} placeholder="leer = 2-Tage-Link" className={inp} /></div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="block text-xs text-gray-500 mb-1">Zoom: {c.webuntis_zoom}%</label>
+            <input type="range" min={50} max={150} value={c.webuntis_zoom} onChange={e => updateConfig('webuntis_zoom', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-purple-500" /></div>
+          <div className="flex items-end">
+            <button onClick={() => canEdit && updateConfig('webuntis_dark_mode', !c.webuntis_dark_mode)} disabled={!canEdit}
+              className={`px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${c.webuntis_dark_mode ? 'bg-blue-600/20 border-blue-500/40 text-blue-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}><Moon className="w-4 h-4 inline mr-1" /> Dark-Mode</button></div>
+        </div>
+      </>);
+      case 'zeige_qr_code': return settingsCard(<QrCode className="w-4 h-4 text-emerald-400" />, 'QR-Code', <div className="grid grid-cols-2 gap-3">
+        <div><label className="block text-xs text-gray-500 mb-1">URL</label>
+          <input type="url" value={c.qr_code_url} onChange={e => updateConfig('qr_code_url', e.target.value)} disabled={!canEdit} placeholder="https://..." className={inp} /></div>
+        <div><label className="block text-xs text-gray-500 mb-1">Beschriftung</label>
+          <input type="text" value={c.qr_code_label} onChange={e => updateConfig('qr_code_label', e.target.value)} disabled={!canEdit} placeholder="z.B. Event-Anmeldung" className={inp} /></div>
+      </div>);
+      case 'zeige_kamera': return settingsCard(<Activity className="w-4 h-4 text-cyan-400" />, 'Kamera-Stream', <>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="block text-xs text-gray-500 mb-1">Titel</label>
+            <input type="text" value={c.kamera_titel || ''} onChange={e => updateConfig('kamera_titel', e.target.value)} disabled={!canEdit} placeholder="z.B. Saal" className={inp} /></div>
+          <div><label className="block text-xs text-gray-500 mb-1">Typ</label>
+            <select value={c.kamera_typ || 'img'} onChange={e => updateConfig('kamera_typ', e.target.value)} disabled={!canEdit} className={inp}>
+              <option value="img">MJPEG / Bild-Stream</option><option value="video">HLS / MP4</option><option value="iframe">iframe / Embed</option></select></div>
+        </div>
+        <div><label className="block text-xs text-gray-500 mb-1">Stream-URL</label>
+          <input type="url" value={c.kamera_url || ''} onChange={e => updateConfig('kamera_url', e.target.value)} disabled={!canEdit} placeholder="http://kamera.lan/stream.mjpg" className={inp} /></div>
+      </>);
+      case 'zeige_freitext': return settingsCard(<AlignLeft className="w-4 h-4 text-teal-400" />, 'Freier Textblock', <>
+        <input type="text" value={c.freitext_titel} onChange={e => updateConfig('freitext_titel', e.target.value)} disabled={!canEdit} placeholder="Titel" className={inp} />
+        <textarea value={c.freitext_inhalt} onChange={e => updateConfig('freitext_inhalt', e.target.value)} disabled={!canEdit} placeholder="Inhalt..." rows={3} className={`${inp} resize-none`} />
+      </>);
+      case 'zeige_raumplan': return settingsCard(<LayoutGrid className="w-4 h-4 text-indigo-400" />, 'Raumplan (WebUntis API)', <>
+        <div className="grid grid-cols-3 gap-3">
+          <div><label className="block text-xs text-gray-500 mb-1">Server</label>
+            <input type="text" value={c.raumplan_server} onChange={e => updateConfig('raumplan_server', e.target.value)} disabled={!canEdit} placeholder="katharineum.webuntis.com" className={inp} /></div>
+          <div><label className="block text-xs text-gray-500 mb-1">Schule</label>
+            <input type="text" value={c.raumplan_schule} onChange={e => updateConfig('raumplan_schule', e.target.value)} disabled={!canEdit} placeholder="katharineum" className={inp} /></div>
+          <div><label className="block text-xs text-gray-500 mb-1">Raum-Kürzel</label>
+            <input type="text" value={c.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)} disabled={!canEdit} placeholder="Aul" className={inp} /></div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="block text-xs text-gray-500 mb-1">Benutzername (optional)</label>
+            <input type="text" value={c.raumplan_benutzername} onChange={e => updateConfig('raumplan_benutzername', e.target.value)} disabled={!canEdit} placeholder="Leer = Anonym" className={inp} /></div>
+          <div><label className="block text-xs text-gray-500 mb-1">Passwort (optional)</label>
+            <input type="password" value={c.raumplan_passwort} onChange={e => updateConfig('raumplan_passwort', e.target.value)} disabled={!canEdit} placeholder="Passwort" className={inp} /></div>
+        </div>
+      </>);
+      case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-amber-400" />, 'Eigener Countdown', <div className="grid grid-cols-2 gap-3">
+        <div><label className="block text-xs text-gray-500 mb-1">Event-Name</label>
+          <input type="text" value={c.eigener_countdown_name} onChange={e => updateConfig('eigener_countdown_name', e.target.value)} disabled={!canEdit} placeholder="z.B. Schulkonzert" className={inp} /></div>
+        <div><label className="block text-xs text-gray-500 mb-1">Datum &amp; Uhrzeit</label>
+          <input type="datetime-local" value={c.eigener_countdown_datum ? c.eigener_countdown_datum.slice(0, 16) : ''} onChange={e => updateConfig('eigener_countdown_datum', e.target.value ? e.target.value + ':00Z' : null)} disabled={!canEdit} className={inp} /></div>
+      </div>);
+      case 'zeige_bildschirmschoner': return settingsCard(<MonitorOff className="w-4 h-4 text-cyan-400" />, 'Bildschirmschoner',
+        <div><label className="block text-xs text-gray-500 mb-1">Timeout: {c.bildschirmschoner_timeout} Minuten</label>
+          <input type="range" min={1} max={60} value={c.bildschirmschoner_timeout} onChange={e => updateConfig('bildschirmschoner_timeout', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-cyan-500" /></div>);
+      case 'zeige_seitenrotation': return settingsCard(<RotateCw className="w-4 h-4 text-pink-400" />, 'Seitenrotation', <>
+        <div><label className="block text-xs text-gray-500 mb-1">Intervall: {c.seitenrotation_intervall} Sekunden</label>
+          <input type="range" min={5} max={120} value={c.seitenrotation_intervall} onChange={e => updateConfig('seitenrotation_intervall', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-pink-500" /></div>
+        <div><label className="block text-xs text-gray-500 mb-2">Seiten zum Rotieren</label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[{ id: 'main', label: 'Hauptansicht' }, { id: 'veranstaltungen', label: 'Veranstaltungen' }, { id: 'ankuendigungen', label: 'Ankündigungen' }, { id: 'raumplan', label: 'Raumplan' }, { id: 'wetter', label: 'Wetter' }, { id: 'slideshow', label: 'Slideshow' }, { id: 'pdf', label: 'PDF' }, { id: 'freitext', label: 'Freier Text' }].map(page => {
+              const selected = (c.seitenrotation_seiten || []).includes(page.id);
+              return (<button key={page.id} onClick={() => { if (!canEdit) return; const s = c.seitenrotation_seiten || []; updateConfig('seitenrotation_seiten', selected ? s.filter(x => x !== page.id) : [...s, page.id]); }} disabled={!canEdit}
+                className={`p-2 rounded-lg text-xs border transition-colors disabled:opacity-50 ${selected ? 'bg-pink-600/20 border-pink-500/40 text-pink-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>{page.label}</button>);
+            })}
+          </div></div>
+      </>);
+      default: return null;
+    }
+  };
+
+  const areaNav = [
+    { id: 'uebersicht', label: 'Übersicht', icon: Activity },
+    { id: 'ansichten', label: 'Ansichten', icon: LayoutGrid },
+    { id: 'bildschirme', label: 'Bildschirme', icon: Monitor },
+    { id: 'inhalte', label: 'Inhalte', icon: Megaphone },
+    { id: 'events', label: 'Events', icon: Radio },
+    { id: 'einstellungen', label: 'Einstellungen', icon: Settings },
+  ];
+
   return (
     <AreaContext.Provider value={activeArea}>
-    <div className="max-w-6xl mx-auto space-y-4">
+    <div className="max-w-7xl mx-auto flex gap-5">
+      {/* ═══ Seitenleiste (Desktop) ═══ */}
+      <aside className="hidden md:flex flex-col gap-1 w-52 shrink-0 sticky top-4 self-start">
+        <div className="flex items-center gap-2 px-2 py-3 mb-1">
+          <div className="w-9 h-9 bg-purple-600/20 rounded-xl flex items-center justify-center">
+            <Monitor className="w-5 h-5 text-purple-400" />
+          </div>
+          <span className="text-sm font-bold text-white">Monitor</span>
+        </div>
+        {areaNav.map(a => {
+          const Ico = a.icon;
+          const active = activeArea === a.id;
+          return (
+            <button key={a.id} onClick={() => setActiveArea(a.id)}
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                active ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+              }`}>
+              <Ico className="w-4 h-4 shrink-0" /> {a.label}
+              {a.id === 'events' && events.some(e => e.aktiv) && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse" />}
+            </button>
+          );
+        })}
+      </aside>
+
+      {/* ═══ Hauptspalte ═══ */}
+      <div className="flex-1 min-w-0 space-y-4">
       {/* ═══ Sticky Header ═══ */}
       <div className="sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800/50">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
               <Monitor className="w-5 h-5 text-purple-400" />
@@ -740,35 +897,27 @@ export default function MonitorAdminPage() {
           </div>
         </div>
 
-        {/* Bereichs-Navigation (Hub) */}
-        {(() => {
-          const areas = [
-            { id: 'uebersicht', label: 'Übersicht', icon: Activity },
-            { id: 'ansichten', label: 'Ansichten', icon: LayoutGrid },
-            { id: 'bildschirme', label: 'Bildschirme', icon: Monitor },
-            { id: 'inhalte', label: 'Inhalte', icon: Megaphone },
-            { id: 'events', label: 'Events', icon: Radio },
-            { id: 'einstellungen', label: 'Einstellungen', icon: Settings },
-          ];
-          return (
-            <div className="max-w-6xl mx-auto mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-              {areas.map(a => {
-                const Ico = a.icon;
-                const active = activeArea === a.id;
-                return (
-                  <button key={a.id} onClick={() => setActiveArea(a.id)}
-                    className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                      active ? 'bg-purple-600 text-white' : 'bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-800'
-                    }`}>
-                    <Ico className="w-4 h-4" /> {a.label}
-                    {a.id === 'events' && events.some(e => e.aktiv) && <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse" />}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })()}
+        {/* Bereichs-Navigation (Mobile) */}
+        <div className="md:hidden mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+          {areaNav.map(a => {
+            const Ico = a.icon;
+            const active = activeArea === a.id;
+            return (
+              <button key={a.id} onClick={() => setActiveArea(a.id)}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  active ? 'bg-purple-600 text-white' : 'bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-800'
+                }`}>
+                <Ico className="w-4 h-4" /> {a.label}
+                {a.id === 'events' && events.some(e => e.aktiv) && <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse" />}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* ═══ Inhaltsbereich (mit fester Vorschau-Spalte in „Ansichten") ═══ */}
+      <div className={activeArea === 'ansichten' && showPreview ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-5 lg:items-start' : ''}>
+      <div className="space-y-4 min-w-0">
 
       {/* ═══ Bildschirme ═══ */}
       <Section id="bildschirme" area="bildschirme" title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
@@ -1169,9 +1318,9 @@ export default function MonitorAdminPage() {
             )}
           </div>
 
-          {/* ═══ Mini Preview ═══ */}
+          {/* ═══ Mini Preview (nur mobil — Desktop hat feste Vorschau-Spalte) ═══ */}
           {showPreview && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="lg:hidden bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-800">
                 <span className="text-xs text-gray-400 flex items-center gap-2">
                   <Activity className="w-3 h-3" /> Live-Vorschau — {activeProfile?.name}
@@ -1200,47 +1349,65 @@ export default function MonitorAdminPage() {
 
           {activeArea === 'uebersicht' && (
           <>
-          {/* ═══ Status Dashboard ═══ */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className={`rounded-xl p-3.5 border transition-colors ${monitorConfig.ist_on_air ? 'bg-red-900/20 border-red-600/50' : 'bg-gray-900 border-gray-800'}`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">ON AIR</p>
-                  <p className={`text-sm font-bold ${monitorConfig.ist_on_air ? 'text-red-400' : 'text-gray-400'}`}>
-                    {monitorConfig.ist_on_air ? 'LIVE' : 'Aus'}
-                  </p>
-                </div>
-                <Radio className={`w-5 h-5 ${monitorConfig.ist_on_air ? 'text-red-500 animate-pulse' : 'text-gray-700'}`} />
-              </div>
+          {/* ═══ Bildschirm-Cockpit — was läuft gerade wo ═══ */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Monitor className="w-4 h-4 text-indigo-400" /> Bildschirme ({bildschirme.length})</h3>
+              <button onClick={() => setActiveArea('bildschirme')} className="text-xs text-gray-400 hover:text-white">verwalten →</button>
             </div>
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-3.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Layout</p>
-                  <p className="text-sm font-bold text-white">{{ standard: 'Standard', stundenplan: 'Stundenplan', onair: 'ON AIR', abfahrten: 'Abfahrten' }[monitorConfig.layout_modus] || 'Standard'}</p>
-                </div>
-                <Layers className="w-5 h-5 text-purple-500" />
+            {bildschirme.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 border border-gray-800 rounded-xl">
+                <Monitor className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                <p className="text-sm">Noch keine Bildschirme — unter „Bildschirme" anlegen.</p>
               </div>
-            </div>
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-3.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Dateien</p>
-                  <p className="text-sm font-bold text-white">{monitorDateien.length}</p>
-                </div>
-                <Image className="w-5 h-5 text-pink-500" />
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {bildschirme.map(bs => {
+                  const aktivesEvent = events.find(e => e.aktiv && (e.zuweisungen || []).some(z => z.bildschirm_id === bs.id));
+                  return (
+                    <div key={bs.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                      <div className="relative bg-black" style={{ paddingBottom: '56.25%' }}>
+                        <iframe key={bs.slug} src={`/monitor?bildschirm=${bs.slug}`}
+                          className="absolute inset-0 w-full h-full border-0" title={bs.name}
+                          style={{ pointerEvents: 'none' }} loading="lazy" />
+                        {aktivesEvent && (
+                          <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 text-[10px] rounded font-medium text-white" style={{ background: aktivesEvent.farbe }}>
+                            {aktivesEvent.name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between px-3 py-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <Monitor className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                          <span className="text-sm text-white truncate">{bs.name}</span>
+                          {(bs.zeitplan || []).length > 0 && <CalendarClock className="w-3 h-3 text-green-400 shrink-0" />}
+                        </div>
+                        <a href={`/monitor?bildschirm=${bs.slug}`} target="_blank" rel="noopener noreferrer"
+                          className="text-gray-500 hover:text-white shrink-0" title="Groß öffnen"><Maximize2 className="w-3.5 h-3.5" /></a>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-3.5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-1">Meldungen</p>
-                  <p className="text-sm font-bold text-white">{monitorAnkuendigungen.length}</p>
-                </div>
-                <Megaphone className="w-5 h-5 text-amber-500" />
-              </div>
-            </div>
+            )}
           </div>
+
+          {/* Events-Schnellzugriff */}
+          {events.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-2"><Radio className="w-4 h-4 text-violet-400" /> Events</h3>
+              <div className="flex flex-wrap gap-2">
+                {events.map(ev => (
+                  <button key={ev.id} onClick={() => canEdit && toggleEventActive(ev)} disabled={!canEdit}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+                      ev.aktiv ? 'bg-violet-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: ev.aktiv ? '#fff' : ev.farbe }} />
+                    {ev.name}{ev.aktiv && ' · aktiv'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ═══ Quick Actions ═══ */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1838,7 +2005,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ Widgets ═══ */}
-          <Section id="widgets" area="ansichten" title="Widgets & Bereiche" description={`${activeWidgets} von ${widgetKeys.length} aktiv`}
+          <Section id="widgets" area={['standard', 'split', 'stundenplan'].includes(monitorConfig.layout_modus) ? 'ansichten' : 'nicht-relevant'} title="Widgets & Bereiche" description={`${activeWidgets} von ${widgetKeys.length} aktiv`}
             icon={Zap} iconColor="bg-blue-600/30" open={openSections.widgets} onToggle={toggleSection}
             statusDot={activeWidgets > 0 ? 'bg-blue-400' : 'bg-gray-600'}>
 
@@ -1865,10 +2032,18 @@ export default function MonitorAdminPage() {
                     );
                   })}
                 </div>
+                {/* Einstellungen der aktiven Widgets dieser Kategorie — direkt darunter */}
+                <div className="space-y-3 mb-4">
+                  {widgetDefs.filter(w => w.cat === cat && monitorConfig[w.key]).map(w => {
+                    const s = renderWidgetSettings(w.key);
+                    return s ? <div key={`set-${w.key}`}>{s}</div> : null;
+                  })}
+                </div>
               </div>
             ))}
 
-            {/* ── Widget Settings ── */}
+            {/* ── Widget Settings (alt — entfernt, jetzt inline) ── */}
+            {false && (
             <div className="space-y-3 border-t border-gray-800 pt-4">
               <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Widget-Einstellungen</p>
 
@@ -2145,6 +2320,7 @@ export default function MonitorAdminPage() {
                 <p className="text-sm text-gray-600 text-center py-4">Aktiviere Widgets mit zusätzlichen Einstellungen, um sie hier zu konfigurieren.</p>
               )}
             </div>
+            )}
           </Section>
 
           {/* ═══ Theme & Farben ═══ */}
@@ -3079,9 +3255,40 @@ export default function MonitorAdminPage() {
         </>
       )}
 
+      </div>{/* Ende linke Spalte */}
+
+      {/* Feste Live-Vorschau (Ansichten, ab lg) */}
+      {activeArea === 'ansichten' && showPreview && monitorConfig && (
+        <aside className="hidden lg:block sticky top-24 self-start">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 border-b border-gray-800">
+              <span className="text-xs text-gray-400 flex items-center gap-2 truncate">
+                <Activity className="w-3 h-3 shrink-0" /> Vorschau — {activeProfile?.name}
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                <a href={`/monitor?profil=${monitorConfig.slug}`} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white" title="Groß öffnen">
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </a>
+                <button onClick={() => setShowPreview(false)} className="text-gray-500 hover:text-white" title="Vorschau ausblenden">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="relative bg-black" style={{ paddingBottom: '56.25%' }}>
+              <iframe key={monitorConfig.slug} src={`/monitor?profil=${monitorConfig.slug}`}
+                className="absolute inset-0 w-full h-full border-0" title="Monitor Preview"
+                style={{ pointerEvents: 'none' }} />
+            </div>
+          </div>
+        </aside>
+      )}
+
+      </div>{/* Ende Inhaltsbereich-Grid */}
+
       {/* Hidden Inputs */}
       <input ref={fileInputRef} type="file" className="hidden" onChange={handleUploadFile}
         accept={uploadTyp === 'pdf' ? '.pdf' : 'image/*'} />
+      </div>
     </div>
     </AreaContext.Provider>
   );
