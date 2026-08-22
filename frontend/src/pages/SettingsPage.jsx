@@ -429,7 +429,86 @@ function NotificationsTab() {
           Hinweis: Auf iOS funktionieren Push-Notifications nur, wenn Stagedesk als PWA über „Zum Home-Bildschirm" installiert ist.
         </p>
       </div>
+
+      <NotificationCategories />
     </div>
+  );
+}
+
+function NotifSwitch({ on, onClick, disabled, offColor = 'bg-gray-600' }) {
+  return (
+    <button onClick={onClick} disabled={disabled}
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${on ? 'bg-blue-600' : offColor} disabled:opacity-40`}>
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${on ? 'translate-x-5' : ''}`} />
+    </button>
+  );
+}
+
+function NotificationCategories() {
+  const [cfg, setCfg] = useState(null);
+
+  useEffect(() => { apiClient.get('/users/notification-config').then(r => setCfg(r.data)).catch(() => {}); }, []);
+  if (!cfg) return null;
+
+  const toggleMine = async (kind) => {
+    const disabled = cfg.my_disabled.includes(kind)
+      ? cfg.my_disabled.filter(k => k !== kind)
+      : [...cfg.my_disabled, kind];
+    setCfg({ ...cfg, my_disabled: disabled });
+    try { await apiClient.put('/users/me', { notify_disabled: disabled }); }
+    catch { toast.error('Speichern fehlgeschlagen'); }
+  };
+  const toggleGlobal = async (kind) => {
+    const disabled = cfg.global_disabled.includes(kind)
+      ? cfg.global_disabled.filter(k => k !== kind)
+      : [...cfg.global_disabled, kind];
+    setCfg({ ...cfg, global_disabled: disabled });
+    try { await apiClient.put('/users/notification-config/global', { disabled }); toast.success('Global gespeichert'); }
+    catch { toast.error('Speichern fehlgeschlagen'); }
+  };
+
+  return (
+    <>
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-2">Kategorien</h3>
+        <p className="text-sm text-gray-400 mb-4">Welche Benachrichtigungen möchtest du bekommen?</p>
+        <div className="space-y-2">
+          {cfg.kinds.map(k => {
+            const globalOff = cfg.global_disabled.includes(k.value);
+            const on = !cfg.my_disabled.includes(k.value) && !globalOff;
+            return (
+              <div key={k.value} className="flex items-center justify-between p-3 rounded-lg border border-gray-700 bg-gray-800/50">
+                <div>
+                  <span className="text-white">{k.label}</span>
+                  {globalOff && <span className="ml-2 text-xs text-amber-400">systemweit deaktiviert</span>}
+                </div>
+                <NotifSwitch on={on} disabled={globalOff} onClick={() => toggleMine(k.value)} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {cfg.is_admin && (
+        <div>
+          <h3 className="text-lg font-semibold text-white mb-2">Global (Admin)</h3>
+          <p className="text-sm text-gray-400 mb-4">
+            Kategorien hier systemweit abschalten — diese Benachrichtigungen werden dann für <strong>alle</strong> Nutzer nicht mehr verschickt.
+          </p>
+          <div className="space-y-2">
+            {cfg.kinds.map(k => {
+              const on = !cfg.global_disabled.includes(k.value);
+              return (
+                <div key={k.value} className="flex items-center justify-between p-3 rounded-lg border border-gray-700 bg-gray-800/50">
+                  <span className="text-white">{k.label}</span>
+                  <NotifSwitch on={on} offColor="bg-red-600" onClick={() => toggleGlobal(k.value)} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 

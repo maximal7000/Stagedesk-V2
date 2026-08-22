@@ -17,11 +17,23 @@ def notify(user_keycloak_id: str, kind: str, title: str,
     """Erzeugt eine Notification für einen User per keycloak_id.
     Gibt die Notification-ID zurück oder None bei Fehler/User-nicht-gefunden."""
     try:
-        from users.models import UserProfile, Notification
+        from users.models import UserProfile, Notification, GlobalSettings
         if not user_keycloak_id:
             return None
+        k = kind or 'info'
+        # Globaler Schalter (Admin, systemweit): Kategorie ganz deaktiviert?
+        try:
+            import json as _json
+            raw = GlobalSettings.get_value('notify_disabled_kinds', '[]')
+            if k in (_json.loads(raw) if raw else []):
+                return None
+        except Exception:
+            pass
         profile = UserProfile.objects.filter(keycloak_id=user_keycloak_id).first()
         if not profile:
+            return None
+        # Pro-Benutzer: hat der Nutzer diese Kategorie abgeschaltet?
+        if k in (profile.notify_disabled or []):
             return None
         n = Notification.objects.create(
             user=profile,

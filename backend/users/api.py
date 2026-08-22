@@ -136,6 +136,13 @@ def update_current_user(request, payload: UserProfileUpdateSchema):
         profile.default_landing = v[:200]
         changed.append('default_landing')
 
+    if payload.notify_disabled is not None:
+        # Nur bekannte Kategorien zulassen
+        from users.models import Notification
+        valid = {c[0] for c in Notification.KIND_CHOICES}
+        profile.notify_disabled = [k for k in payload.notify_disabled if k in valid]
+        changed.append('notify_disabled')
+
     if changed:
         profile.save(update_fields=changed + ['updated_at'])
     return profile
@@ -675,6 +682,41 @@ def update_setting(request, key: str, payload: GlobalSettingUpdateSchema):
     profile = get_or_create_profile(request)
     setting = GlobalSettings.set_value(key, payload.value, payload.description, profile)
     return setting
+
+
+# ========== Benachrichtigungs-Einstellungen ==========
+
+@users_router.get("/notification-config", auth=keycloak_auth)
+def get_notification_config(request):
+    """Kategorien + globale (Admin) und eigene deaktivierte Kategorien."""
+    import json as _json
+    from users.models import Notification
+    profile = get_or_create_profile(request)
+    try:
+        global_disabled = _json.loads(GlobalSettings.get_value('notify_disabled_kinds', '[]') or '[]')
+    except Exception:
+        global_disabled = []
+    return {
+        'kinds': [{'value': v, 'label': l} for v, l in Notification.KIND_CHOICES],
+        'global_disabled': global_disabled,
+        'my_disabled': profile.notify_disabled or [],
+        'is_admin': is_admin(request),
+    }
+
+
+@users_router.put("/notification-config/global", auth=keycloak_auth)
+def set_notification_global(request, payload: dict):
+    """Global (Admin): welche Kategorien systemweit NICHT verschickt werden."""
+    if not is_admin(request):
+        return 403, {"error": "Keine Berechtigung"}
+    import json as _json
+    from users.models import Notification
+    valid = {c[0] for c in Notification.KIND_CHOICES}
+    disabled = [k for k in (payload.get('disabled') or []) if k in valid]
+    profile = get_or_create_profile(request)
+    GlobalSettings.set_value('notify_disabled_kinds', _json.dumps(disabled),
+                             'Systemweit deaktivierte Benachrichtigungs-Kategorien', profile)
+    return {'global_disabled': disabled}
 
 
 # ========== Setup: Initial Permissions (Admin) ==========

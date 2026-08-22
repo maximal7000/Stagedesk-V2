@@ -74,6 +74,7 @@ class UserProfileSchema(Schema):
     keycloak_roles: List[str]
     permissions: List[str]
     default_landing: str = ''
+    notify_disabled: List[str] = []
     avatar_url: Optional[str] = None
     created_at: datetime
     last_login: Optional[datetime]
@@ -112,6 +113,7 @@ class UserProfileSchema(Schema):
 class UserProfileUpdateSchema(Schema):
     theme: Optional[str] = None
     default_landing: Optional[str] = None
+    notify_disabled: Optional[List[str]] = None
 
 
 class UserProfileAdminUpdateSchema(Schema):
