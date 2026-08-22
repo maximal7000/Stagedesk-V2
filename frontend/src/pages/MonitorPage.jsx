@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
 import {
-  Radio, Calendar, Clock, MapPin, AlertTriangle, Info, Megaphone,
+  Calendar, Clock, MapPin, AlertTriangle, Info, Megaphone,
   Sun, Moon, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog,
   Thermometer, Droplets, Timer, FileText, QrCode, AlignLeft,
   LayoutGrid, Train, Bus, TramFront, Ship,
@@ -86,96 +86,10 @@ function OnAirFullscreen({
 }
 
 
-// ═══ ON AIR Komponente — Größe, Position, Farbe konfigurierbar ═══
-function OnAirIndicator({ config, accent }) {
-  if (!config?.zeige_onair || !config?.ist_on_air) return null;
-
-  const farbe = config.on_air_farbe || accent;
-  const blinken = config.on_air_blinken !== false;
-  const groesse = config.on_air_groesse || 'gross';
-  const position = config.on_air_position || 'banner-oben';
-  const text = config.on_air_text || 'ON AIR';
-
-  // Größen-Config für verschiedene Darstellungen
-  const sizes = {
-    klein:  { py: 'py-1.5', px: 'px-4',  text: 'text-lg',   icon: 'w-4 h-4',  gap: 'gap-2', tracking: 'tracking-[0.15em]' },
-    mittel: { py: 'py-3',   px: 'px-6',  text: 'text-3xl',  icon: 'w-6 h-6',  gap: 'gap-3', tracking: 'tracking-[0.2em]'  },
-    gross:  { py: 'py-4',   px: 'px-10', text: 'text-5xl',  icon: 'w-9 h-9',  gap: 'gap-4', tracking: 'tracking-[0.3em]'  },
-    riesig: { py: 'py-6',   px: 'px-14', text: 'text-7xl',  icon: 'w-12 h-12', gap: 'gap-5', tracking: 'tracking-[0.4em]'  },
-  };
-  const s = sizes[groesse] || sizes.gross;
-
-  // ─── Banner oben (volle Breite) ───
-  if (position === 'banner-oben') {
-    return (
-      <div className="absolute top-0 left-0 right-0 z-50">
-        <div className={`${blinken ? 'animate-pulse' : ''} shadow-lg`}
-          style={{ background: farbe, boxShadow: `0 10px 40px ${farbe}50` }}>
-          <div className={`flex items-center justify-center ${s.gap} ${s.py}`}>
-            <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-            <span className={`text-white font-black ${s.text} ${s.tracking} uppercase`}>{text}</span>
-            <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Banner unten (volle Breite) ───
-  if (position === 'banner-unten') {
-    return (
-      <div className="absolute bottom-0 left-0 right-0 z-50">
-        <div className={`${blinken ? 'animate-pulse' : ''} shadow-lg`}
-          style={{ background: farbe, boxShadow: `0 -10px 40px ${farbe}50` }}>
-          <div className={`flex items-center justify-center ${s.gap} ${s.py}`}>
-            <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-            <span className={`text-white font-black ${s.text} ${s.tracking} uppercase`}>{text}</span>
-            <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Mitte-Overlay ───
-  if (position === 'mitte') {
-    return (
-      <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-        <div
-          className={`${blinken ? 'animate-pulse' : ''} rounded-2xl shadow-2xl flex items-center ${s.gap} ${s.py} ${s.px} pointer-events-auto`}
-          style={{ background: farbe, boxShadow: `0 0 80px ${farbe}70` }}
-        >
-          <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-          <span className={`text-white font-black ${s.text} ${s.tracking} uppercase`}>{text}</span>
-          <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Badge-Modus (Ecke / Kante) ───
-  const positionClasses = {
-    'oben-rechts':  'top-4 right-4',
-    'oben-links':   'top-4 left-4',
-    'oben-mitte':   'top-4 left-1/2 -translate-x-1/2',
-    'unten-rechts': 'bottom-12 right-4',
-    'unten-links':  'bottom-12 left-4',
-    'unten-mitte':  'bottom-12 left-1/2 -translate-x-1/2',
-  };
-
-  return (
-    <div className={`absolute z-50 ${positionClasses[position] || 'top-4 right-4'}`}>
-      <div
-        className={`${blinken ? 'animate-pulse' : ''} rounded-2xl shadow-2xl flex items-center ${s.gap} ${s.py} ${s.px}`}
-        style={{ background: farbe, boxShadow: `0 8px 40px ${farbe}60` }}
-      >
-        <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-        <span className={`text-white font-black ${s.text} ${s.tracking} uppercase`}>{text}</span>
-        <Radio className={`${s.icon} text-white ${blinken ? 'animate-bounce' : ''}`} />
-      </div>
-    </div>
-  );
-}
+// ON AIR wird seit dem Vollbild-Umbau immer als Vollbild-Optik gezeigt
+// (siehe OnAirFullscreen + Override). Die alten Positions-/Banner-Overlays
+// (OnAirIndicator) sind entfernt; on_air_groesse/on_air_position/on_air_vollbild
+// sind deprecated und werden nicht mehr ausgewertet.
 
 
 export default function MonitorPage() {
@@ -545,7 +459,6 @@ export default function MonitorPage() {
       <div className="fixed inset-0 overflow-hidden select-none cursor-none" style={{ background: bgColor }}>
         <BaukastenRenderer data={data} config={config} accent={accent} mediaBase={MEDIA_BASE} />
         {overlays}
-        <OnAirIndicator config={config} accent={accent} />
       </div>
     );
   }
@@ -559,7 +472,6 @@ export default function MonitorPage() {
     return (
       <div className="fixed inset-0 overflow-hidden select-none flex flex-col" style={{ background: bgColor }}>
         {overlays}
-        <OnAirIndicator config={config} accent={accent} />
 
         {/* Uhr — floating oben rechts */}
         {config?.zeige_uhr && (
@@ -1109,7 +1021,6 @@ export default function MonitorPage() {
     return (
       <div className="fixed inset-0 overflow-hidden select-none cursor-none flex flex-col" style={{ background: '#0a0e17' }}>
         {overlays}
-        <OnAirIndicator config={config} accent={accent} />
 
         {/* Streik-Banner */}
         {config?.oepnv_streik_aktiv && config?.oepnv_streik_text && (
@@ -1244,7 +1155,6 @@ export default function MonitorPage() {
       {overlays}
 
       {/* ═══ ON AIR ═══ */}
-      <OnAirIndicator config={config} accent={accent} />
 
       {/* ═══ Header ═══ */}
       <div className={`relative z-10 flex items-center justify-between px-8 ${onAirIsBanner ? 'pt-20' : 'pt-6'} pb-4`}>

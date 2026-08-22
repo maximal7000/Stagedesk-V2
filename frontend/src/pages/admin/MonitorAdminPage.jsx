@@ -93,12 +93,10 @@ export default function MonitorAdminPage() {
   const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [savedAt, setSavedAt] = useState(0);
-  // Vorschau-Iframes sind echte Live-Ansichten — periodisch neu laden, damit sie „leben"
-  const [previewNonce, setPreviewNonce] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setPreviewNonce(n => n + 1), 20000);
-    return () => clearInterval(t);
-  }, []);
+  // Vorschau-Iframes laufen als echte MonitorPage und pollen intern (Uhr/Daten live).
+  // Sie werden nur nach dem Speichern neu geladen (savedAt) — kein hartes Remount-Flackern.
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileLayout, setNewProfileLayout] = useState('standard');
@@ -139,6 +137,9 @@ export default function MonitorAdminPage() {
     return AREAS.includes(b) ? b : 'uebersicht';
   });
   const setActiveArea = (area) => {
+    // Schutz vor Datenverlust: beim Verlassen von „Ansichten" mit ungespeicherten Änderungen warnen
+    if (area !== activeArea && activeArea === 'ansichten' && hasChanges
+        && !confirm('Ungespeicherte Änderungen verwerfen und Bereich wechseln?')) return;
     setActiveAreaState(area);
     setSearchParams(prev => { const p = new URLSearchParams(prev); p.set('bereich', area); return p; }, { replace: true });
   };
@@ -324,12 +325,29 @@ export default function MonitorAdminPage() {
     fetchConfigForProfile(id);
   };
 
-  // Ctrl+S Shortcut
+  // Tastatur-Shortcuts: Ctrl+S speichern, ←/→ Ansicht wechseln, N = neu (kontextabhängig)
   useEffect(() => {
     const handler = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 's') {
         e.preventDefault();
         if (hasChanges && canEdit) handleSaveMonitorConfig();
+        return;
+      }
+      // Nicht auslösen, während in einem Eingabefeld getippt wird
+      const tag = (e.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Ansicht mit Pfeiltasten wechseln (nur im Ansichten-Bereich)
+      if (activeArea === 'ansichten' && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        const idx = profiles.findIndex(p => p.id === activeProfileId);
+        const next = e.key === 'ArrowLeft' ? idx - 1 : idx + 1;
+        if (idx >= 0 && next >= 0 && next < profiles.length) { e.preventDefault(); switchProfile(profiles[next].id); }
+        return;
+      }
+      // N = neu: Ansicht (in „Ansichten") oder Klausur (in „Inhalte")
+      if ((e.key === 'n' || e.key === 'N') && canEdit) {
+        if (activeArea === 'ansichten') { e.preventDefault(); setShowNewProfile(true); }
+        else if (activeArea === 'inhalte') { e.preventDefault(); setKlausurTemplate(null); setShowNewKlausur(true); }
       }
     };
     window.addEventListener('keydown', handler);
@@ -474,6 +492,26 @@ export default function MonitorAdminPage() {
       ]);
       await fetchProfiles();
     } catch { toast.error('Reihenfolge konnte nicht geändert werden'); }
+  };
+
+  // Ansicht direkt am Tab umbenennen (Doppelklick → Inline-Feld)
+  const startRename = (p) => { if (!canEdit) return; setRenamingId(p.id); setRenameValue(p.name); };
+  const commitRename = async () => {
+    const id = renamingId;
+    const name = renameValue.trim();
+    setRenamingId(null);
+    if (!id || !name) return;
+    const prof = profiles.find(p => p.id === id);
+    if (!prof || prof.name === name) return;
+    try {
+      await apiClient.put(`/monitor/config?profil_id=${id}`, { name });
+      await fetchProfiles();
+      if (id === activeProfileId) {
+        setMonitorConfig(c => (c ? { ...c, name } : c));
+        setOriginalConfig(c => (c ? { ...c, name } : c));
+      }
+      toast.success('Ansicht umbenannt');
+    } catch { toast.error('Fehler beim Umbenennen'); }
   };
 
   // ═══ Bildschirm CRUD ═══
@@ -1384,18 +1422,27 @@ export default function MonitorAdminPage() {
             </div>
             <div className="flex items-center gap-2 overflow-x-auto">
               {profiles.map(p => (
-                <button key={p.id} onClick={() => switchProfile(p.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
-                    p.id === activeProfileId
-                      ? 'bg-purple-600/20 border border-purple-500/40 text-purple-300'
-                      : 'bg-gray-800/60 border border-gray-700/60 text-gray-400 hover:text-white hover:border-gray-600'
-                  }`}>
-                  {p.layout_modus === 'stundenplan' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
-                  {p.name}
-                  {p.ist_standard && <span className="px-1.5 py-0.5 text-[9px] bg-blue-600/20 text-blue-400 rounded-full">Standard</span>}
-                  {p.ist_on_air && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-                  {p.zeitplan?.length > 0 && <CalendarClock className="w-3 h-3 text-green-400" />}
-                </button>
+                renamingId === p.id ? (
+                  <input key={p.id} autoFocus value={renameValue}
+                    onChange={e => setRenameValue(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={e => { if (e.key === 'Enter') commitRename(); else if (e.key === 'Escape') setRenamingId(null); }}
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 border border-purple-500/60 text-white w-40" />
+                ) : (
+                  <button key={p.id} onClick={() => switchProfile(p.id)} onDoubleClick={() => startRename(p)}
+                    title={canEdit ? 'Doppelklick zum Umbenennen' : undefined}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                      p.id === activeProfileId
+                        ? 'bg-purple-600/20 border border-purple-500/40 text-purple-300'
+                        : 'bg-gray-800/60 border border-gray-700/60 text-gray-400 hover:text-white hover:border-gray-600'
+                    }`}>
+                    {p.layout_modus === 'stundenplan' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
+                    {p.name}
+                    {p.ist_standard && <span className="px-1.5 py-0.5 text-[9px] bg-blue-600/20 text-blue-400 rounded-full">Standard</span>}
+                    {p.ist_on_air && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+                    {p.zeitplan?.length > 0 && <CalendarClock className="w-3 h-3 text-green-400" />}
+                  </button>
+                )
               ))}
               {canEdit && (
                 <button onClick={() => setShowNewProfile(true)}
@@ -1478,7 +1525,7 @@ export default function MonitorAdminPage() {
               </div>
               <div className="relative" style={{ paddingBottom: '28%' }}>
                 <iframe
-                  key={`${monitorConfig.slug}-${savedAt}-${previewNonce}`}
+                  key={`${monitorConfig.slug}-${savedAt}`}
                   src={`/monitor?profil=${monitorConfig.slug}`}
                   className="absolute inset-0 w-full h-full border-0"
                   title="Monitor Preview"
@@ -1510,7 +1557,7 @@ export default function MonitorAdminPage() {
                   return (
                     <div key={bs.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                       <div className="relative bg-black" style={{ paddingBottom: '56.25%' }}>
-                        <iframe key={`${bs.slug}-${previewNonce}`} src={`/monitor?bildschirm=${bs.slug}`}
+                        <iframe key={bs.slug} src={`/monitor?bildschirm=${bs.slug}`}
                           className="absolute inset-0 w-full h-full border-0" title={bs.name}
                           style={{ pointerEvents: 'none' }} loading="lazy" />
                         {aktivesEvent && (
@@ -3145,7 +3192,7 @@ export default function MonitorAdminPage() {
               </div>
             </div>
             <div className="relative bg-black" style={{ paddingBottom: '56.25%' }}>
-              <iframe key={`${monitorConfig.slug}-${savedAt}-${previewNonce}`} src={`/monitor?profil=${monitorConfig.slug}`}
+              <iframe key={`${monitorConfig.slug}-${savedAt}`} src={`/monitor?profil=${monitorConfig.slug}`}
                 className="absolute inset-0 w-full h-full border-0" title="Monitor Preview"
                 style={{ pointerEvents: 'none' }} />
             </div>
