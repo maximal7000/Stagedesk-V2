@@ -352,6 +352,14 @@ class BildschirmUpdateSchema(Schema):
     power_modus: Optional[str] = None
 
 
+class AuditLogSchema(Schema):
+    id: int
+    zeitpunkt: datetime
+    benutzer: str
+    aktion: str
+    detail: str
+
+
 class OnAirSchema(Schema):
     on_air: bool
 

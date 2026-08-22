@@ -765,3 +765,19 @@ class MonitorGlobalSettings(models.Model):
 
     def __str__(self):
         return 'Globale Monitor-Einstellungen'
+
+
+class MonitorAuditLog(models.Model):
+    """Protokoll sicherheits-/betriebsrelevanter Schaltungen (ON AIR, Notfall, Events)."""
+    zeitpunkt = models.DateTimeField(auto_now_add=True)
+    benutzer = models.CharField(max_length=150, blank=True, default='')
+    aktion = models.CharField(max_length=60)
+    detail = models.CharField(max_length=200, blank=True, default='')
+
+    class Meta:
+        ordering = ['-zeitpunkt']
+        verbose_name = 'Monitor-Protokoll'
+        verbose_name_plural = 'Monitor-Protokoll'
+
+    def __str__(self):
+        return f"{self.zeitpunkt:%d.%m %H:%M} · {self.benutzer} · {self.aktion}"
