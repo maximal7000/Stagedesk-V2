@@ -34,6 +34,22 @@ const LAYOUT_MODI = [
   ['split', 'Splitscreen'],
 ];
 
+// WCAG-Kontrastverhältnis zwischen zwei Hex-Farben (1..21)
+function _relLum(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  const s = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => {
+    v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * s[0] + 0.7152 * s[1] + 0.0722 * s[2];
+}
+function contrastRatio(a, b) {
+  const la = _relLum(a), lb = _relLum(b);
+  if (la == null || lb == null) return null;
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
 // Aktiver Admin-Bereich (Hub-Navigation). Sections rendern nur im passenden Bereich.
 const AreaContext = createContext(null);
 
@@ -852,6 +868,27 @@ export default function MonitorAdminPage() {
         placeholder="Titel *" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
       <textarea value={data.text} onChange={e => setData({ ...data, text: e.target.value })}
         placeholder="Text (optional)" rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm resize-none" />
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="text-[11px] text-gray-500">Emoji:</span>
+        {['📢', '⚠️', '✅', '🎉', '🕒', '📍', '🚌', '❗'].map(em => (
+          <button key={em} type="button" onClick={() => setData({ ...data, text: (data.text || '') + em })}
+            className="px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-base leading-none">{em}</button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Anzeigen ab (optional)</label>
+          <input type="datetime-local" value={data.aktiv_von ? data.aktiv_von.slice(0, 16) : ''}
+            onChange={e => setData({ ...data, aktiv_von: e.target.value ? new Date(e.target.value).toISOString() : null })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-400 mb-1">Ablauf / bis (optional)</label>
+          <input type="datetime-local" value={data.aktiv_bis ? data.aktiv_bis.slice(0, 16) : ''}
+            onChange={e => setData({ ...data, aktiv_bis: e.target.value ? new Date(e.target.value).toISOString() : null })}
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+        </div>
+      </div>
       <div className="flex items-center gap-3 flex-wrap">
         <select value={data.prioritaet} onChange={e => setData({ ...data, prioritaet: e.target.value })}
           className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
@@ -2420,10 +2457,20 @@ export default function MonitorAdminPage() {
                 </div>
               </div>
             </div>
-            <div className="h-12 rounded-lg overflow-hidden flex">
-              <div className="flex-1" style={{ background: monitorConfig.hintergrund_farbe }} />
-              <div className="w-24" style={{ background: monitorConfig.akzent_farbe }} />
+            <div className="h-12 rounded-lg overflow-hidden flex items-center px-4" style={{ background: monitorConfig.hintergrund_farbe }}>
+              <span className="text-sm font-semibold" style={{ color: monitorConfig.akzent_farbe }}>Beispieltext in Akzentfarbe</span>
             </div>
+            {(() => {
+              const cr = contrastRatio(monitorConfig.akzent_farbe, monitorConfig.hintergrund_farbe);
+              if (cr == null) return null;
+              const ok = cr >= 4.5, mid = cr >= 3;
+              return (
+                <p className={`text-xs flex items-center gap-1.5 ${ok ? 'text-green-400' : mid ? 'text-amber-300' : 'text-red-400'}`}>
+                  {ok ? <Check className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                  Kontrast {cr.toFixed(1)}:1 — {ok ? 'gut lesbar' : mid ? 'nur für große Schrift ausreichend' : 'zu gering, Text schwer lesbar'}
+                </p>
+              );
+            })()}
           </Section>
 
           {/* ═══ Medien ═══ */}
