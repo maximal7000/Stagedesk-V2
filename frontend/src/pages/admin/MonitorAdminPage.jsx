@@ -22,6 +22,18 @@ const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
 
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 
+// Alle Layout-Modi (muss zu MonitorConfig.LAYOUT_CHOICES im Backend passen).
+const LAYOUT_MODI = [
+  ['standard', 'Standard-Layout'],
+  ['stundenplan', 'Stundenplan-Vollbild'],
+  ['onair', 'ON AIR Display'],
+  ['abfahrten', 'Abfahrtsmonitor (ÖPNV)'],
+  ['baukasten', 'Widget-Baukasten (frei)'],
+  ['pdf_vollbild', 'PDF-Vollbild'],
+  ['bild_vollbild', 'Bild-Vollbild'],
+  ['split', 'Splitscreen'],
+];
+
 // Aktiver Admin-Bereich (Hub-Navigation). Sections rendern nur im passenden Bereich.
 const AreaContext = createContext(null);
 
@@ -81,6 +93,12 @@ export default function MonitorAdminPage() {
   const [uploading, setUploading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [savedAt, setSavedAt] = useState(0);
+  // Vorschau-Iframes sind echte Live-Ansichten — periodisch neu laden, damit sie „leben"
+  const [previewNonce, setPreviewNonce] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setPreviewNonce(n => n + 1), 20000);
+    return () => clearInterval(t);
+  }, []);
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newProfileName, setNewProfileName] = useState('');
   const [newProfileLayout, setNewProfileLayout] = useState('standard');
@@ -346,7 +364,7 @@ export default function MonitorAdminPage() {
     'zeige_countdown','zeige_ticker','ticker_text','ticker_geschwindigkeit',
     'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
     'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
-    'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id',
+    'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id','bild_fit',
     'zeige_webuntis','webuntis_url','webuntis_url_1tag','webuntis_link_id','webuntis_link_1tag_id','webuntis_zoom','webuntis_dark_mode',
     'split_links','split_rechts','split_links_prozent',
     'zeige_hintergrundbild','aktives_hintergrundbild_id',
@@ -361,7 +379,7 @@ export default function MonitorAdminPage() {
     'oepnv_zeige_via','oepnv_zeige_relativ','oepnv_farbcodierung','oepnv_highlight_naechste',
     'oepnv_auto_scroll','oepnv_stoerungsbanner','oepnv_schriftgroesse','oepnv_layout_spalten',
     'oepnv_streik_aktiv','oepnv_streik_text','oepnv_streik_linien','oepnv_streik_typen',
-    'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild',
+    'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild','on_air_split',
     'refresh_intervall',
     'zeige_kamera','kamera_url','kamera_titel','kamera_typ',
     'layout_widgets','baukasten_spalten','baukasten_zeilenhoehe',
@@ -1420,11 +1438,7 @@ export default function MonitorAdminPage() {
                     <label className="block text-xs text-gray-400 mb-1">Layout</label>
                     <select value={newProfileLayout} onChange={e => setNewProfileLayout(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
-                      <option value="standard">Standard-Layout</option>
-                      <option value="stundenplan">Stundenplan-Vollbild</option>
-                      <option value="onair">ON AIR Display</option>
-                      <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
-                      <option value="baukasten">Widget-Baukasten (frei)</option>
+                      {LAYOUT_MODI.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                     </select>
                   </div>
                 </div>
@@ -1464,6 +1478,7 @@ export default function MonitorAdminPage() {
               </div>
               <div className="relative" style={{ paddingBottom: '28%' }}>
                 <iframe
+                  key={`${monitorConfig.slug}-${savedAt}-${previewNonce}`}
                   src={`/monitor?profil=${monitorConfig.slug}`}
                   className="absolute inset-0 w-full h-full border-0"
                   title="Monitor Preview"
@@ -1495,7 +1510,7 @@ export default function MonitorAdminPage() {
                   return (
                     <div key={bs.id} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
                       <div className="relative bg-black" style={{ paddingBottom: '56.25%' }}>
-                        <iframe key={bs.slug} src={`/monitor?bildschirm=${bs.slug}`}
+                        <iframe key={`${bs.slug}-${previewNonce}`} src={`/monitor?bildschirm=${bs.slug}`}
                           className="absolute inset-0 w-full h-full border-0" title={bs.name}
                           style={{ pointerEvents: 'none' }} loading="lazy" />
                         {aktivesEvent && (
@@ -1609,14 +1624,7 @@ export default function MonitorAdminPage() {
                 <select value={monitorConfig.layout_modus} onChange={e => updateConfig('layout_modus', e.target.value)}
                   disabled={!canEdit}
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
-                  <option value="standard">Standard-Layout</option>
-                  <option value="stundenplan">Stundenplan-Vollbild</option>
-                  <option value="onair">ON AIR Display</option>
-                  <option value="abfahrten">Abfahrtsmonitor (ÖPNV)</option>
-                  <option value="baukasten">Widget-Baukasten (frei)</option>
-                  <option value="pdf_vollbild">PDF-Vollbild</option>
-                  <option value="bild_vollbild">Bild-Vollbild</option>
-                  <option value="split">Splitscreen</option>
+                  {LAYOUT_MODI.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                 </select>
               </div>
             </div>
@@ -1824,6 +1832,26 @@ export default function MonitorAdminPage() {
                         ))}
                       </div>
                     ) : <p className="text-gray-500 text-xs">Noch keine Bilder — oben hochladen.</p>}
+                    <div className="mt-3">
+                      <label className="block text-xs text-gray-400 mb-1.5 font-medium">Skalierung</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { v: 'contain', l: 'Einpassen', desc: 'Ganzes Bild' },
+                          { v: 'cover', l: 'Füllen', desc: 'Ausfüllen, ggf. beschnitten' },
+                          { v: 'fill', l: 'Strecken', desc: 'Verzerrt' },
+                        ].map(o => (
+                          <button key={o.v} onClick={() => canEdit && updateConfig('bild_fit', o.v)} disabled={!canEdit}
+                            className={`py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
+                              (monitorConfig.bild_fit || 'contain') === o.v
+                                ? 'bg-orange-600/20 border-orange-500/40 text-orange-300'
+                                : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-800/80'
+                            }`}>
+                            <div className="font-medium">{o.l}</div>
+                            <div className="text-[10px] opacity-60">{o.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1973,7 +2001,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ ON AIR Anpassung ═══ */}
-          <Section id="onair" area="ansichten" title="ON AIR Anpassung" description="Größe, Position, Farbe und Verhalten"
+          <Section id="onair" area="ansichten" title="ON AIR Anpassung" description="Text, Farbe, Blinken und Splitscreen"
             icon={Radio} iconColor="bg-red-600/30" open={openSections.onair} onToggle={toggleSection}>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -1995,130 +2023,52 @@ export default function MonitorAdminPage() {
               </div>
             </div>
 
-            {/* Größe */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-1.5 font-medium">Größe</label>
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { v: 'klein', l: 'Klein', desc: 'Dezent' },
-                  { v: 'mittel', l: 'Mittel', desc: 'Standard' },
-                  { v: 'gross', l: 'Groß', desc: 'Auffällig' },
-                  { v: 'riesig', l: 'Riesig', desc: 'Maximum' },
-                ].map(s => (
-                  <button key={s.v} onClick={() => canEdit && updateConfig('on_air_groesse', s.v)}
-                    disabled={!canEdit}
-                    className={`py-2.5 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
-                      monitorConfig.on_air_groesse === s.v
-                        ? 'bg-red-600/20 border-red-500/40 text-red-300'
-                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-800/80'
-                    }`}>
-                    <div className="font-medium">{s.l}</div>
-                    <div className="text-[10px] opacity-60">{s.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Position */}
-            <div>
-              <label className="block text-xs text-gray-400 mb-2 font-medium">Position</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { v: 'banner-oben', l: 'Banner oben', desc: 'Volle Breite oben', icon: '▬' },
-                  { v: 'banner-unten', l: 'Banner unten', desc: 'Volle Breite unten', icon: '▬' },
-                  { v: 'mitte', l: 'Mitte', desc: 'Overlay zentriert', icon: '◉' },
-                  { v: 'oben-links', l: 'Oben links', desc: 'Ecke oben links', icon: '◤' },
-                  { v: 'oben-mitte', l: 'Oben Mitte', desc: 'Oben zentriert', icon: '▲' },
-                  { v: 'oben-rechts', l: 'Oben rechts', desc: 'Ecke oben rechts', icon: '◥' },
-                  { v: 'unten-links', l: 'Unten links', desc: 'Ecke unten links', icon: '◣' },
-                  { v: 'unten-mitte', l: 'Unten Mitte', desc: 'Unten zentriert', icon: '▼' },
-                  { v: 'unten-rechts', l: 'Unten rechts', desc: 'Ecke unten rechts', icon: '◢' },
-                ].map(p => (
-                  <button key={p.v} onClick={() => canEdit && updateConfig('on_air_position', p.v)}
-                    disabled={!canEdit}
-                    className={`py-2.5 px-3 rounded-lg text-sm border transition-colors disabled:opacity-50 text-left ${
-                      monitorConfig.on_air_position === p.v
-                        ? 'bg-red-600/20 border-red-500/40 text-red-300'
-                        : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-800/80'
-                    }`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg leading-none">{p.icon}</span>
-                      <div>
-                        <div className="font-medium text-xs">{p.l}</div>
-                        <div className="text-[10px] opacity-60">{p.desc}</div>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* Blinken */}
             <div className="flex items-center gap-3">
               <Toggle checked={monitorConfig.on_air_blinken} onChange={v => updateConfig('on_air_blinken', v)} disabled={!canEdit} />
               <span className="text-sm text-white">Blinken / Pulsieren</span>
             </div>
 
-            {/* Vollbild Override */}
+            {/* Splitscreen bei ON AIR */}
             <div className="flex items-center gap-3">
-              <Toggle checked={monitorConfig.on_air_vollbild} onChange={v => updateConfig('on_air_vollbild', v)} disabled={!canEdit} />
+              <Toggle checked={monitorConfig.on_air_split} onChange={v => updateConfig('on_air_split', v)} disabled={!canEdit} />
               <div>
-                <span className="text-sm text-white">Bei ON AIR automatisch Vollbild</span>
-                <p className="text-xs text-gray-500 mt-0.5">Überschreibt das aktuelle Layout und zeigt die ON AIR Vollbild-Anzeige</p>
+                <span className="text-sm text-white">Bei ON AIR Splitscreen</span>
+                <p className="text-xs text-gray-500 mt-0.5">Statt reinem Vollbild: ON AIR links, Stundenplan rechts (Breite = Split-Verhältnis)</p>
               </div>
             </div>
 
-            {/* Live-Vorschau mit Position */}
+            <p className="text-[11px] text-gray-500">
+              ON AIR wird immer als Vollbild-Optik gezeigt (überschreibt das Layout, solange ON AIR aktiv ist).
+            </p>
+
+            {/* Live-Vollbild-Vorschau */}
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">Vorschau</label>
-              <div className="relative bg-gray-950 rounded-xl border border-gray-700/40 overflow-hidden" style={{ height: '200px' }}>
-                {/* Mini-Monitor Hintergrund */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-white/5 text-xs">Monitor</div>
-                </div>
+              <div className="relative bg-black rounded-xl border border-gray-700/40 overflow-hidden flex items-center justify-center" style={{ height: '200px' }}>
                 {(() => {
                   const f = monitorConfig.on_air_farbe || monitorConfig.akzent_farbe || '#da1f3d';
                   const blink = monitorConfig.on_air_blinken ? 'animate-pulse' : '';
-                  const sizeClasses = {
-                    klein: 'text-xs px-2 py-1',
-                    mittel: 'text-sm px-3 py-1.5',
-                    gross: 'text-lg px-5 py-2.5',
-                    riesig: 'text-2xl px-7 py-3',
-                  };
-                  const sc = sizeClasses[monitorConfig.on_air_groesse] || sizeClasses.gross;
-                  const pos = monitorConfig.on_air_position || 'banner-oben';
-
-                  const badge = (
-                    <div className={`${blink} rounded-lg font-black tracking-wider whitespace-nowrap ${sc}`}
-                      style={{ background: f, color: '#fff', boxShadow: `0 4px 20px ${f}60` }}>
-                      {monitorConfig.on_air_text || 'ON AIR'}
-                    </div>
-                  );
-
-                  if (pos === 'banner-oben') return (
-                    <div className="absolute top-0 left-0 right-0">
-                      <div className={`${blink} flex items-center justify-center ${sc}`}
-                        style={{ background: f, color: '#fff' }}>
-                        <span className="font-black tracking-wider">{monitorConfig.on_air_text || 'ON AIR'}</span>
+                  const onair = (
+                    <div className="text-center">
+                      <div className={`${blink} font-black uppercase tracking-[0.3em] leading-none`}
+                        style={{ color: f, fontSize: monitorConfig.on_air_split ? '2rem' : '3rem', textShadow: `0 0 40px ${f}60` }}>
+                        {monitorConfig.on_air_text || 'ON AIR'}
                       </div>
+                      {monitorConfig.zeige_uhr && <div className="font-mono text-sm mt-3 tracking-widest" style={{ color: `${f}55` }}>12:34:56</div>}
                     </div>
                   );
-                  if (pos === 'banner-unten') return (
-                    <div className="absolute bottom-0 left-0 right-0">
-                      <div className={`${blink} flex items-center justify-center ${sc}`}
-                        style={{ background: f, color: '#fff' }}>
-                        <span className="font-black tracking-wider">{monitorConfig.on_air_text || 'ON AIR'}</span>
+                  if (monitorConfig.on_air_split) {
+                    const p = Math.min(80, Math.max(20, monitorConfig.split_links_prozent || 50));
+                    return (
+                      <div className="absolute inset-0 flex">
+                        <div className="flex items-center justify-center" style={{ width: `${p}%`, background: 'radial-gradient(ellipse at center, ' + f + '10 0%, #000 70%)' }}>{onair}</div>
+                        <div className="w-px bg-white/15" />
+                        <div className="flex-1 flex items-center justify-center text-white/25 text-xs bg-white/[0.02]">Stundenplan</div>
                       </div>
-                    </div>
-                  );
-                  if (pos === 'mitte') return <div className="absolute inset-0 flex items-center justify-center">{badge}</div>;
-                  if (pos === 'oben-links') return <div className="absolute top-3 left-3">{badge}</div>;
-                  if (pos === 'oben-mitte') return <div className="absolute top-3 left-1/2 -translate-x-1/2">{badge}</div>;
-                  if (pos === 'oben-rechts') return <div className="absolute top-3 right-3">{badge}</div>;
-                  if (pos === 'unten-links') return <div className="absolute bottom-3 left-3">{badge}</div>;
-                  if (pos === 'unten-mitte') return <div className="absolute bottom-3 left-1/2 -translate-x-1/2">{badge}</div>;
-                  if (pos === 'unten-rechts') return <div className="absolute bottom-3 right-3">{badge}</div>;
-                  return <div className="absolute top-3 right-3">{badge}</div>;
+                    );
+                  }
+                  return <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'radial-gradient(ellipse at center, ' + f + '10 0%, #000 70%)' }}>{onair}</div>;
                 })()}
               </div>
             </div>
@@ -2434,7 +2384,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           {/* ═══ WebUntis-Link-Bibliothek ═══ */}
-          <Section id="webuntislinks" area="inhalte" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
+          <Section id="webuntislinks" area="einstellungen" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
             icon={Calendar} iconColor="bg-purple-600/30" open={openSections.webuntislinks} onToggle={toggleSection}
             badge={webuntisLinks.length}>
             <WebUntisLinkManager links={webuntisLinks} canEdit={canEdit}
@@ -3175,7 +3125,7 @@ export default function MonitorAdminPage() {
               </div>
             </div>
             <div className="relative bg-black" style={{ paddingBottom: '56.25%' }}>
-              <iframe key={monitorConfig.slug} src={`/monitor?profil=${monitorConfig.slug}`}
+              <iframe key={`${monitorConfig.slug}-${savedAt}-${previewNonce}`} src={`/monitor?profil=${monitorConfig.slug}`}
                 className="absolute inset-0 w-full h-full border-0" title="Monitor Preview"
                 style={{ pointerEvents: 'none' }} />
             </div>
