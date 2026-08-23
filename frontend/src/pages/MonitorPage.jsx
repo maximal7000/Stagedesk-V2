@@ -899,9 +899,9 @@ export default function MonitorPage() {
 
     // Schriftgrößen — kompakt: alles einzeilig, via inline
     const sizes = {
-      normal: { time: 'text-[14px]', delay: 'text-[10px]', linie: 'text-[12px]', dir: 'text-[13px]', via: 'text-[10px]', gleis: 'text-[11px]', station: 'text-[11px]', relativ: 'text-[10px]', badge: 'text-[9px]', icon: 'w-4 h-4', iconInner: 'w-2.5 h-2.5', row: 'px-2 py-[4px]', lineW: 'w-[90px]', timeW: 'w-[72px]', relativW: 'w-[42px]', header: 'text-lg', clock: 'text-4xl', wegzeit: 'text-[9px]' },
-      gross:  { time: 'text-[17px]', delay: 'text-[12px]', linie: 'text-[14px]', dir: 'text-[16px]', via: 'text-[11px]', gleis: 'text-[13px]', station: 'text-[12px]', relativ: 'text-[12px]', badge: 'text-[10px]', icon: 'w-5 h-5', iconInner: 'w-3 h-3', row: 'px-3 py-[5px]', lineW: 'w-[110px]', timeW: 'w-[82px]', relativW: 'w-[50px]', header: 'text-xl', clock: 'text-5xl', wegzeit: 'text-[10px]' },
-      '4k':   { time: 'text-[22px]', delay: 'text-[14px]', linie: 'text-[18px]', dir: 'text-[20px]', via: 'text-[13px]', gleis: 'text-[16px]', station: 'text-[14px]', relativ: 'text-[14px]', badge: 'text-[12px]', icon: 'w-6 h-6', iconInner: 'w-3.5 h-3.5', row: 'px-4 py-[6px]', lineW: 'w-[140px]', timeW: 'w-[100px]', relativW: 'w-[58px]', header: 'text-2xl', clock: 'text-6xl', wegzeit: 'text-[12px]' },
+      normal: { time: 'text-[14px]', delay: 'text-[10px]', linie: 'text-[12px]', dir: 'text-[13px]', via: 'text-[10px]', gleis: 'text-[11px]', station: 'text-[11px]', relativ: 'text-[10px]', badge: 'text-[9px]', icon: 'w-4 h-4', iconInner: 'w-2.5 h-2.5', row: 'px-2 py-[4px]', lineW: 'w-[56px]', timeW: 'w-[72px]', relativW: 'w-[42px]', header: 'text-lg', clock: 'text-4xl', wegzeit: 'text-[9px]' },
+      gross:  { time: 'text-[17px]', delay: 'text-[12px]', linie: 'text-[14px]', dir: 'text-[16px]', via: 'text-[11px]', gleis: 'text-[13px]', station: 'text-[12px]', relativ: 'text-[12px]', badge: 'text-[10px]', icon: 'w-5 h-5', iconInner: 'w-3 h-3', row: 'px-3 py-[5px]', lineW: 'w-[66px]', timeW: 'w-[82px]', relativW: 'w-[50px]', header: 'text-xl', clock: 'text-5xl', wegzeit: 'text-[10px]' },
+      '4k':   { time: 'text-[22px]', delay: 'text-[14px]', linie: 'text-[18px]', dir: 'text-[20px]', via: 'text-[13px]', gleis: 'text-[16px]', station: 'text-[14px]', relativ: 'text-[14px]', badge: 'text-[12px]', icon: 'w-6 h-6', iconInner: 'w-3.5 h-3.5', row: 'px-4 py-[6px]', lineW: 'w-[86px]', timeW: 'w-[100px]', relativW: 'w-[58px]', header: 'text-2xl', clock: 'text-6xl', wegzeit: 'text-[12px]' },
     };
     const s = sizes[schrift] || sizes.gross;
 
@@ -1031,15 +1031,13 @@ export default function MonitorPage() {
               )}
             </div>
           )}
-          {/* Linien-Chip in echter Linienfarbe = die einzige Farbe der Zeile */}
-          <div className={`${useCompact ? cs.lineW : s.lineW} shrink-0 flex items-center`}>
-            <span className={`${useCompact ? cs.linie : s.linie} font-bold tabular-nums rounded px-1.5 py-[3px] leading-none text-center inline-block truncate max-w-full ${dep.ausfall ? 'opacity-40' : ''}`}
+          {/* Linien-Chip (linksbündig, inhaltsbreit) + Ziel — eng gekoppelt mit kleinem Abstand */}
+          <div className="flex-1 min-w-0 flex items-center gap-2 pr-1.5">
+            <span className={`${useCompact ? cs.linie : s.linie} font-bold tabular-nums rounded px-1.5 py-[3px] leading-none text-center inline-block shrink-0 ${dep.ausfall ? 'opacity-40' : ''}`}
               style={{ background: lineColor, color: chipTextColor(lineColor), minWidth: '2.1em' }}>
               {lineLabel}
             </span>
-          </div>
-          {/* Ziel + optionale echte Ausnahme-Zeile */}
-          <div className="flex-1 min-w-0 px-1.5">
+            <div className="min-w-0 flex-1">
             <div className="truncate">
               <span className={`${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through text-white/40' : 'text-white'}`}>
                 {dep.richtung}
@@ -1051,6 +1049,7 @@ export default function MonitorPage() {
                 {zusatzInfo.map((z, k) => <span key={k} className={z.tone}>{k > 0 ? ' · ' : ''}{z.txt}</span>)}
               </div>
             )}
+            </div>
           </div>
           {/* Status rechts — ein Rot für Probleme, Amber nur für aktive Umleitung/SEV, Rest neutral */}
           <div className="shrink-0 flex items-center gap-1.5">
