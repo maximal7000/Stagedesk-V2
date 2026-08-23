@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import AutocompleteInput from '../../components/AutocompleteInput';
+import { PageHeader, Button, StatusBadge } from '../../components/ui';
 
 const STATUS_FARBEN = {
   verfuegbar: 'bg-green-500',
@@ -29,6 +30,8 @@ const STATUS_LABELS = {
   reserviert: 'Reserviert',
   defekt: 'Defekt',
 };
+
+const STATUS_TONES = { verfuegbar: 'positive', ausgeliehen: 'info', reserviert: 'warning', defekt: 'danger' };
 
 export default function ItemDetailPage() {
   const { id } = useParams();
@@ -340,7 +343,7 @@ export default function ItemDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent animate-spin" />
       </div>
     );
   }
@@ -348,69 +351,41 @@ export default function ItemDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/inventar')}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">
-            {isNew ? 'Neues Item' : (editing ? 'Item bearbeiten' : item?.name)}
-          </h1>
-          {!isNew && item?.seriennummer && (
-            <p className="text-gray-400">SN: {item.seriennummer}</p>
-          )}
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" className="mt-1"
+          onClick={() => navigate('/inventar')} />
+        <div className="flex-1 min-w-0">
+          <PageHeader
+            title={isNew ? 'Neues Item' : (editing ? 'Item bearbeiten' : item?.name)}
+            meta={!isNew && item?.seriennummer ? `SN: ${item.seriennummer}` : undefined}
+            actions={
+              <>
+                {!isNew && !editing && (
+                  <>
+                    <Button variant="secondary" onClick={handleDuplicate} disabled={duplicating}>
+                      {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
+                      Duplizieren
+                    </Button>
+                    <Button variant="secondary" icon={Edit} onClick={() => setEditing(true)}>Bearbeiten</Button>
+                    <Button variant="ghost" icon={Trash2} aria-label="Löschen" title="Löschen"
+                      className="text-red-400 hover:text-red-300" onClick={handleDelete} />
+                  </>
+                )}
+                {(isNew || editing) && (
+                  <>
+                    {!isNew && (
+                      <Button variant="ghost" onClick={() => setEditing(false)}>Abbrechen</Button>
+                    )}
+                    <Button variant="primary" onClick={handleSave} disabled={saving || !formData.name}>
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                      Speichern
+                    </Button>
+                  </>
+                )}
+              </>
+            }
+          />
         </div>
-
-        {!isNew && !editing && (
-          <div className="flex gap-2">
-            <button
-              onClick={handleDuplicate}
-              disabled={duplicating}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
-            >
-              {duplicating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
-              Duplizieren
-            </button>
-            <button
-              onClick={() => setEditing(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
-            >
-              <Edit className="w-4 h-4" />
-              Bearbeiten
-            </button>
-            <button
-              onClick={handleDelete}
-              className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg"
-            >
-              <Trash2 className="w-5 h-5" />
-            </button>
-          </div>
-        )}
-
-        {(isNew || editing) && (
-          <div className="flex gap-2">
-            {!isNew && (
-              <button
-                onClick={() => setEditing(false)}
-                className="px-4 py-2 text-gray-400 hover:text-white"
-              >
-                Abbrechen
-              </button>
-            )}
-            <button
-              onClick={handleSave}
-              disabled={saving || !formData.name}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Speichern
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Erste Zeile: Basis-Infos links, QR-Code rechts */}
@@ -517,13 +492,9 @@ export default function ItemDetailPage() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-white">QR-Codes</h3>
               {(editing || isNew) && (
-                <button
-                  onClick={() => setShowQrModal(true)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg"
-                >
-                  <Plus className="w-4 h-4" />
+                <Button variant="secondary" size="sm" icon={Plus} onClick={() => setShowQrModal(true)}>
                   QR-Code hinzufügen
-                </button>
+                </Button>
               )}
             </div>
             
@@ -538,7 +509,7 @@ export default function ItemDetailPage() {
                       <div>
                         <span className="font-mono text-white">{qr.code}</span>
                         {qr.bezeichnung && <span className="text-sm text-gray-400 ml-2">({qr.bezeichnung})</span>}
-                        {qr.ist_primaer && <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded ml-2">Primär</span>}
+                        {qr.ist_primaer && <span className="text-xs bg-accent text-white px-2 py-0.5 rounded ml-2">Primär</span>}
                       </div>
                     </div>
                     {(editing || isNew) && (
@@ -639,7 +610,7 @@ export default function ItemDetailPage() {
           {!isNew && item && item.status === 'verfuegbar' && (
             <Link
               to={`/ausleihen?item=${item.id}`}
-              className="block w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-center"
+              className="block w-full py-3 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl text-center"
             >
               Ausleihen
             </Link>
@@ -656,7 +627,7 @@ export default function ItemDetailPage() {
               Bilder
             </h3>
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg cursor-pointer">
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg cursor-pointer">
                 {bilderUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 <span className="hidden sm:inline">Foto aufnehmen</span>
                 <span className="sm:hidden">Kamera</span>
@@ -729,7 +700,7 @@ export default function ItemDetailPage() {
             <div className="px-6 pb-6">
               {zustandslogLoading ? (
                 <div className="flex justify-center py-6">
-                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                  <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
                 </div>
               ) : zustandslog.length === 0 ? (
                 <p className="text-gray-400 text-center py-4">Keine Einträge vorhanden</p>
@@ -798,7 +769,7 @@ export default function ItemDetailPage() {
 
           {verfuegbarkeitLoading ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+              <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
             </div>
           ) : verfuegbarkeit.length === 0 ? (
             <div className="flex items-center gap-2 text-gray-400 py-4 justify-center">
@@ -916,7 +887,7 @@ export default function ItemDetailPage() {
               <button
                 onClick={handleAddQrCode}
                 disabled={!newQrCode}
-                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg"
+                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg"
               >
                 Hinzufügen
               </button>

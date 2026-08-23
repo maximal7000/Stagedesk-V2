@@ -63,7 +63,7 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
                     {t.beginn && t.beginn.slice(0, 5)}{t.ende ? `–${t.ende.slice(0, 5)}` : ''}
                   </span>
                 )}
-                {t.titel && <span className="text-blue-400 ml-auto">{t.titel}</span>}
+                {t.titel && <span className="text-accent ml-auto">{t.titel}</span>}
               </div>
             ))}
           </div>
@@ -108,14 +108,14 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
                 </div>
               ))}
               <button onClick={() => setForm([...form, { id: null, titel: '', datum: '', beginn: '', ende: '' }])}
-                className="flex items-center gap-2 w-full p-3 text-sm text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded-lg border border-dashed border-gray-700">
+                className="flex items-center gap-2 w-full p-3 text-sm text-accent hover:opacity-80 hover:bg-gray-800 rounded-lg border border-dashed border-gray-700">
                 <Plus className="w-4 h-4" /> Termin hinzufügen
               </button>
             </div>
             <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
               <button onClick={() => setShowModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
               <button onClick={handleSave} disabled={saving}
-                className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Speichern
               </button>

@@ -135,7 +135,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Empfohlen</h3>
                 <div className="flex flex-wrap gap-2">
                   {empfohlen.map(k => (
-                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 border border-blue-500/30 text-blue-300 rounded-full text-sm">
+                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/30 text-accent rounded-full text-sm">
                       <Award className="w-3.5 h-3.5" /> {k.name}
                     </span>
                   ))}
@@ -165,7 +165,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                       const cls = istPflicht
                         ? 'bg-red-500/20 border-red-500/50 text-red-300'
                         : istEmpf
-                          ? 'bg-blue-500/20 border-blue-500/50 text-blue-300'
+                          ? 'bg-accent/15 border-accent/50 text-accent'
                           : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700';
                       const onClick = () => {
                         if (istPflicht) {
@@ -192,7 +192,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
             </div>
             <div className="flex gap-2 pt-2 border-t border-gray-800">
               <button type="button" onClick={save} disabled={saving}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500 text-sm disabled:opacity-50">
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent text-white rounded hover:bg-accent-hover text-sm disabled:opacity-50">
                 <Save className="w-4 h-4" /> Speichern
               </button>
               <button type="button"

@@ -69,7 +69,7 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
             <div className="space-y-2">
               <p className="text-sm text-gray-500">Noch keine Vorlagen vorhanden.</p>
               <Link to="/veranstaltung/vorlagen" onClick={onClose}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">
+                className="inline-flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
                 <Settings className="w-4 h-4" /> Vorlagen verwalten
               </Link>
             </div>
@@ -83,7 +83,7 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
                       <button onClick={() => setSelected(t)}
                         className={`w-full text-left p-3 rounded-lg border ${
                           selected?.id === t.id
-                            ? 'bg-blue-600/20 border-blue-500'
+                            ? 'bg-accent/15 border-accent'
                             : 'bg-gray-800 border-gray-700 hover:border-gray-600'
                         }`}>
                         <div className="text-white font-medium">{t.name}</div>
@@ -133,7 +133,7 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
             Abbrechen
           </button>
           <button onClick={create} disabled={!selected || !datumVon || creating}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
             {creating && <Loader2 className="w-4 h-4 animate-spin" />}
             Anlegen
           </button>

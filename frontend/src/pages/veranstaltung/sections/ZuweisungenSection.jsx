@@ -156,10 +156,10 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                 const isGemeldet = gemeldeteIds.has(u.keycloak_id);
                 return (
                   <label key={u.keycloak_id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-gray-700 ${selectedUsers.includes(u.keycloak_id) ? 'bg-blue-900/30' : ''}`}>
+                    className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-gray-700 ${selectedUsers.includes(u.keycloak_id) ? 'bg-accent/10' : ''}`}>
                     <input type="checkbox" checked={selectedUsers.includes(u.keycloak_id)}
                       onChange={() => toggleUserSelection(u.keycloak_id)}
-                      className="rounded border-gray-600 bg-gray-700 text-blue-500" />
+                      className="rounded border-gray-600 bg-gray-700 text-accent" />
                     <span className="text-white text-sm">{u.name}</span>
                     {u.kompetenzen_total > 0 && (
                       <span title="Erforderliche Kompetenzen erfüllt"
@@ -198,7 +198,7 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
               </select>
               <button type="button" onClick={() => addZuweisungen()}
                 disabled={selectedUsers.length === 0 || busy}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm">
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm">
                 <Plus className="w-3.5 h-3.5" />
                 {busy ? '…' : (selectedUsers.length > 0 ? `${selectedUsers.length} hinzufügen` : 'Hinzufügen')}
               </button>
@@ -220,7 +220,7 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
             return (
             <div key={z.id} className="flex items-center justify-between py-2.5 px-4 bg-gray-800 rounded-lg group">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-accent rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-white text-sm font-medium">{name.charAt(0).toUpperCase()}</span>
                 </div>
                 <span className="text-white font-medium truncate">{name}</span>

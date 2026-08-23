@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Plus, Search, Package, ArrowLeft,
-  Loader2, AlertTriangle, Clock, User, Calendar,
+  Loader2, Clock, User, Calendar,
   X, Check, Pen, Mail, RefreshCw,
   ScanLine, FileDown, ExternalLink, Layers,
   ChevronDown, ChevronRight, MapPin, Send,
@@ -16,6 +16,10 @@ import SignatureModal from '../../components/SignatureModal';
 import apiClient from '../../lib/api';
 import QRScanner from '../../components/QRScanner';
 import { downloadLeihschein, generateLeihscheinPdf, generateGroupedLeihscheinPdf } from '../../lib/pdfGenerator';
+import { PageHeader, Button, StatusBadge as UIStatusBadge, EmptyState } from '../../components/ui';
+
+// Ausleihe-Status → StatusBadge-Ton
+const AUSLEIHE_STATUS_TONES = { offen: 'neutral', aktiv: 'info', teilrueckgabe: 'warning', abgeschlossen: 'positive', abgebrochen: 'danger' };
 
 // ─── Hilfs-Komponenten ────────────────────────────────────────────
 
@@ -37,23 +41,10 @@ function SectionHeader({ title, count, defaultOpen = true, children }) {
 }
 
 function StatusBadge({ status, statusDisplay, istUeberfaellig }) {
-  const colors = {
-    offen: 'bg-gray-700 text-gray-300',
-    aktiv: 'bg-blue-900/30 text-blue-400',
-    teilrueckgabe: 'bg-yellow-900/30 text-yellow-400',
-    abgeschlossen: 'bg-green-900/30 text-green-400',
-    abgebrochen: 'bg-red-900/30 text-red-400',
-  };
   return (
     <div className="flex items-center gap-2">
-      {istUeberfaellig && (
-        <span className="flex items-center gap-1 px-2 py-0.5 text-xs bg-red-900/30 text-red-400 rounded">
-          <AlertTriangle className="w-3 h-3" /> Überfällig
-        </span>
-      )}
-      <span className={`px-2 py-0.5 text-xs rounded ${colors[status] || 'bg-gray-700 text-gray-400'}`}>
-        {statusDisplay || status}
-      </span>
+      {istUeberfaellig && <UIStatusBadge tone="danger" label="Überfällig" />}
+      <UIStatusBadge tone={AUSLEIHE_STATUS_TONES[status] || 'neutral'} label={statusDisplay || status} />
     </div>
   );
 }
@@ -606,7 +597,7 @@ export default function AusleihePage() {
   if (loading && !listId) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent animate-spin" />
       </div>
     );
   }
@@ -623,7 +614,7 @@ export default function AusleihePage() {
             <ArrowLeft className="w-5 h-5" /> Zurück
           </button>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            <Loader2 className="w-8 h-8 text-accent animate-spin" />
           </div>
         </div>
       );
@@ -635,15 +626,14 @@ export default function AusleihePage() {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/ausleihen')} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" className="mt-1"
+            onClick={() => navigate('/ausleihen')} />
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-white truncate">
+            <h1 className="font-display text-[1.6rem] leading-none font-bold text-white truncate">
               {detailListe.titel || `Ausleihliste #${detailListe.id}`}
             </h1>
-            <div className="flex items-center gap-3 text-gray-400 text-sm mt-1">
+            <div className="flex items-center gap-3 text-gray-400 text-sm mt-2">
               {detailListe.ausleiher_name && (
                 <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {detailListe.ausleiher_name}</span>
               )}
@@ -654,18 +644,15 @@ export default function AusleihePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => { setScanMode('add'); setShowQRScanner(true); }}
-              className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-              <ScanLine className="w-4 h-4" /> QR
-            </button>
+            <Button variant="secondary" size="sm" icon={ScanLine}
+              onClick={() => { setScanMode('add'); setShowQRScanner(true); }}>QR</Button>
             {(detailListe.positionen?.length || 0) > 0 && (
               <>
                 {detailListe.modus === 'individuell' ? (
                   <div className="relative">
-                    <button onClick={() => setShowPdfDropdown(!showPdfDropdown)}
-                      className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
+                    <Button variant="secondary" size="sm" onClick={() => setShowPdfDropdown(!showPdfDropdown)}>
                       <FileDown className="w-4 h-4" /> PDF <ChevronDown className="w-3 h-3 ml-0.5" />
-                    </button>
+                    </Button>
                     {showPdfDropdown && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowPdfDropdown(false)} />
@@ -687,12 +674,9 @@ export default function AusleihePage() {
                     )}
                   </div>
                 ) : (
-                  <button onClick={() => handleDownloadPdf()}
-                    className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                    <FileDown className="w-4 h-4" /> PDF
-                  </button>
+                  <Button variant="secondary" size="sm" icon={FileDown} onClick={() => handleDownloadPdf()}>PDF</Button>
                 )}
-                <button onClick={() => {
+                <Button variant="secondary" size="sm" icon={Mail} onClick={() => {
                   setEmailForm({
                     email: detailListe.ausleiher_email || '',
                     betreff: `Leihschein #${detailListe.id} – ${detailListe.titel || detailListe.ausleiher_name}`,
@@ -700,10 +684,7 @@ export default function AusleihePage() {
                     pdfMode: 'gesamt',
                   });
                   setShowEmailModal(true);
-                }}
-                  className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  <Mail className="w-4 h-4" /> E-Mail
-                </button>
+                }}>E-Mail</Button>
               </>
             )}
           </div>
@@ -718,7 +699,7 @@ export default function AusleihePage() {
             {detailListe.frist && <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Frist: {new Date(detailListe.frist).toLocaleDateString('de-DE')}</span>}
             {detailListe.zweck && <span>Zweck: {detailListe.zweck}</span>}
             {detailListe.veranstaltung_id && (
-              <Link to={`/veranstaltung/${detailListe.veranstaltung_id}`} className="flex items-center gap-1 text-blue-400 hover:text-blue-300">
+              <Link to={`/veranstaltung/${detailListe.veranstaltung_id}`} className="flex items-center gap-1 text-accent hover:opacity-80">
                 <ExternalLink className="w-3 h-3" /> Veranstaltung #{detailListe.veranstaltung_id}
               </Link>
             )}
@@ -727,10 +708,7 @@ export default function AusleihePage() {
           {/* Items hinzufügen (immer sichtbar ausser bei abgeschlossen/abgebrochen) */}
           {detailListe.status !== 'abgeschlossen' && detailListe.status !== 'abgebrochen' && (
             <div className="flex items-center gap-2">
-              <button onClick={openItemModal}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
-                <Plus className="w-4 h-4" /> Artikel hinzufügen
-              </button>
+              <Button variant="primary" size="sm" icon={Plus} onClick={openItemModal}>Artikel hinzufügen</Button>
               <div className="relative">
                 <button onClick={() => setShowSetDropdown(!showSetDropdown)}
                   className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm">
@@ -927,10 +905,9 @@ export default function AusleihePage() {
                       <input type="text" value={quickAddName} onChange={e => setQuickAddName(e.target.value)}
                         placeholder="Name des neuen Artikels" className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white"
                         onKeyDown={e => e.key === 'Enter' && handleQuickAddItem()} />
-                      <button onClick={handleQuickAddItem} disabled={!quickAddName.trim()}
-                        className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
+                      <Button variant="secondary" size="sm" onClick={handleQuickAddItem} disabled={!quickAddName.trim()}>
                         Hinzufügen
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -946,11 +923,11 @@ export default function AusleihePage() {
                           <button type="button" onClick={() => !isInList && toggleItemSelection(item)} disabled={isInList}
                             className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
                               isInList ? 'opacity-40 cursor-not-allowed' :
-                              isSelected ? 'bg-blue-900/30 border-l-2 border-l-blue-500' :
+                              isSelected ? 'bg-accent/15 border-l-2 border-l-accent' :
                               'hover:bg-gray-800'
                             }`}>
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-600'
+                              isSelected ? 'bg-accent border-accent' : 'border-gray-600'
                             }`}>
                               {isSelected && <Check className="w-3 h-3 text-white" />}
                             </div>
@@ -982,12 +959,11 @@ export default function AusleihePage() {
 
               {/* Footer */}
               <div className="flex items-center justify-between p-6 pt-4 border-t border-gray-800">
-                <button onClick={() => setShowItemModal(false)} className="px-4 py-2 text-gray-400 hover:text-white">ABBRECHEN</button>
-                <button onClick={handleAddSelectedItems} disabled={selectedItems.length === 0 || addingItems}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                <Button variant="ghost" onClick={() => setShowItemModal(false)}>ABBRECHEN</Button>
+                <Button variant="primary" onClick={handleAddSelectedItems} disabled={selectedItems.length === 0 || addingItems}>
                   {addingItems ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   {selectedItems.length} Artikel hinzufügen
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1005,7 +981,7 @@ export default function AusleihePage() {
                   { value: 'per_item', label: 'Pro Artikel unterschreiben', desc: 'Jeder Artikel wird einzeln unterschrieben' },
                 ].map(opt => (
                   <button key={opt.value} onClick={() => handleSignatureChoice(opt.value)}
-                    className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                    className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-accent hover:bg-accent/10 transition-colors">
                     <div className="font-medium text-white">{opt.label}</div>
                     <div className="text-sm text-gray-400">{opt.desc}</div>
                   </button>
@@ -1148,7 +1124,7 @@ export default function AusleihePage() {
                         <button key={opt.value} onClick={() => setEmailForm({ ...emailForm, pdfMode: opt.value })}
                           className={`flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-lg border transition-colors ${
                             emailForm.pdfMode === opt.value
-                              ? 'border-blue-500 bg-blue-900/20 text-blue-400'
+                              ? 'border-accent bg-accent/10 text-accent'
                               : 'border-gray-700 text-gray-400 hover:border-gray-600'
                           }`}>
                           <opt.icon className="w-3.5 h-3.5" />
@@ -1165,12 +1141,11 @@ export default function AusleihePage() {
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
-                <button onClick={() => setShowEmailModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleSendEmail} disabled={!emailForm.email || sendingEmail}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowEmailModal(false)}>Abbrechen</Button>
+                <Button variant="primary" className="flex-1" onClick={handleSendEmail} disabled={!emailForm.email || sendingEmail}>
                   {sendingEmail ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   Senden
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1192,23 +1167,22 @@ export default function AusleihePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <button onClick={() => navigate('/inventar')} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">Ausleihen</h1>
-          <p className="text-gray-400">Listen erstellen, Artikel hinzufügen und aktivieren</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => { setScanMode('rueckgabe'); setShowQRScanner(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
-            <ScanLine className="w-5 h-5" /> Schnellrückgabe
-          </button>
-          <button onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
-            <Plus className="w-5 h-5" /> Neue Ausleihliste
-          </button>
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" className="mt-1"
+          onClick={() => navigate('/inventar')} />
+        <div className="flex-1 min-w-0">
+          <PageHeader
+            title="Ausleihen"
+            meta="Listen erstellen, Artikel hinzufügen und aktivieren"
+            actions={
+              <>
+                <Button variant="secondary" size="sm" icon={ScanLine}
+                  onClick={() => { setScanMode('rueckgabe'); setShowQRScanner(true); }}>Schnellrückgabe</Button>
+                <Button variant="primary" size="sm" icon={Plus}
+                  onClick={() => setShowCreateModal(true)}>Neue Ausleihliste</Button>
+              </>
+            }
+          />
         </div>
       </div>
 
@@ -1235,7 +1209,7 @@ export default function AusleihePage() {
                   ].map(opt => (
                     <button key={opt.value} onClick={() => setCreateForm({ ...createForm, modus: opt.value })}
                       className={`text-left p-3 rounded-lg border transition-colors ${
-                        createForm.modus === opt.value ? 'border-blue-500 bg-blue-900/20' : 'border-gray-700 hover:border-gray-600'
+                        createForm.modus === opt.value ? 'border-accent bg-accent/10' : 'border-gray-700 hover:border-gray-600'
                       }`}>
                       <div className="font-medium text-white text-sm">{opt.label}</div>
                       <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
@@ -1280,12 +1254,12 @@ export default function AusleihePage() {
             </div>
 
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleCreateListe} disabled={saving || !createForm.titel || (createForm.modus === 'global' && !createForm.ausleiher_name && !createForm.ausleiher_ort)}
-                className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+              <Button variant="ghost" className="flex-1" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
+              <Button variant="primary" className="flex-1" onClick={handleCreateListe}
+                disabled={saving || !createForm.titel || (createForm.modus === 'global' && !createForm.ausleiher_name && !createForm.ausleiher_ort)}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Liste erstellen
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1293,9 +1267,10 @@ export default function AusleihePage() {
 
       {/* ─── Listen nach Sektionen ───────────────────────── */}
       {sections.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Package className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">Keine Ausleihen vorhanden</p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <EmptyState icon={Package} title="Keine Ausleihen vorhanden"
+            description="Erstelle eine Ausleihliste, um Artikel auszugeben."
+            action={<Button variant="primary" size="sm" icon={Plus} onClick={() => setShowCreateModal(true)}>Neue Ausleihliste</Button>} />
         </div>
       ) : (
         <div className="space-y-2">

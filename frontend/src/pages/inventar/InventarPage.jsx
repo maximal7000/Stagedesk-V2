@@ -18,6 +18,7 @@ import {
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import QRScanner from '../../components/QRScanner';
+import { PageHeader, Button, StatusBadge, StatTile, EmptyState } from '../../components/ui';
 
 const STATUS_FARBEN = {
   verfuegbar: 'bg-green-500',
@@ -31,14 +32,10 @@ const STATUS_LABELS = {
   reserviert: 'Reserviert',
   defekt: 'Defekt',
 };
+// Status → StatusBadge-Ton (semantische Zuordnung, kollisionsfrei zu defekt=danger)
+const STATUS_TONES = { verfuegbar: 'positive', ausgeliehen: 'info', reserviert: 'warning', defekt: 'danger' };
+const AUSLEIHE_STATUS_TONES = { offen: 'neutral', aktiv: 'info', teilrueckgabe: 'warning', abgeschlossen: 'positive', abgebrochen: 'danger' };
 const STATUS_COLORS_CHART = { verfuegbar: '#22C55E', ausgeliehen: '#3B82F6', reserviert: '#EAB308', defekt: '#EF4444' };
-const AUSLEIHE_STATUS_COLORS = {
-  offen: 'bg-gray-700 text-gray-300',
-  aktiv: 'bg-blue-900/30 text-blue-400',
-  teilrueckgabe: 'bg-yellow-900/30 text-yellow-400',
-  abgeschlossen: 'bg-green-900/30 text-green-400',
-  abgebrochen: 'bg-red-900/30 text-red-400',
-};
 
 function SectionHeader({ title, count, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -267,57 +264,42 @@ export default function InventarPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header: compact */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-white">Inventar</h1>
-          {stats && (
-            <div className="hidden sm:flex items-center gap-3 text-xs text-gray-400">
-              <span>{stats.total_items} Items</span>
-              <span className="text-green-400">{stats.status_counts?.verfuegbar || 0} frei</span>
-              <span className="text-blue-400">{stats.status_counts?.ausgeliehen || 0} verliehen</span>
-              {stats.ueberfaellige_ausleihen > 0 && (
-                <span className="text-red-400 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" />{stats.ueberfaellige_ausleihen} überfällig
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          {activeTab === 'items' && (
-            <>
-              <button onClick={() => { setScanMode('find'); setShowQRScanner(true); }}
-                className="p-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg" title="QR-Scan">
-                <ScanLine className="w-4 h-4" />
-              </button>
-              <button onClick={() => setShowImportModal(true)}
-                className="p-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg" title="CSV Import">
-                <Upload className="w-4 h-4" />
-              </button>
-              <Link to="/inventar/sets" className="p-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg" title="Item-Sets">
-                <Layers className="w-4 h-4" />
-              </Link>
-              <Link to="/inventar/neu"
-                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
-                <Plus className="w-4 h-4" /> Neu
-              </Link>
-            </>
-          )}
-          {activeTab === 'ausleihen' && (
-            <>
-              <button onClick={() => { setScanMode('rueckgabe'); setShowQRScanner(true); }}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 text-gray-300 hover:text-white rounded-lg text-sm">
-                <ScanLine className="w-4 h-4" /> Rückgabe
-              </button>
-              <Link to="/ausleihen"
-                className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg">
-                <Plus className="w-4 h-4" /> Neue Ausleihe
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title={{ items: 'Items', ausleihen: 'Ausleihen', statistik: 'Statistik' }[activeTab] || 'Inventar'}
+        meta={stats && (
+          <span className="flex items-center gap-2 flex-wrap">
+            <span>{stats.total_items} Items</span>
+            <span className="text-green-400">· {stats.status_counts?.verfuegbar || 0} frei</span>
+            <span className="text-blue-400">· {stats.status_counts?.ausgeliehen || 0} verliehen</span>
+            {stats.ueberfaellige_ausleihen > 0 && (
+              <span className="text-red-400 flex items-center gap-1">
+                · <AlertTriangle className="w-3 h-3" />{stats.ueberfaellige_ausleihen} überfällig
+              </span>
+            )}
+          </span>
+        )}
+        actions={
+          <>
+            {activeTab === 'items' && (
+              <>
+                <Button variant="secondary" size="sm" icon={ScanLine} title="QR-Scan" aria-label="QR-Scan"
+                  onClick={() => { setScanMode('find'); setShowQRScanner(true); }} />
+                <Button variant="secondary" size="sm" icon={Upload} title="CSV Import" aria-label="CSV Import"
+                  onClick={() => setShowImportModal(true)} />
+                <Button as={Link} to="/inventar/sets" variant="secondary" size="sm" icon={Layers} title="Item-Sets" aria-label="Item-Sets" />
+                <Button as={Link} to="/inventar/neu" variant="primary" size="sm" icon={Plus}>Neu</Button>
+              </>
+            )}
+            {activeTab === 'ausleihen' && (
+              <>
+                <Button variant="secondary" size="sm" icon={ScanLine}
+                  onClick={() => { setScanMode('rueckgabe'); setShowQRScanner(true); }}>Rückgabe</Button>
+                <Button as={Link} to="/ausleihen" variant="primary" size="sm" icon={Plus}>Neue Ausleihe</Button>
+              </>
+            )}
+          </>
+        }
+      />
 
       {/* Tabs: compact pill style */}
       <div className="flex gap-0.5 bg-gray-900/50 border border-gray-800 rounded-lg p-0.5">
@@ -354,7 +336,7 @@ export default function InventarPage() {
                 placeholder="Suche..." className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-600" />
             </div>
             <button onClick={() => setShowFilter(!showFilter)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg ${hasActiveFilters ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg ${hasActiveFilters ? 'bg-accent hover:bg-accent-hover text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}>
               <Filter className="w-3.5 h-3.5" /> Filter
             </button>
             <button onClick={() => { setBulkMode(!bulkMode); setSelectedIds(new Set()); }}
@@ -379,7 +361,7 @@ export default function InventarPage() {
                 <div className="flex items-center gap-2">
                   {hasActiveFilters && (
                     <>
-                      <button onClick={() => setShowSaveFilter(true)} className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                      <button onClick={() => setShowSaveFilter(true)} className="text-xs text-accent hover:opacity-80 flex items-center gap-1">
                         <BookmarkPlus className="w-3 h-3" /> Speichern
                       </button>
                       <button onClick={clearFilters} className="text-xs text-gray-400 hover:text-white">Reset</button>
@@ -454,12 +436,11 @@ export default function InventarPage() {
 
           {/* Content */}
           {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-accent animate-spin" /></div>
           ) : items.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-10 text-center">
-              <Package className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Keine Items gefunden</p>
-              <Link to="/inventar/neu" className="mt-2 inline-block text-sm text-blue-400 hover:text-blue-300">Item erstellen</Link>
+            <div className="bg-gray-900 border border-gray-800 rounded-lg">
+              <EmptyState icon={Package} title="Keine Items gefunden"
+                action={<Button as={Link} to="/inventar/neu" variant="primary" size="sm" icon={Plus}>Item erstellen</Button>} />
             </div>
           ) : viewMode === 'list' ? (
             /* ─── LIST VIEW ─── */
@@ -509,10 +490,8 @@ export default function InventarPage() {
                       </td>
                       <td className="p-2 text-xs text-gray-400 hidden lg:table-cell">{item.standort_name || '-'}</td>
                       <td className="p-2">
-                        <span className="flex items-center gap-1.5 text-xs">
-                          <span className={`w-1.5 h-1.5 rounded-full ${STATUS_FARBEN[item.status] || 'bg-gray-500'}`} />
-                          {item.status_display || STATUS_LABELS[item.status] || item.status}
-                        </span>
+                        <StatusBadge tone={STATUS_TONES[item.status] || 'neutral'} dot
+                          label={item.status_display || STATUS_LABELS[item.status] || item.status} />
                       </td>
                       <td className="p-2 text-xs text-gray-400 hidden lg:table-cell">
                         {item.menge_gesamt > 1 ? `${item.menge_verfuegbar}/${item.menge_gesamt}` : ''}
@@ -541,7 +520,7 @@ export default function InventarPage() {
                       <span className={`absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full ${STATUS_FARBEN[item.status] || 'bg-gray-500'}`} />
                     </div>
                     <div className="p-2.5">
-                      <h3 className="text-sm font-medium text-white truncate group-hover:text-blue-400">{item.name}</h3>
+                      <h3 className="text-sm font-medium text-white truncate group-hover:text-accent">{item.name}</h3>
                       <div className="flex items-center justify-between mt-1.5">
                         {item.kategorie_name ? (
                           <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ backgroundColor: (item.kategorie_farbe || '#6B7280') + '15', color: item.kategorie_farbe || '#6B7280' }}>
@@ -568,11 +547,10 @@ export default function InventarPage() {
               placeholder="Suche..." className="w-full pl-8 pr-3 py-1.5 text-sm bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-600" />
           </div>
           {ausleihenLoading ? (
-            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-accent animate-spin" /></div>
           ) : filteredSections.length === 0 ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-lg p-10 text-center">
-              <Package className="w-10 h-10 text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-400 text-sm">Keine Ausleihen</p>
+            <div className="bg-gray-900 border border-gray-800 rounded-lg">
+              <EmptyState icon={Package} title="Keine Ausleihen" />
             </div>
           ) : (
             <div className="space-y-1">
@@ -598,9 +576,7 @@ export default function InventarPage() {
                             <Mail className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <span className={`px-2 py-0.5 text-[11px] rounded ${AUSLEIHE_STATUS_COLORS[a.status] || 'bg-gray-700 text-gray-400'}`}>
-                          {a.status_display || a.status}
-                        </span>
+                        <StatusBadge tone={AUSLEIHE_STATUS_TONES[a.status] || 'neutral'} label={a.status_display || a.status} />
                         <ChevronRight className="w-4 h-4 text-gray-700" />
                       </div>
                     </Link>
@@ -616,28 +592,16 @@ export default function InventarPage() {
       {activeTab === 'statistik' && (
         <>
           {statistikLoading ? (
-            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-blue-500 animate-spin" /></div>
+            <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 text-accent animate-spin" /></div>
           ) : (
             <>
               {/* KPI row */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  { label: 'Aktive Ausleihen', value: stats?.aktive_ausleihen ?? 0, icon: Package, color: 'text-blue-400', bg: 'bg-blue-900/20' },
-                  { label: 'Überfällig', value: stats?.ueberfaellige_ausleihen ?? 0, icon: AlertTriangle, color: 'text-red-400', bg: 'bg-red-900/20', border: stats?.ueberfaellige_ausleihen > 0 ? 'border-red-900/50' : '' },
-                  { label: 'Heute fällig', value: erweitert?.heute_faellig ?? 0, icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-900/20' },
-                  { label: 'Items gesamt', value: stats?.total_items ?? 0, icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-900/20' },
-                ].map((kpi, i) => {
-                  const Icon = kpi.icon;
-                  return (
-                    <div key={i} className={`bg-gray-900 border rounded-lg p-4 ${kpi.border || 'border-gray-800'}`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className={`p-1.5 rounded ${kpi.bg}`}><Icon className={`w-4 h-4 ${kpi.color}`} /></div>
-                        <span className="text-xs text-gray-400">{kpi.label}</span>
-                      </div>
-                      <p className={`text-2xl font-bold ${kpi.value > 0 && kpi.color === 'text-red-400' ? 'text-red-400' : 'text-white'}`}>{kpi.value}</p>
-                    </div>
-                  );
-                })}
+                <StatTile icon={Package} label="Aktive Ausleihen" value={stats?.aktive_ausleihen ?? 0} />
+                <StatTile icon={AlertTriangle} label="Überfällig" value={stats?.ueberfaellige_ausleihen ?? 0}
+                  tone={(stats?.ueberfaellige_ausleihen ?? 0) > 0 ? 'danger' : 'default'} />
+                <StatTile icon={Clock} label="Heute fällig" value={erweitert?.heute_faellig ?? 0} tone="warning" />
+                <StatTile icon={TrendingUp} label="Items gesamt" value={stats?.total_items ?? 0} tone="positive" />
               </div>
 
               {/* Charts */}
@@ -707,7 +671,7 @@ export default function InventarPage() {
                           <tr key={a.id} className="border-b border-gray-800/30">
                             <td className="py-1.5 text-white">{a.ausleiher_name}</td>
                             <td className="py-1.5 text-red-400">{a.frist ? new Date(a.frist).toLocaleDateString('de-DE') : '-'}</td>
-                            <td className="py-1.5 text-right"><Link to={`/ausleihen/${a.id}`} className="text-blue-400 hover:text-blue-300">Details</Link></td>
+                            <td className="py-1.5 text-right"><Link to={`/ausleihen/${a.id}`} className="text-accent hover:opacity-80">Details</Link></td>
                           </tr>
                         ))}
                       </tbody>
@@ -736,7 +700,7 @@ export default function InventarPage() {
             <p className="text-xs text-gray-400 mb-3">Spalten: Name, Seriennummer, Kategorie, Standort, Hersteller, Menge, Notizen</p>
             <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center">
               <input ref={fileInputRef} type="file" accept=".csv" onChange={handleImportCSV} className="hidden" id="csv-import" />
-              <label htmlFor="csv-import" className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg cursor-pointer">
+              <label htmlFor="csv-import" className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-medium rounded-lg cursor-pointer">
                 {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {importing ? 'Importiere...' : 'Datei wählen'}
               </label>
@@ -752,8 +716,8 @@ export default function InventarPage() {
             <input type="text" value={filterName} onChange={e => setFilterName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveFilter()}
               placeholder="Name..." className="w-full px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white mb-3" autoFocus />
             <div className="flex gap-2">
-              <button onClick={() => { setShowSaveFilter(false); setFilterName(''); }} className="flex-1 py-1.5 text-sm text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleSaveFilter} disabled={!filterName.trim()} className="flex-1 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium rounded-lg">Speichern</button>
+              <Button variant="ghost" size="sm" className="flex-1" onClick={() => { setShowSaveFilter(false); setFilterName(''); }}>Abbrechen</Button>
+              <Button variant="primary" size="sm" className="flex-1" onClick={handleSaveFilter} disabled={!filterName.trim()}>Speichern</Button>
             </div>
           </div>
         </div>

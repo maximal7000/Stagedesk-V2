@@ -72,7 +72,7 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
           ) : (
             <>
               <button type="button" onClick={handleCreate} disabled={creating}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm">
+                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg text-sm">
                 <Wand2 className="w-4 h-4" /> Auto-Erstellen
               </button>
               <button type="button" onClick={() => { setShowLink(true); fetchAlle(); }}
@@ -94,7 +94,7 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
             ))}
           </select>
           <button type="button" onClick={link} disabled={!selectedId}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm">Verknüpfen</button>
+            className="px-3 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg text-sm">Verknüpfen</button>
           <button type="button" onClick={() => setShowLink(false)} className="px-3 py-2 text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
       )}
@@ -103,7 +103,7 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
         <div className="flex items-center justify-between py-3 px-4 bg-gray-800 rounded-lg">
           <div className="flex-1 min-w-0">
             <Link to={`/anwesenheit/${data.anwesenheitsliste_id}`}
-              className="text-white hover:text-blue-400 font-medium flex items-center gap-2">
+              className="text-white hover:text-accent font-medium flex items-center gap-2">
               <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
               {data.anwesenheitsliste_titel || `Anwesenheitsliste #${data.anwesenheitsliste_id}`}
             </Link>

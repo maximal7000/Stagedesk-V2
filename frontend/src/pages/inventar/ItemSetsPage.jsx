@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import { toast } from 'sonner';
+import { PageHeader, Button, EmptyState } from '../../components/ui';
 
 export default function ItemSetsPage() {
   const navigate = useNavigate();
@@ -211,7 +212,7 @@ export default function ItemSetsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent animate-spin" />
       </div>
     );
   }
@@ -219,37 +220,24 @@ export default function ItemSetsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate('/inventar')}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">Item-Sets</h1>
-          <p className="text-gray-400">Vordefinierte Zusammenstellungen für schnelles Ausleihen</p>
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" className="mt-1"
+          onClick={() => navigate('/inventar')} />
+        <div className="flex-1 min-w-0">
+          <PageHeader
+            title="Item-Sets"
+            meta="Vordefinierte Zusammenstellungen für schnelles Ausleihen"
+            actions={<Button variant="primary" size="sm" icon={Plus} onClick={openCreateModal}>Neues Set</Button>}
+          />
         </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Neues Set
-        </button>
       </div>
 
       {/* Sets Liste */}
       {sets.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Layers className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">Noch keine Item-Sets vorhanden</p>
-          <button
-            onClick={openCreateModal}
-            className="mt-4 text-blue-400 hover:text-blue-300"
-          >
-            Erstes Set erstellen
-          </button>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <EmptyState icon={Layers} title="Noch keine Item-Sets vorhanden"
+            description="Vordefinierte Zusammenstellungen beschleunigen das Ausleihen."
+            action={<Button variant="primary" size="sm" icon={Plus} onClick={openCreateModal}>Erstes Set erstellen</Button>} />
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -514,20 +502,12 @@ export default function ItemSetsPage() {
             </div>
 
             <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-4 flex justify-end gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-gray-400 hover:text-white"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving || !formData.name || selectedItems.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg"
-              >
+              <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
+              <Button variant="primary" onClick={handleSave}
+                disabled={saving || !formData.name || selectedItems.length === 0}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {editingSet ? 'Speichern' : 'Erstellen'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

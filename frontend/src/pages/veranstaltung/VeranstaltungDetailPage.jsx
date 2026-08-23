@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import Markdown, { MarkdownHint } from '../../components/Markdown';
+import { Button, StatusBadge } from '../../components/ui';
 
 // Sections
 import QuickInfoCard from './sections/QuickInfoCard';
@@ -38,11 +39,11 @@ const EFFEKTIV_LABELS = {
   abgesagt: 'Abgesagt',
 };
 
-const EFFEKTIV_CLASS = {
-  geplant: 'bg-blue-500/20 text-blue-400',
-  laufend: 'bg-green-500/20 text-green-400',
-  abgeschlossen: 'bg-slate-500/20 text-slate-400',
-  abgesagt: 'bg-red-500/20 text-red-400',
+const EFFEKTIV_TONE = {
+  geplant: 'info',
+  laufend: 'positive',
+  abgeschlossen: 'neutral',
+  abgesagt: 'danger',
 };
 
 function formatDatum(d) {
@@ -225,7 +226,7 @@ export default function VeranstaltungDetailPage() {
   if (loading && !isNew) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-accent" />
       </div>
     );
   }
@@ -277,11 +278,10 @@ export default function VeranstaltungDetailPage() {
                 rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
             </div>
             <div className="flex gap-3 pt-4">
-              <button type="submit" disabled={saving}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
+              <Button type="submit" variant="primary" disabled={saving}>
                 {saving ? '…' : 'Anlegen'}
-              </button>
-              <Link to="/veranstaltung" className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">Abbrechen</Link>
+              </Button>
+              <Button as={Link} to="/veranstaltung" variant="secondary">Abbrechen</Button>
             </div>
           </form>
         </div>
@@ -294,7 +294,7 @@ export default function VeranstaltungDetailPage() {
     return (
       <div className="text-center py-16 text-gray-500">
         <p>Veranstaltung nicht gefunden.</p>
-        <Link to="/veranstaltung" className="text-blue-400 hover:underline mt-2 inline-block">Zur Liste</Link>
+        <Link to="/veranstaltung" className="text-accent hover:underline mt-2 inline-block">Zur Liste</Link>
       </div>
     );
   }
@@ -320,7 +320,7 @@ export default function VeranstaltungDetailPage() {
             <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-400">
               <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {formatDatum(data.datum_von)} – {formatDatum(data.datum_bis)}</span>
               {data.ort && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {data.ort}</span>}
-              {data.zammad_ticket_number && <span className="text-blue-400">Zammad #{data.zammad_ticket_number}</span>}
+              {data.zammad_ticket_number && <span className="text-accent">Zammad #{data.zammad_ticket_number}</span>}
             </div>
             {editMode && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -348,11 +348,7 @@ export default function VeranstaltungDetailPage() {
           <div className="flex items-center gap-2">
             {(() => {
               const eff = data.effektiv_status || data.status;
-              return (
-                <span className={`inline-flex px-2 py-1 rounded text-sm font-medium ${
-                  EFFEKTIV_CLASS[eff] || 'bg-gray-500/20 text-gray-400'
-                }`}>{EFFEKTIV_LABELS[eff] || eff}</span>
-              );
+              return <StatusBadge tone={EFFEKTIV_TONE[eff] || 'neutral'} label={EFFEKTIV_LABELS[eff] || eff} />;
             })()}
             {canEdit && !editMode && (
               data.status === 'abgesagt' ? (
@@ -361,28 +357,21 @@ export default function VeranstaltungDetailPage() {
                   Wieder aktivieren
                 </button>
               ) : (
-                <button type="button" onClick={() => handleStatusToggle('abgesagt')}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm">
+                <Button variant="danger" size="sm" onClick={() => handleStatusToggle('abgesagt')}>
                   Absagen
-                </button>
+                </Button>
               )
             )}
             {canEdit && !editMode ? (
-              <button type="button" onClick={() => setEditMode(true)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-                <Pen className="w-4 h-4" />
-              </button>
+              <Button variant="ghost" size="sm" icon={Pen} onClick={() => setEditMode(true)}
+                title="Bearbeiten" aria-label="Bearbeiten" />
             ) : editMode ? (
               <>
-                <button type="button" onClick={handleUpdate} disabled={saving}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm">
-                  <Save className="w-4 h-4" /> Speichern
-                </button>
-                <button type="button"
-                  onClick={() => { setEditMode(false); setForm({ titel: data.titel, beschreibung: data.beschreibung || '', datum_von: isoToLocalInput(data.datum_von), datum_bis: isoToLocalInput(data.datum_bis), ort: data.ort || '', adresse: data.adresse || '', status: data.status || 'geplant' }); }}
-                  className="p-2 text-gray-400 hover:text-white">
-                  <X className="w-4 h-4" />
-                </button>
+                <Button variant="primary" size="sm" icon={Save} onClick={handleUpdate} disabled={saving}>
+                  Speichern
+                </Button>
+                <Button variant="ghost" size="sm" icon={X} title="Abbrechen" aria-label="Abbrechen"
+                  onClick={() => { setEditMode(false); setForm({ titel: data.titel, beschreibung: data.beschreibung || '', datum_von: isoToLocalInput(data.datum_von), datum_bis: isoToLocalInput(data.datum_bis), ort: data.ort || '', adresse: data.adresse || '', status: data.status || 'geplant' }); }} />
               </>
             ) : null}
           </div>

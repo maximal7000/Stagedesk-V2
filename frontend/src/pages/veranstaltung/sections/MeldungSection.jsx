@@ -106,7 +106,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
               )}
               <p className="text-xs text-gray-400 mt-2">
                 Frage einen Admin nach Bestätigung deiner Kompetenzen.{' '}
-                <Link to="/kompetenzen" className="text-blue-400 hover:underline">Zu meinen Kompetenzen</Link>
+                <Link to="/kompetenzen" className="text-accent hover:underline">Zu meinen Kompetenzen</Link>
               </p>
             </div>
           </div>

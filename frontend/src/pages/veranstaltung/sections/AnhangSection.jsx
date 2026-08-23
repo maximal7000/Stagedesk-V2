@@ -76,7 +76,7 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
         {(data?.anhaenge || []).map((a) => (
           <li key={a.id} className="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-lg">
             <button type="button" onClick={() => download(a)}
-              className="text-blue-400 hover:underline flex items-center gap-1.5 text-left">
+              className="text-accent hover:underline flex items-center gap-1.5 text-left">
               <Download className="w-3.5 h-3.5 flex-shrink-0" /> {a.name}
             </button>
             {canEdit && (

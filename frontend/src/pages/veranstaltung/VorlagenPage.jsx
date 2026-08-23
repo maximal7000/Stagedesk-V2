@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import { PageHeader, Button, EmptyState } from '../../components/ui';
 
 const EINHEITEN = [
   { v: 'minuten', l: 'Min' },
@@ -98,19 +99,20 @@ export default function VorlagenPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to="/veranstaltung" className="text-gray-400 hover:text-white">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <FileText className="w-6 h-6 text-blue-400" />
-        <h1 className="text-2xl font-bold text-white">Veranstaltungs-Vorlagen</h1>
-        {canEdit && !editing && (
-          <button onClick={() => setEditing(emptyTemplate())}
-            className="ml-auto inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">
-            <Plus className="w-4 h-4" /> Neue Vorlage
-          </button>
-        )}
-      </div>
+      <PageHeader
+        eyebrow="Veranstaltungen"
+        title="Vorlagen"
+        actions={
+          <>
+            <Button as={Link} to="/veranstaltung" variant="ghost" icon={ArrowLeft}>Zurück</Button>
+            {canEdit && !editing && (
+              <Button variant="primary" icon={Plus} onClick={() => setEditing(emptyTemplate())}>
+                Neue Vorlage
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
@@ -123,7 +125,7 @@ export default function VorlagenPage() {
             ) : templates.map((t) => (
               <div key={t.id}
                 className={`p-3 rounded-lg border ${
-                  editing?.id === t.id ? 'border-blue-500 bg-blue-600/10' : 'border-gray-800 bg-gray-900 hover:border-gray-700'
+                  editing?.id === t.id ? 'border-accent bg-accent/10' : 'border-gray-800 bg-gray-900 hover:border-gray-700'
                 }`}>
                 <div className="flex items-start gap-2">
                   <button onClick={() => setEditing({
@@ -293,27 +295,28 @@ export default function VorlagenPage() {
                   ))}
                   <button onClick={() => setEditing(s => ({
                     ...s, erinnerungen: [...(s.erinnerungen || []), { zeit_vorher: 1, einheit: 'tage' }],
-                  }))} className="text-xs text-blue-400 hover:text-blue-300 inline-flex items-center gap-1">
+                  }))} className="text-xs text-accent hover:opacity-80 inline-flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Erinnerung
                   </button>
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
-                <button onClick={() => setEditing(null)}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">
-                  Abbrechen
-                </button>
-                <button onClick={save} disabled={saving}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg inline-flex items-center gap-2">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <Button variant="secondary" onClick={() => setEditing(null)}>Abbrechen</Button>
+                <Button variant="primary" onClick={save} disabled={saving}
+                  icon={saving ? undefined : Save}>
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   Speichern
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center text-gray-500">
-              {canEdit ? 'Vorlage auswählen oder neue anlegen.' : 'Du hast keine Bearbeitungs-Rechte.'}
+            <div className="bg-gray-900 border border-gray-800 rounded-xl">
+              <EmptyState icon={FileText}
+                title={canEdit ? 'Keine Vorlage ausgewählt' : 'Keine Bearbeitungs-Rechte'}
+                description={canEdit
+                  ? 'Wähle links eine Vorlage aus oder lege oben rechts eine neue an.'
+                  : 'Du kannst Vorlagen ansehen, aber nicht bearbeiten.'} />
             </div>
           )}
         </div>

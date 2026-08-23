@@ -75,7 +75,7 @@ export default function MitteilungSection({ data, canEdit, eventId }) {
             </select>
           </div>
           <button onClick={send} disabled={sending || !text.trim() || counts[an] === 0}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg inline-flex items-center gap-2">
+            className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg inline-flex items-center gap-2">
             {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Senden
           </button>

@@ -5,12 +5,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Plus, Search, Loader2, Calendar, MapPin, User, FileDown,
-  Ticket, Filter, ChevronRight, Clock, Users, X, CalendarDays, Hand, FileText,
+  Ticket, Filter, ChevronRight, Clock, Users, X, CalendarDays, Hand, FileText, CalendarX2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import VeranstaltungTemplateModal from '../../components/VeranstaltungTemplateModal';
+import { PageHeader, Button, StatusBadge, EmptyState } from '../../components/ui';
 
 function MeldenButton({ v, onRefetch }) {
   const [loading, setLoading] = useState(false);
@@ -68,11 +69,12 @@ const STATUS_LABELS = {
   abgesagt: 'Abgesagt',
 };
 
-const STATUS_CLASS = {
-  geplant: 'bg-blue-500/20 text-blue-400',
-  laufend: 'bg-green-500/20 text-green-400',
-  abgeschlossen: 'bg-slate-500/20 text-slate-400',
-  abgesagt: 'bg-red-500/20 text-red-400',
+// Status-Töne für StatusBadge (semantische Farben bleiben erhalten)
+const STATUS_TONE = {
+  geplant: 'info',
+  laufend: 'positive',
+  abgeschlossen: 'neutral',
+  abgesagt: 'danger',
 };
 
 // Effektiv-Status (vom Backend abgeleitet) bestimmt Aktiv/Erledigt
@@ -108,17 +110,11 @@ function VeranstaltungCard({ v, onRefetch }) {
         <div className="flex-1 min-w-0">
           {/* Titel + Status */}
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="font-semibold text-white group-hover:text-blue-400 transition-colors truncate">
+            <span className="font-semibold text-white group-hover:text-accent transition-colors truncate">
               {v.titel}
             </span>
-            <span className={`shrink-0 px-2 py-0.5 text-[10px] font-medium rounded ${STATUS_CLASS[eff] || 'bg-gray-500/20 text-gray-400'}`}>
-              {STATUS_LABELS[eff] || eff}
-            </span>
-            {v.ist_zugewiesen && (
-              <span className="shrink-0 px-2 py-0.5 text-[10px] font-medium rounded bg-blue-900/30 text-blue-400">
-                Zugeteilt
-              </span>
-            )}
+            <StatusBadge tone={STATUS_TONE[eff] || 'neutral'} label={STATUS_LABELS[eff] || eff} />
+            {v.ist_zugewiesen && <StatusBadge tone="accent" label="Zugeteilt" />}
           </div>
 
           {/* Datum */}
@@ -161,7 +157,7 @@ function VeranstaltungCard({ v, onRefetch }) {
               </span>
             )}
             {v.zammad_ticket_number && (
-              <span className="flex items-center gap-1 text-blue-400/60">
+              <span className="flex items-center gap-1 text-accent/70">
                 <Ticket className="w-3 h-3" />
                 #{v.zammad_ticket_number}
               </span>
@@ -300,53 +296,35 @@ export default function VeranstaltungenPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Veranstaltungen</h1>
-          <p className="text-gray-400 text-sm mt-0.5">{list.length} Veranstaltungen gesamt</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {hasPermission('veranstaltung.create') && (
-            <Link
-              to="/veranstaltung/neu"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-            >
-              <Plus className="w-4 h-4" />
-              Neue Veranstaltung
-            </Link>
-          )}
-          {hasPermission('veranstaltung.create') && (
-            <button
-              type="button"
-              onClick={() => setShowTemplateModal(true)}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-            >
-              <FileText className="w-4 h-4" />
-              Aus Vorlage
-            </button>
-          )}
-          {isAdmin && (
-            <>
-              <button
-                type="button"
-                onClick={loadZammadTickets}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-              >
-                <Ticket className="w-4 h-4" />
-                Aus Ticket
-              </button>
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-colors text-sm"
-              >
-                <FileDown className="w-4 h-4" />
-                CSV
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow="Veranstaltungen"
+        title="Alle Veranstaltungen"
+        meta={`${list.length} ${list.length === 1 ? 'Veranstaltung' : 'Veranstaltungen'} gesamt`}
+        actions={
+          <>
+            {hasPermission('veranstaltung.create') && (
+              <Button as={Link} to="/veranstaltung/neu" variant="primary" icon={Plus}>
+                Neue Veranstaltung
+              </Button>
+            )}
+            {hasPermission('veranstaltung.create') && (
+              <Button variant="secondary" icon={FileText} onClick={() => setShowTemplateModal(true)}>
+                Aus Vorlage
+              </Button>
+            )}
+            {isAdmin && (
+              <>
+                <Button variant="secondary" icon={Ticket} onClick={loadZammadTickets}>
+                  Aus Ticket
+                </Button>
+                <Button variant="secondary" icon={FileDown} onClick={exportCsv}>
+                  CSV
+                </Button>
+              </>
+            )}
+          </>
+        }
+      />
 
       {/* Filter */}
       <div className="flex flex-wrap items-center gap-3">
@@ -375,7 +353,7 @@ export default function VeranstaltungenPage() {
             type="checkbox"
             checked={nurMeine}
             onChange={(e) => setNurMeine(e.target.checked)}
-            className="rounded border-gray-600 bg-gray-800 text-blue-600"
+            className="rounded border-gray-600 bg-gray-800 text-accent"
           />
           Nur meine
         </label>
@@ -392,18 +370,21 @@ export default function VeranstaltungenPage() {
       {/* Inhalt */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <Loader2 className="w-8 h-8 animate-spin text-accent" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">
-            {suche || filterStatus || nurMeine ? 'Keine Veranstaltungen gefunden' : 'Noch keine Veranstaltungen'}
-          </p>
-          {hasPermission('veranstaltung.create') && !suche && !filterStatus && !nurMeine && (
-            <Link to="/veranstaltung/neu" className="text-blue-400 hover:underline mt-2 inline-block text-sm">
-              Erste Veranstaltung anlegen
-            </Link>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          {suche || filterStatus || nurMeine ? (
+            <EmptyState icon={CalendarX2} title="Keine Veranstaltungen gefunden"
+              description="Passe deine Suche oder Filter an." />
+          ) : (
+            <EmptyState icon={CalendarX2} title="Noch keine Veranstaltungen"
+              description="Leg deine erste Veranstaltung an, um loszulegen."
+              action={hasPermission('veranstaltung.create') && (
+                <Button as={Link} to="/veranstaltung/neu" variant="primary" icon={Plus}>
+                  Erste Veranstaltung anlegen
+                </Button>
+              )} />
           )}
         </div>
       ) : (
@@ -425,7 +406,7 @@ export default function VeranstaltungenPage() {
             </div>
             <div className="p-4 overflow-y-auto flex-1">
               {zammadLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+                <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
               ) : zammadTickets.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">Keine Tickets gefunden oder Zammad nicht konfiguriert.</p>
               ) : (
@@ -438,14 +419,14 @@ export default function VeranstaltungenPage() {
                           <p className="text-sm text-gray-500 mt-0.5">{new Date(t.created_at).toLocaleDateString('de-DE')}</p>
                         )}
                       </div>
-                      <button
-                        type="button"
+                      <Button
+                        variant="primary"
+                        size="sm"
                         onClick={() => createFromTicket(t.id)}
                         disabled={creatingFromTicket === t.id}
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg text-sm"
                       >
                         {creatingFromTicket === t.id ? '…' : 'Erstellen'}
-                      </button>
+                      </Button>
                     </li>
                   ))}
                 </ul>

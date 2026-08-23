@@ -2,7 +2,7 @@ import { Calendar, MapPin, Users, CheckSquare, Hand } from 'lucide-react';
 
 const STATUS_COLORS = {
   planung: 'bg-gray-500/20 text-gray-400',
-  bestaetigt: 'bg-blue-500/20 text-blue-400',
+  bestaetigt: 'bg-accent/15 text-accent',
   laufend: 'bg-green-500/20 text-green-400',
   abgeschlossen: 'bg-emerald-500/20 text-emerald-400',
   abgesagt: 'bg-red-500/20 text-red-400',
@@ -86,7 +86,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
                   const name = [z.user_first_name, z.user_last_name].filter(Boolean).join(' ')
                     || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
                   return (
-                    <div key={z.id} className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center ring-2 ring-gray-900" title={name}>
+                    <div key={z.id} className="w-7 h-7 bg-accent rounded-full flex items-center justify-center ring-2 ring-gray-900" title={name}>
                       <span className="text-white text-xs font-medium">{name[0].toUpperCase()}</span>
                     </div>
                   );
@@ -117,7 +117,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
-              className={`h-2 rounded-full transition-all ${checkPercent === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+              className={`h-2 rounded-full transition-all ${checkPercent === 100 ? 'bg-green-500' : 'bg-accent'}`}
               style={{ width: `${checkPercent}%` }}
             />
           </div>
@@ -140,7 +140,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
       {/* Zammad */}
       {data.zammad_ticket_number && (
         <div className="pt-2 border-t border-gray-800">
-          <span className="text-blue-400 text-sm">Zammad #{data.zammad_ticket_number}</span>
+          <span className="text-accent text-sm">Zammad #{data.zammad_ticket_number}</span>
         </div>
       )}
     </div>

@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Package, AlertTriangle, Clock, CalendarCheck,
-  Plus, QrCode, RotateCcw, Loader2, TrendingUp,
+  Plus, QrCode, RotateCcw, Loader2,
   BarChart3, PieChart as PieChartIcon,
 } from 'lucide-react';
 import {
@@ -14,6 +14,7 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import apiClient from '../../lib/api';
+import { PageHeader, StatTile } from '../../components/ui';
 
 const STATUS_COLORS = {
   verfuegbar: '#22C55E',
@@ -64,7 +65,7 @@ export default function AusleiheDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent animate-spin" />
       </div>
     );
   }
@@ -92,58 +93,18 @@ export default function AusleiheDashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
-          <TrendingUp className="w-8 h-8 text-blue-500" />
-          Ausleihe-Dashboard
-        </h1>
-        <p className="text-gray-400">
-          Überblick über alle Ausleihen, Rückgaben und den Inventarstatus.
-        </p>
-      </div>
+      <PageHeader
+        title="Ausleihe-Dashboard"
+        meta="Überblick über alle Ausleihen, Rückgaben und den Inventarstatus."
+      />
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-blue-900/30 rounded-lg">
-              <Package className="w-5 h-5 text-blue-400" />
-            </div>
-            <span className="text-sm text-gray-400">Aktive Ausleihen</span>
-          </div>
-          <p className="text-3xl font-bold text-white">{aktiveAusleihen}</p>
-        </div>
-
-        <div className="bg-gray-900 border border-red-900/50 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-red-900/30 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-red-400" />
-            </div>
-            <span className="text-sm text-gray-400">Überfällige</span>
-          </div>
-          <p className="text-3xl font-bold text-red-400">{ueberfaellige}</p>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-yellow-900/30 rounded-lg">
-              <Clock className="w-5 h-5 text-yellow-400" />
-            </div>
-            <span className="text-sm text-gray-400">Heute fällig</span>
-          </div>
-          <p className="text-3xl font-bold text-white">{heuteFaellig}</p>
-        </div>
-
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-purple-900/30 rounded-lg">
-              <CalendarCheck className="w-5 h-5 text-purple-400" />
-            </div>
-            <span className="text-sm text-gray-400">Diese Woche fällig</span>
-          </div>
-          <p className="text-3xl font-bold text-white">{dieseWocheFaellig}</p>
-        </div>
+        <StatTile icon={Package} label="Aktive Ausleihen" value={aktiveAusleihen} />
+        <StatTile icon={AlertTriangle} label="Überfällige" value={ueberfaellige}
+          tone={ueberfaellige > 0 ? 'danger' : 'default'} />
+        <StatTile icon={Clock} label="Heute fällig" value={heuteFaellig} tone="warning" />
+        <StatTile icon={CalendarCheck} label="Diese Woche fällig" value={dieseWocheFaellig} />
       </div>
 
       {/* Charts */}
@@ -151,7 +112,7 @@ export default function AusleiheDashboardPage() {
         {/* Bar Chart: Ausleihen pro Monat */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-400" />
+            <BarChart3 className="w-5 h-5 text-accent" />
             Ausleihen pro Monat
           </h2>
           {monatsDaten.length > 0 ? (
@@ -252,11 +213,11 @@ export default function AusleiheDashboardPage() {
             to="/ausleihen"
             className="flex items-center gap-3 p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg transition-colors group"
           >
-            <div className="p-2 bg-blue-900/30 rounded-lg">
-              <Plus className="w-5 h-5 text-blue-400" />
+            <div className="p-2 bg-accent/15 rounded-lg">
+              <Plus className="w-5 h-5 text-accent" />
             </div>
             <div>
-              <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
                 Neue Ausleihe
               </h3>
               <p className="text-sm text-gray-400">Ausleihliste erstellen</p>
@@ -359,7 +320,7 @@ export default function AusleiheDashboardPage() {
                       <td className="py-2 text-right">
                         <Link
                           to={`/ausleihen/${a.id}`}
-                          className="text-blue-400 hover:text-blue-300 hover:underline"
+                          className="text-accent hover:opacity-80 hover:underline"
                         >
                           Details
                         </Link>
