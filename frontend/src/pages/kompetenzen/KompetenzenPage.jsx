@@ -681,7 +681,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 className="w-full flex items-center gap-3 p-3 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-left disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
-                  istAdmin ? 'bg-purple-600' : 'bg-blue-600'
+                  istAdmin ? 'bg-purple-600' : 'bg-accent'
                 }`}>
                   {(u.first_name || u.username)?.[0]?.toUpperCase() || '?'}
                 </div>
