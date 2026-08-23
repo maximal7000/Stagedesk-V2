@@ -9,7 +9,7 @@ import {
   Calendar, Clock, MapPin, AlertTriangle, Info, Megaphone,
   Sun, Moon, Cloud, CloudRain, CloudSnow, CloudLightning, CloudFog,
   Thermometer, Droplets, Timer, FileText, QrCode, AlignLeft,
-  LayoutGrid, Train, Bus, TramFront, Ship,
+  LayoutGrid, Train, Bus, TramFront, Ship, Footprints, Construction, Megaphone as MegaphoneAlt,
 } from 'lucide-react';
 import BaukastenRenderer from '../components/monitor/BaukastenRenderer';
 import CameraStream from '../components/monitor/CameraStream';
@@ -30,6 +30,117 @@ const weatherIcons = {
   '13d': CloudSnow, '13n': CloudSnow,
   '50d': CloudFog, '50n': CloudFog,
 };
+
+// ═══ Offizielle SWL-Linienfarben (Stadtverkehr Lübeck, Quelle: swhl.de mobil/linien) ═══
+const SWL_LINIEN_FARBEN = {
+  '1': '#00b1eb', '3': '#00a070', '4': '#13a538', '5': '#004f9f', '6': '#13a538',
+  '7': '#82338b', '8': '#13a538', '9': '#00b1eb', '10': '#00b1eb', '11': '#e7343f',
+  '12': '#ec6608', '15': '#a00057', '16': '#13a538', '17': '#ea5297', '18': '#ae0f0a',
+  '21': '#e7343f', '24': '#00a070', '25': '#a00057', '26': '#13a538', '30': '#a2bf1a',
+  '31': '#e7343f', '33': '#055a1c', '34': '#0069b4', '35': '#a00057', '38': '#e84e0f',
+  '40': '#a2bf1a', '41': '#e7343f', '50': '#a2bf1a',
+};
+
+// Lesbare Textfarbe auf farbigem Chip (relative Luminanz)
+function chipTextColor(hex) {
+  try {
+    const h = String(hex).replace('#', '');
+    const f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const r = parseInt(f.slice(0, 2), 16), g = parseInt(f.slice(2, 4), 16), b = parseInt(f.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#0a0e17' : '#ffffff';
+  } catch { return '#ffffff'; }
+}
+
+// SWL-Farbe für eine Linien-Bezeichnung (z.B. "11", "Bus 12") — sonst null
+function swlColorForLine(name) {
+  const k = String(name || '').toLowerCase().replace(/^(bus|linie|tram)\s+/i, '').trim();
+  return SWL_LINIEN_FARBEN[k] || null;
+}
+
+// Generische Dauer-Hinweise (E-Tretroller-Mitnahme etc.) — nicht überall prominent zeigen
+const STOERUNG_GENERIC_RE = /(tretroller|e-?scooter|e-?roller|fahrr[aä]d|gep[aä]ck|mitnahme|hund|ferienfahrplan|schulfrei)/i;
+function istGenerischerHinweis(st) {
+  const generic = STOERUNG_GENERIC_RE.test(`${st.titel || ''} ${st.text || ''}`);
+  return generic && (st.all_lines || !(st.linien || []).filter(l => l && l !== 'alle').length);
+}
+
+// ═══ Störungs-Karte: schaltet Störungen/Bau/Streik durch, mit Bild wenn vorhanden ═══
+function DisruptionCarousel({ items, accent, height }) {
+  const [idx, setIdx] = useState(0);
+  const reduce = typeof window !== 'undefined' && window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  useEffect(() => { setIdx(0); }, [items.length]);
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const ms = 9000;
+    const t = setInterval(() => setIdx(p => (p + 1) % items.length), ms);
+    return () => clearInterval(t);
+  }, [items.length]);
+  if (!items.length) return null;
+  const st = items[Math.min(idx, items.length - 1)];
+  const isStreik = st.typ === 'streik';
+  const isBau = st.typ === 'bauarbeiten';
+  const TagIcon = isStreik ? MegaphoneAlt : isBau ? Construction : AlertTriangle;
+  const tagLabel = isStreik ? 'Streik' : isBau ? 'Baumaßnahme' : 'Störung';
+  const tagTone = isBau ? { c: '#f0a020', bg: 'rgba(240,160,32,0.12)' } : { c: '#ff5964', bg: 'rgba(255,89,100,0.12)' };
+  const linien = (st.linien || []).filter(l => l && l !== 'alle').slice(0, 8);
+  const gilt = st.all_lines ? 'alle Linien' : '';
+
+  return (
+    <div className="shrink-0 border-t border-white/10 overflow-hidden" style={{ height, background: 'linear-gradient(180deg, rgba(18,22,32,0.96) 0%, rgba(10,14,23,0.98) 100%)' }}>
+      <div key={idx} className="h-full flex items-stretch gap-4 px-6 py-3" style={reduce ? undefined : { animation: 'dm-fade 500ms ease' }}>
+        {/* Textspalte */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-bold uppercase tracking-wide"
+              style={{ color: tagTone.c, background: tagTone.bg }}>
+              <TagIcon className="w-4 h-4" /> {tagLabel}
+            </span>
+            {gilt && <span className="text-white/45 text-xs font-medium">{gilt}</span>}
+            {linien.map((l, j) => {
+              const col = swlColorForLine(l);
+              return (
+                <span key={j} className="text-xs font-bold rounded px-1.5 py-0.5 leading-none tabular-nums"
+                  style={col ? { background: col, color: chipTextColor(col) } : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)' }}>
+                  {l}
+                </span>
+              );
+            })}
+          </div>
+          <div className="text-white font-display font-bold leading-tight text-[clamp(1rem,2.1vw,1.7rem)] truncate">{st.titel}</div>
+          {st.text && (
+            <div className="text-white/55 leading-snug text-[clamp(0.72rem,1.25vw,1rem)]"
+              style={{ display: '-webkit-box', WebkitLineClamp: st.bild ? 2 : 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {st.text}
+            </div>
+          )}
+          <div className="flex items-center gap-4 mt-0.5">
+            {(st.von || st.bis) && (
+              <span className="text-white/40 text-[clamp(0.65rem,1vw,0.85rem)] tabular-nums">{st.von}{st.bis ? ` – ${st.bis}` : ''}</span>
+            )}
+            {st.vorschlag && <span className="text-white/45 text-[clamp(0.65rem,1vw,0.85rem)] truncate">→ {st.vorschlag}</span>}
+          </div>
+        </div>
+        {/* Bildspalte */}
+        {st.bild && (
+          <div className="shrink-0 h-full rounded-lg overflow-hidden bg-white/[0.03] border border-white/10" style={{ aspectRatio: '16 / 9', maxWidth: '38%' }}>
+            <img src={st.bild} alt="" className="w-full h-full object-contain" loading="lazy"
+              onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
+          </div>
+        )}
+        {/* Fortschritt */}
+        {items.length > 1 && (
+          <div className="shrink-0 flex flex-col justify-center gap-1.5 pl-1">
+            {items.slice(0, 8).map((_, j) => (
+              <span key={j} className="w-1.5 rounded-full transition-all"
+                style={{ height: j === idx ? 18 : 6, background: j === idx ? accent : 'rgba(255,255,255,0.2)' }} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 
 // ═══ WebUntis-Iframe — Zoom + Dark-Mode, wiederverwendbar ═══
@@ -805,9 +916,20 @@ export default function MonitorPage() {
       sbahn: '#408335', ubahn: '#1455a3', tram: '#b4001e',
       bus: '#a0137e', faehre: '#00838f', taxi: '#ffc107', zug: '#78858b',
     };
-    // Linienfarbe ermitteln: API-Farbe > Typ-Farbe
+    const busTypen2 = ['bus', 'faehre', 'taxi'];
+    // Kurzes Linien-Label fürs Chip: "Bus 12" → "12", "RE8" bleibt
+    const getLinienLabel = (dep) => {
+      const raw = String(dep.linie || '').trim();
+      const m = raw.match(/^(?:Bus|Linie|Tram|Fähre|Faehre)\s+(.+)$/i);
+      return (m ? m[1] : raw) || '?';
+    };
+    // Linienfarbe ermitteln: API-Farbe > SWL-Linienfarbe (Bus) > Typ-Farbe
     const getLinienFarbe = (dep) => {
       if (dep.linien_farbe) return dep.linien_farbe;
+      if (busTypen2.includes(dep.typ_icon)) {
+        const swl = swlColorForLine(getLinienLabel(dep));
+        if (swl) return swl;
+      }
       return typColors[dep.typ_icon] || '#78858b';
     };
 
@@ -833,20 +955,6 @@ export default function MonitorPage() {
       if (min <= 30) return 'text-white/80';
       return 'text-white/50';
     };
-
-    // Störungen sammeln
-    const stoerungen = [];
-    if (stoerungsbanner) {
-      abfahrten.forEach(st => {
-        const ausfaelle = (st.abfahrten || []).filter(d => d.ausfall);
-        if (ausfaelle.length >= 3) stoerungen.push(`${st.station_name}: ${ausfaelle.length} Ausfälle`);
-        (st.abfahrten || []).forEach(d => {
-          if (d.bemerkungen?.length > 0 && !d.ausfall) {
-            d.bemerkungen.forEach(b => { if (b.length > 10 && !stoerungen.includes(b)) stoerungen.push(b); });
-          }
-        });
-      });
-    }
 
     // ─── Layout-Designer: Stationen in Spalten gruppieren ───
     // Jede Station hat ein optionales `spalte` Feld (0-indexed).
@@ -892,76 +1000,79 @@ export default function MonitorPage() {
     // Einzelne Abfahrtszeile rendern
     const DepRow = ({ dep, i, isHighlight, useCompact }) => {
       const cs = useCompact ? (sizes.normal || s) : s;
-      const TypIcon = typIcons[dep.typ_icon] || Train;
-      const badgeColor = getLinienFarbe(dep);
+      const lineColor = getLinienFarbe(dep);
+      const lineLabel = getLinienLabel(dep);
       const hasDelay = dep.verspaetung > 0;
       const minUntil = getMinUntil(dep.abfahrt, dep.verspaetung);
       const via = zeigeVia ? (dep.stopovers?.slice(0, 3).join(', ') || '') : '';
+      // Nur echte Ausnahmen als Zeilen-Zusatz — generische Bemerkungen wandern in die Störungs-Karte
+      const zusatzInfo = [
+        dep.entfall_halte?.length ? { txt: `ohne Halt: ${dep.entfall_halte.join(', ')}`, tone: 'text-red-400/90' } : null,
+        dep.zusatz_halte?.length ? { txt: `zusätzl. Halt: ${dep.zusatz_halte.join(', ')}`, tone: 'text-white/45' } : null,
+      ].filter(Boolean);
 
       return (
-        <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${i > 0 ? 'border-t border-white/[0.03]' : ''} ${i % 2 === 1 ? 'bg-white/[0.01]' : ''} ${isHighlight && !dep.ausfall ? 'bg-white/[0.04] border-l-2' : ''}`}
-          style={isHighlight && !dep.ausfall ? { borderLeftColor: accent } : undefined}>
+        <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${i > 0 ? 'border-t border-white/[0.06]' : ''} ${isHighlight && !dep.ausfall ? 'bg-white/[0.035]' : ''}`}
+          style={isHighlight && !dep.ausfall ? { boxShadow: `inset 3px 0 0 ${accent}` } : undefined}>
+          {/* Zeit + Verspätung */}
           <div className={`${useCompact ? cs.timeW : s.timeW} shrink-0 flex items-baseline gap-1`}>
             <span className={`font-mono ${useCompact ? cs.time : s.time} font-bold tabular-nums leading-none ${dep.ausfall ? 'line-through text-white/30' : getTimeColor(minUntil)}`}>
               {dep.abfahrt || '—'}
             </span>
             {hasDelay && <span className={`text-red-400 ${useCompact ? cs.delay : s.delay} font-bold tabular-nums`}>+{dep.verspaetung}</span>}
           </div>
+          {/* Relativ (in X min / jetzt) */}
           {zeigeRelativ && (
             <div className={`${useCompact ? cs.relativW : s.relativW} shrink-0 text-right pr-2`}>
               {minUntil !== null && !dep.ausfall && (
-                <span className={`${useCompact ? cs.relativ : s.relativ} tabular-nums ${minUntil <= 0 ? 'text-green-400 font-semibold' : 'text-white/25'}`}>
+                <span className={`${useCompact ? cs.relativ : s.relativ} tabular-nums ${minUntil <= 0 ? 'text-green-400 font-semibold' : minUntil <= 5 ? 'text-green-400/80' : 'text-white/30'}`}>
                   {minUntil <= 0 ? 'jetzt' : `${minUntil}′`}
                 </span>
               )}
             </div>
           )}
-          <div className={`${useCompact ? cs.lineW : s.lineW} shrink-0 flex items-center gap-1.5`}>
-            <div className={`${useCompact ? cs.icon : s.icon} rounded flex items-center justify-center shrink-0`} style={{ background: badgeColor }}>
-              <TypIcon className={`${useCompact ? cs.iconInner : s.iconInner} text-white`} />
-            </div>
-            <span className={`text-white ${useCompact ? cs.linie : s.linie} font-semibold truncate leading-none`}>{dep.linie}</span>
+          {/* Linien-Chip in echter Linienfarbe = die einzige Farbe der Zeile */}
+          <div className={`${useCompact ? cs.lineW : s.lineW} shrink-0 flex items-center`}>
+            <span className={`${useCompact ? cs.linie : s.linie} font-bold tabular-nums rounded px-1.5 py-[3px] leading-none text-center inline-block truncate max-w-full ${dep.ausfall ? 'opacity-40' : ''}`}
+              style={{ background: lineColor, color: chipTextColor(lineColor), minWidth: '2.1em' }}>
+              {lineLabel}
+            </span>
           </div>
+          {/* Ziel + optionale echte Ausnahme-Zeile */}
           <div className="flex-1 min-w-0 px-1.5">
             <div className="truncate">
-              <span className={`${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through text-white/45' : 'text-white'}`}>
+              <span className={`${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through text-white/40' : 'text-white'}`}>
                 {dep.richtung}
               </span>
-              {via && <span className={`${useCompact ? cs.via : s.via} text-white/20 italic ml-1.5`}>{via}</span>}
+              {via && <span className={`${useCompact ? cs.via : s.via} text-white/35 ml-1.5`}>{via}</span>}
             </div>
-            {!useCompact && (dep.bemerkungen?.length > 0 || dep.zusatz_halte?.length > 0 || dep.entfall_halte?.length > 0) && (
-              <div className={`${dep.ausfall ? 'text-red-400/80' : 'text-amber-400/70'} text-[9px] leading-tight truncate`}>
-                {[
-                  dep.entfall_halte?.length ? `Halt entfällt: ${dep.entfall_halte.join(', ')}` : null,
-                  dep.zusatz_halte?.length ? `+Halt: ${dep.zusatz_halte.join(', ')}` : null,
-                  dep.bemerkungen?.[0],
-                ].filter(Boolean).join(' · ')}
+            {!useCompact && zusatzInfo.length > 0 && (
+              <div className="text-[9px] leading-tight truncate">
+                {zusatzInfo.map((z, k) => <span key={k} className={z.tone}>{k > 0 ? ' · ' : ''}{z.txt}</span>)}
               </div>
             )}
           </div>
+          {/* Status rechts — ein Rot für Probleme, Amber nur für aktive Umleitung/SEV, Rest neutral */}
           <div className="shrink-0 flex items-center gap-1.5">
             {dep.ausfall && <span className={`text-red-400 ${useCompact ? cs.dir : s.dir} font-bold`}>Fällt aus</span>}
-            {dep.ersatzverkehr && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>SEV</span>}
-            {dep.umleitung && !dep.ausfall && <span className={`text-orange-300 ${useCompact ? cs.badge : s.badge} font-bold bg-orange-400/10 px-1.5 py-0.5 rounded`}>Umleitung</span>}
-            {dep.fluegelzug && !dep.ausfall && <span className={`text-sky-300 ${useCompact ? cs.badge : s.badge} font-medium bg-sky-400/10 px-1.5 py-0.5 rounded`}>Flügel</span>}
-            {dep.ersatzzug && <span className={`text-violet-300 ${useCompact ? cs.badge : s.badge} font-medium bg-violet-400/10 px-1.5 py-0.5 rounded`}>Ersatzzug</span>}
-            {useCompact && dep.bemerkungen?.length > 0 && !dep.ausfall && (
-              <AlertTriangle className="w-3.5 h-3.5 text-amber-400/50 shrink-0" title={dep.bemerkungen.join(', ')} />
-            )}
+            {dep.ersatzverkehr && !dep.ausfall && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>SEV</span>}
+            {dep.umleitung && !dep.ausfall && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>Umleitung</span>}
+            {dep.fluegelzug && !dep.ausfall && <span className={`text-white/60 ${useCompact ? cs.badge : s.badge} font-medium bg-white/[0.06] px-1.5 py-0.5 rounded`}>Flügelzug</span>}
+            {dep.ersatzzug && !dep.ausfall && <span className={`text-white/60 ${useCompact ? cs.badge : s.badge} font-medium bg-white/[0.06] px-1.5 py-0.5 rounded`}>Ersatzzug</span>}
             {dep.auslastung && !dep.ausfall && (() => {
-              const load = { 'low-to-medium': { bars: 1, color: 'text-green-400' }, 'high': { bars: 2, color: 'text-yellow-400' }, 'very-high': { bars: 3, color: 'text-orange-400' }, 'exceptionally-high': { bars: 3, color: 'text-red-400' } };
+              const load = { 'low-to-medium': { bars: 1, color: 'text-green-400' }, 'high': { bars: 2, color: 'text-amber-400' }, 'very-high': { bars: 3, color: 'text-amber-400' }, 'exceptionally-high': { bars: 3, color: 'text-red-400' } };
               const l = load[dep.auslastung] || load['low-to-medium'];
               return (
-                <span className={`${l.color} flex items-end gap-px shrink-0`}>
+                <span className={`${l.color} flex items-end gap-px shrink-0`} title="Auslastung">
                   {[1,2,3].map(n => <span key={n} className={`inline-block w-[3px] rounded-sm ${n <= l.bars ? 'bg-current' : 'bg-white/10'}`} style={{ height: `${6 + n * 2}px` }} />)}
                 </span>
               );
             })()}
             {dep.gleis && (
-              <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[26px] text-center ${
-                dep.gleis_geplant ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/[0.05] text-white/35'
+              <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-semibold ${
+                dep.gleis_geplant ? 'bg-red-500/25 text-red-300 border border-red-500/40' : 'bg-white/[0.08] text-white/70 border border-white/10'
               }`}>
-                {dep.gleis_geplant && <span className="line-through text-white/15 mr-0.5 text-[0.8em]">{dep.gleis_geplant}</span>}
+                {dep.gleis_geplant && <span className="line-through text-white/25 mr-0.5 text-[0.8em] font-normal">{dep.gleis_geplant}</span>}
                 {dep.gleis}
               </span>
             )}
@@ -1017,8 +1128,8 @@ export default function MonitorPage() {
           <div className="flex flex-col min-w-0 flex-1 gap-1">
             <div className="flex items-center gap-1.5 px-1">
               <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
-              <h2 className={`text-white/50 ${useCompact ? sizes.normal.station : s.station} font-bold uppercase tracking-[0.15em] truncate`}>{station.station_name}</h2>
-              {station.wegzeit_minuten > 0 && <span className={`${s.wegzeit} text-amber-400/50 shrink-0`}>~{station.wegzeit_minuten}′</span>}
+              <h2 className={`text-white/60 font-display ${useCompact ? sizes.normal.station : s.station} font-bold uppercase tracking-[0.12em] truncate`}>{station.station_name}</h2>
+              {station.wegzeit_minuten > 0 && <span className={`${s.wegzeit} text-white/40 shrink-0 inline-flex items-center gap-0.5`}><Footprints className="w-3 h-3" />{station.wegzeit_minuten} min</span>}
               {station.fehler && <span className="text-red-400/40 text-[8px] shrink-0">!</span>}
             </div>
             {/* Busse oben */}
@@ -1049,9 +1160,9 @@ export default function MonitorPage() {
         <div className="flex flex-col min-w-0 flex-1">
           <div className="flex items-center gap-1.5 mb-1 px-1">
             <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
-            <h2 className={`text-white/50 ${useCompact ? sizes.normal.station : s.station} font-bold uppercase tracking-[0.15em] truncate`}>{station.station_name}</h2>
+            <h2 className={`text-white/60 font-display ${useCompact ? sizes.normal.station : s.station} font-bold uppercase tracking-[0.12em] truncate`}>{station.station_name}</h2>
             {station.wegzeit_minuten > 0 && (
-              <span className={`${s.wegzeit} text-amber-400/50 shrink-0`}>~{station.wegzeit_minuten}′</span>
+              <span className={`${s.wegzeit} text-white/40 shrink-0 inline-flex items-center gap-0.5`}><Footprints className="w-3 h-3" />{station.wegzeit_minuten} min</span>
             )}
             {station.fehler && <span className="text-red-400/40 text-[8px] shrink-0">!</span>}
           </div>
@@ -1061,49 +1172,38 @@ export default function MonitorPage() {
               {deps.map((dep, i) => <DepRow key={i} dep={dep} i={i} isHighlight={highlightNaechste && i === 0 && !dep.ausfall} useCompact={useCompact} />)}
             </div>
           ) : (
-            <div className="text-white/10 text-xs px-2 py-3 text-center border border-white/[0.03] rounded flex-1 flex items-center justify-center">
-              Keine Abfahrten
+            <div className="text-white/25 text-xs px-2 py-3 text-center border border-white/[0.05] rounded flex-1 flex flex-col items-center justify-center gap-1">
+              <Clock className="w-4 h-4 text-white/15" />
+              Aktuell keine Abfahrten
             </div>
           )}
         </div>
       );
     };
 
+    // Störungs-Karte speisen: Streik zuerst, dann API-Störungen; generische Dauer-Hinweise raus
+    const disruptionItems = [];
+    if (config?.oepnv_streik_aktiv && config?.oepnv_streik_text) {
+      disruptionItems.push({ typ: 'streik', titel: 'Streik im Nahverkehr', text: config.oepnv_streik_text, linien: [], all_lines: true });
+    }
+    (data?.stoerungen || []).forEach(st => { if (!istGenerischerHinweis(st)) disruptionItems.push(st); });
+    // Priorität: Bild-Karten & hervorgehobene zuerst, danach max. 8 durchschalten
+    disruptionItems.sort((a, b) => (b.typ === 'streik') - (a.typ === 'streik')
+      || (b.highlighted ? 1 : 0) - (a.highlighted ? 1 : 0)
+      || (b.bild ? 1 : 0) - (a.bild ? 1 : 0));
+    disruptionItems.splice(8);
+
     return (
       <div className="fixed inset-0 overflow-hidden select-none cursor-none flex flex-col" style={{ background: '#0a0e17' }}>
         {overlays}
 
-        {/* Streik-Banner */}
-        {config?.oepnv_streik_aktiv && config?.oepnv_streik_text && (
-          <div className="shrink-0 bg-gradient-to-r from-red-900/50 via-red-800/40 to-red-900/50 border-b border-red-500/30 px-6 py-2 flex items-center gap-3">
-            <div className="flex items-center gap-2 shrink-0">
-              <AlertTriangle className="w-4 h-4 text-red-400" />
-              <span className="text-red-400 text-xs font-bold uppercase tracking-wider">Streik</span>
-            </div>
-            <span className={`text-red-200 ${s.station} font-medium`}>{config.oepnv_streik_text}</span>
-          </div>
-        )}
-
-        {/* Störungsbanner */}
-        {stoerungen.length > 0 && (
-          <div className="shrink-0 bg-red-900/30 border-b border-red-500/15 px-6 py-1 flex items-center gap-3 overflow-hidden">
-            <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-            <div className="overflow-hidden whitespace-nowrap">
-              <span className={`text-red-300 ${s.wegzeit} font-medium inline-block`}
-                style={{ animation: stoerungen.join(' — ').length > 80 ? 'marquee 30s linear infinite' : 'none' }}>
-                {stoerungen.join(' — ')}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-2 shrink-0 border-b border-white/[0.06]" style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(10,14,23,0.9) 100%)' }}>
+        {/* Header — mit schmaler Akzentlinie als Marken-Signatur (wie Slideshow) */}
+        <div className="flex items-center justify-between px-6 py-2 shrink-0" style={{ background: 'linear-gradient(180deg, rgba(15,23,42,0.95) 0%, rgba(10,14,23,0.9) 100%)', borderBottom: `2px solid ${accent}` }}>
           <div className="flex items-center gap-4">
             {config?.zeige_logo && logoUrl && (
               <img src={logoUrl} alt="" className="h-8 object-contain" />
             )}
-            <h1 className={`text-white ${s.header} font-semibold tracking-wide`}>{config?.name || config?.titel || 'Abfahrten'}</h1>
+            <h1 className={`text-white font-display ${s.header} font-bold tracking-wide`}>{config?.name || config?.titel || 'Abfahrten'}</h1>
           </div>
           <div className="flex items-center gap-5">
             {config?.zeige_wetter && wetter && (
@@ -1140,38 +1240,8 @@ export default function MonitorPage() {
           )}
         </div>
 
-        {/* Störungen & Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell) */}
-        {(data?.stoerungen || []).length > 0 && (
-          <div className="shrink-0 border-t border-amber-500/20 bg-amber-950/20 px-4 py-2" style={{ maxHeight: '28%' }}>
-            <div className="flex items-center gap-2 mb-1.5">
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span className="text-amber-300 text-xs font-bold uppercase tracking-wider">Störungen &amp; Baumaßnahmen</span>
-              <span className="text-amber-400/50 text-[10px]">({data.stoerungen.length})</span>
-            </div>
-            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-              {data.stoerungen.slice(0, 10).map((st, i) => (
-                <div key={i} className="shrink-0 w-72 bg-white/[0.03] border border-amber-500/15 rounded-lg px-3 py-2">
-                  <div className="flex items-center gap-1 flex-wrap mb-1">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${st.typ === 'bauarbeiten' ? 'bg-orange-500/25 text-orange-300' : 'bg-red-500/25 text-red-300'}`}>
-                      {st.typ === 'bauarbeiten' ? 'Bau' : 'Störung'}
-                    </span>
-                    {(st.linien || []).slice(0, 6).map((l, j) => (
-                      <span key={j} className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/75 font-bold">{l}</span>
-                    ))}
-                  </div>
-                  <div className="text-white text-xs font-semibold leading-tight mb-0.5">{st.titel}</div>
-                  {st.text && (
-                    <div className="text-white/50 text-[10px] leading-snug"
-                      style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {st.text}
-                    </div>
-                  )}
-                  {(st.von || st.bis) && <div className="text-amber-400/60 text-[9px] mt-1 tabular-nums">{st.von}{st.bis ? ` – ${st.bis}` : ''}</div>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Störungen / Baumaßnahmen / Streik — rotierende Karte mit Bild, blendet sich aus wenn nichts anliegt */}
+        <DisruptionCarousel items={disruptionItems} accent={accent} height="clamp(118px, 20vh, 240px)" />
 
         {/* Footer */}
         <div className="px-6 py-0.5 flex items-center justify-between text-white/[0.06] text-[8px] shrink-0">

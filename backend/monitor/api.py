@@ -332,6 +332,8 @@ def _fetch_stoerungen(config):
                 'quelle': 'manuell', 'typ': 'stoerung',
                 'titel': m.get('titel') or 'Hinweis', 'text': m.get('text') or '',
                 'linien': [], 'von': '', 'bis': '',
+                'all_lines': False, 'bild': m.get('bild') or '', 'haltestellen': [], 'vorschlag': '',
+                'highlighted': bool(m.get('highlighted')),
             })
     config.oepnv_stoerung_cache = result
     config.oepnv_stoerung_cache_zeit = timezone.now()
