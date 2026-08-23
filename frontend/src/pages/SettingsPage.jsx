@@ -109,11 +109,11 @@ export default function SettingsPage() {
                   onClick={() => { setActiveTab(tab.id); setMobileDetail(true); }}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                     active
-                      ? 'md:bg-blue-600/15 md:text-blue-400 text-gray-200 bg-gray-800/60'
+                      ? 'md:bg-accent/15 md:text-accent text-gray-200 bg-gray-800/60'
                       : 'text-gray-300 hover:bg-gray-800/70'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 shrink-0 ${active ? 'md:text-blue-400' : 'text-gray-400'}`} />
+                  <Icon className={`w-5 h-5 shrink-0 ${active ? 'md:text-accent' : 'text-gray-400'}`} />
                   <span className="flex-1 font-medium">{tab.name}</span>
                   <ChevronRight className="w-4 h-4 text-gray-500 md:hidden" />
                 </button>
@@ -158,7 +158,7 @@ export default function SettingsPage() {
                   disabled={!!forcedTheme || saving}
                   className={`relative p-4 rounded-xl border-2 transition-all ${
                     effectiveTheme === 'dark'
-                      ? 'border-blue-500 bg-blue-500/10'
+                      ? 'border-accent bg-accent/10'
                       : 'border-gray-700 hover:border-gray-600'
                   } ${forcedTheme ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -169,7 +169,7 @@ export default function SettingsPage() {
                     <span className="font-medium text-white">Dark</span>
                   </div>
                   {effectiveTheme === 'dark' && (
-                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-blue-500" />
+                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-accent" />
                   )}
                 </button>
 
@@ -179,7 +179,7 @@ export default function SettingsPage() {
                   disabled={!!forcedTheme || !hasPermission('theme.light_mode') || saving}
                   className={`relative p-4 rounded-xl border-2 transition-all ${
                     effectiveTheme === 'light'
-                      ? 'border-blue-500 bg-blue-500/10'
+                      ? 'border-accent bg-accent/10'
                       : 'border-gray-700 hover:border-gray-600'
                   } ${(forcedTheme || !hasPermission('theme.light_mode')) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -190,7 +190,7 @@ export default function SettingsPage() {
                     <span className="font-medium text-white">Light</span>
                   </div>
                   {effectiveTheme === 'light' && (
-                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-blue-500" />
+                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-accent" />
                   )}
                 </button>
 
@@ -200,7 +200,7 @@ export default function SettingsPage() {
                   disabled={!!forcedTheme || saving}
                   className={`relative p-4 rounded-xl border-2 transition-all ${
                     effectiveTheme === 'system'
-                      ? 'border-blue-500 bg-blue-500/10'
+                      ? 'border-accent bg-accent/10'
                       : 'border-gray-700 hover:border-gray-600'
                   } ${forcedTheme ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -211,7 +211,7 @@ export default function SettingsPage() {
                     <span className="font-medium text-white">System</span>
                   </div>
                   {effectiveTheme === 'system' && (
-                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-blue-500" />
+                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-accent" />
                   )}
                 </button>
               </div>
@@ -352,7 +352,7 @@ export default function SettingsPage() {
                     href={`${import.meta.env.VITE_KEYCLOAK_URL || 'https://auth.t410.de'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'technik-ag'}/account/#/security/signingin`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                    className="px-4 py-2 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
                   >
                     {profile?.two_factor_enabled ? 'Verwalten' : 'Aktivieren'}
                   </a>
@@ -439,7 +439,7 @@ function NotificationsTab() {
                 </button>
               ) : (
                 <button onClick={onSubscribe} disabled={busy}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm disabled:opacity-50">
+                  className="px-4 py-2 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg text-sm disabled:opacity-50">
                   {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Aktivieren'}
                 </button>
               )}
@@ -459,7 +459,7 @@ function NotificationsTab() {
 function NotifSwitch({ on, onClick, disabled, offColor = 'bg-gray-600' }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${on ? 'bg-blue-600' : offColor} disabled:opacity-40`}>
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${on ? 'bg-accent' : offColor} disabled:opacity-40`}>
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${on ? 'translate-x-5' : ''}`} />
     </button>
   );
@@ -584,14 +584,14 @@ function ProfileTab() {
       <div>
         <h3 className="text-lg font-semibold text-white mb-3">Profilbild</h3>
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-accent flex items-center justify-center">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
               : <User className="w-9 h-9 text-white" />
             }
           </div>
           <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg cursor-pointer">
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg cursor-pointer">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {profile?.avatar_url ? 'Bild ersetzen' : 'Bild hochladen'}
               <input type="file" className="hidden" accept="image/*"
@@ -682,13 +682,13 @@ function KalenderAboTab() {
                 onFocus={(e) => e.target.select()}
                 className="flex-1 min-w-[260px] bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
               <button onClick={copy}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg">
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
                 <Copy className="w-4 h-4" /> Kopieren
               </button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
               Tipp: In Apple Calendar als <code className="text-gray-400">webcal://</code>-Link öffnen —{' '}
-              <a href={webcalUrl} className="text-blue-400 underline">direkt abonnieren</a>.
+              <a href={webcalUrl} className="text-accent underline">direkt abonnieren</a>.
             </p>
           </div>
 

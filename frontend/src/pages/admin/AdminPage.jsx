@@ -237,7 +237,7 @@ export default function AdminPage() {
                     <>
                       <span className="text-sm text-gray-400">{selectedUserIds.size} ausgewählt</span>
                       <button onClick={() => setBulkOpen(true)}
-                        className="px-3 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                        className="px-3 py-1.5 text-sm bg-accent hover:bg-accent-hover text-white rounded-lg">
                         Bulk-Aktion…
                       </button>
                       <button onClick={() => setSelectedUserIds(new Set())}
@@ -254,7 +254,7 @@ export default function AdminPage() {
                 <div key={user.id} className="p-4 flex items-start gap-3">
                   {editingUser?.id !== user.id && (
                     <input type="checkbox"
-                      className="mt-3 rounded border-gray-600 bg-gray-700 text-blue-500"
+                      className="mt-3 rounded border-gray-600 bg-gray-700 text-accent"
                       checked={selectedUserIds.has(user.id)}
                       onChange={() => setSelectedUserIds((prev) => {
                         const next = new Set(prev);
@@ -295,7 +295,7 @@ export default function AdminPage() {
                               <button key={b.id} type="button" onClick={() => {
                                 const ids = isSelected ? editingUser.bereich_ids.filter(id => id !== b.id) : [...(editingUser.bereich_ids || []), b.id];
                                 setEditingUser({ ...editingUser, bereich_ids: ids });
-                              }} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                              }} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${isSelected ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
                                 {b.name}
                               </button>
                             );
@@ -342,7 +342,7 @@ export default function AdminPage() {
                         <div className="flex gap-2">
                           {[{ v: 'none', l: 'Keine', i: null }, { v: 'dark', l: 'Dark', i: Moon }, { v: 'light', l: 'Light', i: Sun }].map(o => (
                             <button key={o.v} onClick={() => setEditingUser({ ...editingUser, forced_theme: o.v })}
-                              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 ${(editingUser.forced_theme || 'none') === o.v ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300'}`}>
+                              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 ${(editingUser.forced_theme || 'none') === o.v ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}>
                               {o.i && <o.i className="w-4 h-4" />} {o.l}
                             </button>
                           ))}
@@ -352,7 +352,7 @@ export default function AdminPage() {
                   ) : (
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center">
                           <span className="text-white font-medium">{(user.first_name || user.username)?.charAt(0).toUpperCase() || '?'}</span>
                         </div>
                         <div>
@@ -364,7 +364,7 @@ export default function AdminPage() {
                           </div>
                           {user.discord_id && <div className="text-xs text-indigo-400">Discord: {user.discord_id}</div>}
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {user.bereiche?.map(b => <span key={b.id} className="px-1.5 py-0.5 text-xs bg-blue-600/20 text-blue-400 rounded">{b.name}</span>)}
+                            {user.bereiche?.map(b => <span key={b.id} className="px-1.5 py-0.5 text-xs bg-accent/20 text-accent rounded">{b.name}</span>)}
                             {user.permission_groups?.map(g => <span key={g.id} className="px-1.5 py-0.5 text-xs bg-purple-600/20 text-purple-400 rounded">{g.name}</span>)}
                           </div>
                         </div>
@@ -617,7 +617,7 @@ export default function AdminPage() {
               <button onClick={() => setBulkOpen(false)} disabled={bulkBusy}
                 className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">Abbrechen</button>
               <button onClick={runBulk} disabled={!bulkTarget || bulkBusy}
-                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                 {bulkBusy ? 'Läuft…' : 'Anwenden'}
               </button>
             </div>
@@ -811,7 +811,7 @@ function SystemTab() {
             </div>
             {globalDirty && (
               <button onClick={saveGlobal} disabled={globalSaving}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg">
+                className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg">
                 {globalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Speichern
               </button>

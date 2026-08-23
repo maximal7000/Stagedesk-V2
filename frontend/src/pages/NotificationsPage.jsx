@@ -71,12 +71,12 @@ export default function NotificationsPage() {
         <div className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-gray-400" />
           <h1 className="text-2xl font-bold text-white">Benachrichtigungen</h1>
-          {unread > 0 && <span className="text-sm text-blue-400">{unread} ungelesen</span>}
+          {unread > 0 && <span className="text-sm text-accent">{unread} ungelesen</span>}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setOnlyUnread((v) => !v)}
             className={`px-3 py-1.5 text-sm rounded-lg ${
-              onlyUnread ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              onlyUnread ? 'bg-accent text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
             }`}>
             {onlyUnread ? 'Nur ungelesen' : 'Alle'}
           </button>
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
         <ul className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
           {items.map((n) => (
             <li key={n.id}
-              className={`flex items-start gap-3 p-4 hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-blue-500/5'}`}>
+              className={`flex items-start gap-3 p-4 hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/5'}`}>
               <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${KIND_CLASS[n.kind] || 'bg-gray-500/20 text-gray-400'}`}>
                 {KIND_LABEL[n.kind] || n.kind}
               </span>

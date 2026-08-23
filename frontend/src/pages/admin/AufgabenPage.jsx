@@ -135,7 +135,7 @@ export default function AufgabenPage() {
           onKeyDown={(e) => e.key === 'Enter' && addAufgabe()}
           className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500" />
         <button onClick={addAufgabe} disabled={!neuerTitel.trim()}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg inline-flex items-center gap-2">
+          className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg inline-flex items-center gap-2">
           <Plus className="w-4 h-4" /> Hinzufügen
         </button>
       </div>
@@ -191,7 +191,7 @@ function SortableAufgabe({
     <li ref={setNodeRef} style={style}
       className={`bg-gray-900 border rounded-xl p-4 ${
         done ? 'border-green-800/40 opacity-70' : 'border-gray-800 hover:border-gray-700'
-      } ${isDragging ? 'ring-2 ring-blue-500' : ''}`}>
+      } ${isDragging ? 'ring-2 ring-accent' : ''}`}>
       <div className="flex items-start gap-3 flex-wrap">
         <button {...attributes} {...listeners}
           className="shrink-0 mt-1 text-gray-500 hover:text-white cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
@@ -240,7 +240,7 @@ function SortableAufgabe({
                       className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700/60 cursor-pointer">
                       <input type="checkbox" checked={on}
                         onChange={() => toggleAssign(a, u.id)}
-                        className="rounded border-gray-600 bg-gray-700 text-blue-500" />
+                        className="rounded border-gray-600 bg-gray-700 text-accent" />
                       <span className="text-sm text-white">{u.name}</span>
                     </label>
                   );

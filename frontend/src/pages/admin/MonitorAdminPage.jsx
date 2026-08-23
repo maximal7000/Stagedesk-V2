@@ -87,7 +87,7 @@ function Section({ id, area, plain, title, description, icon: Icon, iconColor, o
 function Toggle({ checked, onChange, disabled }) {
   return (
     <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
-      className={`relative w-10 h-5.5 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-blue-600' : 'bg-gray-700'}`}>
+      className={`relative w-10 h-5.5 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-accent' : 'bg-gray-700'}`}>
       <span className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${checked ? 'left-5' : 'left-0.5'}`} />
     </button>
   );
@@ -1547,7 +1547,7 @@ export default function MonitorAdminPage() {
               <span className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Ansichten</span>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setShowPreview(!showPreview)}
-                  className={`p-1.5 rounded-lg transition-colors ${showPreview ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
+                  className={`p-1.5 rounded-lg transition-colors ${showPreview ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
                   title="Live-Vorschau ein/aus">
                   <Eye className="w-4 h-4" />
                 </button>
@@ -2714,7 +2714,7 @@ export default function MonitorAdminPage() {
                   {canEdit && (
                     <div className="flex items-center gap-1 ml-4">
                       <button onClick={() => { setNewAnkuendigung(null); setEditingAnkuendigung({ ...a }); }}
-                        className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
+                        className="p-2 text-gray-400 hover:text-accent hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
                       <button onClick={() => handleDeleteAnkuendigung(a.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                     </div>
                   )}
@@ -3706,7 +3706,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
                   modus === v
                     ? (v === 'manuell_an' ? 'bg-green-600 text-white'
                        : v === 'manuell_aus' ? 'bg-red-600 text-white'
-                       : 'bg-blue-600 text-white')
+                       : 'bg-accent text-white')
                     : 'bg-gray-800 text-gray-400 hover:text-white'
                 } disabled:opacity-50`}>
                 {l}
@@ -4038,7 +4038,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
                         ev.aktiv ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
                       {ev.aktiv ? 'Deaktivieren' : 'Aktivieren'}
                     </button>
-                    <button onClick={() => start(ev)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
+                    <button onClick={() => start(ev)} className="p-2 text-gray-400 hover:text-accent hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
                     <button onClick={() => onDelete(ev.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
                   </>
                 )}
@@ -4160,7 +4160,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
             <div key={v.id} className="flex items-center gap-2 text-xs text-gray-300">
               <span className="w-2 h-2 rounded-full" style={{ background: v.farbe }} />
               <span className="flex-1">{v.name} · {v.dauer_minuten} Min · {v.anzeige_modus}</span>
-              <button onClick={() => setDraft({ ...v })} className="p-1 text-gray-400 hover:text-blue-400"><Edit className="w-3.5 h-3.5" /></button>
+              <button onClick={() => setDraft({ ...v })} className="p-1 text-gray-400 hover:text-accent"><Edit className="w-3.5 h-3.5" /></button>
               <button onClick={() => onDelete(v.id)} className="p-1 text-gray-400 hover:text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
             </div>
           ))}
@@ -4217,7 +4217,7 @@ function WebUntisLinkManager({ links, canEdit, onSave, onDelete }) {
             </div>
             {canEdit && (
               <div className="flex items-center gap-1 ml-3 shrink-0">
-                <button onClick={() => start(l)} className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
+                <button onClick={() => start(l)} className="p-2 text-gray-400 hover:text-accent hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
                 <button onClick={() => onDelete(l.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
               </div>
             )}
@@ -4381,7 +4381,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
       <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-500/20">
         <button onClick={onCancel} className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
         <button onClick={submit} disabled={!titel.trim() || bildschirmIds.length === 0}
-          className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-lg flex items-center gap-2">
+          className="px-4 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm rounded-lg flex items-center gap-2">
           <Save className="w-3.5 h-3.5" /> Speichern
         </button>
       </div>
