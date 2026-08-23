@@ -194,7 +194,10 @@ export default function DashboardLayout({ children }) {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800">
-          <h1 className="text-xl font-bold text-white">Stagedesk</h1>
+          <div className="flex items-center gap-2">
+            <span className="w-2.5 h-6 rounded-sm bg-accent shrink-0" />
+            <h1 className="font-display text-xl font-bold tracking-tight text-white">Stagedesk</h1>
+          </div>
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400 hover:text-white"
@@ -231,7 +234,7 @@ export default function DashboardLayout({ children }) {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-accent text-white'
                       : 'text-gray-400 hover:text-white hover:bg-gray-800'
                   }`}
                 >
@@ -324,7 +327,7 @@ export default function DashboardLayout({ children }) {
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition-colors text-left"
               >
-                <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center shrink-0">
+                <div className="w-8 h-8 rounded-full overflow-hidden bg-accent flex items-center justify-center shrink-0">
                   {profile?.avatar_url ? (
                     <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                   ) : (
@@ -401,10 +404,10 @@ export default function DashboardLayout({ children }) {
             <Menu className="w-6 h-6" />
           </button>
           
-          <div className="hidden lg:block">
-            <h2 className="text-lg font-semibold text-white">
-              {getPageTitle()}
-            </h2>
+          <div className="hidden lg:flex items-center gap-1.5 text-sm text-gray-500">
+            <span className="text-gray-600">Stagedesk</span>
+            <span className="text-gray-700">/</span>
+            <span className="font-medium text-gray-300">{getPageTitle()}</span>
           </div>
 
           <div className="flex items-center gap-2 ml-auto">
@@ -418,7 +421,7 @@ export default function DashboardLayout({ children }) {
             <NotificationBell />
             {/* Mobile User Icon */}
             <div className="lg:hidden">
-              <div className="w-8 h-8 rounded-full overflow-hidden bg-blue-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full overflow-hidden bg-accent flex items-center justify-center">
                 {profile?.avatar_url ? (
                   <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
                 ) : (

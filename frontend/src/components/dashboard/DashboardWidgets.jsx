@@ -6,9 +6,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Calendar, ChevronRight, Loader2, AlertTriangle, Package, Boxes, Award,
+  Calendar, ChevronRight, Loader2, AlertTriangle, Package, Boxes, Award, CheckCircle2,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
+import { StatTile, EmptyState } from '../ui';
 
 function formatDatum(d) {
   if (!d) return '–';
@@ -42,16 +43,15 @@ function MeineVeranstaltungenWidget() {
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <Calendar className="w-5 h-5" /> Meine Veranstaltungen
         </h2>
-        <Link to="/veranstaltung" className="text-sm text-blue-400 hover:text-blue-300">
+        <Link to="/veranstaltung" className="text-sm text-accent hover:opacity-80">
           Alle anzeigen
         </Link>
       </div>
       {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
+        <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-gray-500" /></div>
       ) : items.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
-          <p>Du bist keiner Veranstaltung zugewiesen.</p>
-        </div>
+        <EmptyState icon={Calendar} title="Keine Veranstaltung zugewiesen"
+          description="Sobald dir eine Veranstaltung zugeteilt wird, erscheint sie hier." />
       ) : (
         <ul className="space-y-2">
           {items.map((v) => (
@@ -59,12 +59,12 @@ function MeineVeranstaltungenWidget() {
               <Link to={`/veranstaltung/${v.id}`}
                 className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-800 transition-colors group">
                 <div>
-                  <span className="font-medium text-white group-hover:text-blue-400">{v.titel}</span>
+                  <span className="font-medium text-white group-hover:text-accent">{v.titel}</span>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {formatDatum(v.datum_von)}{v.ort && ` · ${v.ort}`}
                   </p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-blue-400" />
+                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-accent" />
               </Link>
             </li>
           ))}
@@ -110,32 +110,11 @@ function InventarStatsWidget() {
   if (!stats) return null;
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div className="flex items-center gap-2 text-gray-400 mb-1">
-          <Boxes className="w-4 h-4" /><span className="text-sm">Items gesamt</span>
-        </div>
-        <p className="text-2xl font-bold text-white">{stats.total_items}</p>
-      </div>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div className="flex items-center gap-2 text-gray-400 mb-1">
-          <Package className="w-4 h-4" /><span className="text-sm">Aktive Ausleihen</span>
-        </div>
-        <p className="text-2xl font-bold text-blue-400">{stats.aktive_ausleihen}</p>
-      </div>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div className="flex items-center gap-2 text-gray-400 mb-1">
-          <span className="text-sm">Verfügbar</span>
-        </div>
-        <p className="text-2xl font-bold text-green-400">{stats.status_counts?.verfuegbar || 0}</p>
-      </div>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div className="flex items-center gap-2 text-gray-400 mb-1">
-          <AlertTriangle className="w-4 h-4" /><span className="text-sm">Überfällig</span>
-        </div>
-        <p className={`text-2xl font-bold ${stats.ueberfaellige_ausleihen > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-          {stats.ueberfaellige_ausleihen}
-        </p>
-      </div>
+      <StatTile icon={Boxes} label="Items gesamt" value={stats.total_items} />
+      <StatTile icon={Package} label="Aktive Ausleihen" value={stats.aktive_ausleihen} />
+      <StatTile icon={CheckCircle2} label="Verfügbar" value={stats.status_counts?.verfuegbar || 0} tone="positive" />
+      <StatTile icon={AlertTriangle} label="Überfällig" value={stats.ueberfaellige_ausleihen}
+        tone={stats.ueberfaellige_ausleihen > 0 ? 'danger' : 'default'} />
     </div>
   );
 }
@@ -188,19 +167,19 @@ function SchnellzugriffWidget() {
         <Link to="/veranstaltung/neu"
           className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group">
           <div className="text-3xl mb-2">📅</div>
-          <h3 className="font-semibold text-white mb-1 group-hover:text-blue-400">Neue Veranstaltung</h3>
+          <h3 className="font-semibold text-white mb-1 group-hover:text-accent">Neue Veranstaltung</h3>
           <p className="text-sm text-gray-400">Veranstaltung anlegen</p>
         </Link>
         <Link to="/haushalte"
           className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group">
           <div className="text-3xl mb-2">🏠</div>
-          <h3 className="font-semibold text-white mb-1 group-hover:text-blue-400">Haushalte</h3>
+          <h3 className="font-semibold text-white mb-1 group-hover:text-accent">Haushalte</h3>
           <p className="text-sm text-gray-400">Haushalte verwalten</p>
         </Link>
         <Link to="/inventar"
           className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group">
           <div className="text-3xl mb-2">📦</div>
-          <h3 className="font-semibold text-white mb-1 group-hover:text-blue-400">Inventar</h3>
+          <h3 className="font-semibold text-white mb-1 group-hover:text-accent">Inventar</h3>
           <p className="text-sm text-gray-400">Inventar durchsuchen</p>
         </Link>
       </div>
@@ -225,7 +204,7 @@ function KompetenzPunkteWidget() {
         <div className="grid grid-cols-3 gap-3">
           <div>
             <div className="text-xs text-gray-400 uppercase">Punkte</div>
-            <div className="text-2xl font-bold text-blue-400 mt-1">{stats.punkte}</div>
+            <div className="text-2xl font-bold text-accent mt-1">{stats.punkte}</div>
           </div>
           <div>
             <div className="text-xs text-gray-400 uppercase">Aktiv</div>

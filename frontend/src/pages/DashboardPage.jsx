@@ -3,10 +3,11 @@
  */
 import { useState, useEffect } from 'react';
 import { useAuth } from 'react-oidc-context';
-import { Settings, Loader2 } from 'lucide-react';
+import { Settings, Loader2, LayoutDashboard } from 'lucide-react';
 import apiClient from '../lib/api';
 import { WIDGET_REGISTRY } from '../components/dashboard/DashboardWidgets';
 import DashboardSettingsModal from '../components/dashboard/DashboardSettingsModal';
+import { PageHeader, Button, EmptyState } from '../components/ui';
 
 export default function DashboardPage() {
   const auth = useAuth();
@@ -20,33 +21,25 @@ export default function DashboardPage() {
       .catch(() => setWidgets([]));
   }, []);
 
+  const name = (user?.given_name || user?.family_name)
+    ? [user?.given_name, user?.family_name].filter(Boolean).join(' ')
+    : (user?.name || user?.preferred_username);
+
   return (
-    <div className="space-y-8">
-      {/* Welcome */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
-            Willkommen zurück, {(user?.given_name || user?.family_name)
-              ? [user?.given_name, user?.family_name].filter(Boolean).join(' ')
-              : (user?.name || user?.preferred_username)}! 👋
-          </h1>
-          <p className="text-gray-400">Schön, dass du da bist.</p>
-        </div>
-        <button onClick={() => setShowSettings(true)}
-          className="flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-sm text-gray-300 rounded-lg shrink-0">
-          <Settings className="w-4 h-4" /> Anpassen
-        </button>
-      </div>
+    <div className="max-w-6xl space-y-8">
+      <PageHeader
+        title={`Willkommen zurück, ${name}! 👋`}
+        meta="Schön, dass du da bist."
+        actions={<Button variant="secondary" icon={Settings} onClick={() => setShowSettings(true)}>Anpassen</Button>}
+      />
 
       {widgets === null ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
       ) : widgets.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-          <p className="text-gray-400 mb-4">Dein Dashboard ist leer.</p>
-          <button onClick={() => setShowSettings(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
-            <Settings className="w-4 h-4" /> Widgets hinzufügen
-          </button>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <EmptyState icon={LayoutDashboard} title="Dein Dashboard ist leer"
+            description="Füge Widgets hinzu, um hier Kennzahlen und Aktivitäten auf einen Blick zu sehen."
+            action={<Button variant="primary" icon={Settings} onClick={() => setShowSettings(true)}>Widgets hinzufügen</Button>} />
         </div>
       ) : (
         widgets.map((code) => {
