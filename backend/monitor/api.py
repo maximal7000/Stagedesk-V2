@@ -678,6 +678,9 @@ def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = 
 
     for key, value in data.items():
         setattr(config, key, value)
+    # ÖPNV-/Störungs-Cache verwerfen, damit Config-Änderungen sofort greifen
+    config.oepnv_cache_zeit = None
+    config.oepnv_stoerung_cache_zeit = None
     config.save()
     return config
 
