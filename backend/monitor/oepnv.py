@@ -824,7 +824,7 @@ def _product_icon(product):
 SWL_STORYBLOK_TOKEN = "UDFTUVH6rpOAv9hnKKsl4gtt"  # öffentlicher CDN-Read-Token (aus swhl.de)
 SWL_STORYBLOK_BASE = "https://api.storyblok.com/v2/cdn"
 
-_LINE_RE = re.compile(r'\b(ICE|IC|EC|RE|RB|R|S|X|SH|ME|AKN|ERB|NBE)\s?-?\s?(\d{1,4})\b', re.I)
+_LINE_RE = re.compile(r'\b(RE|RB|X|SH|ME|AKN|ERB|NBE|S)\s?-?\s?(\d{1,3})\b')
 
 
 def _normalize_line(s):
