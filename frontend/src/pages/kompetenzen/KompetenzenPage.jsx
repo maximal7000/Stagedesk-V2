@@ -243,7 +243,7 @@ function StufenEditor({ uk, onSave, onClose }) {
           className="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-xs"
         />
         <button type="button" disabled={saving} onClick={() => save(parse())}
-                className="px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-500 disabled:opacity-50 text-xs">
+                className="px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 text-xs">
           Speichern
         </button>
         <button type="button" disabled={saving || istUnbegrenzt} onClick={() => save([0])}
@@ -287,7 +287,7 @@ function Scoreboard({ data, currentKid }) {
         return (
           <div key={entry.user_keycloak_id}
                className={`flex items-center gap-4 p-4 rounded-lg border ${
-                 isMe ? 'bg-blue-500/10 border-blue-500/40' : 'bg-gray-900 border-gray-800'
+                 isMe ? 'bg-accent/10 border-accent/40' : 'bg-gray-900 border-gray-800'
                }`}>
             <div className="w-10 text-center font-bold text-lg text-gray-400">
               {medal || `#${entry.rang}`}
@@ -296,7 +296,7 @@ function Scoreboard({ data, currentKid }) {
               <div className="font-medium text-white truncate">
                 {(entry.user_first_name || entry.user_last_name)
                   ? [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ')
-                  : entry.user_username} {isMe && <span className="text-xs text-blue-400">(Du)</span>}
+                  : entry.user_username} {isMe && <span className="text-xs text-accent">(Du)</span>}
               </div>
               <div className="text-xs text-gray-500">
                 {entry.anzahl_aktiv} / {entry.anzahl_gesamt} Kompetenzen aktiv
@@ -326,7 +326,7 @@ function StatsCards({ stats }) {
       </div>
       <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg">
         <div className="text-gray-400 text-xs uppercase">Punkte</div>
-        <div className="text-2xl font-bold text-blue-400 mt-1">{stats.punkte}</div>
+        <div className="text-2xl font-bold text-accent mt-1">{stats.punkte}</div>
       </div>
       <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg">
         <div className="text-gray-400 text-xs uppercase">Badges</div>
@@ -599,7 +599,7 @@ function TabButton({ active, onClick, icon: Icon, children }) {
       onClick={onClick}
       className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
         active
-          ? 'border-blue-500 text-white'
+          ? 'border-accent text-white'
           : 'border-transparent text-gray-400 hover:text-white'
       }`}
     >

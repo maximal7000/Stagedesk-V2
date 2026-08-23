@@ -250,7 +250,7 @@ export default function KalenderPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Kalender</h1>
+          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">Kalender</h1>
           <p className="text-gray-400 mt-1">Plane und verwalte Events</p>
         </div>
 
@@ -259,28 +259,28 @@ export default function KalenderPage() {
           <div className="flex bg-gray-800 rounded-lg p-1">
             <button
               onClick={() => setViewMode('month')}
-              className={`p-2 rounded ${viewMode === 'month' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`p-2 rounded ${viewMode === 'month' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
               title="Monat"
             >
               <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`p-2 rounded ${viewMode === 'week' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`p-2 rounded ${viewMode === 'week' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
               title="Woche"
             >
               <CalendarRange className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('day')}
-              className={`p-2 rounded ${viewMode === 'day' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`p-2 rounded ${viewMode === 'day' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
               title="Tag"
             >
               <CalendarDays className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`p-2 rounded ${viewMode === 'list' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
               title="Liste"
             >
               <List className="w-4 h-4" />
@@ -292,7 +292,7 @@ export default function KalenderPage() {
             <button
               onClick={() => setShowFilter(!showFilter)}
               className={`p-2 rounded-lg transition-colors ${
-                selectedKategorie ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                selectedKategorie ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
               }`}
             >
               <Filter className="w-5 h-5" />
@@ -344,7 +344,7 @@ export default function KalenderPage() {
 
           <button
             onClick={() => handleCreateEvent()}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
+            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg"
           >
             <Plus className="w-5 h-5" />
             <span className="hidden sm:inline">Neues Event</span>
@@ -365,7 +365,7 @@ export default function KalenderPage() {
           <h2 className="text-xl font-semibold text-white">{getHeaderTitle()}</h2>
           <button
             onClick={goToToday}
-            className="px-3 py-1 text-sm text-blue-400 hover:text-blue-300 hover:bg-blue-900/20 rounded"
+            className="px-3 py-1 text-sm text-accent hover:opacity-80 hover:bg-accent/10 rounded"
           >
             Heute
           </button>
@@ -382,7 +382,7 @@ export default function KalenderPage() {
       {/* Kalender Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+          <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
         </div>
       ) : error ? (
         <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
@@ -421,7 +421,7 @@ export default function KalenderPage() {
                     >
                       <div className={`text-sm font-medium mb-1 ${
                         isCurrentDay 
-                          ? 'w-7 h-7 flex items-center justify-center bg-blue-600 text-white rounded-full' 
+                          ? 'w-7 h-7 flex items-center justify-center bg-accent text-white rounded-full' 
                           : isCurrentMonth ? 'text-white' : 'text-gray-600'
                       }`}>
                         {format(day, 'd')}
@@ -454,11 +454,11 @@ export default function KalenderPage() {
                   <div
                     key={day.toISOString()}
                     className={`p-3 text-center border-l border-gray-800 ${
-                      isToday(day) ? 'bg-blue-900/20' : 'bg-gray-800/50'
+                      isToday(day) ? 'bg-accent/10' : 'bg-gray-800/50'
                     }`}
                   >
                     <div className="text-xs text-gray-400">{format(day, 'EEE', { locale: de })}</div>
-                    <div className={`text-lg font-semibold ${isToday(day) ? 'text-blue-400' : 'text-white'}`}>
+                    <div className={`text-lg font-semibold ${isToday(day) ? 'text-accent' : 'text-white'}`}>
                       {format(day, 'd')}
                     </div>
                   </div>

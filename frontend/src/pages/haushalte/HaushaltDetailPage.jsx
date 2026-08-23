@@ -116,7 +116,7 @@ const EditingRow = memo(function EditingRow({
           <button
             onClick={handleParse}
             disabled={!localData.link || parsingId === item.id}
-            className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white rounded"
+            className="p-1.5 bg-accent hover:bg-accent-hover disabled:bg-gray-700 text-white rounded"
             title="Auto-Vervollständigen"
           >
             {parsingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
@@ -230,7 +230,7 @@ const NewRowComponent = memo(function NewRowComponent({
           <button
             onClick={handleParse}
             disabled={!localData.link || parsingId === 'new'}
-            className="p-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white rounded"
+            className="p-1.5 bg-accent hover:bg-accent-hover disabled:bg-gray-700 text-white rounded"
           >
             {parsingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
           </button>
@@ -560,7 +560,7 @@ export default function HaushaltDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+        <Loader2 className="w-12 h-12 text-gray-500 animate-spin" />
       </div>
     );
   }
@@ -668,7 +668,7 @@ export default function HaushaltDetailPage() {
         </td>
         {/* Name + Beschreibung-Toggle */}
         <td className="p-2">
-          <span className="text-white cursor-pointer hover:text-blue-400"
+          <span className="text-white cursor-pointer hover:text-accent"
             onClick={openEdit}>
             {item.name}
           </span>
@@ -682,17 +682,17 @@ export default function HaushaltDetailPage() {
         <td className="p-2">
           {item.link ? (
             <a href={item.link} target="_blank" rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 flex items-center gap-1 text-sm">
+              className="text-accent hover:opacity-80 flex items-center gap-1 text-sm">
               <ExternalLink className="w-3 h-3" /> Link
             </a>
           ) : (
             <span className="text-gray-600 text-sm">—</span>
           )}
         </td>
-        <td className="p-2 text-right text-gray-300 cursor-pointer hover:text-blue-400" onClick={openEdit}>
+        <td className="p-2 text-right text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
           {formatPreis(item.preis)}
         </td>
-        <td className="p-2 text-center text-gray-300 cursor-pointer hover:text-blue-400" onClick={openEdit}>
+        <td className="p-2 text-center text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
           {item.anzahl}
         </td>
         <td className="p-2 text-right text-white font-medium">
@@ -716,7 +716,7 @@ export default function HaushaltDetailPage() {
         <td className="p-2">
           <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={openEdit}
-              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded">
+              className="p-1.5 text-gray-400 hover:text-accent hover:bg-gray-700 rounded">
               <Edit className="w-4 h-4" />
             </button>
             <button onClick={() => handleDeleteArtikel(item.id)}
@@ -848,10 +848,10 @@ export default function HaushaltDetailPage() {
         </button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">{haushalt.name}</h1>
+            <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">{haushalt.name}</h1>
             <button
               onClick={() => setShowEditModal(true)}
-              className="p-1.5 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded"
+              className="p-1.5 text-gray-400 hover:text-accent hover:bg-gray-800 rounded"
             >
               <Edit className="w-4 h-4" />
             </button>
@@ -948,7 +948,7 @@ export default function HaushaltDetailPage() {
             <span className="text-sm text-gray-400">{selectedIds.size} ausgewählt</span>
             <select onChange={(e) => { if (e.target.value) { bulkSetStatus(e.target.value); e.target.value = ''; } }}
               disabled={bulkBusy}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm rounded px-2 py-2 border-0">
+              className="bg-accent hover:bg-accent-hover text-white text-sm rounded px-2 py-2 border-0">
               <option value="">Status setzen…</option>
               {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900">{l}</option>)}
             </select>

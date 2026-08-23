@@ -400,7 +400,7 @@ export default function AnwesenheitPage() {
   if (loading && !listId) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
       </div>
     );
   }
@@ -417,7 +417,7 @@ export default function AnwesenheitPage() {
             <ArrowLeft className="w-5 h-5" /> Zurück
           </button>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+            <Loader2 className="w-8 h-8 text-gray-500 animate-spin" />
           </div>
         </div>
       );
@@ -507,14 +507,14 @@ export default function AnwesenheitPage() {
           <div className="flex gap-2 overflow-x-auto pb-1">
             <button onClick={() => setActiveTerminId(null)}
               className={`shrink-0 px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                activeTerminId === null ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+                activeTerminId === null ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
               }`}>
               Gesamt
             </button>
             {termine.map(t => (
               <button key={t.id} onClick={() => setActiveTerminId(t.id)}
                 className={`shrink-0 px-3 py-1.5 text-sm rounded-lg transition-colors flex items-center gap-1.5 ${
-                  activeTerminId === t.id ? 'bg-blue-600 text-white' : t.ist_vergangen ? 'bg-gray-800/50 text-gray-500 hover:text-gray-300' : 'bg-gray-800 text-gray-400 hover:text-white'
+                  activeTerminId === t.id ? 'bg-accent text-white' : t.ist_vergangen ? 'bg-gray-800/50 text-gray-500 hover:text-gray-300' : 'bg-gray-800 text-gray-400 hover:text-white'
                 }`}>
                 <Calendar className="w-3.5 h-3.5" />
                 {t.titel || new Date(t.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
@@ -884,7 +884,7 @@ export default function AnwesenheitPage() {
               <div className="flex gap-2 mt-6">
                 <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
                 <button onClick={handleCreate} disabled={saving || !createForm.titel}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Erstellen
                 </button>
@@ -923,14 +923,14 @@ export default function AnwesenheitPage() {
                   </div>
                 ))}
                 <button onClick={() => setTermineForm([...termineForm, { id: null, titel: '', datum: '', beginn: '', ende: '', notizen: '' }])}
-                  className="flex items-center gap-2 w-full p-3 text-sm text-blue-400 hover:text-blue-300 hover:bg-gray-800 rounded-lg border border-dashed border-gray-700">
+                  className="flex items-center gap-2 w-full p-3 text-sm text-accent hover:opacity-80 hover:bg-gray-800 rounded-lg border border-dashed border-gray-700">
                   <Plus className="w-4 h-4" /> Termin hinzufügen
                 </button>
               </div>
               <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
                 <button onClick={() => setShowTermineModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
                 <button onClick={handleSaveTermine} disabled={saving}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Speichern
                 </button>
@@ -999,7 +999,7 @@ export default function AnwesenheitPage() {
               <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
                 <button onClick={() => setShowTeilnehmerModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
                 <button onClick={handleAddTeilnehmer} disabled={selectedBenutzer.length === 0 || saving}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                   Hinzufügen ({selectedBenutzer.length})
                 </button>
@@ -1040,7 +1040,7 @@ export default function AnwesenheitPage() {
               <div className="flex gap-2 mt-6">
                 <button onClick={() => setShowKlonModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
                 <button onClick={handleKlonen} disabled={saving}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
                   Klonen
                 </button>
@@ -1199,7 +1199,7 @@ export default function AnwesenheitPage() {
                     toast.success('Gespeichert');
                   } catch (err) { handleApiError(err, 'Speichern fehlgeschlagen'); }
                 }}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
+                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg">
                   <Check className="w-4 h-4" /> Speichern
                 </button>
               </div>
@@ -1240,12 +1240,12 @@ export default function AnwesenheitPage() {
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">Anwesenheit</h1>
+          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">Anwesenheit</h1>
           <p className="text-gray-400">Anwesenheitslisten verwalten und Status erfassen</p>
         </div>
         {hasPermission('anwesenheit.create') && (
           <button onClick={() => { setCreateForm({ titel: '', beschreibung: '', ort: '' }); setShowCreateModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
+            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg">
             <Plus className="w-5 h-5" /> Neue Liste
           </button>
         )}
@@ -1333,7 +1333,7 @@ export default function AnwesenheitPage() {
             <div className="flex gap-2 mt-6">
               <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
               <button onClick={handleCreate} disabled={saving || !createForm.titel}
-                className="flex items-center justify-center gap-2 flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg">
+                className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Erstellen
               </button>

@@ -175,7 +175,7 @@ export default function KategorienPage() {
         <button
           onClick={onSave}
           disabled={isSaving || !data.name}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg"
+          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg"
         >
           {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {isNew ? 'Erstellen' : 'Speichern'}
@@ -189,13 +189,13 @@ export default function KategorienPage() {
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Event-Kategorien</h1>
+          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">Event-Kategorien</h1>
           <p className="text-gray-400 mt-1">Verwalte Kategorien für deine Events</p>
         </div>
 
         <button
           onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg"
+          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg"
         >
           <Plus className="w-5 h-5" />
           Neue Kategorie
@@ -222,7 +222,7 @@ export default function KategorienPage() {
       {/* Kategorien Liste */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
+          <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
         </div>
       ) : error ? (
         <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
@@ -234,7 +234,7 @@ export default function KategorienPage() {
           <p className="text-gray-400">Keine Kategorien vorhanden</p>
           <button
             onClick={() => setShowNew(true)}
-            className="mt-4 text-blue-400 hover:text-blue-300"
+            className="mt-4 text-accent hover:opacity-80"
           >
             Erste Kategorie erstellen
           </button>

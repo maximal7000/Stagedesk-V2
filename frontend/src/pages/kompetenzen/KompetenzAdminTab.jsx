@@ -168,7 +168,7 @@ function Section({ title, onAdd, children, extra }) {
         <h3 className="font-semibold text-white">{title}</h3>
         <div className="flex-1" />
         {extra}
-        <button onClick={onAdd} className="flex items-center gap-1 text-sm px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-500">
+        <button onClick={onAdd} className="flex items-center gap-1 text-sm px-3 py-1.5 bg-accent text-white rounded hover:bg-accent-hover">
           <Plus className="w-4 h-4" /> Neu
         </button>
       </div>
@@ -292,7 +292,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
           <button onClick={() => setEditing(null)} className="px-4 py-2 text-gray-400 hover:text-white">
             Abbrechen
           </button>
-          <button onClick={onSave} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500">
+          <button onClick={onSave} className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover">
             <Save className="w-4 h-4" /> Speichern
           </button>
         </div>
@@ -393,7 +393,7 @@ function StandardStufenSection({ settings, onSaved }) {
           ∞
         </button>
         <button onClick={saveDefault} disabled={saving}
-                className="flex items-center gap-1 px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 disabled:opacity-50">
+                className="flex items-center gap-1 px-3 py-2 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50">
           <Save className="w-4 h-4" /> Speichern
         </button>
       </div>

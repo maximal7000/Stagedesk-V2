@@ -65,3 +65,4 @@ dist-ssr/
 # Logs
 logs/
 *.log
+*.kate-swp

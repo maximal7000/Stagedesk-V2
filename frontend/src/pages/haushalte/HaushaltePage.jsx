@@ -95,7 +95,7 @@ export default function HaushaltePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Meine Haushalte</h1>
+          <h1 className="font-display text-[1.7rem] leading-none font-bold text-white mb-2">Meine Haushalte</h1>
           <div className="flex items-center gap-3">
             <p className="text-gray-400">Verwalte deine Haushalte und Budget</p>
             {/* Live-Update Status */}
@@ -122,7 +122,7 @@ export default function HaushaltePage() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors"
         >
           <Plus className="w-5 h-5" />
           Neuer Haushalt
@@ -132,7 +132,7 @@ export default function HaushaltePage() {
       {/* Haushalte Grid */}
       {loading ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Loader2 className="w-12 h-12 text-blue-500 mx-auto mb-4 animate-spin" />
+          <Loader2 className="w-12 h-12 text-gray-500 mx-auto mb-4 animate-spin" />
           <p className="text-gray-400">Haushalte werden geladen...</p>
         </div>
       ) : error ? (
@@ -152,7 +152,7 @@ export default function HaushaltePage() {
           <p className="text-gray-400 mb-6">Erstelle deinen ersten Haushalt, um loszulegen!</p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors"
           >
             <Plus className="w-5 h-5" />
             Ersten Haushalt erstellen
@@ -185,7 +185,7 @@ export default function HaushaltePage() {
                   <div className="flex gap-2">
                     <button 
                       onClick={() => handleEditHaushalt(haushalt)}
-                      className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-lg transition-colors"
+                      className="p-2 text-gray-400 hover:text-accent hover:bg-gray-800 rounded-lg transition-colors"
                       title="Bearbeiten"
                     >
                       <Edit className="w-4 h-4" />
@@ -245,7 +245,7 @@ export default function HaushaltePage() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => handleAddArtikel(haushalt)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     Artikel hinzufügen
