@@ -330,7 +330,9 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
         # Per-Station API-Auswahl: "db", "nahsh", "beide" (default: globale Einstellung)
         station_api = station.get("api", "")
         if station_api == "db":
-            st_use_db, st_use_nahsh = True, False
+            # DB bevorzugt; falls DB nichts liefert (z.B. Bushaltestelle ohne
+            # EVA-Nummer), automatisch auf NAH.SH zurückfallen.
+            st_use_db, st_use_nahsh = True, True
         elif station_api == "nahsh":
             st_use_db, st_use_nahsh = False, True
         elif station_api == "beide":
