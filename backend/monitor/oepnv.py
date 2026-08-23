@@ -330,9 +330,7 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
         # Per-Station API-Auswahl: "db", "nahsh", "beide" (default: globale Einstellung)
         station_api = station.get("api", "")
         if station_api == "db":
-            # DB bevorzugt; falls DB nichts liefert (z.B. Bushaltestelle ohne
-            # EVA-Nummer), automatisch auf NAH.SH zurückfallen.
-            st_use_db, st_use_nahsh = True, True
+            st_use_db, st_use_nahsh = True, False
         elif station_api == "nahsh":
             st_use_db, st_use_nahsh = False, True
         elif station_api == "beide":
@@ -400,7 +398,8 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
                         zusatz_deps = _fetch_departures_db(zusatz_id, dauer, max_pro_station * 2, stopovers=False)
                     except Exception:
                         pass
-                if zusatz_api in ("nahsh", "beide") or (zusatz_api == "" and zusatz_deps is None):
+                # NAH.SH: bei explizitem Wunsch, bei „beide", oder wenn DB nichts lieferte
+                if zusatz_api in ("nahsh", "beide") or (zusatz_api == "" and not zusatz_deps):
                     try:
                         nahsh_z = _fetch_departures_nahsh(zusatz_id, dauer, max_pro_station * 2, stopovers=False)
                         if nahsh_z is not None:

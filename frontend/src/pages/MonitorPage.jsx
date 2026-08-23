@@ -899,10 +899,10 @@ export default function MonitorPage() {
       const via = zeigeVia ? (dep.stopovers?.slice(0, 3).join(', ') || '') : '';
 
       return (
-        <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${dep.ausfall ? 'bg-red-500/10 border-l-2 border-red-500/70' : ''} ${i > 0 ? 'border-t border-white/[0.03]' : ''} ${!dep.ausfall && i % 2 === 1 ? 'bg-white/[0.01]' : ''} ${isHighlight && !dep.ausfall ? 'bg-white/[0.04] border-l-2' : ''}`}
+        <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${i > 0 ? 'border-t border-white/[0.03]' : ''} ${i % 2 === 1 ? 'bg-white/[0.01]' : ''} ${isHighlight && !dep.ausfall ? 'bg-white/[0.04] border-l-2' : ''}`}
           style={isHighlight && !dep.ausfall ? { borderLeftColor: accent } : undefined}>
           <div className={`${useCompact ? cs.timeW : s.timeW} shrink-0 flex items-baseline gap-1`}>
-            <span className={`font-mono ${useCompact ? cs.time : s.time} font-bold tabular-nums leading-none ${dep.ausfall ? 'line-through text-red-400/80' : getTimeColor(minUntil)}`}>
+            <span className={`font-mono ${useCompact ? cs.time : s.time} font-bold tabular-nums leading-none ${dep.ausfall ? 'line-through text-white/30' : getTimeColor(minUntil)}`}>
               {dep.abfahrt || '—'}
             </span>
             {hasDelay && <span className={`text-red-400 ${useCompact ? cs.delay : s.delay} font-bold tabular-nums`}>+{dep.verspaetung}</span>}
@@ -924,27 +924,23 @@ export default function MonitorPage() {
           </div>
           <div className="flex-1 min-w-0 px-1.5">
             <div className="truncate">
-              <span className={`${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through text-white/55' : 'text-white'}`}>
+              <span className={`${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through text-white/45' : 'text-white'}`}>
                 {dep.richtung}
               </span>
               {via && <span className={`${useCompact ? cs.via : s.via} text-white/20 italic ml-1.5`}>{via}</span>}
             </div>
-            {dep.ausfall ? (
-              <div className="text-red-300 text-[10px] leading-tight truncate font-semibold">
-                Fällt aus{dep.bemerkungen?.length > 0 ? ` — ${dep.bemerkungen[0]}` : ''}
-              </div>
-            ) : (!useCompact && (dep.bemerkungen?.length > 0 || dep.zusatz_halte?.length > 0 || dep.entfall_halte?.length > 0) && (
-              <div className="text-amber-400/70 text-[9px] leading-tight truncate">
+            {!useCompact && (dep.bemerkungen?.length > 0 || dep.zusatz_halte?.length > 0 || dep.entfall_halte?.length > 0) && (
+              <div className={`${dep.ausfall ? 'text-red-400/80' : 'text-amber-400/70'} text-[9px] leading-tight truncate`}>
                 {[
                   dep.entfall_halte?.length ? `Halt entfällt: ${dep.entfall_halte.join(', ')}` : null,
                   dep.zusatz_halte?.length ? `+Halt: ${dep.zusatz_halte.join(', ')}` : null,
                   dep.bemerkungen?.[0],
                 ].filter(Boolean).join(' · ')}
               </div>
-            ))}
+            )}
           </div>
           <div className="shrink-0 flex items-center gap-1.5">
-            {dep.ausfall && <span className={`text-white ${useCompact ? cs.badge : s.badge} font-bold bg-red-500/80 px-2 py-0.5 rounded uppercase tracking-wide`}>Ausfall</span>}
+            {dep.ausfall && <span className={`text-red-400 ${useCompact ? cs.dir : s.dir} font-bold`}>Fällt aus</span>}
             {dep.ersatzverkehr && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>SEV</span>}
             {dep.umleitung && !dep.ausfall && <span className={`text-orange-300 ${useCompact ? cs.badge : s.badge} font-bold bg-orange-400/10 px-1.5 py-0.5 rounded`}>Umleitung</span>}
             {dep.fluegelzug && !dep.ausfall && <span className={`text-sky-300 ${useCompact ? cs.badge : s.badge} font-medium bg-sky-400/10 px-1.5 py-0.5 rounded`}>Flügel</span>}
