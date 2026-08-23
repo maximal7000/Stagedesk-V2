@@ -922,15 +922,30 @@ export default function MonitorPage() {
             </div>
             <span className={`text-white ${useCompact ? cs.linie : s.linie} font-semibold truncate leading-none`}>{dep.linie}</span>
           </div>
-          <div className="flex-1 min-w-0 px-1.5 truncate">
-            <span className={`text-white ${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through opacity-40' : ''}`}>
-              {dep.richtung}
-            </span>
-            {via && <span className={`${useCompact ? cs.via : s.via} text-white/20 italic ml-1.5`}>{via}</span>}
+          <div className="flex-1 min-w-0 px-1.5">
+            <div className="truncate">
+              <span className={`text-white ${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through opacity-40' : ''}`}>
+                {dep.richtung}
+              </span>
+              {via && <span className={`${useCompact ? cs.via : s.via} text-white/20 italic ml-1.5`}>{via}</span>}
+            </div>
+            {!useCompact && (dep.bemerkungen?.length > 0 || dep.zusatz_halte?.length > 0 || dep.entfall_halte?.length > 0) && (
+              <div className="text-amber-400/70 text-[9px] leading-tight truncate">
+                {[
+                  dep.entfall_halte?.length ? `Halt entfällt: ${dep.entfall_halte.join(', ')}` : null,
+                  dep.zusatz_halte?.length ? `+Halt: ${dep.zusatz_halte.join(', ')}` : null,
+                  dep.bemerkungen?.[0],
+                ].filter(Boolean).join(' · ')}
+              </div>
+            )}
           </div>
           <div className="shrink-0 flex items-center gap-1.5">
             {dep.ausfall && <span className={`text-red-400 ${useCompact ? cs.badge : s.badge} font-bold bg-red-400/10 px-1.5 py-0.5 rounded`}>Ausfall</span>}
-            {dep.bemerkungen?.length > 0 && !dep.ausfall && (
+            {dep.ersatzverkehr && !dep.ausfall && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>SEV</span>}
+            {dep.umleitung && !dep.ausfall && <span className={`text-orange-300 ${useCompact ? cs.badge : s.badge} font-bold bg-orange-400/10 px-1.5 py-0.5 rounded`}>Umleitung</span>}
+            {dep.fluegelzug && !dep.ausfall && <span className={`text-sky-300 ${useCompact ? cs.badge : s.badge} font-medium bg-sky-400/10 px-1.5 py-0.5 rounded`}>Flügel</span>}
+            {dep.ersatzzug && <span className={`text-violet-300 ${useCompact ? cs.badge : s.badge} font-medium bg-violet-400/10 px-1.5 py-0.5 rounded`}>Ersatzzug</span>}
+            {useCompact && dep.bemerkungen?.length > 0 && !dep.ausfall && (
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400/50 shrink-0" title={dep.bemerkungen.join(', ')} />
             )}
             {dep.auslastung && !dep.ausfall && (() => {
