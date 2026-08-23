@@ -3289,7 +3289,7 @@ export default function MonitorAdminPage() {
               <div className="flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
                 <span className="text-sm font-semibold text-white">Störungen & Baumaßnahmen</span>
-                {!monitorConfig.oepnv_stoerungsbanner && <span className="text-[10px] text-amber-400">(Widget „Störungsbanner" oben aktivieren)</span>}
+                <span className="text-[10px] text-gray-500">Quelle je Verkehrsmittel wählbar</span>
               </div>
 
               {/* Zug-Störungen (NAH.SH) */}

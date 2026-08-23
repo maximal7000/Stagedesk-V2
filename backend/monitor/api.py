@@ -309,7 +309,8 @@ def _fetch_stoerungen(config):
     """Störungen/Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell), gecacht 5 Min."""
     if config.layout_modus != 'abfahrten' and not config.zeige_oepnv:
         return []
-    if not getattr(config, 'oepnv_stoerungsbanner', True):
+    # Nur wenn mind. eine Quelle aktiv ist
+    if not (config.oepnv_stoerung_bahn or config.oepnv_stoerung_bus or (config.oepnv_stoerung_manuell or [])):
         return []
     # Cache 5 Min (Störungen ändern sich langsam)
     if config.oepnv_stoerung_cache_zeit:
