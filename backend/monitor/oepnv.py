@@ -2,11 +2,13 @@
 ÖPNV Abfahrtsmonitor — Stationssuche & Abfahrten
 Dual-API: DB REST (v6.db.transport.rest) + NAH.SH HAFAS (mgate.exe)
 """
+import os
 import json
 import re
 import urllib.request
 import urllib.parse
-from datetime import datetime
+import xml.etree.ElementTree as ET
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 # Explizite Zeitzone — Server kann in UTC laufen, Abfahrten sind aber CET/CEST
@@ -15,8 +17,43 @@ TIMEZONE = ZoneInfo("Europe/Berlin")
 
 # ═══ API Konfiguration ════════════════════════════════════════════
 
-# DB REST API (wraps db-hafas, ganz Deutschland)
-DB_REST_BASE = "https://v6.db.transport.rest"
+# DB Timetables API (offiziell, DB API Marketplace) — Credentials via Env-Vars
+DB_TT_BASE = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
+DB_TT_CLIENT_ID = os.getenv("DB_TT_CLIENT_ID", "")
+DB_TT_API_KEY = os.getenv("DB_TT_API_KEY", "")
+
+# DB-Kategorie → Produkt-Typ (für Filter/Icon)
+DB_CAT_TO_PRODUCT = {
+    "ICE": "nationalExpress", "ECE": "nationalExpress", "RJ": "nationalExpress",
+    "IC": "national", "EC": "national", "EN": "national", "NJ": "national", "D": "national",
+    "RE": "regionalExpress", "IRE": "regionalExpress", "erx": "regionalExpress", "ERX": "regionalExpress",
+    "RB": "regional", "R": "regional", "NWB": "regional", "NBE": "regional", "ME": "regional",
+    "AKN": "regional", "ERB": "regional", "WFB": "regional", "ENO": "regional",
+    "S": "suburban", "U": "subway", "STR": "tram", "STB": "tram",
+    "Bus": "bus", "BUS": "bus", "F": "ferry", "Fähre": "ferry",
+}
+
+
+def _db_tt_get(path, timeout=None):
+    """DB Timetables API GET → XML-Element (ElementTree)."""
+    req = urllib.request.Request(DB_TT_BASE + path, headers={
+        "DB-Client-Id": DB_TT_CLIENT_ID,
+        "DB-Api-Key": DB_TT_API_KEY,
+        "Accept": "application/xml",
+        "User-Agent": "Stagedesk-Monitor/1.0",
+    })
+    with urllib.request.urlopen(req, timeout=timeout or REQUEST_TIMEOUT) as resp:
+        return ET.fromstring(resp.read())
+
+
+def _db_cat_product(cat, line):
+    if cat in DB_CAT_TO_PRODUCT:
+        return DB_CAT_TO_PRODUCT[cat]
+    # Fallback über Linien-Präfix (z.B. "RE83" → RE)
+    m = re.match(r'^([A-Za-zÄÖÜ]+)', (line or ''))
+    if m and m.group(1) in DB_CAT_TO_PRODUCT:
+        return DB_CAT_TO_PRODUCT[m.group(1)]
+    return "regional"
 
 # NAH.SH HAFAS mgate.exe (Schleswig-Holstein + Hamburg)
 NAHSH_MGATE_URL = "https://nah.sh.hafas.de/bin/mgate.exe"
@@ -129,31 +166,26 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
     nahsh_results = []
 
     def _search_db():
-        url = (
-            f"{DB_REST_BASE}/locations"
-            f"?query={urllib.parse.quote(query)}"
-            f"&results={results}"
-            f"&stops=true&addresses=false&poi=false"
-            f"&language=de"
-        )
-        data = _get_json(url, timeout=REQUEST_TIMEOUT_SEARCH)
+        # DB Timetables /station/{pattern} → EVA-Nummern
+        if not DB_TT_CLIENT_ID:
+            return []
+        root = _db_tt_get(f"/station/{urllib.parse.quote(query)}", timeout=REQUEST_TIMEOUT_SEARCH)
         out = []
-        for loc in data:
-            if loc.get("type") != "stop":
+        for st in root.findall("station"):
+            eva = st.get("eva")
+            name = st.get("name")
+            if not eva or not name:
                 continue
-            sid = str(loc.get("id", ""))
-            if not sid:
-                continue
-            products = loc.get("products", {})
-            produkte = [k for k, v in products.items() if v]
+            # DB Timetables liefert nur Bahnhöfe (Zugverkehr)
+            produkte = ["nationalExpress", "national", "regionalExpress", "regional", "suburban"]
             out.append({
-                "id": sid,
-                "name": loc.get("name", ""),
-                "typ": _station_type(produkte),
+                "id": str(eva),
+                "name": name,
+                "typ": "bahnhof",
                 "quelle": "db",
                 "produkte": produkte,
             })
-        return out
+        return out[:results]
 
     def _search_nahsh():
         res = _nahsh_rpc("LocMatch", {
@@ -500,109 +532,94 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
 # ═══ DB REST — Abfahrten ══════════════════════════════════════════
 
 def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
-    """Abfahrten über DB REST API holen"""
-    url = (
-        f"{DB_REST_BASE}/stops/{urllib.parse.quote(str(station_id))}/departures"
-        f"?duration={dauer}"
-        f"&results={max_results}"
-        f"&language=de"
-        f"&stopovers={'true' if stopovers else 'false'}"
-        f"&remarks=true"
-    )
-    data = _get_json(url)
+    """Abfahrten über die DB Timetables API (/plan geplant + /fchg Echtzeit)."""
+    if not DB_TT_CLIENT_ID:
+        return []
+    now = datetime.now(TIMEZONE)
 
-    abfahrten = []
-    items = data.get("departures", data) if isinstance(data, dict) else data
-    for dep in items:
-        parsed = _parse_db_departure(dep, include_stopovers=stopovers)
-        if parsed:
-            abfahrten.append(parsed)
-    return abfahrten
-
-
-def _parse_db_departure(dep, include_stopovers=False):
-    """Ein Abfahrts-Objekt aus der DB REST API parsen"""
+    # Echtzeit-Änderungen (Verspätung / Gleis / Ausfall) je Stop-ID
+    changes = {}
     try:
-        line = dep.get("line", {}) or {}
-        linie = line.get("name", "") or line.get("fahrtNr", "") or ""
-        produkt = line.get("product", "") or ""
-        richtung = dep.get("direction", "") or dep.get("provenance", "") or ""
-
-        # Zeiten parsen
-        geplant = dep.get("plannedWhen") or dep.get("when") or ""
-        aktuell = dep.get("when") or geplant
-
-        abfahrt_geplant = _parse_iso_time(geplant)
-        abfahrt_aktuell = _parse_iso_time(aktuell)
-
-        # Verspätung in Minuten
-        verspaetung = dep.get("delay")
-        if verspaetung is not None:
-            verspaetung = verspaetung // 60
-        else:
-            verspaetung = 0
-
-        gleis_aktuell = dep.get("platform") or ""
-        gleis_geplant = dep.get("plannedPlatform") or ""
-        gleis = gleis_aktuell or gleis_geplant
-        gleis_geaendert = bool(gleis_aktuell and gleis_geplant and gleis_aktuell != gleis_geplant)
-        cancelled = dep.get("cancelled", False)
-
-        # Auslastung (DB liefert loadFactor: "low-to-medium", "high", "very-high", "exceptionally-high")
-        load_factor = dep.get("loadFactor", "")
-
-        # Bemerkungen
-        remarks = dep.get("remarks", []) or []
-        bemerkungen = []
-        for r in remarks:
-            if isinstance(r, dict) and r.get("type") in ("warning", "status"):
-                text = r.get("summary") or r.get("text") or ""
-                if text:
-                    bemerkungen.append(text)
-
-        # Linienfarbe aus API (DB liefert line.color.fg/bg)
-        line_color = ""
-        color_data = line.get("color", {}) or {}
-        if isinstance(color_data, dict):
-            # Priorität: bg (Hintergrundfarbe der Linie), dann fg
-            bg = color_data.get("bg")
-            fg = color_data.get("fg")
-            if bg and bg != "#000000" and bg != "#ffffff":
-                line_color = bg
-            elif fg and fg != "#000000" and fg != "#ffffff":
-                line_color = fg
-
-        result = {
-            "linie": linie,
-            "richtung": richtung,
-            "abfahrt": abfahrt_geplant,
-            "abfahrt_aktuell": abfahrt_aktuell,
-            "verspaetung": verspaetung,
-            "gleis": str(gleis),
-            "typ": produkt,
-            "typ_icon": _product_icon(produkt),
-            "ausfall": cancelled,
-            "bemerkungen": bemerkungen[:2],
-        }
-        if line_color:
-            result["linien_farbe"] = line_color
-        if gleis_geaendert:
-            result["gleis_geplant"] = str(gleis_geplant)
-        if load_factor:
-            result["auslastung"] = load_factor
-
-        # Stopovers (Zwischenhalte) für Via-Filter
-        if include_stopovers:
-            stopovers = dep.get("stopovers") or []
-            result["stopovers"] = [
-                (s.get("stop", {}) or {}).get("name", "")
-                for s in stopovers
-                if isinstance(s, dict) and (s.get("stop", {}) or {}).get("name")
-            ]
-
-        return result
+        fchg = _db_tt_get(f"/fchg/{station_id}")
+        for s in fchg.findall("s"):
+            dp = s.find("dp")
+            if dp is not None:
+                changes[s.get("id")] = {"ct": dp.get("ct"), "cp": dp.get("cp"), "cs": dp.get("cs")}
     except Exception:
-        return None
+        pass
+
+    stunden = 1 + min(3, int(dauer) // 60)
+    deps = []
+    for i in range(stunden):
+        t = now + timedelta(hours=i)
+        try:
+            plan = _db_tt_get(f"/plan/{station_id}/{t.strftime('%y%m%d')}/{t.strftime('%H')}")
+        except Exception:
+            continue
+        for s in plan.findall("s"):
+            dp = s.find("dp")
+            if dp is None:
+                continue
+            pt = dp.get("pt") or ""
+            if len(pt) < 10:
+                continue
+            line = dp.get("l") or ""
+            tl = s.find("tl")
+            cat = (tl.get("c") if tl is not None else "") or ""
+            if not line and tl is not None:
+                line = (cat + (tl.get("n") or "")).strip()
+            ppth = [p for p in (dp.get("ppth") or "").split("|") if p]
+            ziel = ppth[-1] if ppth else ""
+            try:
+                dt_plan = datetime.strptime(pt, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
+            except Exception:
+                continue
+            ch = changes.get(s.get("id"), {})
+            ct = ch.get("ct")
+            cancelled = ch.get("cs") == "c"
+            verspaetung = 0
+            dt_real = dt_plan
+            if ct and len(ct) >= 10:
+                try:
+                    dt_real = datetime.strptime(ct, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
+                    verspaetung = int((dt_real - dt_plan).total_seconds() // 60)
+                except Exception:
+                    pass
+            min_until = (dt_real - now).total_seconds() / 60
+            if min_until < -1 or min_until > dauer:
+                continue
+            gleis_geplant = dp.get("pp") or ""
+            gleis_aktuell = ch.get("cp") or gleis_geplant
+            produkt = _db_cat_product(cat, line)
+            result = {
+                "linie": line,
+                "richtung": ziel,
+                "abfahrt": dt_plan.strftime("%H:%M"),
+                "abfahrt_aktuell": dt_real.strftime("%H:%M"),
+                "verspaetung": verspaetung,
+                "gleis": str(gleis_aktuell),
+                "typ": produkt,
+                "typ_icon": _product_icon(produkt),
+                "ausfall": cancelled,
+                "bemerkungen": [],
+                "_sortkey": dt_plan.timestamp(),
+            }
+            if gleis_aktuell and gleis_geplant and gleis_aktuell != gleis_geplant:
+                result["gleis_geplant"] = str(gleis_geplant)
+            if stopovers:
+                result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
+            deps.append(result)
+
+    deps.sort(key=lambda d: d.get("_sortkey", 0))
+    seen, out = set(), []
+    for d in deps:
+        key = (d["linie"], d["abfahrt"], d["richtung"])
+        if key in seen:
+            continue
+        seen.add(key)
+        d.pop("_sortkey", None)
+        out.append(d)
+    return out[:max_results]
 
 
 # ═══ NAH.SH HAFAS — Abfahrten ════════════════════════════════════
