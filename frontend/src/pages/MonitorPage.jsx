@@ -1125,6 +1125,39 @@ export default function MonitorPage() {
           )}
         </div>
 
+        {/* Störungen & Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell) */}
+        {(data?.stoerungen || []).length > 0 && (
+          <div className="shrink-0 border-t border-amber-500/20 bg-amber-950/20 px-4 py-2" style={{ maxHeight: '28%' }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              <span className="text-amber-300 text-xs font-bold uppercase tracking-wider">Störungen &amp; Baumaßnahmen</span>
+              <span className="text-amber-400/50 text-[10px]">({data.stoerungen.length})</span>
+            </div>
+            <div className="flex gap-2 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+              {data.stoerungen.slice(0, 10).map((st, i) => (
+                <div key={i} className="shrink-0 w-72 bg-white/[0.03] border border-amber-500/15 rounded-lg px-3 py-2">
+                  <div className="flex items-center gap-1 flex-wrap mb-1">
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${st.typ === 'bauarbeiten' ? 'bg-orange-500/25 text-orange-300' : 'bg-red-500/25 text-red-300'}`}>
+                      {st.typ === 'bauarbeiten' ? 'Bau' : 'Störung'}
+                    </span>
+                    {(st.linien || []).slice(0, 6).map((l, j) => (
+                      <span key={j} className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/75 font-bold">{l}</span>
+                    ))}
+                  </div>
+                  <div className="text-white text-xs font-semibold leading-tight mb-0.5">{st.titel}</div>
+                  {st.text && (
+                    <div className="text-white/50 text-[10px] leading-snug"
+                      style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {st.text}
+                    </div>
+                  )}
+                  {(st.von || st.bis) && <div className="text-amber-400/60 text-[9px] mt-1 tabular-nums">{st.von}{st.bis ? ` – ${st.bis}` : ''}</div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="px-6 py-0.5 flex items-center justify-between text-white/[0.06] text-[8px] shrink-0">
           <span>{abfahrten.reduce((sum, st) => sum + (st.abfahrten?.length || 0), 0)} Verbindungen</span>

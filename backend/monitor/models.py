@@ -278,6 +278,18 @@ class MonitorConfig(models.Model):
     oepnv_cache = models.JSONField(null=True, blank=True)
     oepnv_cache_zeit = models.DateTimeField(null=True, blank=True)
 
+    # ─── Störungsmeldungen (Bahn: NAH.SH · Bus: SWL Lübeck · manuell) ───
+    oepnv_stoerung_bahn = models.BooleanField(default=True, help_text="Zug-Störungen (NAH.SH HAFAS)")
+    oepnv_stoerung_bus = models.BooleanField(default=True, help_text="Bus-Störungen (Stadtverkehr Lübeck)")
+    oepnv_stoerung_bahn_linien = models.JSONField(default=list, blank=True,
+        help_text="Zug-Linienfilter, z.B. ['RE8','RB85']. Leer = alle mit erkennbarer Linie.")
+    oepnv_stoerung_bus_linien = models.JSONField(default=list, blank=True,
+        help_text="Bus-Linienfilter, z.B. ['1','3','16']. Leer = alle.")
+    oepnv_stoerung_manuell = models.JSONField(default=list, blank=True,
+        help_text="Manuelle Meldungen: [{'titel':..., 'text':...}]")
+    oepnv_stoerung_cache = models.JSONField(default=list, blank=True)
+    oepnv_stoerung_cache_zeit = models.DateTimeField(null=True, blank=True)
+
     # ─── ON AIR ────────────────────────────
     ist_on_air = models.BooleanField(default=False)
     on_air_text = models.CharField(max_length=100, default='ON AIR')

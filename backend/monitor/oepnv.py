@@ -3,6 +3,7 @@
 Dual-API: DB REST (v6.db.transport.rest) + NAH.SH HAFAS (mgate.exe)
 """
 import json
+import re
 import urllib.request
 import urllib.parse
 from datetime import datetime
@@ -814,3 +815,146 @@ def _product_icon(product):
         "taxi": "taxi",
     }
     return mapping.get(product, "zug")
+
+
+# ═══ Störungsmeldungen ════════════════════════════════════════════
+# Bahn: NAH.SH HAFAS (HimSearch, deckt RE/RB inkl. DB Regio ab)
+# Bus:  Stadtverkehr/Stadtwerke Lübeck (Storyblok-CMS, öffentlicher Read-Token)
+
+SWL_STORYBLOK_TOKEN = "UDFTUVH6rpOAv9hnKKsl4gtt"  # öffentlicher CDN-Read-Token (aus swhl.de)
+SWL_STORYBLOK_BASE = "https://api.storyblok.com/v2/cdn"
+
+_LINE_RE = re.compile(r'\b(ICE|IC|EC|RE|RB|R|S|X|SH|ME|AKN|ERB|NBE)\s?-?\s?(\d{1,4})\b', re.I)
+
+
+def _normalize_line(s):
+    return (s or '').upper().replace(' ', '').replace('-', '').strip()
+
+
+def _extract_lines_from_text(text):
+    out = set()
+    for m in _LINE_RE.finditer(text or ''):
+        out.add((m.group(1) + m.group(2)).upper())
+    return out
+
+
+def _him_text(m):
+    cands = []
+    if m.get('text'):
+        cands.append(m['text'])
+    for grp in m.get('texts', []) or []:
+        for t in grp.get('texts', []) or []:
+            if t.get('text'):
+                cands.append(t['text'])
+    return max(cands, key=len) if cands else ''
+
+
+def _him_date(d, t):
+    d = str(d or '')
+    if len(d) < 8:
+        return ''
+    s = f"{d[6:8]}.{d[4:6]}.{d[0:4]}"
+    t = str(t or '')
+    if len(t) >= 4:
+        s += f" {t[0:2]}:{t[2:4]}"
+    return s
+
+
+def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
+    """Zug-Störungen/Baumaßnahmen aus NAH.SH HAFAS (HimSearch), gefiltert auf Linien."""
+    wanted = {_normalize_line(x) for x in (linien_filter or []) if x}
+    try:
+        res = _nahsh_rpc('HimSearch', {'maxNum': max_num})
+    except Exception:
+        return []
+    out, seen = [], set()
+    for m in res.get('msgL', []) or []:
+        head = (m.get('head') or '').strip().rstrip('.')
+        text = _him_text(m)
+        lines = _extract_lines_from_text(head + ' ' + text)
+        norm_lines = {_normalize_line(x) for x in lines}
+        if wanted:
+            if not (wanted & norm_lines):
+                continue
+        elif not lines:
+            continue  # ohne Filter nur Meldungen mit erkennbarer Linie
+        key = text[:120]
+        if key in seen:
+            continue
+        seen.add(key)
+        low = (head + ' ' + text).lower()
+        typ = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
+        out.append({
+            'quelle': 'bahn', 'typ': typ,
+            'titel': head or 'Störung', 'text': text,
+            'linien': sorted(lines),
+            'von': _him_date(m.get('sDate'), m.get('sTime')),
+            'bis': _him_date(m.get('eDate'), m.get('eTime')),
+            'prio': m.get('prio', 0),
+        })
+    out.sort(key=lambda x: -(x.get('prio') or 0))
+    return out[:25]
+
+
+def _swl_get(path):
+    url = f"{SWL_STORYBLOK_BASE}/{path}{'&' if '?' in path else '?'}token={SWL_STORYBLOK_TOKEN}&version=published"
+    req = urllib.request.Request(url, headers={'User-Agent': 'Stagedesk-Monitor/1.0'})
+    with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT + 3) as resp:
+        return json.loads(resp.read())
+
+
+def _swl_parse_date(s):
+    if not s:
+        return None
+    try:
+        return datetime.strptime(str(s).strip()[:16], '%Y-%m-%d %H:%M').replace(tzinfo=ZoneInfo("Europe/Berlin"))
+    except Exception:
+        return None
+
+
+def _swl_fmt(s):
+    d = _swl_parse_date(s)
+    return d.strftime('%d.%m.%Y %H:%M') if d else ''
+
+
+def fetch_stoerungen_swl(linien_filter=None):
+    """Bus-Störungen von Stadtverkehr/Stadtwerke Lübeck (Storyblok), gefiltert auf Linien."""
+    wanted = {_normalize_line(x) for x in (linien_filter or []) if x}
+    try:
+        data = _swl_get('stories?starts_with=' + urllib.parse.quote('mobil/stoerungsmeldungen/')
+                        + '&per_page=100&resolve_relations=TickerMessage.linien')
+    except Exception:
+        return []
+    rels = {r.get('uuid'): r for r in data.get('rels', []) or []}
+    now = datetime.now(ZoneInfo("Europe/Berlin"))
+    out = []
+    for st in data.get('stories', []) or []:
+        c = st.get('content', {}) or {}
+        if c.get('component') != 'TickerMessage':
+            continue
+        linien = []
+        for lx in c.get('linien', []) or []:
+            r = rels.get(lx) if isinstance(lx, str) else None
+            nm = (r or {}).get('name') if r else None
+            if nm:
+                linien.append(str(nm))
+        all_lines = bool(c.get('all_lines'))
+        bis_dt = _swl_parse_date(c.get('enddate'))
+        if bis_dt and bis_dt < now:
+            continue  # abgelaufen
+        if wanted and not all_lines and not (wanted & {_normalize_line(x) for x in linien}):
+            continue
+        title = (c.get('title') or '').strip()
+        text = (c.get('maintext') or '').strip()
+        low = (title + ' ' + text).lower()
+        typ = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
+        out.append({
+            'quelle': 'bus', 'typ': typ,
+            'titel': title or 'Störung', 'text': text,
+            'linien': (['alle'] if all_lines else linien),
+            'von': _swl_fmt(c.get('startdate')),
+            'bis': _swl_fmt(c.get('enddate')),
+            'highlighted': bool(c.get('highlighted')),
+        })
+    out.sort(key=lambda x: (not x.get('highlighted'),))
+    return out[:25]
