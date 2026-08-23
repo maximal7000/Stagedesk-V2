@@ -5,6 +5,7 @@ Dual-API: DB REST (v6.db.transport.rest) + NAH.SH HAFAS (mgate.exe)
 import os
 import json
 import re
+import html as _html
 import urllib.request
 import urllib.parse
 import xml.etree.ElementTree as ET
@@ -952,6 +953,25 @@ def _extract_lines_from_text(text):
     return out
 
 
+_IMG_URL_RE = re.compile(r'(https?://[^\s"\'<>]+?\.(?:png|jpe?g|gif|webp))', re.I)
+
+
+def _clean_html_text(raw):
+    """Störungs-Text von HTML befreien und ggf. eingebettetes Bild (z.B. Umleitungskarte) extrahieren.
+    Gibt (sauberer_text, bild_url) zurück."""
+    if not raw:
+        return '', ''
+    s = str(raw)
+    m = _IMG_URL_RE.search(s)
+    img = m.group(1) if m else ''
+    s = re.sub(r'(?i)<br\s*/?>', ' · ', s)      # Zeilenumbrüche → Trenner
+    s = re.sub(r'<[^>]+>', '', s)                # restliche Tags entfernen
+    s = _html.unescape(s)                        # &amp; etc.
+    s = re.sub(r'(?:\s*·\s*){2,}', ' · ', s)     # doppelte Trenner zusammenfassen
+    s = re.sub(r'\s+', ' ', s).strip(' ·\t\n')
+    return s, img
+
+
 def _him_text(m):
     cands = []
     if m.get('text'):
@@ -984,8 +1004,10 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
     out, seen = [], set()
     for m in res.get('msgL', []) or []:
         head = (m.get('head') or '').strip().rstrip('.')
-        text = _him_text(m)
-        lines = _extract_lines_from_text(head + ' ' + text)
+        raw_text = _him_text(m)
+        text, bild = _clean_html_text(raw_text)
+        head = _clean_html_text(head)[0] or head
+        lines = _extract_lines_from_text(head + ' ' + raw_text)
         norm_lines = {_normalize_line(x) for x in lines}
         if wanted:
             if not (wanted & norm_lines):
@@ -1005,6 +1027,7 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
             'von': _him_date(m.get('sDate'), m.get('sTime')),
             'bis': _him_date(m.get('eDate'), m.get('eTime')),
             'prio': m.get('prio', 0),
+            'all_lines': False, 'bild': bild, 'haltestellen': [], 'vorschlag': '',
         })
     out.sort(key=lambda x: -(x.get('prio') or 0))
     return out[:25]
@@ -1058,10 +1081,16 @@ def fetch_stoerungen_swl(linien_filter=None):
             continue  # abgelaufen
         if wanted and not all_lines and not (wanted & {_normalize_line(x) for x in linien}):
             continue
-        title = (c.get('title') or '').strip()
-        text = (c.get('maintext') or '').strip()
+        title = _clean_html_text(c.get('title'))[0] or (c.get('title') or '').strip()
+        text, text_img = _clean_html_text(c.get('maintext'))
         low = (title + ' ' + text).lower()
         typ = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
+        # Bild-Asset (z.B. Umleitungskarte) bevorzugt, sonst aus Text extrahiert
+        img = c.get('image')
+        bild = (img.get('filename') if isinstance(img, dict) else img) or text_img or ''
+        # Betroffene Haltestellen / Alternativvorschlag (optional)
+        stops = [str(s) for s in (c.get('stops') or []) if s] if isinstance(c.get('stops'), list) else []
+        suggestion = (c.get('suggestion') or '').strip() if isinstance(c.get('suggestion'), str) else ''
         out.append({
             'quelle': 'bus', 'typ': typ,
             'titel': title or 'Störung', 'text': text,
@@ -1069,6 +1098,10 @@ def fetch_stoerungen_swl(linien_filter=None):
             'von': _swl_fmt(c.get('startdate')),
             'bis': _swl_fmt(c.get('enddate')),
             'highlighted': bool(c.get('highlighted')),
+            'all_lines': all_lines,
+            'bild': bild,
+            'haltestellen': stops[:8],
+            'vorschlag': suggestion,
         })
     out.sort(key=lambda x: (not x.get('highlighted'),))
     return out[:25]
