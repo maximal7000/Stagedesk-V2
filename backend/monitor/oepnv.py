@@ -34,6 +34,45 @@ DB_CAT_TO_PRODUCT = {
 }
 
 
+# DB IRIS Meldungs-Codes → Text (Verspätungsursachen t="d" + Qualitätsmängel t="q")
+DB_MSG_TEXT = {
+    1: "Nähere Informationen in Kürze", 2: "Polizeieinsatz", 3: "Feuerwehreinsatz auf der Strecke",
+    4: "Kurzfristiger Personalausfall", 5: "Ärztliche Versorgung eines Fahrgastes", 6: "Betätigen der Notbremse",
+    7: "Unbefugte Personen auf der Strecke", 8: "Notarzteinsatz auf der Strecke", 9: "Streikauswirkungen",
+    10: "Tiere auf der Strecke", 11: "Unwetter", 12: "Warten auf ein verspätetes Schiff",
+    13: "Pass- und Zollkontrolle", 14: "Defekt am Bahnhof", 15: "Beeinträchtigung durch Vandalismus",
+    16: "Entschärfung einer Fliegerbombe", 17: "Beschädigung einer Brücke", 18: "Umgestürzter Baum auf der Strecke",
+    19: "Unfall an einem Bahnübergang", 20: "Tiere im Gleis", 21: "Warten auf Anschlussreisende",
+    22: "Witterungsbedingte Beeinträchtigungen", 23: "Betriebsstabilisierung", 24: "Verspätung im Ausland",
+    25: "Bereitstellung weiterer Wagen", 26: "Abhängen von Wagen", 27: "Technische Störung am Bus",
+    28: "Gegenstände auf der Strecke", 29: "Ersatzverkehr mit Bus ist eingerichtet", 30: "Personalausfall im Stellwerk",
+    31: "Bauarbeiten", 32: "Längere Haltezeit am Bahnhof", 33: "Defekt an der Oberleitung", 34: "Defekt an einem Signal",
+    35: "Streckensperrung", 36: "Technische Störung am Zug", 37: "Kurzfristiger Fahrzeugausfall", 38: "Defekt an der Strecke",
+    39: "Stau / Hohes Verkehrsaufkommen", 40: "Defektes Stellwerk", 41: "Defekt an einem Bahnübergang",
+    42: "Außerplanmäßige Geschwindigkeitsbeschränkung", 43: "Verspätung eines vorausfahrenden Zuges",
+    44: "Warten auf einen entgegenkommenden Zug", 45: "Vorfahrt eines anderen Zuges", 46: "Vorfahrt eines anderen Zuges",
+    47: "Verspätete Bereitstellung", 48: "Verspätung aus vorheriger Fahrt", 49: "Kurzfristiger Personalausfall",
+    50: "Kurzfristige Erkrankung von Personal", 51: "Verspätetes Personal aus vorheriger Fahrt", 52: "Streik",
+    53: "Unwetterauswirkungen", 54: "Verfügbarkeit der Gleise derzeit eingeschränkt", 55: "Technischer Defekt an einem anderen Zug",
+    56: "Laden der Antriebsbatterie", 57: "Zusätzlicher Halt", 58: "Umleitung", 59: "Schnee und Eis",
+    60: "Witterungsbedingt verminderte Geschwindigkeit", 61: "Defekte Tür", 62: "Behobener Defekt am Zug",
+    63: "Technische Untersuchung am Zug", 64: "Defekt an einer Weiche", 65: "Erdrutsch", 66: "Hochwasser",
+    67: "Behördliche Maßnahme", 68: "Hohes Fahrgastaufkommen", 69: "Zug verkehrt mit verminderter Geschwindigkeit",
+    70: "WLAN nicht verfügbar", 71: "Eingeschränktes WLAN", 72: "Info/Entertainment nicht verfügbar",
+    73: "Heute: Mehrzweckabteil vorne", 74: "Heute: Mehrzweckabteil hinten", 75: "Heute: 1. Klasse vorne",
+    76: "Heute: 1. Klasse hinten", 77: "1. Klasse fehlt", 78: "Ersatzverkehr mit Bus ist eingerichtet",
+    79: "Mehrzweckabteil fehlt", 80: "Abweichende Wagenreihung", 81: "Fahrzeugtausch", 82: "Mehrere Wagen fehlen",
+    83: "Heute ohne fahrzeuggebundene Einstiegshilfe", 84: "Zug verkehrt richtig gereiht", 85: "Ein Wagen fehlt",
+    86: "Gesamter Zug ohne Reservierung", 87: "Einzelne Wagen ohne Reservierung", 88: "Keine Qualitätsmängel",
+    89: "Reservierungen sind wieder vorhanden", 90: "Kein gastronomisches Angebot", 91: "Fahrradmitnahme nicht möglich",
+    92: "Fahrradmitnahme kann nicht garantiert werden", 93: "Behindertengerechte Einrichtung fehlt", 94: "Ersatzbewirtschaftung",
+    95: "Universaltoilette fehlt", 96: "Zustieg kann nicht garantiert werden", 97: "Hohe Auslastung",
+    98: "Sonstige Qualitätsmängel", 99: "Verzögerungen im Betriebsablauf",
+}
+# Codes, die keine echte Störung sind (nicht als Verspätungsgrund anzeigen)
+DB_MSG_IGNORE = {84, 88, 89, 62}
+
+
 def _db_tt_get(path, timeout=None):
     """DB Timetables API GET → XML-Element (ElementTree)."""
     req = urllib.request.Request(DB_TT_BASE + path, headers={
@@ -532,19 +571,33 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
 # ═══ DB REST — Abfahrten ══════════════════════════════════════════
 
 def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
-    """Abfahrten über die DB Timetables API (/plan geplant + /fchg Echtzeit)."""
+    """Abfahrten über die DB Timetables API (/plan geplant + /fchg Echtzeit).
+    Extrahiert: Verspätung, Gleis(-wechsel), Ausfall, Meldungen (Verspätungsgründe/
+    Ersatzverkehr/Umleitung/Qualität), Flügelzug, Ersatzzug, Halt-Änderungen."""
     if not DB_TT_CLIENT_ID:
         return []
     now = datetime.now(TIMEZONE)
 
-    # Echtzeit-Änderungen (Verspätung / Gleis / Ausfall) je Stop-ID
+    # Echtzeit-Änderungen je Stop-ID
     changes = {}
     try:
         fchg = _db_tt_get(f"/fchg/{station_id}")
         for s in fchg.findall("s"):
             dp = s.find("dp")
-            if dp is not None:
-                changes[s.get("id")] = {"ct": dp.get("ct"), "cp": dp.get("cp"), "cs": dp.get("cs")}
+            if dp is None:
+                continue
+            codes = []
+            for m in list(dp) + list(s):
+                if m.tag != "m":
+                    continue
+                t = m.get("t")
+                c = m.get("c")
+                if t in ("d", "q") and c and c.isdigit():
+                    codes.append(int(c))
+            changes[s.get("id")] = {
+                "ct": dp.get("ct"), "cp": dp.get("cp"), "cs": dp.get("cs"),
+                "cpth": dp.get("cpth"), "codes": codes,
+            }
     except Exception:
         pass
 
@@ -566,6 +619,7 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
             line = dp.get("l") or ""
             tl = s.find("tl")
             cat = (tl.get("c") if tl is not None else "") or ""
+            tl_t = (tl.get("t") if tl is not None else "") or ""
             if not line and tl is not None:
                 line = (cat + (tl.get("n") or "")).strip()
             ppth = [p for p in (dp.get("ppth") or "").split("|") if p]
@@ -591,6 +645,34 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
             gleis_geplant = dp.get("pp") or ""
             gleis_aktuell = ch.get("cp") or gleis_geplant
             produkt = _db_cat_product(cat, line)
+
+            # ─── Meldungen aus Change-Codes ───
+            codes = ch.get("codes", [])
+            bemerkungen = []
+            for c in codes:
+                if c in DB_MSG_IGNORE:
+                    continue
+                txt = DB_MSG_TEXT.get(c)
+                if txt and txt not in bemerkungen:
+                    bemerkungen.append(txt)
+            ersatzverkehr = any(c in (29, 78) for c in codes)
+            umleitung = 58 in codes
+
+            # ─── Flügelzug / Ersatzzug ───
+            fluegelzug = bool(dp.get("wings"))
+            ersatzzug = tl_t == "e"
+
+            # ─── Halt-Änderungen (geänderte Route cpth vs ppth) ───
+            zusatz_halte, entfall_halte = [], []
+            cpth = ch.get("cpth")
+            if cpth:
+                neu = [p for p in cpth.split("|") if p]
+                setp, setn = set(ppth), set(neu)
+                zusatz_halte = [h for h in neu if h not in setp][:3]
+                entfall_halte = [h for h in ppth if h not in setn][:3]
+                if neu:
+                    ziel = neu[-1]  # neues Ziel
+
             result = {
                 "linie": line,
                 "richtung": ziel,
@@ -601,11 +683,23 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
                 "typ": produkt,
                 "typ_icon": _product_icon(produkt),
                 "ausfall": cancelled,
-                "bemerkungen": [],
+                "bemerkungen": bemerkungen[:3],
                 "_sortkey": dt_plan.timestamp(),
             }
             if gleis_aktuell and gleis_geplant and gleis_aktuell != gleis_geplant:
                 result["gleis_geplant"] = str(gleis_geplant)
+            if ersatzverkehr:
+                result["ersatzverkehr"] = True
+            if umleitung:
+                result["umleitung"] = True
+            if fluegelzug:
+                result["fluegelzug"] = True
+            if ersatzzug:
+                result["ersatzzug"] = True
+            if zusatz_halte:
+                result["zusatz_halte"] = zusatz_halte
+            if entfall_halte:
+                result["entfall_halte"] = entfall_halte
             if stopovers:
                 result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
             deps.append(result)
