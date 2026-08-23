@@ -305,6 +305,39 @@ def _fetch_oepnv(config):
         return config.oepnv_cache or None
 
 
+def _fetch_stoerungen(config):
+    """Störungen/Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell), gecacht 5 Min."""
+    if config.layout_modus != 'abfahrten' and not config.zeige_oepnv:
+        return []
+    if not getattr(config, 'oepnv_stoerungsbanner', True):
+        return []
+    # Cache 5 Min (Störungen ändern sich langsam)
+    if config.oepnv_stoerung_cache_zeit:
+        age = (timezone.now() - config.oepnv_stoerung_cache_zeit).total_seconds()
+        if age < 300:
+            return config.oepnv_stoerung_cache or []
+    result = []
+    try:
+        if config.oepnv_stoerung_bahn:
+            result += oepnv.fetch_stoerungen_nahsh(config.oepnv_stoerung_bahn_linien or None)
+        if config.oepnv_stoerung_bus:
+            result += oepnv.fetch_stoerungen_swl(config.oepnv_stoerung_bus_linien or None)
+    except Exception as e:
+        print(f"Störungs-Fehler: {e}")
+    # Manuelle Meldungen voranstellen
+    for m in (config.oepnv_stoerung_manuell or []):
+        if isinstance(m, dict) and (m.get('titel') or m.get('text')):
+            result.insert(0, {
+                'quelle': 'manuell', 'typ': 'stoerung',
+                'titel': m.get('titel') or 'Hinweis', 'text': m.get('text') or '',
+                'linien': [], 'von': '', 'bis': '',
+            })
+    config.oepnv_stoerung_cache = result
+    config.oepnv_stoerung_cache_zeit = timezone.now()
+    config.save(update_fields=['oepnv_stoerung_cache', 'oepnv_stoerung_cache_zeit', 'aktualisiert_am'])
+    return result
+
+
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
 @monitor_router.get("/display")
@@ -388,6 +421,7 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
 
     # ÖPNV Abfahrten
     abfahrten = _fetch_oepnv(config)
+    stoerungen = _fetch_stoerungen(config)
 
     # Config (sensitive Felder entfernen)
     config_data = MonitorConfigSchema.from_orm(config).dict()
@@ -424,6 +458,7 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
         'wetter': wetter,
         'raumplan': raumplan,
         'abfahrten': abfahrten,
+        'stoerungen': stoerungen,
         'on_air_profil': on_air_profil,
         'klausur': klausur,
     }

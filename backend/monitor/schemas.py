@@ -143,6 +143,11 @@ class MonitorConfigSchema(Schema):
     oepnv_streik_text: str
     oepnv_streik_linien: list = []
     oepnv_streik_typen: list = []
+    oepnv_stoerung_bahn: bool = True
+    oepnv_stoerung_bus: bool = True
+    oepnv_stoerung_bahn_linien: list = []
+    oepnv_stoerung_bus_linien: list = []
+    oepnv_stoerung_manuell: list = []
     ist_on_air: bool
     on_air_text: str
     on_air_seit: Optional[datetime] = None
@@ -259,6 +264,11 @@ class MonitorConfigUpdateSchema(Schema):
     oepnv_streik_text: Optional[str] = None
     oepnv_streik_linien: Optional[list] = None
     oepnv_streik_typen: Optional[list] = None
+    oepnv_stoerung_bahn: Optional[bool] = None
+    oepnv_stoerung_bus: Optional[bool] = None
+    oepnv_stoerung_bahn_linien: Optional[list] = None
+    oepnv_stoerung_bus_linien: Optional[list] = None
+    oepnv_stoerung_manuell: Optional[list] = None
     on_air_text: Optional[str] = None
     on_air_groesse: Optional[str] = None
     on_air_position: Optional[str] = None

@@ -457,6 +457,7 @@ export default function MonitorAdminPage() {
     'oepnv_zeige_via','oepnv_zeige_relativ','oepnv_farbcodierung','oepnv_highlight_naechste',
     'oepnv_auto_scroll','oepnv_stoerungsbanner','oepnv_schriftgroesse','oepnv_layout_spalten',
     'oepnv_streik_aktiv','oepnv_streik_text','oepnv_streik_linien','oepnv_streik_typen',
+    'oepnv_stoerung_bahn','oepnv_stoerung_bus','oepnv_stoerung_bahn_linien','oepnv_stoerung_bus_linien','oepnv_stoerung_manuell',
     'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild','on_air_split','on_air_split_seite',
     'refresh_intervall',
     'zeige_kamera','kamera_url','kamera_titel','kamera_typ',
@@ -3267,10 +3268,9 @@ export default function MonitorAdminPage() {
                   onChange={e => updateConfig('oepnv_layout_spalten', parseInt(e.target.value))}
                   disabled={!canEdit}
                   className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50">
-                  <option value={1}>1 Spalte</option>
-                  <option value={2}>2 Spalten</option>
-                  <option value={3}>3 Spalten</option>
-                  <option value={4}>4 Spalten</option>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <option key={n} value={n}>{n} {n === 1 ? 'Spalte' : 'Spalten'}</option>
+                  ))}
                 </select>
                 <span className="text-[10px] text-gray-500">Stationen werden in diese Spalten aufgeteilt. Zuordnung pro Station oben konfigurierbar.</span>
               </div>
@@ -3283,6 +3283,91 @@ export default function MonitorAdminPage() {
                 <p className="text-xs mt-1">Oben nach einer Haltestelle oder einem Bahnhof suchen</p>
               </div>
             )}
+
+            {/* ─── Störungsmeldungen ─── */}
+            <div className="border-t border-gray-700/40 pt-4 mt-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <span className="text-sm font-semibold text-white">Störungen & Baumaßnahmen</span>
+                {!monitorConfig.oepnv_stoerungsbanner && <span className="text-[10px] text-amber-400">(Widget „Störungsbanner" oben aktivieren)</span>}
+              </div>
+
+              {/* Zug-Störungen (NAH.SH) */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer mb-1.5">
+                  <input type="checkbox" checked={monitorConfig.oepnv_stoerung_bahn !== false} disabled={!canEdit}
+                    onChange={e => updateConfig('oepnv_stoerung_bahn', e.target.checked)}
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 text-blue-500" />
+                  <span className="text-sm text-white">Zug-Störungen (NAH.SH / DB Regio)</span>
+                </label>
+                {monitorConfig.oepnv_stoerung_bahn !== false && (
+                  <div className="ml-6">
+                    <label className="block text-[11px] text-gray-500 mb-1">Linienfilter (leer = alle erkannten Linien)</label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(monitorConfig.oepnv_stoerung_bahn_linien || []).map((l, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium">
+                          {l}{canEdit && <button onClick={() => updateConfig('oepnv_stoerung_bahn_linien', (monitorConfig.oepnv_stoerung_bahn_linien || []).filter((_, j) => j !== i))} className="ml-0.5 hover:text-white">&times;</button>}
+                        </span>
+                      ))}
+                    </div>
+                    <input type="text" placeholder="z.B. RE8 — Enter zum Hinzufügen" disabled={!canEdit}
+                      className="w-full sm:w-72 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-600 disabled:opacity-50"
+                      onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { const v = e.target.value.trim(); const cur = monitorConfig.oepnv_stoerung_bahn_linien || []; if (!cur.includes(v)) updateConfig('oepnv_stoerung_bahn_linien', [...cur, v]); e.target.value = ''; } }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Bus-Störungen (SWL Lübeck) */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer mb-1.5">
+                  <input type="checkbox" checked={monitorConfig.oepnv_stoerung_bus !== false} disabled={!canEdit}
+                    onChange={e => updateConfig('oepnv_stoerung_bus', e.target.checked)}
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 text-purple-500" />
+                  <span className="text-sm text-white">Bus-Störungen (Stadtverkehr Lübeck)</span>
+                </label>
+                {monitorConfig.oepnv_stoerung_bus !== false && (
+                  <div className="ml-6">
+                    <label className="block text-[11px] text-gray-500 mb-1">Linienfilter (leer = alle; „alle Linien"-Meldungen immer)</label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {(monitorConfig.oepnv_stoerung_bus_linien || []).map((l, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full text-xs font-medium">
+                          {l}{canEdit && <button onClick={() => updateConfig('oepnv_stoerung_bus_linien', (monitorConfig.oepnv_stoerung_bus_linien || []).filter((_, j) => j !== i))} className="ml-0.5 hover:text-white">&times;</button>}
+                        </span>
+                      ))}
+                    </div>
+                    <input type="text" placeholder="z.B. 1, 3, 16 — Enter zum Hinzufügen" disabled={!canEdit}
+                      className="w-full sm:w-72 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-600 disabled:opacity-50"
+                      onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { const v = e.target.value.trim(); const cur = monitorConfig.oepnv_stoerung_bus_linien || []; if (!cur.includes(v)) updateConfig('oepnv_stoerung_bus_linien', [...cur, v]); e.target.value = ''; } }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Manuelle Meldungen */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Manuelle Meldungen</label>
+                <div className="space-y-2">
+                  {(monitorConfig.oepnv_stoerung_manuell || []).map((m, i) => (
+                    <div key={i} className="flex gap-2 items-start">
+                      <div className="flex-1 space-y-1">
+                        <input type="text" value={m.titel || ''} disabled={!canEdit} placeholder="Titel"
+                          onChange={e => { const u = [...(monitorConfig.oepnv_stoerung_manuell || [])]; u[i] = { ...u[i], titel: e.target.value }; updateConfig('oepnv_stoerung_manuell', u); }}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm disabled:opacity-50" />
+                        <textarea value={m.text || ''} disabled={!canEdit} placeholder="Text" rows={2}
+                          onChange={e => { const u = [...(monitorConfig.oepnv_stoerung_manuell || [])]; u[i] = { ...u[i], text: e.target.value }; updateConfig('oepnv_stoerung_manuell', u); }}
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm resize-none disabled:opacity-50" />
+                      </div>
+                      {canEdit && <button onClick={() => updateConfig('oepnv_stoerung_manuell', (monitorConfig.oepnv_stoerung_manuell || []).filter((_, j) => j !== i))} className="p-1.5 text-gray-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>}
+                    </div>
+                  ))}
+                </div>
+                {canEdit && (
+                  <button onClick={() => updateConfig('oepnv_stoerung_manuell', [...(monitorConfig.oepnv_stoerung_manuell || []), { titel: '', text: '' }])}
+                    className="mt-2 flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-200 text-sm rounded-lg">
+                    <Plus className="w-3.5 h-3.5" /> Meldung
+                  </button>
+                )}
+              </div>
+            </div>
 
             {/* ─── Streik-Modus ─── */}
             <div className="border-t border-gray-700/40 pt-4 mt-4">
