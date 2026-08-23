@@ -602,8 +602,10 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
         pass
 
     stunden = 1 + min(3, int(dauer) // 60)
+    # Auch die vorherige Stunde laden (i=-1): Züge mit früher Plan-Zeit aber
+    # Verspätung stehen im Plan der GEPLANTEN Stunde, nicht der aktuellen.
     deps = []
-    for i in range(stunden):
+    for i in range(-1, stunden):
         t = now + timedelta(hours=i)
         try:
             plan = _db_tt_get(f"/plan/{station_id}/{t.strftime('%y%m%d')}/{t.strftime('%H')}")
