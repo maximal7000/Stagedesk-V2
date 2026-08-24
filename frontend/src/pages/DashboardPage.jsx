@@ -26,7 +26,7 @@ export default function DashboardPage() {
     : (user?.name || user?.preferred_username);
 
   return (
-    <div className="max-w-6xl space-y-8">
+    <div className="w-full space-y-8">
       <PageHeader
         title={`Willkommen zurück, ${name}! 👋`}
         meta="Schön, dass du da bist."
