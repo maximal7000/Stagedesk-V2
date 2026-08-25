@@ -604,17 +604,21 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
             dp = s.find("dp")
             if dp is None:
                 continue
-            codes = []
+            codes = []      # d + q — für Flag-Erkennung (SEV/Umleitung)
+            codes_d = []    # nur t="d" = echte Verspätungs-/Ausfallursachen (fürs Anzeigen)
             for m in list(dp) + list(s):
                 if m.tag != "m":
                     continue
                 t = m.get("t")
                 c = m.get("c")
                 if t in ("d", "q") and c and c.isdigit():
-                    codes.append(int(c))
+                    ci = int(c)
+                    codes.append(ci)
+                    if t == "d":
+                        codes_d.append(ci)
             changes[s.get("id")] = {
                 "ct": dp.get("ct"), "cp": dp.get("cp"), "cs": dp.get("cs"),
-                "cpth": dp.get("cpth"), "codes": codes,
+                "cpth": dp.get("cpth"), "codes": codes, "codes_d": codes_d,
             }
     except Exception:
         pass
@@ -668,8 +672,10 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
 
             # ─── Meldungen aus Change-Codes ───
             codes = ch.get("codes", [])
+            # Grund/Bemerkung NUR aus echten Ursachen (t="d") — Qualitätshinweise
+            # (t="q", z.B. „nur 2. Klasse") gehören nicht als Verspätungsgrund auf die Zeile.
             bemerkungen = []
-            for c in codes:
+            for c in ch.get("codes_d", []):
                 if c in DB_MSG_IGNORE:
                     continue
                 txt = DB_MSG_TEXT.get(c)
