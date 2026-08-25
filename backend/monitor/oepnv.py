@@ -535,7 +535,23 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
             if len(abfahrten) >= max_pro_station:
                 break
 
-        abfahrten.sort(key=lambda d: d.get("abfahrt", ""))
+        # Tagesbewusst sortieren: "00:03" gehört ans Ende, nicht an den Anfang.
+        # (String-Sortierung stellte Züge nach Mitternacht fälschlich nach oben.)
+        _now = datetime.now(ZoneInfo("Europe/Berlin"))
+        _now_min = _now.hour * 60 + _now.minute
+
+        def _dep_sortmin(d):
+            t = d.get("abfahrt") or d.get("abfahrt_aktuell") or "99:99"
+            try:
+                h, m = map(int, str(t).split(":")[:2])
+                diff = h * 60 + m - _now_min
+                if diff < -120:  # bereits nach Mitternacht → nächster Tag
+                    diff += 1440
+                return diff
+            except (ValueError, TypeError):
+                return 99999
+
+        abfahrten.sort(key=_dep_sortmin)
 
         entry = {
             "station_name": station_name,

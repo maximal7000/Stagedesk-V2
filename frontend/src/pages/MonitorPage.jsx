@@ -58,7 +58,7 @@ function swlColorForLine(name) {
 }
 
 // Generische Dauer-Hinweise (E-Tretroller-Mitnahme etc.) — nicht überall prominent zeigen
-const STOERUNG_GENERIC_RE = /(tretroller|e-?scooter|e-?roller|fahrr[aä]d|gep[aä]ck|mitnahme|hund|ferienfahrplan|schulfrei)/i;
+const STOERUNG_GENERIC_RE = /(tretroller|e-?scooter|e-?roller|fahrr[aä]d|gep[aä]ck|mitnahme|hund|ferienfahrplan|schulfrei|kurzstrecke|heiligabend|silvester|rollstuhl|autokraft|barrierefrei|informationen zum)/i;
 function istGenerischerHinweis(st) {
   const generic = STOERUNG_GENERIC_RE.test(`${st.titel || ''} ${st.text || ''}`);
   return generic && (st.all_lines || !(st.linien || []).filter(l => l && l !== 'alle').length);
@@ -1005,11 +1005,21 @@ export default function MonitorPage() {
       const hasDelay = dep.verspaetung > 0;
       const minUntil = getMinUntil(dep.abfahrt, dep.verspaetung);
       const via = zeigeVia ? (dep.stopovers?.slice(0, 3).join(', ') || '') : '';
-      // Nur echte Ausnahmen als Zeilen-Zusatz — generische Bemerkungen wandern in die Störungs-Karte
-      const zusatzInfo = [
-        dep.entfall_halte?.length ? { txt: `ohne Halt: ${dep.entfall_halte.join(', ')}`, tone: 'text-red-400/90' } : null,
-        dep.zusatz_halte?.length ? { txt: `zusätzl. Halt: ${dep.zusatz_halte.join(', ')}`, tone: 'text-white/45' } : null,
-      ].filter(Boolean);
+      // Zeilen-Zusatz: bei Ausfall der GRUND (statt „ohne Halt", das bei Komplettausfall widersprüchlich ist),
+      // sonst echte Routenänderungen; falls keine, der Grund als dezenter Hinweis.
+      // Echter Grund (z.B. „Unbefugte Personen auf der Strecke") — generische Dauer-Hinweise
+      // (E-Tretroller, Fahrradmitnahme, Gepäck …) werden herausgefiltert, sollen nicht auf jede Zeile.
+      const grund = (dep.bemerkungen || []).find(b =>
+        typeof b === 'string' && b.trim().length > 4 && !STOERUNG_GENERIC_RE.test(b));
+      const zusatzInfo = [];
+      if (dep.ausfall) {
+        // Bei Ausfall den Grund (statt „ohne Halt", das bei Komplettausfall widersprüchlich ist)
+        if (grund) zusatzInfo.push({ txt: grund, tone: 'text-red-400/85' });
+      } else {
+        // Normale Zeilen: nur echte Routenänderungen — KEINE generischen Bemerkungen (Rauschen)
+        if (dep.entfall_halte?.length) zusatzInfo.push({ txt: `ohne Halt: ${dep.entfall_halte.join(', ')}`, tone: 'text-red-400/85' });
+        if (dep.zusatz_halte?.length) zusatzInfo.push({ txt: `zusätzl. Halt: ${dep.zusatz_halte.join(', ')}`, tone: 'text-white/45' });
+      }
 
       return (
         <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${i > 0 ? 'border-t border-white/[0.06]' : ''} ${isHighlight && !dep.ausfall ? 'bg-white/[0.035]' : ''}`}
