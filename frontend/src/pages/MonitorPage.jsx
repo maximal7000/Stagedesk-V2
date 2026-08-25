@@ -1016,9 +1016,13 @@ export default function MonitorPage() {
         // Bei Ausfall den Grund (statt „ohne Halt", das bei Komplettausfall widersprüchlich ist)
         if (grund) zusatzInfo.push({ txt: grund, tone: 'text-red-400/85' });
       } else {
-        // Normale Zeilen: nur echte Routenänderungen — KEINE generischen Bemerkungen (Rauschen)
+        // Normale Zeilen: echte Routenänderungen — KEINE generischen Bemerkungen (Rauschen)
         if (dep.entfall_halte?.length) zusatzInfo.push({ txt: `ohne Halt: ${dep.entfall_halte.join(', ')}`, tone: 'text-red-400/85' });
         if (dep.zusatz_halte?.length) zusatzInfo.push({ txt: `zusätzl. Halt: ${dep.zusatz_halte.join(', ')}`, tone: 'text-white/45' });
+        // Verspätungsgrund bei tatsächlicher Verspätung
+        if (hasDelay && grund && !zusatzInfo.some(z => z.txt === grund)) {
+          zusatzInfo.push({ txt: grund, tone: 'text-red-400/70' });
+        }
       }
 
       return (
