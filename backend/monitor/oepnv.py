@@ -378,6 +378,19 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
                     if k not in existing:
                         existing.add(k)
                         abfahrten_roh.append(d)
+                # Zeitlich vorsortieren, sonst schneidet der max-Cap (vor dem finalen Sort) die
+                # hinten angehängten S-Bahnen wieder ab.
+                _n = datetime.now(TIMEZONE)
+                _nm = _n.hour * 60 + _n.minute
+
+                def _rawmin(d):
+                    try:
+                        h, m = map(int, str(d.get("abfahrt", "99:99")).split(":")[:2])
+                        diff = h * 60 + m - _nm
+                        return diff + 1440 if diff < -120 else diff
+                    except (ValueError, TypeError):
+                        return 99999
+                abfahrten_roh.sort(key=_rawmin)
             except Exception as e:
                 print(f"S-Bahn-Merge Fehler ({station_name}): {e}")
 
