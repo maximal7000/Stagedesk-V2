@@ -368,6 +368,19 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
                     except Exception as e2:
                         print(f"DB Fallback Fehler ({station_name}): {e2}")
 
+        # ─── S-Bahn aus meta-EVA dazuholen (opt-in) — große Bahnhöfe trennen S-Bahn ab ───
+        if st_use_db and station.get("zeige_sbahn", False) and abfahrten_roh:
+            try:
+                sbahn_deps = _fetch_sbahn_meta(station_id, dauer, max_pro_station * 2, stopovers=need_stopovers)
+                existing = {(d["linie"], d["abfahrt"], d["richtung"]) for d in abfahrten_roh}
+                for d in sbahn_deps:
+                    k = (d["linie"], d["abfahrt"], d["richtung"])
+                    if k not in existing:
+                        existing.add(k)
+                        abfahrten_roh.append(d)
+            except Exception as e:
+                print(f"S-Bahn-Merge Fehler ({station_name}): {e}")
+
         # ─── Versuch 2: NAH.SH HAFAS (Fallback oder wenn beide aktiv) ───
         if st_use_nahsh and (abfahrten_roh is None or len(abfahrten_roh) == 0 or station_api == "beide"):
             try:
@@ -587,6 +600,45 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
 
 
 # ═══ DB REST — Abfahrten ══════════════════════════════════════════
+
+_DB_META_CACHE = {}  # eva -> (meta_evas, timestamp) — große Bahnhöfe trennen S-Bahn in eigene EVA
+
+
+def _db_meta_evas(eva):
+    """Geschwister-EVAs eines Bahnhofs (aus dem meta-Feld) — z.B. die separate S-Bahn-EVA.
+    IRIS trennt Bahnsteig-Gruppen: Hamburg Hbf = 8002549 (Fern/Regio), S-Bahn = 8098549."""
+    import time as _time
+    now = _time.time()
+    hit = _DB_META_CACHE.get(str(eva))
+    if hit and now - hit[1] < 86400:
+        return hit[0]
+    evas = []
+    try:
+        root = _db_tt_get(f"/station/{urllib.parse.quote(str(eva))}", timeout=REQUEST_TIMEOUT_SEARCH)
+        for s in root.findall("station"):
+            if s.get("eva") == str(eva):
+                meta = s.get("meta") or ""
+                evas = [x for x in meta.split("|") if x and x != str(eva)]
+                break
+    except Exception:
+        evas = []
+    _DB_META_CACHE[str(eva)] = (evas, now)
+    return evas
+
+
+def _fetch_sbahn_meta(eva, dauer, max_results, stopovers=False):
+    """S-Bahn-Abfahrten aus den meta-Geschwister-EVAs einsammeln (nur typ_icon == sbahn)."""
+    out = []
+    for m_eva in _db_meta_evas(eva):
+        try:
+            deps = _fetch_departures_db(m_eva, dauer, max_results, stopovers=stopovers)
+        except Exception:
+            continue
+        for d in deps:
+            if d.get("typ_icon") == "sbahn":
+                out.append(d)
+    return out
+
 
 def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
     """Abfahrten über die DB Timetables API (/plan geplant + /fchg Echtzeit).
