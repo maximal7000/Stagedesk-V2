@@ -65,7 +65,7 @@ function istGenerischerHinweis(st) {
 }
 
 // ═══ Störungs-Karte: schaltet Störungen/Bau/Streik durch, mit Bild wenn vorhanden ═══
-function DisruptionCarousel({ items, accent, height }) {
+function DisruptionCarousel({ items, accent, height, layout = 'strip' }) {
   const [idx, setIdx] = useState(0);
   const reduce = typeof window !== 'undefined' && window.matchMedia
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -86,27 +86,72 @@ function DisruptionCarousel({ items, accent, height }) {
   const linien = (st.linien || []).filter(l => l && l !== 'alle').slice(0, 8);
   const gilt = st.all_lines ? 'alle Linien' : '';
 
-  return (
-    <div className="shrink-0 border-t border-white/10 overflow-hidden" style={{ height, background: 'linear-gradient(180deg, rgba(18,22,32,0.96) 0%, rgba(10,14,23,0.98) 100%)' }}>
-      <div key={idx} className="h-full flex items-stretch gap-4 px-6 py-3" style={reduce ? undefined : { animation: 'dm-fade 500ms ease' }}>
-        {/* Textspalte */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-bold tracking-wide"
-              style={{ color: tagTone.c, background: tagTone.bg }}>
-              <TagIcon className="w-4 h-4" /> {tagLabel}
-            </span>
-            {gilt && <span className="text-white/45 text-xs font-medium">{gilt}</span>}
-            {linien.map((l, j) => {
-              const col = swlColorForLine(l);
-              return (
-                <span key={j} className="text-xs font-bold rounded px-1.5 py-0.5 leading-none tabular-nums"
-                  style={col ? { background: col, color: chipTextColor(col) } : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)' }}>
-                  {l}
-                </span>
-              );
-            })}
+  const grad = 'linear-gradient(180deg, rgba(18,22,32,0.96) 0%, rgba(10,14,23,0.98) 100%)';
+  const kopf = (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-bold tracking-wide"
+        style={{ color: tagTone.c, background: tagTone.bg }}>
+        <TagIcon className="w-4 h-4" /> {tagLabel}
+      </span>
+      {gilt && <span className="text-white/45 text-xs font-medium">{gilt}</span>}
+      {linien.map((l, j) => {
+        const col = swlColorForLine(l);
+        return (
+          <span key={j} className="text-xs font-bold rounded px-1.5 py-0.5 leading-none tabular-nums"
+            style={col ? { background: col, color: chipTextColor(col) } : { background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.8)' }}>
+            {l}
+          </span>
+        );
+      })}
+    </div>
+  );
+  const bild = st.bild && (
+    <div className="rounded-lg overflow-hidden bg-white/[0.03] border border-white/10 w-full" style={{ aspectRatio: '16 / 9' }}>
+      <img src={st.bild} alt="" className="w-full h-full object-contain" loading="lazy"
+        onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
+    </div>
+  );
+  const fuss = (st.von || st.bis || st.vorschlag) && (
+    <div className="flex items-center gap-4">
+      {(st.von || st.bis) && <span className="text-white/40 text-[clamp(0.65rem,1vw,0.85rem)] tabular-nums">{st.von}{st.bis ? ` – ${st.bis}` : ''}</span>}
+      {st.vorschlag && <span className="text-white/45 text-[clamp(0.65rem,1vw,0.85rem)] truncate">→ {st.vorschlag}</span>}
+    </div>
+  );
+
+  // ─── Eigene Spalte: vertikal, Bild groß oben, mehr Text ───
+  if (layout === 'column') {
+    return (
+      <div className="flex flex-col min-w-0 flex-1 rounded-lg overflow-hidden border border-white/10" style={{ background: grad }}>
+        <div key={idx} className="flex-1 min-h-0 flex flex-col gap-2.5 p-4 overflow-hidden" style={reduce ? undefined : { animation: 'dm-fade 500ms ease' }}>
+          {kopf}
+          {bild}
+          <div className="text-white font-display font-bold leading-tight text-[clamp(1.1rem,1.6vw,1.9rem)]">{st.titel}</div>
+          {st.text && (
+            <div className="text-white/60 leading-snug text-[clamp(0.8rem,1vw,1.05rem)] min-h-0"
+              style={{ display: '-webkit-box', WebkitLineClamp: st.bild ? 6 : 12, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {st.text}
+            </div>
+          )}
+          <div className="mt-auto">{fuss}</div>
+        </div>
+        {items.length > 1 && (
+          <div className="shrink-0 flex justify-center gap-1.5 py-2 border-t border-white/[0.06]">
+            {items.slice(0, 10).map((_, j) => (
+              <span key={j} className="h-1.5 rounded-full transition-all"
+                style={{ width: j === idx ? 18 : 6, background: j === idx ? accent : 'rgba(255,255,255,0.2)' }} />
+            ))}
           </div>
+        )}
+      </div>
+    );
+  }
+
+  // ─── Unten: horizontaler Streifen (Text links, Bild rechts) ───
+  return (
+    <div className="shrink-0 border-t border-white/10 overflow-hidden" style={{ height, background: grad }}>
+      <div key={idx} className="h-full flex items-stretch gap-4 px-6 py-3" style={reduce ? undefined : { animation: 'dm-fade 500ms ease' }}>
+        <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+          {kopf}
           <div className="text-white font-display font-bold leading-tight text-[clamp(1rem,2.1vw,1.7rem)] truncate">{st.titel}</div>
           {st.text && (
             <div className="text-white/55 leading-snug text-[clamp(0.72rem,1.25vw,1rem)]"
@@ -114,21 +159,14 @@ function DisruptionCarousel({ items, accent, height }) {
               {st.text}
             </div>
           )}
-          <div className="flex items-center gap-4 mt-0.5">
-            {(st.von || st.bis) && (
-              <span className="text-white/40 text-[clamp(0.65rem,1vw,0.85rem)] tabular-nums">{st.von}{st.bis ? ` – ${st.bis}` : ''}</span>
-            )}
-            {st.vorschlag && <span className="text-white/45 text-[clamp(0.65rem,1vw,0.85rem)] truncate">→ {st.vorschlag}</span>}
-          </div>
+          <div className="mt-0.5">{fuss}</div>
         </div>
-        {/* Bildspalte */}
         {st.bild && (
           <div className="shrink-0 h-full rounded-lg overflow-hidden bg-white/[0.03] border border-white/10" style={{ aspectRatio: '16 / 9', maxWidth: '38%' }}>
             <img src={st.bild} alt="" className="w-full h-full object-contain" loading="lazy"
               onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
           </div>
         )}
-        {/* Fortschritt */}
         {items.length > 1 && (
           <div className="shrink-0 flex flex-col justify-center gap-1.5 pl-1">
             {items.slice(0, 8).map((_, j) => (
@@ -1215,6 +1253,8 @@ export default function MonitorPage() {
       || (b.highlighted ? 1 : 0) - (a.highlighted ? 1 : 0)
       || (b.bild ? 1 : 0) - (a.bild ? 1 : 0));
     disruptionItems.splice(8);
+    const stoerungPos = config?.oepnv_stoerung_position || 'unten';
+    const stoerungAlsSpalte = stoerungPos === 'spalte' && disruptionItems.length > 0;
 
     return (
       <div className="fixed inset-0 overflow-hidden select-none cursor-none flex flex-col" style={{ background: '#0a0e17' }}>
@@ -1252,6 +1292,15 @@ export default function MonitorPage() {
                   ))}
                 </div>
               ))}
+              {stoerungAlsSpalte && (
+                <div className="flex-1 flex flex-col min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1 px-1">
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
+                    <h2 className={`text-white/60 font-display ${s.station} font-bold uppercase tracking-[0.12em] truncate`}>Störungen &amp; Baumaßnahmen</h2>
+                  </div>
+                  <DisruptionCarousel items={disruptionItems} accent={accent} layout="column" />
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center py-20">
@@ -1263,8 +1312,10 @@ export default function MonitorPage() {
           )}
         </div>
 
-        {/* Störungen / Baumaßnahmen / Streik — rotierende Karte mit Bild, blendet sich aus wenn nichts anliegt */}
-        <DisruptionCarousel items={disruptionItems} accent={accent} height="clamp(118px, 20vh, 240px)" />
+        {/* Störungen / Baumaßnahmen / Streik — unten als Streifen (wenn nicht als Spalte konfiguriert) */}
+        {!stoerungAlsSpalte && stoerungPos !== 'spalte' && (
+          <DisruptionCarousel items={disruptionItems} accent={accent} height="clamp(118px, 20vh, 240px)" />
+        )}
 
         {/* Footer */}
         <div className="px-6 py-0.5 flex items-center justify-between text-white/[0.06] text-[8px] shrink-0">

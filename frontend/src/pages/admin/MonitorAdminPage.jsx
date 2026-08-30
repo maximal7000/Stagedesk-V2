@@ -147,6 +147,8 @@ export default function MonitorAdminPage() {
   const [klausurVorlagen, setKlausurVorlagen] = useState([]);
   const [globalSettings, setGlobalSettings] = useState(null);
   const [configVersions, setConfigVersions] = useState([]);
+  const [stoerungenListe, setStoerungenListe] = useState([]);
+  const [stoerungenLoading, setStoerungenLoading] = useState(false);
   const [papierkorb, setPapierkorb] = useState({ ansichten: [], medien: [] });
 
   // Sections
@@ -458,6 +460,7 @@ export default function MonitorAdminPage() {
     'oepnv_auto_scroll','oepnv_stoerungsbanner','oepnv_schriftgroesse','oepnv_layout_spalten',
     'oepnv_streik_aktiv','oepnv_streik_text','oepnv_streik_linien','oepnv_streik_typen',
     'oepnv_stoerung_bahn','oepnv_stoerung_bus','oepnv_stoerung_bahn_linien','oepnv_stoerung_bus_linien','oepnv_stoerung_manuell',
+    'oepnv_stoerung_ausgeblendet','oepnv_stoerung_position',
     'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild','on_air_split','on_air_split_seite',
     'refresh_intervall',
     'zeige_kamera','kamera_url','kamera_titel','kamera_typ',
@@ -826,6 +829,21 @@ export default function MonitorAdminPage() {
   };
 
   const updateConfig = (key, value) => setMonitorConfig(prev => ({ ...prev, [key]: value }));
+
+  const fetchStoerungen = useCallback(async () => {
+    if (!activeProfileId) return;
+    setStoerungenLoading(true);
+    try {
+      const res = await apiClient.get(`/monitor/stoerungen?profil_id=${activeProfileId}`);
+      setStoerungenListe(Array.isArray(res.data) ? res.data : []);
+    } catch { setStoerungenListe([]); }
+    finally { setStoerungenLoading(false); }
+  }, [activeProfileId]);
+
+  const toggleStoerungAusgeblendet = (id) => {
+    const cur = monitorConfig?.oepnv_stoerung_ausgeblendet || [];
+    updateConfig('oepnv_stoerung_ausgeblendet', cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]);
+  };
 
   const applyTheme = (preset) => {
     const themes = {
@@ -3290,6 +3308,59 @@ export default function MonitorAdminPage() {
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
                 <span className="text-sm font-semibold text-white">Störungen & Baumaßnahmen</span>
                 <span className="text-[10px] text-gray-500">Quelle je Verkehrsmittel wählbar</span>
+              </div>
+
+              {/* Anzeige-Position */}
+              <div>
+                <label className="block text-xs text-gray-400 mb-1.5">Störungs-Anzeige</label>
+                <div className="flex gap-2">
+                  {[{ v: 'unten', l: 'Unten (Streifen)' }, { v: 'spalte', l: 'Eigene Spalte' }].map(o => (
+                    <button key={o.v} disabled={!canEdit}
+                      onClick={() => updateConfig('oepnv_stoerung_position', o.v)}
+                      className={`px-3 py-1.5 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
+                        (monitorConfig.oepnv_stoerung_position || 'unten') === o.v
+                          ? 'bg-accent/20 border-accent/40 text-accent' : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
+                      }`}>{o.l}</button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-gray-600 mt-1">„Eigene Spalte" gibt Bild + Text deutlich mehr Platz; „Unten" ist der schmale Durchlauf-Streifen.</p>
+              </div>
+
+              {/* Aktuelle Störungen verwalten (ausblenden) */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs text-gray-400">Aktuelle Störungen — einzeln ausblenden</label>
+                  <button onClick={fetchStoerungen} disabled={stoerungenLoading}
+                    className="text-xs px-2 py-1 bg-gray-800 border border-gray-700 rounded text-gray-300 hover:text-white disabled:opacity-50">
+                    {stoerungenLoading ? 'Lädt…' : 'Laden / Aktualisieren'}
+                  </button>
+                </div>
+                {stoerungenListe.length === 0 ? (
+                  <p className="text-[11px] text-gray-600">Auf „Laden" klicken, um alle aktuellen Meldungen zu sehen. Ausgeblendete verschwinden vom Monitor und werden automatisch entfernt, sobald der Anbieter sie löscht.</p>
+                ) : (
+                  <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                    {stoerungenListe.map(s => {
+                      const hidden = (monitorConfig.oepnv_stoerung_ausgeblendet || []).includes(s.id);
+                      return (
+                        <div key={s.id} className={`flex items-start gap-2 p-2 rounded-lg border ${hidden ? 'bg-gray-900/40 border-gray-800 opacity-60' : 'bg-gray-800/40 border-gray-700'}`}>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${s.typ === 'bauarbeiten' ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>{s.typ === 'bauarbeiten' ? 'Bau' : 'Störung'}</span>
+                              <span className="text-[9px] text-gray-500 uppercase">{s.quelle}</span>
+                              {(s.linien || []).slice(0, 6).map((l, i) => <span key={i} className="text-[9px] px-1 py-0.5 bg-white/10 text-white/70 rounded">{l}</span>)}
+                              {s.hat_bild && <span className="text-[9px] text-gray-500" title="mit Bild">🖼</span>}
+                            </div>
+                            <div className={`text-xs mt-0.5 truncate ${hidden ? 'text-gray-500 line-through' : 'text-white'}`}>{s.titel}</div>
+                          </div>
+                          <button onClick={() => toggleStoerungAusgeblendet(s.id)} disabled={!canEdit}
+                            className={`shrink-0 text-xs px-2 py-1 rounded border disabled:opacity-50 ${hidden ? 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white' : 'bg-red-500/15 border-red-500/30 text-red-300'}`}>
+                            {hidden ? 'Einblenden' : 'Ausblenden'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Zug-Störungen (NAH.SH) */}

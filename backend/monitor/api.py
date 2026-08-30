@@ -329,15 +329,23 @@ def _fetch_stoerungen(config):
     for m in (config.oepnv_stoerung_manuell or []):
         if isinstance(m, dict) and (m.get('titel') or m.get('text')):
             result.insert(0, {
+                'id': oepnv._stoerung_id('manuell', m.get('titel'), m.get('text')),
                 'quelle': 'manuell', 'typ': 'stoerung',
                 'titel': m.get('titel') or 'Hinweis', 'text': m.get('text') or '',
                 'linien': [], 'von': '', 'bis': '',
                 'all_lines': False, 'bild': m.get('bild') or '', 'haltestellen': [], 'vorschlag': '',
                 'highlighted': bool(m.get('highlighted')),
             })
+    # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren
+    aktuelle_ids = {s.get('id') for s in result}
+    versteckt = [h for h in (config.oepnv_stoerung_ausgeblendet or []) if h in aktuelle_ids]
+    felder = ['oepnv_stoerung_cache', 'oepnv_stoerung_cache_zeit', 'aktualisiert_am']
+    if versteckt != (config.oepnv_stoerung_ausgeblendet or []):
+        config.oepnv_stoerung_ausgeblendet = versteckt
+        felder.append('oepnv_stoerung_ausgeblendet')
     config.oepnv_stoerung_cache = result
     config.oepnv_stoerung_cache_zeit = timezone.now()
-    config.save(update_fields=['oepnv_stoerung_cache', 'oepnv_stoerung_cache_zeit', 'aktualisiert_am'])
+    config.save(update_fields=felder)
     return result
 
 
@@ -424,7 +432,9 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
 
     # ÖPNV Abfahrten
     abfahrten = _fetch_oepnv(config)
-    stoerungen = _fetch_stoerungen(config)
+    # Ausgeblendete Störungen nicht ans Display schicken
+    _versteckt = set(config.oepnv_stoerung_ausgeblendet or [])
+    stoerungen = [s for s in _fetch_stoerungen(config) if s.get('id') not in _versteckt]
 
     # Config (sensitive Felder entfernen)
     config_data = MonitorConfigSchema.from_orm(config).dict()
@@ -626,6 +636,23 @@ def get_config(request, profil_id: int = None):
     if profil_id:
         return get_object_or_404(MonitorConfig, id=profil_id)
     return MonitorConfig.get()
+
+
+@monitor_router.get("/stoerungen", auth=keycloak_auth)
+def list_stoerungen(request, profil_id: int = None):
+    """Admin: alle aktuellen Störungen (aller Quellen) mit hidden-Flag zum Ausblenden."""
+    _require_perm(request, 'monitor.view')
+    config = get_object_or_404(MonitorConfig, id=profil_id) if profil_id else MonitorConfig.get()
+    versteckt = set(config.oepnv_stoerung_ausgeblendet or [])
+    out = []
+    for s in _fetch_stoerungen(config):
+        out.append({
+            'id': s.get('id'), 'quelle': s.get('quelle'), 'typ': s.get('typ'),
+            'titel': s.get('titel'), 'text': (s.get('text') or '')[:160],
+            'linien': s.get('linien', []), 'von': s.get('von', ''), 'bis': s.get('bis', ''),
+            'hat_bild': bool(s.get('bild')), 'hidden': s.get('id') in versteckt,
+        })
+    return out
 
 
 _VERSION_DENY = {'id', 'api_token', 'slug', 'erstellt_am', 'aktualisiert_am'}

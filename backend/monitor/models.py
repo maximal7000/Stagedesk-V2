@@ -289,6 +289,10 @@ class MonitorConfig(models.Model):
         help_text="Manuelle Meldungen: [{'titel':..., 'text':...}]")
     oepnv_stoerung_cache = models.JSONField(default=list, blank=True)
     oepnv_stoerung_cache_zeit = models.DateTimeField(null=True, blank=True)
+    oepnv_stoerung_ausgeblendet = models.JSONField(default=list, blank=True,
+        help_text="IDs manuell ausgeblendeter Störungen (auto-bereinigt wenn Meldung verschwindet)")
+    oepnv_stoerung_position = models.CharField(max_length=10, default='unten',
+        help_text="Störungs-Anzeige: 'unten' (Streifen) oder 'spalte' (eigene Spalte)")
 
     # ─── ON AIR ────────────────────────────
     ist_on_air = models.BooleanField(default=False)

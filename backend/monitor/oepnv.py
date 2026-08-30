@@ -1081,6 +1081,14 @@ def _him_date(d, t):
     return s
 
 
+def _stoerung_id(quelle, titel, text):
+    """Stabile Kurz-ID einer Störung (für Ausblenden). Bleibt gleich solange Inhalt gleich;
+    verschwindet die Meldung beim Anbieter, verschwindet die ID → Ausblendung wird auto-bereinigt."""
+    import hashlib
+    key = f"{quelle}|{(titel or '').strip()}|{(text or '').strip()[:120]}"
+    return hashlib.md5(key.encode('utf-8')).hexdigest()[:12]
+
+
 def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
     """Zug-Störungen/Baumaßnahmen aus NAH.SH HAFAS (HimSearch), gefiltert auf Linien."""
     wanted = {_normalize_line(x) for x in (linien_filter or []) if x}
@@ -1108,6 +1116,7 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
         low = (head + ' ' + text).lower()
         typ = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
         out.append({
+            'id': _stoerung_id('bahn', head, text),
             'quelle': 'bahn', 'typ': typ,
             'titel': head or 'Störung', 'text': text,
             'linien': sorted(lines),
@@ -1179,6 +1188,7 @@ def fetch_stoerungen_swl(linien_filter=None):
         stops = [str(s) for s in (c.get('stops') or []) if s] if isinstance(c.get('stops'), list) else []
         suggestion = (c.get('suggestion') or '').strip() if isinstance(c.get('suggestion'), str) else ''
         out.append({
+            'id': _stoerung_id('bus', title, text),
             'quelle': 'bus', 'typ': typ,
             'titel': title or 'Störung', 'text': text,
             'linien': (['alle'] if all_lines else linien),

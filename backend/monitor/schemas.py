@@ -148,6 +148,8 @@ class MonitorConfigSchema(Schema):
     oepnv_stoerung_bahn_linien: list = []
     oepnv_stoerung_bus_linien: list = []
     oepnv_stoerung_manuell: list = []
+    oepnv_stoerung_ausgeblendet: list = []
+    oepnv_stoerung_position: str = 'unten'
     ist_on_air: bool
     on_air_text: str
     on_air_seit: Optional[datetime] = None
@@ -269,6 +271,8 @@ class MonitorConfigUpdateSchema(Schema):
     oepnv_stoerung_bahn_linien: Optional[list] = None
     oepnv_stoerung_bus_linien: Optional[list] = None
     oepnv_stoerung_manuell: Optional[list] = None
+    oepnv_stoerung_ausgeblendet: Optional[list] = None
+    oepnv_stoerung_position: Optional[str] = None
     on_air_text: Optional[str] = None
     on_air_groesse: Optional[str] = None
     on_air_position: Optional[str] = None
