@@ -663,6 +663,8 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
 
     # Echtzeit-Änderungen je Stop-ID
     changes = {}
+    ersetzt_durch = {}   # (cat, nr) des Originals -> Ersatz-Label (z.B. "Bus 114392")
+    ersatz_s = []        # Ersatz-Fahrten (tl t="e" + <ref>) — stehen nur im /fchg, als eigene Abfahrt ergänzen
     try:
         fchg = _db_tt_get(f"/fchg/{station_id}")
         for s in fchg.findall("s"):
@@ -685,6 +687,16 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
                 "ct": dp.get("ct"), "cp": dp.get("cp"), "cs": dp.get("cs"),
                 "cpth": dp.get("cpth"), "codes": codes, "codes_d": codes_d,
             }
+            # Ersatzverkehr: dieser Trip ersetzt einen anderen (Original steht im <ref>)
+            tl = s.find("tl")
+            ref = s.find("ref")
+            if tl is not None and tl.get("t") == "e" and ref is not None:
+                r_tl = ref.find("tl")
+                if r_tl is not None and r_tl.get("n"):
+                    orig_key = (r_tl.get("c") or "", r_tl.get("n") or "")
+                    repl_label = ((tl.get("c") or "") + " " + (tl.get("n") or "")).strip()
+                    ersetzt_durch[orig_key] = repl_label
+                    ersatz_s.append(s)
     except Exception:
         pass
 
@@ -755,6 +767,7 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
 
             # ─── Halt-Änderungen (geänderte Route cpth vs ppth) ───
             zusatz_halte, entfall_halte = [], []
+            endet_frueher, ziel_geplant = False, ""
             cpth = ch.get("cpth")
             if cpth:
                 neu = [p for p in cpth.split("|") if p]
@@ -762,7 +775,11 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
                 zusatz_halte = [h for h in neu if h not in setp][:3]
                 entfall_halte = [h for h in ppth if h not in setn][:3]
                 if neu:
+                    orig_ziel = ppth[-1] if ppth else ""
                     ziel = neu[-1]  # neues Ziel
+                    # Zug endet früher: neues Ziel liegt in der Original-Route, dahinter fällt was weg
+                    if orig_ziel and ziel != orig_ziel and ziel in ppth:
+                        endet_frueher, ziel_geplant = True, orig_ziel
 
             result = {
                 "linie": line,
@@ -791,9 +808,52 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
                 result["zusatz_halte"] = zusatz_halte
             if entfall_halte:
                 result["entfall_halte"] = entfall_halte
+            if endet_frueher:
+                result["endet_frueher"] = True
+                result["ziel_geplant"] = ziel_geplant
+            _ek = (cat, (tl.get("n") if tl is not None else "") or "")
+            if _ek in ersetzt_durch:
+                result["ersetzt_durch"] = ersetzt_durch[_ek]
             if stopovers:
                 result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
             deps.append(result)
+
+    # Ersatz-Fahrten (nur im /fchg vorhanden) als eigene Abfahrten ergänzen
+    for s in ersatz_s:
+        dp = s.find("dp"); tl = s.find("tl"); ref = s.find("ref")
+        if dp is None or tl is None:
+            continue
+        pt = dp.get("pt") or ""
+        ch = changes.get(s.get("id"), {})
+        ct = ch.get("ct")
+        if len(pt) < 10:
+            continue
+        try:
+            dt_plan = datetime.strptime(pt, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
+            dt_real = datetime.strptime(ct, "%y%m%d%H%M").replace(tzinfo=TIMEZONE) if (ct and len(ct) >= 10) else dt_plan
+        except Exception:
+            continue
+        min_until = (dt_real - now).total_seconds() / 60
+        if min_until < -1 or min_until > dauer:
+            continue
+        ppth = [p for p in (dp.get("ppth") or "").split("|") if p]
+        cat = tl.get("c") or "Bus"
+        line = (dp.get("fb") or (cat + " " + (tl.get("n") or ""))).strip()
+        r_tl = ref.find("tl") if ref is not None else None
+        ersatz_fuer = (f"{r_tl.get('c')} {r_tl.get('n')}".strip()) if r_tl is not None else ""
+        produkt = 'bus' if 'bus' in cat.lower() else _db_cat_product(cat, line)
+        res = {
+            "linie": line, "richtung": ppth[-1] if ppth else "",
+            "abfahrt": dt_plan.strftime("%H:%M"), "abfahrt_aktuell": dt_real.strftime("%H:%M"),
+            "verspaetung": int((dt_real - dt_plan).total_seconds() // 60),
+            "gleis": str(dp.get("cp") or dp.get("pp") or ""),
+            "typ": produkt, "typ_icon": _product_icon(produkt) if produkt != 'bus' else 'bus',
+            "ausfall": False, "bemerkungen": [], "ersatzverkehr": True,
+            "ersatz_fuer": ersatz_fuer, "_sortkey": dt_plan.timestamp(),
+        }
+        if stopovers:
+            res["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
+        deps.append(res)
 
     deps.sort(key=lambda d: d.get("_sortkey", 0))
     seen, out = set(), []

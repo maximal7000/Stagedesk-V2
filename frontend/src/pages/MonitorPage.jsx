@@ -118,21 +118,26 @@ function DisruptionCarousel({ items, accent, height, layout = 'strip' }) {
     </div>
   );
 
-  // ─── Eigene Spalte: vertikal, Bild groß oben, mehr Text ───
+  // ─── Eigene Spalte: vertikal — Text oben, Bild darunter groß (Letterbox-Balken l/r) ───
   if (layout === 'column') {
     return (
       <div className="flex flex-col min-w-0 flex-1 rounded-lg overflow-hidden border border-white/10" style={{ background: grad }}>
         <div key={idx} className="flex-1 min-h-0 flex flex-col gap-2.5 p-4 overflow-hidden" style={reduce ? undefined : { animation: 'dm-fade 500ms ease' }}>
           {kopf}
-          {bild}
-          <div className="text-white font-display font-bold leading-tight text-[clamp(1.1rem,1.6vw,1.9rem)]">{st.titel}</div>
+          <div className="text-white font-display font-bold leading-tight text-[clamp(1.1rem,1.6vw,1.9rem)] shrink-0">{st.titel}</div>
           {st.text && (
-            <div className="text-white/60 leading-snug text-[clamp(0.8rem,1vw,1.05rem)] min-h-0"
-              style={{ display: '-webkit-box', WebkitLineClamp: st.bild ? 6 : 12, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            <div className="text-white/60 leading-snug text-[clamp(0.8rem,1vw,1.05rem)] shrink-0"
+              style={{ display: '-webkit-box', WebkitLineClamp: st.bild ? 5 : 14, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {st.text}
             </div>
           )}
-          <div className="mt-auto">{fuss}</div>
+          {st.bild && (
+            <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center">
+              <img src={st.bild} alt="" className="max-w-full max-h-full object-contain" loading="lazy"
+                onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
+            </div>
+          )}
+          <div className="shrink-0 mt-auto">{fuss}</div>
         </div>
         {items.length > 1 && (
           <div className="shrink-0 flex justify-center gap-1.5 py-2 border-t border-white/[0.06]">
@@ -1063,6 +1068,13 @@ export default function MonitorPage() {
           zusatzInfo.push({ txt: grund, tone: 'text-red-400/70' });
         }
       }
+      // Zug endet früher als geplant — auffällig
+      if (dep.endet_frueher && dep.ziel_geplant) {
+        zusatzInfo.unshift({ txt: `endet vorzeitig · sonst bis ${dep.ziel_geplant}`, tone: 'text-amber-300/90' });
+      }
+      // Ersatzverkehr-Verknüpfung (IRIS): Original ↔ Ersatzbus
+      if (dep.ersetzt_durch) zusatzInfo.push({ txt: `Ersetzt durch ${dep.ersetzt_durch}`, tone: 'text-red-400/90' });
+      if (dep.ersatz_fuer) zusatzInfo.push({ txt: `Ersatz für ${dep.ersatz_fuer}`, tone: 'text-white/50' });
 
       return (
         <div className={`flex items-center gap-2 ${useCompact ? cs.row : s.row} ${i > 0 ? 'border-t border-white/[0.06]' : ''} ${isHighlight && !dep.ausfall ? 'bg-white/[0.035]' : ''}`}
@@ -1093,7 +1105,7 @@ export default function MonitorPage() {
             <div className="min-w-0 flex-1">
               {/* Ziel + Via in einem Flex — Via kürzt zuerst und behält seine eigene (gedämpfte) Farbe für „…" */}
               <div className="flex items-baseline min-w-0">
-                <span className={`${useCompact ? cs.dir : s.dir} font-medium truncate min-w-0 ${dep.ausfall ? 'line-through text-white/40' : 'text-white'}`}>
+                <span className={`${useCompact ? cs.dir : s.dir} font-medium truncate min-w-0 ${dep.ausfall ? 'line-through text-white/40' : dep.endet_frueher ? 'text-amber-300 font-semibold' : 'text-white'}`}>
                   {dep.richtung}
                 </span>
                 {via && (
