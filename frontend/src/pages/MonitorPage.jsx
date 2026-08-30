@@ -1099,7 +1099,9 @@ export default function MonitorPage() {
       // Per-Station config für Trennung und Kompaktmodus
       const stConfig = (config?.oepnv_stationen || []).find(sc => sc.id === station.station_id);
       const trennungAktiv = stConfig?.trennung || false;  // "bus_zug" Trennung
-      const useCompact = stConfig?.kompakt || compact || false;
+      // Kompakt-Modus NUR über den manuellen Haken pro Station — nicht mehr automatisch,
+      // wenn mehrere Stationen in einer Spalte stehen (sonst verschwindet z.B. der Verspätungsgrund).
+      const useCompact = stConfig?.kompakt || false;
 
       useEffect(() => {
         if (!autoScroll || !scrollRef.current) return;
