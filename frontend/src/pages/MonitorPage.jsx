@@ -92,7 +92,7 @@ function DisruptionCarousel({ items, accent, height }) {
         {/* Textspalte */}
         <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-bold uppercase tracking-wide"
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[13px] font-bold tracking-wide"
               style={{ color: tagTone.c, background: tagTone.bg }}>
               <TagIcon className="w-4 h-4" /> {tagLabel}
             </span>
@@ -1002,6 +1002,7 @@ export default function MonitorPage() {
       const cs = useCompact ? (sizes.normal || s) : s;
       const lineColor = getLinienFarbe(dep);
       const lineLabel = getLinienLabel(dep);
+      const isZug = ['ice', 'ic', 're', 'rb', 'sbahn', 'zug'].includes(dep.typ_icon);
       const hasDelay = dep.verspaetung > 0;
       const minUntil = getMinUntil(dep.abfahrt, dep.verspaetung);
       const via = zeigeVia ? (dep.stopovers?.slice(0, 3).join(', ') || '') : '';
@@ -1045,24 +1046,29 @@ export default function MonitorPage() {
               )}
             </div>
           )}
-          {/* Linien-Chip (linksbündig, inhaltsbreit) + Ziel — eng gekoppelt mit kleinem Abstand */}
+          {/* Linien-Chip + Ziel — bei Zügen feste Chip-Breite, damit die Ziele auf gleicher x-Achse beginnen */}
           <div className="flex-1 min-w-0 flex items-center gap-2 pr-1.5">
             <span className={`${useCompact ? cs.linie : s.linie} font-bold tabular-nums rounded px-1.5 py-[3px] leading-none text-center inline-block shrink-0 ${dep.ausfall ? 'opacity-40' : ''}`}
-              style={{ background: lineColor, color: chipTextColor(lineColor), minWidth: '2.1em' }}>
+              style={{ background: lineColor, color: chipTextColor(lineColor), minWidth: isZug ? '3.6em' : '2.1em' }}>
               {lineLabel}
             </span>
             <div className="min-w-0 flex-1">
-            <div className="truncate">
-              <span className={`${useCompact ? cs.dir : s.dir} font-medium ${dep.ausfall ? 'line-through text-white/40' : 'text-white'}`}>
-                {dep.richtung}
-              </span>
-              {via && <span className={`${useCompact ? cs.via : s.via} text-white/35 ml-1.5`}>{via}</span>}
-            </div>
-            {!useCompact && zusatzInfo.length > 0 && (
-              <div className="text-[9px] leading-tight truncate">
-                {zusatzInfo.map((z, k) => <span key={k} className={z.tone}>{k > 0 ? ' · ' : ''}{z.txt}</span>)}
+              {/* Ziel + Via in einem Flex — Via kürzt zuerst und behält seine eigene (gedämpfte) Farbe für „…" */}
+              <div className="flex items-baseline min-w-0">
+                <span className={`${useCompact ? cs.dir : s.dir} font-medium truncate min-w-0 ${dep.ausfall ? 'line-through text-white/40' : 'text-white'}`}>
+                  {dep.richtung}
+                </span>
+                {via && (
+                  <span className={`${useCompact ? cs.via : s.via} text-white/35 ml-1.5 truncate min-w-0`} style={{ flexShrink: 4 }}>
+                    {via}
+                  </span>
+                )}
               </div>
-            )}
+              {!useCompact && zusatzInfo.length > 0 && (
+                <div className="text-[9px] leading-tight truncate">
+                  {zusatzInfo.map((z, k) => <span key={k} className={z.tone}>{k > 0 ? ' · ' : ''}{z.txt}</span>)}
+                </div>
+              )}
             </div>
           </div>
           {/* Status rechts — ein Rot für Probleme, Amber nur für aktive Umleitung/SEV, Rest neutral */}
@@ -1083,9 +1089,11 @@ export default function MonitorPage() {
             })()}
             {dep.gleis && (
               <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-semibold ${
-                dep.gleis_geplant ? 'bg-red-500/25 text-red-300 border border-red-500/40' : 'bg-white/[0.08] text-white/70 border border-white/10'
+                dep.ausfall ? 'bg-white/[0.03] text-white/25 border border-white/5 line-through'
+                : dep.gleis_geplant ? 'bg-red-500/25 text-red-300 border border-red-500/40'
+                : 'bg-white/[0.08] text-white/70 border border-white/10'
               }`}>
-                {dep.gleis_geplant && <span className="line-through text-white/25 mr-0.5 text-[0.8em] font-normal">{dep.gleis_geplant}</span>}
+                {!dep.ausfall && dep.gleis_geplant && <span className="line-through text-white/25 mr-0.5 text-[0.8em] font-normal">{dep.gleis_geplant}</span>}
                 {dep.gleis}
               </span>
             )}
