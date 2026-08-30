@@ -140,10 +140,10 @@ function DisruptionCarousel({ items, accent, height, layout = 'strip' }) {
           <div className="shrink-0 mt-auto">{fuss}</div>
         </div>
         {items.length > 1 && (
-          <div className="shrink-0 flex justify-center gap-1.5 py-2 border-t border-white/[0.06]">
-            {items.slice(0, 10).map((_, j) => (
+          <div className="shrink-0 flex flex-wrap justify-center items-center gap-1.5 py-2 px-3 border-t border-white/[0.06]">
+            {items.map((_, j) => (
               <span key={j} className="h-1.5 rounded-full transition-all"
-                style={{ width: j === idx ? 18 : 6, background: j === idx ? accent : 'rgba(255,255,255,0.2)' }} />
+                style={{ width: j === idx ? 16 : 6, background: j === idx ? accent : 'rgba(255,255,255,0.2)' }} />
             ))}
           </div>
         )}
@@ -173,12 +173,20 @@ function DisruptionCarousel({ items, accent, height, layout = 'strip' }) {
           </div>
         )}
         {items.length > 1 && (
-          <div className="shrink-0 flex flex-col justify-center gap-1.5 pl-1">
-            {items.slice(0, 8).map((_, j) => (
-              <span key={j} className="w-1.5 rounded-full transition-all"
-                style={{ height: j === idx ? 18 : 6, background: j === idx ? accent : 'rgba(255,255,255,0.2)' }} />
-            ))}
-          </div>
+          items.length <= 10 ? (
+            <div className="shrink-0 flex flex-col justify-center gap-1.5 pl-1">
+              {items.map((_, j) => (
+                <span key={j} className="w-1.5 rounded-full transition-all"
+                  style={{ height: j === idx ? 18 : 6, background: j === idx ? accent : 'rgba(255,255,255,0.2)' }} />
+              ))}
+            </div>
+          ) : (
+            <div className="shrink-0 flex flex-col items-center justify-center pl-1 tabular-nums">
+              <span className="text-sm font-bold" style={{ color: accent }}>{idx + 1}</span>
+              <span className="w-4 h-px my-0.5 bg-white/20" />
+              <span className="text-xs text-white/40">{items.length}</span>
+            </div>
+          )
         )}
       </div>
     </div>
