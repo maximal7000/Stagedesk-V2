@@ -474,6 +474,7 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
         'stoerungen': stoerungen,
         'on_air_profil': on_air_profil,
         'klausur': klausur,
+        'neu_laden_zeit': bs_obj.neu_laden_zeit.isoformat() if (bs_obj and bs_obj.neu_laden_zeit) else None,
     }
 
 
@@ -998,6 +999,16 @@ def delete_bildschirm(request, id: int):
     _require_perm(request, 'monitor.edit')
     bs = get_object_or_404(Bildschirm, id=id)
     bs.delete()
+    return {"success": True}
+
+
+@monitor_router.post("/bildschirme/{id}/reload", auth=keycloak_auth)
+def reload_bildschirm(request, id: int):
+    """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt neu_laden_zeit)."""
+    _require_perm(request, 'monitor.edit')
+    bs = get_object_or_404(Bildschirm, id=id)
+    bs.neu_laden_zeit = timezone.now()
+    bs.save(update_fields=['neu_laden_zeit'])
     return {"success": True}
 
 

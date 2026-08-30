@@ -132,8 +132,8 @@ function DisruptionCarousel({ items, accent, height, layout = 'strip' }) {
             </div>
           )}
           {st.bild && (
-            <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-black/30 border border-white/10 flex items-center justify-center">
-              <img src={st.bild} alt="" className="max-w-full max-h-full object-contain" loading="lazy"
+            <div className="flex-1 min-h-0 flex items-center justify-center overflow-hidden">
+              <img src={st.bild} alt="" className="max-w-full max-h-full object-contain rounded-lg" loading="lazy"
                 onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
             </div>
           )}
@@ -284,6 +284,7 @@ export default function MonitorPage() {
   const [screensaverActive, setScreensaverActive] = useState(false);
   const [rotationIdx, setRotationIdx] = useState(0);
   const lastActivityRef = useRef(Date.now());
+  const reloadRef = useRef(undefined);  // merkt neu_laden_zeit; steigt der Wert → Seite neu laden
 
   // Mauszeiger auf dem TV-Monitor ausblenden (Kiosk hat keine Maus)
   useEffect(() => {
@@ -331,6 +332,11 @@ export default function MonitorPage() {
       const res = await fetch(url);
       if (!res.ok) throw new Error();
       const json = await res.json();
+      // Reload-Anforderung vom Admin: neu_laden_zeit ist gestiegen → Ansicht neu laden
+      if (json.neu_laden_zeit) {
+        if (reloadRef.current === undefined) reloadRef.current = json.neu_laden_zeit;
+        else if (reloadRef.current !== json.neu_laden_zeit) { window.location.reload(); return; }
+      }
       setData(json);
       setLastFetchTime(new Date());
       setError(false);
@@ -1068,10 +1074,6 @@ export default function MonitorPage() {
           zusatzInfo.push({ txt: grund, tone: 'text-red-400/70' });
         }
       }
-      // Zug endet früher als geplant — auffällig
-      if (dep.endet_frueher && dep.ziel_geplant) {
-        zusatzInfo.unshift({ txt: `endet vorzeitig · sonst bis ${dep.ziel_geplant}`, tone: 'text-amber-300/90' });
-      }
       // Ersatzverkehr-Verknüpfung (IRIS): Original ↔ Ersatzbus
       if (dep.ersetzt_durch) zusatzInfo.push({ txt: `Ersetzt durch ${dep.ersetzt_durch}`, tone: 'text-red-400/90' });
       if (dep.ersatz_fuer) zusatzInfo.push({ txt: `Ersatz für ${dep.ersatz_fuer}`, tone: 'text-white/50' });
@@ -1099,13 +1101,13 @@ export default function MonitorPage() {
           {/* Linien-Chip + Ziel — bei Zügen feste Chip-Breite, damit die Ziele auf gleicher x-Achse beginnen */}
           <div className="flex-1 min-w-0 flex items-center gap-2 pr-1.5">
             <span className={`${useCompact ? cs.linie : s.linie} font-bold tabular-nums rounded px-1.5 py-[3px] leading-none text-center inline-block shrink-0 ${dep.ausfall ? 'opacity-40' : ''}`}
-              style={{ background: lineColor, color: chipTextColor(lineColor), minWidth: isZug ? '3.6em' : '2.1em' }}>
+              style={{ background: lineColor, color: chipTextColor(lineColor), minWidth: (isZug || dep.ersatz_fuer) ? '3.6em' : '2.1em' }}>
               {lineLabel}
             </span>
             <div className="min-w-0 flex-1">
               {/* Ziel + Via in einem Flex — Via kürzt zuerst und behält seine eigene (gedämpfte) Farbe für „…" */}
               <div className="flex items-baseline min-w-0">
-                <span className={`${useCompact ? cs.dir : s.dir} font-medium truncate min-w-0 ${dep.ausfall ? 'line-through text-white/40' : dep.endet_frueher ? 'text-amber-300 font-semibold' : 'text-white'}`}>
+                <span className={`${useCompact ? cs.dir : s.dir} font-medium truncate min-w-0 ${dep.ausfall ? 'line-through text-white/40' : dep.endet_frueher ? 'text-red-400 font-semibold' : 'text-white'}`}>
                   {dep.richtung}
                 </span>
                 {via && (
@@ -1121,10 +1123,9 @@ export default function MonitorPage() {
               )}
             </div>
           </div>
-          {/* Status rechts — ein Rot für Probleme, Amber nur für aktive Umleitung/SEV, Rest neutral */}
+          {/* Status rechts — ein Rot für Probleme, Rest neutral; SEV steht rechts in der Gleis-Position */}
           <div className="shrink-0 flex items-center gap-1.5">
             {dep.ausfall && <span className={`text-red-400 ${useCompact ? cs.dir : s.dir} font-bold`}>Fällt aus</span>}
-            {dep.ersatzverkehr && !dep.ausfall && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>SEV</span>}
             {dep.umleitung && !dep.ausfall && <span className={`text-amber-300 ${useCompact ? cs.badge : s.badge} font-bold bg-amber-400/10 px-1.5 py-0.5 rounded`}>Umleitung</span>}
             {dep.fluegelzug && !dep.ausfall && <span className={`text-white/60 ${useCompact ? cs.badge : s.badge} font-medium bg-white/[0.06] px-1.5 py-0.5 rounded`}>Flügelzug</span>}
             {dep.ersatzzug && !dep.ausfall && <span className={`text-white/60 ${useCompact ? cs.badge : s.badge} font-medium bg-white/[0.06] px-1.5 py-0.5 rounded`}>Ersatzzug</span>}
@@ -1137,7 +1138,11 @@ export default function MonitorPage() {
                 </span>
               );
             })()}
-            {dep.gleis && (
+            {/* Rechts: bei Ersatzverkehr das SEV-Kennzeichen in der Gleis-Position, sonst das Gleis */}
+            {(dep.ersatzverkehr || dep.ersetzt_durch) ? (
+              <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-bold bg-amber-400/15 text-amber-300 border border-amber-400/40`}
+                title="Schienenersatzverkehr">SEV</span>
+            ) : dep.gleis ? (
               <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-semibold ${
                 dep.ausfall ? 'bg-white/[0.03] text-white/25 border border-white/5 line-through'
                 : dep.gleis_geplant ? 'bg-red-500/25 text-red-300 border border-red-500/40'
@@ -1146,7 +1151,7 @@ export default function MonitorPage() {
                 {!dep.ausfall && dep.gleis_geplant && <span className="line-through text-white/25 mr-0.5 text-[0.8em] font-normal">{dep.gleis_geplant}</span>}
                 {dep.gleis}
               </span>
-            )}
+            ) : null}
           </div>
         </div>
       );

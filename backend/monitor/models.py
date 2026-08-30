@@ -472,6 +472,8 @@ class Bildschirm(models.Model):
         help_text="Wenn aktiv: Bildschirm grundsätzlich aus, nur Ausnahmen greifen.")
     power_ausnahmen = models.JSONField(default=list, blank=True,
         help_text='[{"von_datum": "YYYY-MM-DD", "bis_datum": "YYYY-MM-DD", "von": "HH:MM", "bis": "HH:MM", "notiz": ""}]')
+    neu_laden_zeit = models.DateTimeField(null=True, blank=True,
+        help_text="Wird beim Reload-Knopf gesetzt; das Display lädt sich neu wenn dieser Wert steigt.")
 
     # Manueller Override: deaktiviert den Zeitplan und erzwingt einen Zustand.
     POWER_MODUS_CHOICES = [
