@@ -1138,12 +1138,10 @@ export default function MonitorPage() {
                 </span>
               );
             })()}
-            {/* Rechts: bei Ersatzverkehr das lila SEV-Kennzeichen (DB-Stil) in der Gleis-Position, sonst das Gleis */}
+            {/* Rechts: bei Ersatzverkehr das offizielle SEV-Logo in der Gleis-Position, sonst das Gleis */}
             {(dep.ersatzverkehr || dep.ersetzt_durch) ? (
-              <span className={`${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded font-bold tracking-wide text-center inline-flex items-center gap-1 shrink-0`}
-                style={{ background: '#814e9e', color: '#ffffff' }} title="Schienenersatzverkehr">
-                <Bus className="w-3 h-3" />SEV
-              </span>
+              <img src="/sev-logo.png" alt="SEV" title="Schienenersatzverkehr"
+                className="shrink-0 object-contain" style={{ height: useCompact ? '1.5em' : '1.8em' }} />
             ) : dep.gleis ? (
               <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-semibold ${
                 dep.ausfall ? 'bg-white/[0.03] text-white/25 border border-white/5 line-through'
