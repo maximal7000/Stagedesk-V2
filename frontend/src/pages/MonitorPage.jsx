@@ -1138,10 +1138,12 @@ export default function MonitorPage() {
                 </span>
               );
             })()}
-            {/* Rechts: bei Ersatzverkehr das SEV-Kennzeichen in der Gleis-Position, sonst das Gleis */}
+            {/* Rechts: bei Ersatzverkehr das lila SEV-Kennzeichen (DB-Stil) in der Gleis-Position, sonst das Gleis */}
             {(dep.ersatzverkehr || dep.ersetzt_durch) ? (
-              <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-bold bg-amber-400/15 text-amber-300 border border-amber-400/40`}
-                title="Schienenersatzverkehr">SEV</span>
+              <span className={`${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded font-bold tracking-wide text-center inline-flex items-center gap-1 shrink-0`}
+                style={{ background: '#814e9e', color: '#ffffff' }} title="Schienenersatzverkehr">
+                <Bus className="w-3 h-3" />SEV
+              </span>
             ) : dep.gleis ? (
               <span className={`font-mono ${useCompact ? cs.gleis : s.gleis} px-1.5 py-0.5 rounded min-w-[28px] text-center font-semibold ${
                 dep.ausfall ? 'bg-white/[0.03] text-white/25 border border-white/5 line-through'
@@ -1265,11 +1267,11 @@ export default function MonitorPage() {
       disruptionItems.push({ typ: 'streik', titel: 'Streik im Nahverkehr', text: config.oepnv_streik_text, linien: [], all_lines: true });
     }
     (data?.stoerungen || []).forEach(st => { if (!istGenerischerHinweis(st)) disruptionItems.push(st); });
-    // Priorität: Bild-Karten & hervorgehobene zuerst, danach max. 8 durchschalten
+    // Priorität: Streik, hervorgehobene, dann Bild-Karten zuerst; danach durchschalten
     disruptionItems.sort((a, b) => (b.typ === 'streik') - (a.typ === 'streik')
       || (b.highlighted ? 1 : 0) - (a.highlighted ? 1 : 0)
       || (b.bild ? 1 : 0) - (a.bild ? 1 : 0));
-    disruptionItems.splice(8);
+    disruptionItems.splice(30);  // großzügiges Limit gegen Endlos-Rotation
     const stoerungPos = config?.oepnv_stoerung_position || 'unten';
     const stoerungAlsSpalte = stoerungPos === 'spalte' && disruptionItems.length > 0;
 
