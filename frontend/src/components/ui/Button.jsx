@@ -15,7 +15,7 @@
  *   <Button as="a" href="/x" variant="secondary" icon={ExternalLink}>Öffnen</Button>
  */
 const base =
-  'inline-flex items-center justify-center gap-2 font-medium rounded-lg whitespace-nowrap transition-colors ' +
+  'inline-flex items-center justify-center gap-2 font-medium leading-none rounded-lg whitespace-nowrap transition-colors duration-150 ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ' +
   'focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:pointer-events-none';
 
@@ -25,10 +25,10 @@ const sizes = {
 };
 
 const variants = {
-  primary: 'bg-accent hover:bg-accent-hover text-white shadow-sm',
-  secondary: 'bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200',
-  ghost: 'text-gray-300 hover:text-white hover:bg-gray-800/70',
-  danger: 'bg-red-600/90 hover:bg-red-600 text-white',
+  primary: 'bg-accent hover:bg-accent-hover active:bg-accent-hover text-white shadow-sm',
+  secondary: 'bg-gray-800/60 hover:bg-gray-800 active:bg-gray-700/70 border border-gray-700 text-gray-200',
+  ghost: 'text-gray-300 hover:text-white hover:bg-gray-800/70 active:bg-gray-800',
+  danger: 'bg-red-600/90 hover:bg-red-600 active:bg-red-700 text-white shadow-sm',
 };
 
 export default function Button({

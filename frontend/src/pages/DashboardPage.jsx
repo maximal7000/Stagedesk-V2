@@ -25,11 +25,18 @@ export default function DashboardPage() {
     ? [user?.given_name, user?.family_name].filter(Boolean).join(' ')
     : (user?.name || user?.preferred_username);
 
+  const heute = new Date().toLocaleDateString('de-DE', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+  });
+  const widgetMeta = widgets === null ? undefined
+    : widgets.length === 0 ? heute
+      : `${heute} · ${widgets.length} Widget${widgets.length === 1 ? '' : 's'} aktiv`;
+
   return (
-    <div className="w-full space-y-8">
+    <div className="max-w-5xl mx-auto">
       <PageHeader
-        title={`Willkommen zurück, ${name}! 👋`}
-        meta="Schön, dass du da bist."
+        title={`Willkommen zurück, ${name}`}
+        meta={widgetMeta}
         actions={<Button variant="secondary" icon={Settings} onClick={() => setShowSettings(true)}>Anpassen</Button>}
       />
 
@@ -42,11 +49,13 @@ export default function DashboardPage() {
             action={<Button variant="primary" icon={Settings} onClick={() => setShowSettings(true)}>Widgets hinzufügen</Button>} />
         </div>
       ) : (
-        widgets.map((code) => {
-          const Widget = WIDGET_REGISTRY[code];
-          if (!Widget) return null;
-          return <Widget key={code} />;
-        })
+        <div className="space-y-6">
+          {widgets.map((code) => {
+            const Widget = WIDGET_REGISTRY[code];
+            if (!Widget) return null;
+            return <Widget key={code} />;
+          })}
+        </div>
       )}
 
       {showSettings && (

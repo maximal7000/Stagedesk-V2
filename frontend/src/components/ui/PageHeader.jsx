@@ -18,12 +18,12 @@ export default function PageHeader({ eyebrow, title, meta, actions }) {
     <div className="flex items-start justify-between gap-4 mb-6">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500 mb-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">
             {eyebrow}
           </p>
         )}
         <div className="flex items-baseline gap-3 flex-wrap">
-          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white truncate">{title}</h1>
+          <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{title}</h1>
           {meta && <span className="text-sm text-gray-400">{meta}</span>}
         </div>
       </div>
