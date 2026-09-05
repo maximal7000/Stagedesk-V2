@@ -2,8 +2,9 @@
  * Event-Kategorien Verwaltung
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit, Trash2, Save, X, Loader2, Tag, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Save, Loader2, Tags, GripVertical } from 'lucide-react';
 import apiClient from '../../lib/api';
+import { PageHeader, Button, EmptyState } from '../../components/ui';
 
 const FARBEN = [
   '#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EF4444',
@@ -21,12 +22,12 @@ export default function KategorienPage() {
   const [kategorien, setKategorien] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Editing
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState({});
   const [savingId, setSavingId] = useState(null);
-  
+
   // Neue Kategorie
   const [showNew, setShowNew] = useState(false);
   const [newData, setNewData] = useState({
@@ -110,30 +111,31 @@ export default function KategorienPage() {
 
   // Form Component
   const KategorieForm = ({ data, setData, onSave, onCancel, isSaving, isNew }) => (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       {/* Name */}
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Name *</label>
+        <label className="mb-1 block text-sm text-gray-400">Name *</label>
         <input
           type="text"
           value={data.name}
           onChange={(e) => setData({ ...data, name: e.target.value })}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-          placeholder="Kategoriename"
+          className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white transition-colors focus:border-accent focus:outline-none"
+          placeholder="z. B. Shows"
         />
       </div>
 
       {/* Farbe */}
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Farbe</label>
+        <label className="mb-1.5 block text-sm text-gray-400">Farbe</label>
         <div className="flex flex-wrap gap-2">
           {FARBEN.map(farbe => (
             <button
               key={farbe}
               type="button"
               onClick={() => setData({ ...data, farbe })}
-              className={`w-8 h-8 rounded-lg transition-transform ${
-                data.farbe === farbe ? 'ring-2 ring-white scale-110' : 'hover:scale-105'
+              aria-label={`Farbe ${farbe}`}
+              className={`h-8 w-8 rounded-lg transition-transform ${
+                data.farbe === farbe ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-gray-900' : 'hover:scale-105'
               }`}
               style={{ backgroundColor: farbe }}
             />
@@ -143,43 +145,39 @@ export default function KategorienPage() {
 
       {/* Beschreibung */}
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+        <label className="mb-1 block text-sm text-gray-400">Beschreibung</label>
         <textarea
           value={data.beschreibung}
           onChange={(e) => setData({ ...data, beschreibung: e.target.value })}
           rows={2}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+          className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white transition-colors focus:border-accent focus:outline-none"
+          placeholder="Optionaler Hinweis zur Kategorie"
         />
       </div>
 
       {/* Sortierung */}
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Sortierung</label>
+        <label className="mb-1 block text-sm text-gray-400">Sortierung</label>
         <input
           type="number"
           value={data.sortierung}
           onChange={(e) => setData({ ...data, sortierung: parseInt(e.target.value) || 0 })}
-          className="w-20 px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+          className="w-20 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white transition-colors focus:border-accent focus:outline-none"
         />
       </div>
 
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-400 hover:text-white rounded-lg"
-        >
-          Abbrechen
-        </button>
-        <button
+        <Button variant="ghost" onClick={onCancel}>Abbrechen</Button>
+        <Button
+          variant="primary"
+          icon={isSaving ? undefined : Save}
           onClick={onSave}
           disabled={isSaving || !data.name}
-          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg"
         >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
           {isNew ? 'Erstellen' : 'Speichern'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -187,25 +185,21 @@ export default function KategorienPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">Event-Kategorien</h1>
-          <p className="text-gray-400 mt-1">Verwalte Kategorien für deine Events</p>
-        </div>
-
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Neue Kategorie
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Kalender"
+        title="Kategorien"
+        meta={loading ? undefined : `${kategorien.length} ${kategorien.length === 1 ? 'Kategorie' : 'Kategorien'}`}
+        actions={
+          <Button variant="primary" icon={Plus} onClick={() => setShowNew(true)}>
+            Neue Kategorie
+          </Button>
+        }
+      />
 
       {/* Neue Kategorie Form */}
       {showNew && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
-          <div className="p-4 border-b border-gray-800">
+        <div className="rounded-xl border border-gray-800 bg-gray-900">
+          <div className="border-b border-gray-800 p-4">
             <h3 className="text-lg font-semibold text-white">Neue Kategorie</h3>
           </div>
           <KategorieForm
@@ -222,31 +216,29 @@ export default function KategorienPage() {
       {/* Kategorien Liste */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
+          <Loader2 className="h-10 w-10 animate-spin text-gray-500" />
         </div>
       ) : error ? (
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
+        <div className="rounded-xl border border-red-800 bg-red-900/20 p-8 text-center">
           <p className="text-red-400">{error}</p>
         </div>
       ) : kategorien.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Tag className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">Keine Kategorien vorhanden</p>
-          <button
-            onClick={() => setShowNew(true)}
-            className="mt-4 text-accent hover:opacity-80"
-          >
-            Erste Kategorie erstellen
-          </button>
+        <div className="rounded-xl border border-gray-800 bg-gray-900">
+          <EmptyState
+            icon={Tags}
+            title="Noch keine Kategorien"
+            description="Kategorien ordnen Termine im Kalender und geben ihnen Farbe."
+            action={<Button variant="primary" icon={Plus} onClick={() => setShowNew(true)}>Erste Kategorie erstellen</Button>}
+          />
         </div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-          {kategorien.map((kategorie, index) => {
+        <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900">
+          {kategorien.map((kategorie) => {
             const isEditing = editingId === kategorie.id;
 
             if (isEditing) {
               return (
-                <div key={kategorie.id} className="border-b border-gray-800 bg-gray-800/30">
+                <div key={kategorie.id} className="border-b border-gray-800 bg-gray-800/30 last:border-b-0">
                   <KategorieForm
                     data={editingData}
                     setData={setEditingData}
@@ -261,37 +253,39 @@ export default function KategorienPage() {
             return (
               <div
                 key={kategorie.id}
-                className="flex items-center justify-between p-4 border-b border-gray-800 last:border-b-0 hover:bg-gray-800/30"
+                className="group flex items-center justify-between border-b border-gray-800 p-4 transition-colors last:border-b-0 hover:bg-gray-800/30"
               >
-                <div className="flex items-center gap-4">
-                  <GripVertical className="w-4 h-4 text-gray-600 cursor-grab" />
+                <div className="flex min-w-0 items-center gap-3">
+                  <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-gray-600" />
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-display text-lg font-bold text-white"
                     style={{ backgroundColor: kategorie.farbe }}
                   >
                     {kategorie.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-white">{kategorie.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-white">{kategorie.name}</h3>
                     {kategorie.beschreibung && (
-                      <p className="text-sm text-gray-500">{kategorie.beschreibung}</p>
+                      <p className="truncate text-sm text-gray-500">{kategorie.beschreibung}</p>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 mr-2">#{kategorie.sortierung}</span>
+                <div className="flex shrink-0 items-center gap-1">
+                  <span className="mr-1 text-xs tabular-nums text-gray-500">#{kategorie.sortierung}</span>
                   <button
                     onClick={() => startEditing(kategorie)}
-                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+                    aria-label="Bearbeiten"
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(kategorie.id)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"
+                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-red-400"
+                    aria-label="Löschen"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -301,11 +295,11 @@ export default function KategorienPage() {
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-900/20 border border-blue-800/50 rounded-xl p-4">
-        <h4 className="text-blue-400 font-medium mb-2">Tipp</h4>
+      <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
+        <h4 className="mb-1 text-sm font-semibold text-white">So helfen Kategorien</h4>
         <p className="text-sm text-gray-400">
-          Kategorien helfen dir, Events zu organisieren und im Kalender farblich zu unterscheiden.
-          Beispiele: "Shows", "Proben", "Meetings", "Wartung".
+          Jede Kategorie gibt ihren Terminen im Kalender eine feste Farbe, sodass sich Shows,
+          Proben, Meetings und Wartung auf einen Blick unterscheiden lassen.
         </p>
       </div>
     </div>

@@ -267,7 +267,7 @@ export default function InventarPage() {
       <PageHeader
         title={{ items: 'Items', ausleihen: 'Ausleihen', statistik: 'Statistik' }[activeTab] || 'Inventar'}
         meta={stats && (
-          <span className="flex items-center gap-2 flex-wrap">
+          <span className="flex items-center gap-2 flex-wrap tabular-nums">
             <span>{stats.total_items} Items</span>
             <span className="text-green-400">· {stats.status_counts?.verfuegbar || 0} frei</span>
             <span className="text-blue-400">· {stats.status_counts?.ausgeliehen || 0} verliehen</span>
@@ -318,7 +318,7 @@ export default function InventarPage() {
               <Icon className="w-3.5 h-3.5" />
               {tab.label}
               {tab.key === 'ausleihen' && stats?.ueberfaellige_ausleihen > 0 && (
-                <span className="w-4 h-4 text-[10px] bg-red-600 text-white rounded-full flex items-center justify-center">{stats.ueberfaellige_ausleihen}</span>
+                <span className="w-4 h-4 text-[10px] bg-red-600 text-white rounded-full flex items-center justify-center tabular-nums">{stats.ueberfaellige_ausleihen}</span>
               )}
             </button>
           );
@@ -399,7 +399,7 @@ export default function InventarPage() {
           {/* Bulk Bar */}
           {bulkMode && selectedIds.size > 0 && (
             <div className="bg-purple-900/20 border border-purple-800 rounded-lg px-3 py-2 flex items-center gap-2 text-sm">
-              <span className="text-white font-medium">{selectedIds.size} ausgewählt</span>
+              <span className="text-white font-medium tabular-nums">{selectedIds.size} ausgewählt</span>
               <div className="flex-1" />
               <div className="relative">
                 <button onClick={() => setShowBulkStatus(!showBulkStatus)} className="px-2 py-1 text-xs bg-gray-700 hover:bg-gray-600 text-white rounded flex items-center gap-1">
@@ -493,7 +493,7 @@ export default function InventarPage() {
                         <StatusBadge tone={STATUS_TONES[item.status] || 'neutral'} dot
                           label={item.status_display || STATUS_LABELS[item.status] || item.status} />
                       </td>
-                      <td className="p-2 text-xs text-gray-400 hidden lg:table-cell">
+                      <td className="p-2 text-xs text-gray-400 hidden lg:table-cell tabular-nums">
                         {item.menge_gesamt > 1 ? `${item.menge_verfuegbar}/${item.menge_gesamt}` : ''}
                       </td>
                       <td className="p-2"><ChevronRight className="w-4 h-4 text-gray-700" /></td>
@@ -564,7 +564,7 @@ export default function InventarPage() {
                           <span className="text-sm font-medium text-white truncate">{a.titel || `#${a.id}`}</span>
                           {a.ausleiher_name && <span className="text-xs text-gray-500 truncate hidden sm:inline">{a.ausleiher_name}</span>}
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5">
+                        <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5 tabular-nums">
                           {a.frist && <span className={a.ist_ueberfaellig ? 'text-red-400' : ''}>{new Date(a.frist).toLocaleDateString('de-DE')}</span>}
                           <span>{a.anzahl_items} Artikel</span>
                         </div>
@@ -616,7 +616,7 @@ export default function InventarPage() {
                           <XAxis dataKey="name" tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={{ stroke: '#1E293B' }} />
                           <YAxis tick={{ fill: '#6B7280', fontSize: 11 }} axisLine={{ stroke: '#1E293B' }} allowDecimals={false} />
                           <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: '6px', color: '#F9FAFB', fontSize: '12px' }} />
-                          <Bar dataKey="anzahl" fill="#3B82F6" radius={[3, 3, 0, 0]} name="Ausleihen" />
+                          <Bar dataKey="anzahl" fill="#da1f3d" radius={[3, 3, 0, 0]} name="Ausleihen" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -645,7 +645,7 @@ export default function InventarPage() {
                 <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
                   <h3 className="text-sm font-semibold text-white mb-3">Top Items</h3>
                   {(erweitert?.top_items ?? []).length > 0 ? (
-                    <table className="w-full text-xs">
+                    <table className="w-full text-xs tabular-nums">
                       <thead><tr className="border-b border-gray-800 text-gray-500">
                         <th className="text-left py-1.5 font-medium">#</th><th className="text-left py-1.5 font-medium">Item</th><th className="text-right py-1.5 font-medium">Ausleihen</th>
                       </tr></thead>
@@ -662,7 +662,7 @@ export default function InventarPage() {
                     <AlertTriangle className="w-3.5 h-3.5 text-red-400" /> Überfällig
                   </h3>
                   {(stats?.ueberfaellige_liste ?? []).length > 0 ? (
-                    <table className="w-full text-xs">
+                    <table className="w-full text-xs tabular-nums">
                       <thead><tr className="border-b border-gray-800 text-gray-500">
                         <th className="text-left py-1.5 font-medium">Ausleiher</th><th className="text-left py-1.5 font-medium">Frist</th><th className="text-right py-1.5 font-medium"></th>
                       </tr></thead>

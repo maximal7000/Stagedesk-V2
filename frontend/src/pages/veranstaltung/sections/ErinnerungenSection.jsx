@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Bell, Plus, Trash2 } from 'lucide-react';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 const EINHEIT_LABELS = { minuten: 'Min.', stunden: 'Std.', tage: 'Tage', wochen: 'Wochen' };
 
@@ -32,21 +33,18 @@ export default function ErinnerungenSection({ data, refetch, canEdit, eventId })
             {Object.entries(EINHEIT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <span className="py-2 text-gray-400">vorher</span>
-          <button type="button" onClick={add}
-            className="inline-flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
-            <Plus className="w-4 h-4" /> Hinzufügen
-          </button>
+          <Button variant="secondary" icon={Plus} onClick={add}>Hinzufügen</Button>
         </div>
       )}
       <ul className="space-y-2">
         {(data?.erinnerungen || []).map((er) => (
           <li key={er.id} className="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-lg">
-            <span className="text-white">
+            <span className="text-white tabular-nums">
               {er.zeit_vorher} {EINHEIT_LABELS[er.einheit] || er.einheit} vorher
               {er.gesendet && <span className="text-gray-500 text-sm ml-2">(gesendet)</span>}
             </span>
             {!er.gesendet && (
-              <button type="button" onClick={() => remove(er.id)} className="text-gray-400 hover:text-red-400">
+              <button type="button" onClick={() => remove(er.id)} aria-label="Erinnerung löschen" className="text-gray-400 hover:text-red-400">
                 <Trash2 className="w-4 h-4" />
               </button>
             )}

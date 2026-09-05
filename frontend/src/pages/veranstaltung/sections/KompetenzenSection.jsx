@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Award, AlertTriangle, CheckCircle2, Plus, X, Save } from 'lucide-react';
+import { Award, AlertTriangle, CheckCircle2, Pen, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function KompetenzenSection({ data, refetch, canEdit, eventId }) {
   const [katalog, setKatalog] = useState([]);
@@ -81,10 +82,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
       title="Erforderliche Kompetenzen"
       count={total || undefined}
       actions={canEdit && !editing && (
-        <button type="button" onClick={() => setEditing(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-300 hover:bg-gray-700">
-          <Plus className="w-4 h-4" /> Bearbeiten
-        </button>
+        <Button variant="secondary" size="sm" icon={Pen} onClick={() => setEditing(true)}>Bearbeiten</Button>
       )}
     >
       <div className="space-y-4">
@@ -123,7 +121,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Pflicht</h3>
                 <div className="flex flex-wrap gap-2">
                   {erforderlich.map(k => (
-                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-300 rounded-full text-sm">
+                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-300 rounded-md text-sm">
                       <Award className="w-3.5 h-3.5" /> {k.name}
                     </span>
                   ))}
@@ -135,7 +133,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                 <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Empfohlen</h3>
                 <div className="flex flex-wrap gap-2">
                   {empfohlen.map(k => (
-                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/30 text-accent rounded-full text-sm">
+                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/30 text-accent rounded-md text-sm">
                       <Award className="w-3.5 h-3.5" /> {k.name}
                     </span>
                   ))}
@@ -179,7 +177,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                       };
                       return (
                         <button type="button" key={k.id} onClick={onClick}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 border rounded-full text-xs transition-colors ${cls}`}>
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 border rounded-lg text-xs transition-colors ${cls}`}>
                           {k.name}
                           {istPflicht && <span className="text-[10px] font-bold ml-1">P</span>}
                           {istEmpf && <span className="text-[10px] font-bold ml-1">E</span>}
@@ -191,15 +189,11 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
               ))}
             </div>
             <div className="flex gap-2 pt-2 border-t border-gray-800">
-              <button type="button" onClick={save} disabled={saving}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent text-white rounded hover:bg-accent-hover text-sm disabled:opacity-50">
-                <Save className="w-4 h-4" /> Speichern
-              </button>
-              <button type="button"
-                onClick={() => { setEditing(false); setDraft({ erforderlich: [...erforderlichIds], empfohlen: [...empfohlenIds] }); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-gray-400 hover:text-white text-sm">
-                <X className="w-4 h-4" /> Abbrechen
-              </button>
+              <Button variant="primary" size="sm" icon={Save} onClick={save} disabled={saving}>Speichern</Button>
+              <Button variant="ghost" size="sm" icon={X}
+                onClick={() => { setEditing(false); setDraft({ erforderlich: [...erforderlichIds], empfohlen: [...empfohlenIds] }); }}>
+                Abbrechen
+              </Button>
             </div>
           </div>
         )}

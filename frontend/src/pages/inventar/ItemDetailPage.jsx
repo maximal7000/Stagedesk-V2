@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Edit, Trash2, Save, Loader2, Package,
+  ArrowLeft, ArrowRight, ChevronDown, Edit, Trash2, Save, Loader2, Package,
   QrCode, MapPin, Building, Plus, X,
   Upload, Copy, History, AlertCircle, ImageIcon, Camera,
 } from 'lucide-react';
@@ -570,7 +570,7 @@ export default function ItemDetailPage() {
                 {item.menge_gesamt > 1 && (
                   <div className="flex items-center justify-between">
                     <span className="text-gray-400">Menge</span>
-                    <span className="text-white font-semibold text-lg">
+                    <span className="text-white font-semibold text-lg tabular-nums">
                       <span className="text-green-400">{item.menge_verfuegbar ?? '?'}</span>
                       <span className="text-gray-500 mx-1">/</span>
                       <span>{item.menge_gesamt}</span>
@@ -691,9 +691,7 @@ export default function ItemDetailPage() {
               <History className="w-5 h-5 text-gray-400" />
               Zustandshistorie
             </h3>
-            <span className={`text-gray-400 transition-transform ${zustandslogOpen ? 'rotate-180' : ''}`}>
-              &#9660;
-            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${zustandslogOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {zustandslogOpen && (
@@ -729,13 +727,15 @@ export default function ItemDetailPage() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-sm font-medium text-white">{typLabel}</span>
                               {entry.zustand_vorher && entry.zustand_nachher && (
-                                <span className="text-xs text-gray-400">
-                                  {entry.zustand_vorher} &rarr; {entry.zustand_nachher}
+                                <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                                  {entry.zustand_vorher}
+                                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                                  {entry.zustand_nachher}
                                 </span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-gray-500">
+                              <span className="text-xs text-gray-500 tabular-nums">
                                 {new Date(entry.erstellt_am || entry.datum).toLocaleDateString('de-DE', {
                                   day: '2-digit', month: '2-digit', year: 'numeric',
                                   hour: '2-digit', minute: '2-digit',
@@ -743,7 +743,7 @@ export default function ItemDetailPage() {
                               </span>
                               {entry.benutzer_name && (
                                 <span className="text-xs text-gray-500">
-                                  &mdash; {entry.benutzer_name}
+                                  · {entry.benutzer_name}
                                 </span>
                               )}
                             </div>
@@ -829,7 +829,7 @@ export default function ItemDetailPage() {
                   return (
                     <div key={idx} className="flex-1 text-center">
                       {showLabel && (
-                        <span className="text-[10px] text-gray-500">
+                        <span className="text-[10px] text-gray-500 tabular-nums">
                           {datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
                         </span>
                       )}

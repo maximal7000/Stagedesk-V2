@@ -95,7 +95,7 @@ export default function AusleiheDashboardPage() {
     <div className="space-y-8">
       <PageHeader
         title="Ausleihe-Dashboard"
-        meta="Überblick über alle Ausleihen, Rückgaben und den Inventarstatus."
+        meta="Ausleihen, Rückgaben und Inventarstatus auf einen Blick"
       />
 
       {/* KPI Cards */}
@@ -143,7 +143,7 @@ export default function AusleiheDashboardPage() {
                   />
                   <Bar
                     dataKey="anzahl"
-                    fill="#3B82F6"
+                    fill="#da1f3d"
                     radius={[4, 4, 0, 0]}
                     stroke="#1E293B"
                     name="Ausleihen"
@@ -161,7 +161,7 @@ export default function AusleiheDashboardPage() {
         {/* Pie Chart: Items nach Status */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
           <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <PieChartIcon className="w-5 h-5 text-green-400" />
+            <PieChartIcon className="w-5 h-5 text-gray-400" />
             Items nach Status
           </h2>
           {statusDaten.length > 0 ? (
@@ -228,11 +228,11 @@ export default function AusleiheDashboardPage() {
             to="/ausleihen"
             className="flex items-center gap-3 p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg transition-colors group"
           >
-            <div className="p-2 bg-green-900/30 rounded-lg">
-              <QrCode className="w-5 h-5 text-green-400" />
+            <div className="p-2 bg-gray-700/60 rounded-lg">
+              <QrCode className="w-5 h-5 text-gray-300" />
             </div>
             <div>
-              <h3 className="font-semibold text-white group-hover:text-green-400 transition-colors">
+              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
                 QR-Scanner
               </h3>
               <p className="text-sm text-gray-400">Item per QR-Code erfassen</p>
@@ -244,11 +244,11 @@ export default function AusleiheDashboardPage() {
             className="flex items-center gap-3 p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg transition-colors group text-left"
             onClick={() => toast.info('Schnellrückgabe kommt bald')}
           >
-            <div className="p-2 bg-yellow-900/30 rounded-lg">
-              <RotateCcw className="w-5 h-5 text-yellow-400" />
+            <div className="p-2 bg-gray-700/60 rounded-lg">
+              <RotateCcw className="w-5 h-5 text-gray-300" />
             </div>
             <div>
-              <h3 className="font-semibold text-white group-hover:text-yellow-400 transition-colors">
+              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
                 Schnellrückgabe
               </h3>
               <p className="text-sm text-gray-400">Rückgabe ohne Listenauswahl</p>
@@ -266,7 +266,7 @@ export default function AusleiheDashboardPage() {
           </h2>
           {topItems.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm tabular-nums">
                 <thead>
                   <tr className="border-b border-gray-800">
                     <th className="text-left py-2 pr-4 text-gray-400 font-medium">#</th>
@@ -300,7 +300,7 @@ export default function AusleiheDashboardPage() {
           </h2>
           {ueberfaelligeListe.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm tabular-nums">
                 <thead>
                   <tr className="border-b border-gray-800">
                     <th className="text-left py-2 pr-4 text-gray-400 font-medium">Ausleiher</th>

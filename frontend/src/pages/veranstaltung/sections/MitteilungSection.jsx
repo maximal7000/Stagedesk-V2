@@ -3,6 +3,7 @@ import { Send, Megaphone, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 const ZIELE = [
   { v: 'zugewiesene', l: 'Zugewiesene' },
@@ -52,7 +53,7 @@ export default function MitteilungSection({ data, canEdit, eventId }) {
           <label className="block text-xs text-gray-400 mb-1">Titel (optional)</label>
           <input type="text" value={titel}
             onChange={(e) => setTitel(e.target.value)}
-            placeholder={`Mitteilung — ${data?.titel || ''}`}
+            placeholder={`Mitteilung: ${data?.titel || ''}`}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
         </div>
         <div>
@@ -74,11 +75,11 @@ export default function MitteilungSection({ data, canEdit, eventId }) {
               ))}
             </select>
           </div>
-          <button onClick={send} disabled={sending || !text.trim() || counts[an] === 0}
-            className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg inline-flex items-center gap-2">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+          <Button variant="primary" icon={sending ? undefined : Send} onClick={send}
+            disabled={sending || !text.trim() || counts[an] === 0}>
+            {sending && <Loader2 className="w-4 h-4 animate-spin" />}
             Senden
-          </button>
+          </Button>
         </div>
         <p className="text-[11px] text-gray-500">
           Empfänger erhalten eine In-App-Notification und (falls aktiviert) eine Web-Push-Notification.

@@ -256,7 +256,7 @@ export default function ItemSetsPage() {
                   </div>
                   <div>
                     <h3 className="font-medium text-white">{set.name}</h3>
-                    <p className="text-sm text-gray-400">{set.anzahl_items} Items</p>
+                    <p className="text-sm text-gray-400 tabular-nums">{set.anzahl_items} Items</p>
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -283,12 +283,12 @@ export default function ItemSetsPage() {
                 {set.positionen.slice(0, 3).map(pos => (
                   <div key={pos.id} className="flex items-center gap-2 text-sm">
                     <Package className="w-3 h-3 text-gray-500" />
-                    <span className="text-gray-400">{pos.anzahl}x</span>
+                    <span className="text-gray-400 tabular-nums">{pos.anzahl}x</span>
                     <span className="text-gray-300 truncate">{pos.item_name}</span>
                   </div>
                 ))}
                 {set.positionen.length > 3 && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 mt-1 tabular-nums">
                     + {set.positionen.length - 3} weitere Items
                   </p>
                 )}
@@ -477,7 +477,7 @@ export default function ItemSetsPage() {
               {/* Ausgewählte Items */}
               {selectedItems.length > 0 && (
                 <div className="space-y-2">
-                  <label className="block text-sm text-gray-400">Enthaltene Items ({selectedItems.length})</label>
+                  <label className="block text-sm text-gray-400">Enthaltene Items (<span className="tabular-nums">{selectedItems.length}</span>)</label>
                   {selectedItems.map(si => (
                     <div key={si.item_id} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
                       <input
@@ -485,7 +485,7 @@ export default function ItemSetsPage() {
                         value={si.anzahl}
                         onChange={(e) => updateItemAnzahl(si.item_id, e.target.value)}
                         min="1"
-                        className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-center"
+                        className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-center tabular-nums"
                       />
                       <span className="text-gray-400">×</span>
                       <span className="flex-1 font-medium text-white">{si.item_name}</span>

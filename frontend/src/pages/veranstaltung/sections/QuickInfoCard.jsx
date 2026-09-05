@@ -1,19 +1,19 @@
 import { Calendar, MapPin, Users, CheckSquare, Hand } from 'lucide-react';
+import { StatusBadge } from '../../../components/ui';
 
-const STATUS_COLORS = {
-  planung: 'bg-gray-500/20 text-gray-400',
-  bestaetigt: 'bg-accent/15 text-accent',
-  laufend: 'bg-green-500/20 text-green-400',
-  abgeschlossen: 'bg-emerald-500/20 text-emerald-400',
-  abgesagt: 'bg-red-500/20 text-red-400',
-};
-
-const STATUS_LABELS = {
-  planung: 'Planung',
-  bestaetigt: 'Bestätigt',
+// Anzeige-Labels für effektiv_status, deckungsgleich mit der Detailseite.
+const EFFEKTIV_LABELS = {
+  geplant: 'Geplant',
   laufend: 'Laufend',
   abgeschlossen: 'Abgeschlossen',
   abgesagt: 'Abgesagt',
+};
+
+const EFFEKTIV_TONE = {
+  geplant: 'info',
+  laufend: 'positive',
+  abgeschlossen: 'neutral',
+  abgesagt: 'danger',
 };
 
 function formatDate(d) {
@@ -34,14 +34,13 @@ export default function QuickInfoCard({ data, isAdmin }) {
   const checkPercent = checkTotal > 0 ? Math.round((checkDone / checkTotal) * 100) : 0;
 
   const meldungen = data.meldungen || [];
+  const eff = data.effektiv_status || data.status;
 
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-5">
       {/* Status */}
       <div>
-        <span className={`inline-flex px-3 py-1.5 rounded-lg text-sm font-semibold ${STATUS_COLORS[data.status] || 'bg-gray-500/20 text-gray-400'}`}>
-          {STATUS_LABELS[data.status] || data.status}
-        </span>
+        <StatusBadge tone={EFFEKTIV_TONE[eff] || 'neutral'} label={EFFEKTIV_LABELS[eff] || eff} />
       </div>
 
       {/* Datum */}
@@ -97,7 +96,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
                   </div>
                 )}
               </div>
-              <span className="text-gray-400 text-sm">{data.zuweisungen.length} Person{data.zuweisungen.length !== 1 ? 'en' : ''}</span>
+              <span className="text-gray-400 text-sm tabular-nums">{data.zuweisungen.length} Person{data.zuweisungen.length !== 1 ? 'en' : ''}</span>
             </>
           ) : (
             <span className="text-gray-500 text-sm">Noch niemand</span>
@@ -113,7 +112,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
               <CheckSquare className="w-3.5 h-3.5" />
               Checkliste
             </div>
-            <span className="text-xs text-gray-400">{checkDone}/{checkTotal}</span>
+            <span className="text-xs text-gray-400 tabular-nums">{checkDone}/{checkTotal}</span>
           </div>
           <div className="w-full bg-gray-800 rounded-full h-2">
             <div
@@ -131,9 +130,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
             <Hand className="w-3.5 h-3.5" />
             Meldungen
           </div>
-          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-xs">
-            {meldungen.length} gemeldet
-          </span>
+          <StatusBadge tone="positive" label={`${meldungen.length} gemeldet`} />
         </div>
       )}
 

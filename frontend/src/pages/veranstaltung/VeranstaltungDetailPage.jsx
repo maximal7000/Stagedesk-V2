@@ -6,13 +6,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft, Loader2, Calendar, MapPin, Save, Pen, X,
+  ArrowLeft, Loader2, Calendar, MapPin, Save, Pen, X, CalendarX2, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
 import Markdown, { MarkdownHint } from '../../components/Markdown';
-import { Button, StatusBadge } from '../../components/ui';
+import { Button, StatusBadge, EmptyState } from '../../components/ui';
 
 // Sections
 import QuickInfoCard from './sections/QuickInfoCard';
@@ -292,9 +292,10 @@ export default function VeranstaltungDetailPage() {
   // ─── Nicht gefunden ──────────────────────────────────
   if (!data) {
     return (
-      <div className="text-center py-16 text-gray-500">
-        <p>Veranstaltung nicht gefunden.</p>
-        <Link to="/veranstaltung" className="text-accent hover:underline mt-2 inline-block">Zur Liste</Link>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <EmptyState icon={CalendarX2} title="Veranstaltung nicht gefunden"
+          description="Sie wurde gelöscht oder der Link ist falsch."
+          action={<Button as={Link} to="/veranstaltung" variant="secondary" icon={ArrowLeft}>Zur Liste</Button>} />
       </div>
     );
   }
@@ -313,14 +314,14 @@ export default function VeranstaltungDetailPage() {
             {editMode ? (
               <input type="text" value={form.titel}
                 onChange={(e) => setForm((f) => ({ ...f, titel: e.target.value }))}
-                className="text-xl font-bold bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white w-full max-w-md" />
+                className="text-xl font-bold bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white w-full max-w-md" />
             ) : (
               <h1 className="text-2xl font-bold text-white">{data.titel}</h1>
             )}
             <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-400">
-              <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {formatDatum(data.datum_von)} – {formatDatum(data.datum_bis)}</span>
+              <span className="flex items-center gap-1 tabular-nums"><Calendar className="w-4 h-4" /> {formatDatum(data.datum_von)} – {formatDatum(data.datum_bis)}</span>
               {data.ort && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {data.ort}</span>}
-              {data.zammad_ticket_number && <span className="text-accent">Zammad #{data.zammad_ticket_number}</span>}
+              {data.zammad_ticket_number && <span className="text-accent tabular-nums">Zammad #{data.zammad_ticket_number}</span>}
             </div>
             {editMode && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -328,19 +329,19 @@ export default function VeranstaltungDetailPage() {
                   <label className="block text-xs text-gray-500 mb-1">Von</label>
                   <input type="datetime-local" value={form.datum_von}
                     onChange={(e) => setForm((f) => ({ ...f, datum_von: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm" />
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm" />
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Bis</label>
                   <input type="datetime-local" value={form.datum_bis}
                     onChange={(e) => setForm((f) => ({ ...f, datum_bis: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm" />
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="block text-xs text-gray-500 mb-1">Ort</label>
                   <input type="text" value={form.ort}
                     onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm" />
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm" />
                 </div>
               </div>
             )}
@@ -353,7 +354,10 @@ export default function VeranstaltungDetailPage() {
             {canEdit && !editMode && (
               data.status === 'abgesagt' ? (
                 <button type="button" onClick={() => handleStatusToggle('geplant')}
-                  className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm">
+                  className="inline-flex items-center gap-2 rounded-lg text-sm px-3.5 py-2 font-medium leading-none
+                             bg-emerald-600/90 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-sm transition-colors
+                             focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
                   Wieder aktivieren
                 </button>
               ) : (

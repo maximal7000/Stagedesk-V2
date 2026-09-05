@@ -18,7 +18,6 @@ import {
   Calendar,
   Ticket,
   Boxes,
-  CalendarDays,
   Monitor,
   ClipboardList,
   ListChecks,
@@ -27,6 +26,7 @@ import {
   ScrollText,
   ScanLine,
   Activity,
+  Eye,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../lib/api';
@@ -43,7 +43,7 @@ export default function DashboardLayout({ children }) {
   const auth = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const { effectiveTheme, isDark } = useTheme();
+  const { isDark } = useTheme();
   const { isAdmin, hasPermission, impersonate, setImpersonate, profile } = useUser();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -200,9 +200,9 @@ export default function DashboardLayout({ children }) {
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-400 hover:text-white"
+            className="lg:hidden p-2 -mr-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
@@ -214,7 +214,7 @@ export default function DashboardLayout({ children }) {
           >
             <Search className="w-4 h-4" />
             <span className="flex-1 text-left">Suchen…</span>
-            <kbd className="text-[10px] px-1.5 py-0.5 bg-gray-900 border border-gray-700 rounded">Ctrl K</kbd>
+            <kbd className="text-[10px] px-1.5 py-0.5 bg-gray-900 border border-gray-700 rounded font-medium text-gray-500">Strg+K</kbd>
           </button>
         </div>
 
@@ -223,10 +223,8 @@ export default function DashboardLayout({ children }) {
           {navigation.map((item) => {
             const Icon = item.icon;
             const isActive = item.href === activeHref;
-            const isKalender = item.href === '/kalender';
             const isInventar = item.href === '/inventar';
-            const isVeranstaltung = item.href === '/veranstaltung';
-            
+
             return (
               <div key={item.name} className="space-y-1">
                 <Link
@@ -275,8 +273,8 @@ export default function DashboardLayout({ children }) {
           {/* Admin Section */}
           {adminNavigation.length > 0 && (
             <>
-              <div className="pt-4 pb-2">
-                <p className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              <div className="pt-4 mt-2 pb-2 border-t border-gray-800">
+                <p className="px-4 pt-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Administration
                 </p>
               </div>
@@ -382,15 +380,21 @@ export default function DashboardLayout({ children }) {
       <div className="lg:pl-64">
         {/* Impersonate-Banner */}
         {impersonate && (
-          <div className="bg-amber-600 text-black text-sm font-medium flex items-center justify-between px-4 lg:px-8 py-2">
-            <span>
-              👁️ Sicht: <strong>
-                {[impersonate.first_name, impersonate.last_name].filter(Boolean).join(' ')
-                  || impersonate.username}
-              </strong> (UI-Filter — API-Antworten kommen weiter aus deinem Admin-Account)
+          <div className="bg-amber-600 text-black text-sm font-medium flex items-center justify-between gap-4 px-4 lg:px-8 py-2">
+            <span className="flex items-center gap-2 min-w-0">
+              <Eye className="w-4 h-4 shrink-0" />
+              <span className="truncate">
+                Sicht: <strong>
+                  {[impersonate.first_name, impersonate.last_name].filter(Boolean).join(' ')
+                    || impersonate.username}
+                </strong>{' '}
+                <span className="font-normal">
+                  (nur UI-Filter, API-Antworten kommen weiterhin aus deinem Admin-Account)
+                </span>
+              </span>
             </span>
             <button onClick={() => { setImpersonate(null); window.location.href = '/'; }}
-              className="px-3 py-1 bg-black/20 hover:bg-black/40 rounded text-white">
+              className="shrink-0 px-3 py-1 bg-black/20 hover:bg-black/40 rounded-lg text-white transition-colors">
               Beenden
             </button>
           </div>
@@ -399,13 +403,13 @@ export default function DashboardLayout({ children }) {
         <header className="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-4 lg:px-8">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden text-gray-400 hover:text-white"
+            className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5" />
           </button>
-          
-          <div className="hidden lg:flex items-center gap-1.5 text-sm text-gray-500">
-            <span className="text-gray-600">Stagedesk</span>
+
+          <div className="hidden lg:flex items-center gap-1.5 text-sm">
+            <span className="text-gray-500">Stagedesk</span>
             <span className="text-gray-700">/</span>
             <span className="font-medium text-gray-300">{getPageTitle()}</span>
           </div>
@@ -413,7 +417,7 @@ export default function DashboardLayout({ children }) {
           <div className="flex items-center gap-2 ml-auto">
             {hasPermission('inventar.view') && (
               <button onClick={() => setScanOpen(true)}
-                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+                className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
                 title="QR-Code scannen">
                 <ScanLine className="w-5 h-5" />
               </button>

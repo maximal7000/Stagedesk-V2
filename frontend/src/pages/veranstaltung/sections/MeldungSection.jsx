@@ -33,7 +33,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
         const nach = detail.split(':')[1] || '';
         const kompetenzen = nach.split(',').map(s => s.trim()).filter(Boolean);
         setMeldenFehler({
-          title: 'Du kannst dich nicht melden — Kompetenzen fehlen',
+          title: 'Melden nicht möglich: Kompetenzen fehlen',
           kompetenzen,
         });
       } else {
@@ -90,7 +90,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <h4 className="text-red-300 font-semibold text-sm">{meldenFehler.title}</h4>
-                <button type="button" onClick={() => setMeldenFehler(null)}
+                <button type="button" onClick={() => setMeldenFehler(null)} aria-label="Hinweis schließen"
                         className="text-red-400/70 hover:text-red-300">
                   <XIcon className="w-4 h-4" />
                 </button>
@@ -98,7 +98,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
               {meldenFehler.kompetenzen.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {meldenFehler.kompetenzen.map((k, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-200 rounded-full text-xs">
+                    <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-200 rounded-md text-xs">
                       <Award className="w-3 h-3" /> {k}
                     </span>
                   ))}
@@ -122,7 +122,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
           <button type="button" onClick={handleMelden}
             className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
             <Hand className="w-4 h-4" />
-            Ich hab Zeit - Melden
+            Verfügbar melden
           </button>
         )}
 

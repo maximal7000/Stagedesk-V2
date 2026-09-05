@@ -33,7 +33,7 @@ function SectionHeader({ title, count, defaultOpen = true, children }) {
       >
         {open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
         <span className="font-semibold text-white">{title}</span>
-        <span className="text-sm text-gray-500">({count})</span>
+        <span className="text-sm text-gray-500 tabular-nums">({count})</span>
       </button>
       {open && <div className="space-y-3 pb-4">{children}</div>}
     </div>
@@ -88,7 +88,7 @@ function PositionsTable({ positionen, isOffen, isAktiv, showBorrower, onRemove, 
               <td className="py-2.5 pr-3">
                 <span className="font-medium text-white">{pos.item_name}</span>
               </td>
-              <td className="py-2.5 pr-3 text-center text-gray-300">{pos.anzahl}</td>
+              <td className="py-2.5 pr-3 text-center text-gray-300 tabular-nums">{pos.anzahl}</td>
               {showBorrower && (
                 <td className="py-2.5 pr-3 text-gray-300 text-xs">
                   {pos.ausleiher_name || <span className="text-gray-600">–</span>}
@@ -710,10 +710,7 @@ export default function AusleihePage() {
             <div className="flex items-center gap-2">
               <Button variant="primary" size="sm" icon={Plus} onClick={openItemModal}>Artikel hinzufügen</Button>
               <div className="relative">
-                <button onClick={() => setShowSetDropdown(!showSetDropdown)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm">
-                  <Layers className="w-4 h-4" /> Set
-                </button>
+                <Button variant="secondary" size="sm" icon={Layers} onClick={() => setShowSetDropdown(!showSetDropdown)}>Set</Button>
                 {showSetDropdown && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowSetDropdown(false)} />
@@ -737,7 +734,7 @@ export default function AusleihePage() {
           {/* Items-Liste */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-white">Enthaltene Artikel ({detailListe.positionen?.length || 0})</h3>
+              <h3 className="font-medium text-white">Enthaltene Artikel (<span className="tabular-nums">{detailListe.positionen?.length || 0}</span>)</h3>
               {detailListe.modus === 'individuell' && (detailListe.positionen?.length || 0) > 0 && (
                 <select value={groupBy} onChange={e => { setGroupBy(e.target.value); setExpandedGroups({}); }}
                   className="text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300">
@@ -763,7 +760,7 @@ export default function AusleihePage() {
                           {groupBy === 'borrower' ? <User className="w-4 h-4 text-gray-400" /> : <MapPin className="w-4 h-4 text-gray-400" />}
                           <span className="font-medium text-white">{groupKey}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                        <div className="flex items-center gap-2 text-xs text-gray-400 tabular-nums">
                           <span>{groupItems.length} Artikel</span>
                           {!isOffen && returned > 0 && (
                             <span className="text-green-400">{returned}/{groupItems.length} zurück</span>
@@ -811,7 +808,7 @@ export default function AusleihePage() {
                   </button>
                 )}
                 {nochOffen > 0 && (
-                  <span className="text-sm text-yellow-400">
+                  <span className="text-sm text-yellow-400 tabular-nums">
                     {nochOffen} von {positionen.length} noch ausgeliehen
                   </span>
                 )}
@@ -858,9 +855,9 @@ export default function AusleihePage() {
                 {selectedItems.length > 0 && (
                   <div className="mx-6 mt-4 p-4 border border-gray-700 rounded-lg">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-semibold text-white">Ausgewählte Artikel ({selectedItems.length})</h3>
+                      <h3 className="text-sm font-semibold text-white">Ausgewählte Artikel (<span className="tabular-nums">{selectedItems.length}</span>)</h3>
                       <button onClick={() => setSelectedItems([])} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
-                        <X className="w-3 h-3" /> ALLE ENTFERNEN
+                        <X className="w-3 h-3" /> Alle entfernen
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -886,18 +883,18 @@ export default function AusleihePage() {
                   <div className="flex items-center gap-2">
                     <button onClick={() => { setScanMode('add'); setShowQRScanner(true); setShowItemModal(false); }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
-                      <ScanLine className="w-3.5 h-3.5" /> SCAN-MODUS
+                      <ScanLine className="w-3.5 h-3.5" /> Scannen
                     </button>
                     <button onClick={() => setShowQuickAdd(!showQuickAdd)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
-                      <PlusCircle className="w-3.5 h-3.5" /> QUICK-ADD
+                      <PlusCircle className="w-3.5 h-3.5" /> Neuer Artikel
                     </button>
                     <button onClick={() => {
                       const available = filteredItems.filter(i => !existingPositionIds.has(i.id) && i.status === 'verfuegbar');
                       setSelectedItems(available.slice(0, 50).map(item => ({ item, anzahl: 1 })));
                     }}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
-                      <Check className="w-3.5 h-3.5" /> ALLE AUSWÄHLEN
+                      <Check className="w-3.5 h-3.5" /> Alle auswählen
                     </button>
                   </div>
                   {showQuickAdd && (
@@ -923,7 +920,7 @@ export default function AusleihePage() {
                           <button type="button" onClick={() => !isInList && toggleItemSelection(item)} disabled={isInList}
                             className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
                               isInList ? 'opacity-40 cursor-not-allowed' :
-                              isSelected ? 'bg-accent/15 border-l-2 border-l-accent' :
+                              isSelected ? 'bg-accent/15 ring-1 ring-inset ring-accent/40' :
                               'hover:bg-gray-800'
                             }`}>
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
@@ -959,10 +956,10 @@ export default function AusleihePage() {
 
               {/* Footer */}
               <div className="flex items-center justify-between p-6 pt-4 border-t border-gray-800">
-                <Button variant="ghost" onClick={() => setShowItemModal(false)}>ABBRECHEN</Button>
+                <Button variant="ghost" onClick={() => setShowItemModal(false)}>Abbrechen</Button>
                 <Button variant="primary" onClick={handleAddSelectedItems} disabled={selectedItems.length === 0 || addingItems}>
                   {addingItems ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  {selectedItems.length} Artikel hinzufügen
+                  <span className="tabular-nums">{selectedItems.length}</span> Artikel hinzufügen
                 </Button>
               </div>
             </div>
@@ -1302,7 +1299,7 @@ export default function AusleihePage() {
                     {a.frist && (
                       <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(a.frist).toLocaleDateString('de-DE')}</span>
                     )}
-                    <span className="flex items-center gap-1"><Package className="w-3.5 h-3.5" /> {a.anzahl_items} Artikel</span>
+                    <span className="flex items-center gap-1 tabular-nums"><Package className="w-3.5 h-3.5" /> {a.anzahl_items} Artikel</span>
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {new Date(a.erstellt_am).toLocaleDateString('de-DE')}</span>
                     <span className="text-xs px-1.5 py-0.5 rounded bg-gray-800">{a.modus === 'global' ? 'Global' : 'Individuell'}</span>
                   </div>

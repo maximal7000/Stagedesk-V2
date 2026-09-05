@@ -3,6 +3,7 @@ import { Paperclip, Plus, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function AnhangSection({ data, refetch, canEdit, eventId }) {
   const [name, setName] = useState('');
@@ -62,10 +63,9 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
           <input type="url" placeholder="URL (optional)" value={url} onChange={(e) => setUrl(e.target.value)}
             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
-          <button type="submit" disabled={adding || (!file && !url.trim())}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg whitespace-nowrap">
-            {adding ? '…' : <><Plus className="w-4 h-4 inline mr-1" /><span>Hinzufügen</span></>}
-          </button>
+          <Button type="submit" variant="secondary" icon={adding ? undefined : Plus} disabled={adding || (!file && !url.trim())}>
+            {adding ? '…' : 'Hinzufügen'}
+          </Button>
           <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)}
             className="sm:col-span-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
                        file:mr-3 file:px-3 file:py-1 file:bg-gray-700 file:text-white file:border-0 file:rounded
@@ -80,7 +80,7 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
               <Download className="w-3.5 h-3.5 flex-shrink-0" /> {a.name}
             </button>
             {canEdit && (
-              <button type="button" onClick={() => remove(a.id)} className="text-gray-400 hover:text-red-400">
+              <button type="button" onClick={() => remove(a.id)} aria-label={`${a.name} löschen`} className="text-gray-400 hover:text-red-400">
                 <Trash2 className="w-4 h-4" />
               </button>
             )}

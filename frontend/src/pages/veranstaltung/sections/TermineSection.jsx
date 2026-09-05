@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { CalendarPlus, Calendar, Plus, Trash2, Save, X, Loader2 } from 'lucide-react';
+import { CalendarPlus, Calendar, Plus, Pen, Trash2, Save, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function TermineSection({ data, refetch, canEdit, eventId }) {
   const [showModal, setShowModal] = useState(false);
@@ -44,16 +45,13 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
         title="Termine"
         count={data?.termine?.length || undefined}
         actions={canEdit && (
-          <button type="button" onClick={openModal}
-            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-            <Plus className="w-4 h-4" /> Bearbeiten
-          </button>
+          <Button variant="secondary" size="sm" icon={Pen} onClick={openModal}>Bearbeiten</Button>
         )}
       >
         {(data?.termine?.length ?? 0) > 0 ? (
           <div className="space-y-2">
             {data.termine.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 py-2.5 px-4 bg-gray-800 rounded-lg text-sm">
+              <div key={t.id} className="flex items-center gap-3 py-2.5 px-4 bg-gray-800 rounded-lg text-sm tabular-nums">
                 <Calendar className="w-4 h-4 text-gray-500 shrink-0" />
                 <span className="text-white font-medium">
                   {new Date(t.datum).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
@@ -77,7 +75,7 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
           <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
               <h2 className="text-lg font-semibold text-white">Termine verwalten</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-white">
+              <button onClick={() => setShowModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -88,21 +86,21 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
                     <input type="text" value={t.titel}
                       onChange={e => { const f = [...form]; f[i].titel = e.target.value; setForm(f); }}
                       placeholder="Titel (optional)"
-                      className="col-span-2 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white" />
+                      className="col-span-2 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white" />
                     <input type="date" value={t.datum}
                       onChange={e => { const f = [...form]; f[i].datum = e.target.value; setForm(f); }}
-                      className="px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white" />
+                      className="px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white" />
                     <div className="flex gap-1">
                       <input type="time" value={t.beginn}
                         onChange={e => { const f = [...form]; f[i].beginn = e.target.value; setForm(f); }}
-                        className="flex-1 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white" />
+                        className="flex-1 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white" />
                       <input type="time" value={t.ende}
                         onChange={e => { const f = [...form]; f[i].ende = e.target.value; setForm(f); }}
-                        className="flex-1 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded text-white" />
+                        className="flex-1 px-2 py-1.5 text-sm bg-gray-700 border border-gray-600 rounded-lg text-white" />
                     </div>
                   </div>
-                  <button onClick={() => setForm(form.filter((_, j) => j !== i))}
-                    className="p-1.5 text-red-400 hover:bg-red-900/20 rounded mt-1">
+                  <button onClick={() => setForm(form.filter((_, j) => j !== i))} aria-label="Termin entfernen"
+                    className="p-1.5 text-red-400 hover:bg-red-900/20 rounded-md mt-1">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -113,12 +111,11 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
               </button>
             </div>
             <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
-              <button onClick={() => setShowModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <Button variant="ghost" className="flex-1" onClick={() => setShowModal(false)}>Abbrechen</Button>
+              <Button variant="primary" className="flex-1" icon={saving ? undefined : Save} disabled={saving} onClick={handleSave}>
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                 Speichern
-              </button>
+              </Button>
             </div>
           </div>
         </div>

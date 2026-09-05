@@ -18,7 +18,7 @@ export default function CollapsibleSection({ icon: Icon, title, count, defaultOp
             {Icon && <Icon className="w-5 h-5" />}
             {title}
             {count !== undefined && (
-              <span className="text-sm font-normal text-gray-400">({count})</span>
+              <span className="text-sm font-normal text-gray-400 tabular-nums">({count})</span>
             )}
           </h2>
         </button>

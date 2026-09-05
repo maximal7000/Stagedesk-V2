@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) {
   const [showLink, setShowLink] = useState(false);
@@ -64,21 +65,19 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
       actions={canEdit && (
         <div className="flex gap-2">
           {data?.anwesenheitsliste_id ? (
-            <button type="button" onClick={handleSync} disabled={syncing}
-              title="Termine aus Veranstaltung in Anwesenheitsliste synchronisieren"
-              className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg text-sm">
-              {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarPlus className="w-4 h-4" />} Termine sync
-            </button>
+            <Button variant="secondary" size="sm" icon={syncing ? undefined : CalendarPlus} onClick={handleSync} disabled={syncing}
+              title="Termine aus Veranstaltung in Anwesenheitsliste synchronisieren">
+              {syncing && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Termine sync
+            </Button>
           ) : (
             <>
-              <button type="button" onClick={handleCreate} disabled={creating}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg text-sm">
-                <Wand2 className="w-4 h-4" /> Auto-Erstellen
-              </button>
-              <button type="button" onClick={() => { setShowLink(true); fetchAlle(); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                <Plus className="w-4 h-4" /> Verknüpfen
-              </button>
+              <Button variant="primary" size="sm" icon={Wand2} onClick={handleCreate} disabled={creating}>
+                Auto-Erstellen
+              </Button>
+              <Button variant="secondary" size="sm" icon={Plus} onClick={() => { setShowLink(true); fetchAlle(); }}>
+                Verknüpfen
+              </Button>
             </>
           )}
         </div>
@@ -93,9 +92,8 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
               <option key={a.id} value={a.id}>{a.titel} {a.ort ? `(${a.ort})` : ''} – {a.status === 'aktiv' ? 'Aktiv' : 'Abgeschlossen'}</option>
             ))}
           </select>
-          <button type="button" onClick={link} disabled={!selectedId}
-            className="px-3 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg text-sm">Verknüpfen</button>
-          <button type="button" onClick={() => setShowLink(false)} className="px-3 py-2 text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <Button variant="primary" size="sm" onClick={link} disabled={!selectedId}>Verknüpfen</Button>
+          <button type="button" onClick={() => setShowLink(false)} aria-label="Abbrechen" className="px-3 py-2 text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -108,7 +106,7 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
               {data.anwesenheitsliste_titel || `Anwesenheitsliste #${data.anwesenheitsliste_id}`}
             </Link>
           </div>
-          <button type="button" onClick={unlink} title="Verknüpfung entfernen"
+          <button type="button" onClick={unlink} title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen"
             className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"><Unlink className="w-4 h-4" /></button>
         </div>
       ) : (

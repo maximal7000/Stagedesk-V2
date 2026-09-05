@@ -8,9 +8,10 @@ import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
 
-function Toggle({ checked, onChange, disabled }) {
+function Toggle({ checked, onChange, disabled, label }) {
   return (
     <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
+      role="switch" aria-checked={checked} aria-label={label}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
         checked ? 'bg-indigo-600' : 'bg-gray-700'
       } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
@@ -84,7 +85,7 @@ export default function DiscordSection({ data, refetch, canEdit, eventId }) {
                 </p>
               </div>
             </div>
-            <Toggle checked={draftChannel} onChange={onToggleChannel} disabled={!canEdit} />
+            <Toggle checked={draftChannel} onChange={onToggleChannel} disabled={!canEdit} label="Text-Channel" />
           </li>
           <li className="flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
@@ -97,7 +98,7 @@ export default function DiscordSection({ data, refetch, canEdit, eventId }) {
                 </p>
               </div>
             </div>
-            <Toggle checked={draftEvent} onChange={onToggleEvent} disabled={!canEdit} />
+            <Toggle checked={draftEvent} onChange={onToggleEvent} disabled={!canEdit} label="Scheduled Event" />
           </li>
           <li className="flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
@@ -111,13 +112,14 @@ export default function DiscordSection({ data, refetch, canEdit, eventId }) {
                 </p>
               </div>
             </div>
-            <Toggle checked={!!status?.info_aktiv} disabled />
+            <Toggle checked={!!status?.info_aktiv} disabled label="Info-Nachricht" />
           </li>
         </ul>
 
         <div className="flex items-center gap-2">
           <button type="button" onClick={handleSync} disabled={!canEdit || syncing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm">
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium leading-none shadow-sm transition-colors
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Synchronisieren
           </button>

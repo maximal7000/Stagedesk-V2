@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { CheckSquare, Plus, Trash2, Calendar, AlertCircle } from 'lucide-react';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 function deadlineState(item) {
   if (!item.deadline) return null;
@@ -71,9 +72,7 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
             onChange={(e) => setNewDeadline(e.target.value)}
             title="Optionale Frist"
             className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
-          <button type="button" onClick={addItem} className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
-            <Plus className="w-4 h-4" />
-          </button>
+          <Button variant="secondary" icon={Plus} onClick={addItem} title="Punkt hinzufügen" aria-label="Punkt hinzufügen" />
         </div>
       )}
       <ul className="space-y-2">
@@ -84,7 +83,8 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
               ds?.urgent ? 'bg-red-900/20 border border-red-800/40' : 'bg-gray-800'
             }`}>
               {canEdit ? (
-                <button type="button" onClick={() => toggleItem(item.id, !item.erledigt)} className="flex-shrink-0">
+                <button type="button" onClick={() => toggleItem(item.id, !item.erledigt)}
+                  aria-label={item.erledigt ? 'Als offen markieren' : 'Als erledigt markieren'} className="flex-shrink-0">
                   <CheckSquare className={`w-5 h-5 ${item.erledigt ? 'text-green-500' : 'text-gray-500'}`} />
                 </button>
               ) : (
@@ -92,7 +92,7 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
               )}
               <span className={`flex-1 min-w-0 ${item.erledigt ? 'text-gray-500 line-through' : 'text-white'}`}>{item.titel}</span>
               {ds && (
-                <span className={`text-xs inline-flex items-center gap-1 ${ds.cls}`}>
+                <span className={`text-xs inline-flex items-center gap-1 tabular-nums ${ds.cls}`}>
                   {ds.urgent ? <AlertCircle className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
                   {ds.label}
                 </span>
@@ -102,7 +102,7 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
                   defaultValue={item.deadline ? new Date(item.deadline).toISOString().slice(0, 16) : ''}
                   onBlur={(e) => setDeadline(item.id, e.target.value ? new Date(e.target.value).toISOString() : null)}
                   autoFocus
-                  className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-white text-xs" />
+                  className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-white text-xs" />
               ) : canEdit && (
                 <button type="button" onClick={() => setEditingDeadlineId(item.id)}
                   title={item.deadline ? 'Frist ändern' : 'Frist setzen'}
@@ -111,7 +111,7 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
                 </button>
               )}
               {canEdit && (
-                <button type="button" onClick={() => deleteItem(item.id)} className="text-gray-400 hover:text-red-400">
+                <button type="button" onClick={() => deleteItem(item.id)} aria-label="Punkt löschen" className="text-gray-400 hover:text-red-400">
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}

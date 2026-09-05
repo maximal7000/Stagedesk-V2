@@ -49,7 +49,7 @@ function MeldenButton({ v, onRefetch }) {
       type="button"
       onClick={handleMelden}
       disabled={loading}
-      className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+      className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
         v.ist_gemeldet
           ? 'bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400'
           : 'bg-gray-700 hover:bg-green-600/30 text-gray-400 hover:text-green-400'
@@ -145,7 +145,7 @@ function VeranstaltungCard({ v, onRefetch }) {
           </div>
 
           {/* Meta-Zeile */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 tabular-nums">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
               {v.anzahl_zuweisungen ?? 0} Personen
@@ -299,7 +299,7 @@ export default function VeranstaltungenPage() {
       <PageHeader
         eyebrow="Veranstaltungen"
         title="Alle Veranstaltungen"
-        meta={`${list.length} ${list.length === 1 ? 'Veranstaltung' : 'Veranstaltungen'} gesamt`}
+        meta={<span className="tabular-nums">{list.length} {list.length === 1 ? 'Veranstaltung' : 'Veranstaltungen'} gesamt</span>}
         actions={
           <>
             {hasPermission('veranstaltung.create') && (
@@ -358,12 +358,10 @@ export default function VeranstaltungenPage() {
           Nur meine
         </label>
         {(suche || filterStatus || nurMeine) && (
-          <button
-            onClick={() => { setSuche(''); setFilterStatus(''); setNurMeine(false); }}
-            className="flex items-center gap-1 text-xs text-gray-500 hover:text-white px-2 py-1 rounded hover:bg-gray-800"
-          >
-            <X className="w-3 h-3" /> Filter zurücksetzen
-          </button>
+          <Button variant="ghost" size="sm" icon={X}
+            onClick={() => { setSuche(''); setFilterStatus(''); setNurMeine(false); }}>
+            Filter zurücksetzen
+          </Button>
         )}
       </div>
 
@@ -400,7 +398,8 @@ export default function VeranstaltungenPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
             <div className="p-4 border-b border-gray-800 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-white">Aus Zammad-Ticket erstellen</h2>
-              <button type="button" onClick={() => setShowZammad(false)} className="text-gray-400 hover:text-white">
+              <button type="button" onClick={() => setShowZammad(false)} aria-label="Schließen"
+                className="text-gray-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>

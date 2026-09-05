@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { User, UserPlus, Plus, X, Hand, CheckCircle2, AlertTriangle, Award } from 'lucide-react';
+import { User, UserPlus, Plus, X, Hand, CheckCircle2, AlertTriangle, Award, MessageCircleOff } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function ZuweisungenSection({ data, refetch, canEdit, eventId, benutzer, taetigkeitsrollen }) {
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -91,10 +92,9 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
       title="Zuweisungen"
       count={(data?.zuweisungen?.length || 0) > 0 ? data.zuweisungen.length : undefined}
       actions={canEdit && (
-        <button type="button" onClick={() => setShowAddUsers(!showAddUsers)}
-          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-          <UserPlus className="w-4 h-4" /> Hinzufügen
-        </button>
+        <Button variant="secondary" size="sm" icon={UserPlus} onClick={() => setShowAddUsers(!showAddUsers)}>
+          Hinzufügen
+        </Button>
       )}
     >
       {/* Quick-Assign: Gemeldete direkt zuweisen */}
@@ -156,14 +156,14 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                 const isGemeldet = gemeldeteIds.has(u.keycloak_id);
                 return (
                   <label key={u.keycloak_id}
-                    className={`flex items-center gap-2 px-3 py-2 rounded cursor-pointer hover:bg-gray-700 ${selectedUsers.includes(u.keycloak_id) ? 'bg-accent/10' : ''}`}>
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer hover:bg-gray-700 ${selectedUsers.includes(u.keycloak_id) ? 'bg-accent/10' : ''}`}>
                     <input type="checkbox" checked={selectedUsers.includes(u.keycloak_id)}
                       onChange={() => toggleUserSelection(u.keycloak_id)}
                       className="rounded border-gray-600 bg-gray-700 text-accent" />
                     <span className="text-white text-sm">{u.name}</span>
                     {u.kompetenzen_total > 0 && (
                       <span title="Erforderliche Kompetenzen erfüllt"
-                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs ${
+                        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs tabular-nums ${
                           u.voll_qualifiziert ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'
                         }`}>
                         {u.voll_qualifiziert ? <CheckCircle2 className="w-3 h-3" /> : <Award className="w-3 h-3" />}
@@ -171,20 +171,20 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                       </span>
                     )}
                     {isGemeldet && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-green-500/20 text-green-400 rounded-md text-xs">
                         <Hand className="w-3 h-3" /> gemeldet
                       </span>
                     )}
                     {hasKonflikt && (
                       <span title={u.konflikte.map(k => k.titel).join(', ')}
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-xs">
+                        className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded-md text-xs">
                         <AlertTriangle className="w-3 h-3" /> Konflikt
                       </span>
                     )}
                     {u.bereiche?.length > 0 && (
                       <span className="text-xs text-gray-500 ml-auto">{u.bereiche.map(b => b.name).join(', ')}</span>
                     )}
-                    {!u.discord_id && <span className="text-xs text-yellow-500" title="Keine Discord-ID">!</span>}
+                    {!u.discord_id && <MessageCircleOff className="w-3.5 h-3.5 text-yellow-500 shrink-0" title="Keine Discord-ID hinterlegt" />}
                   </label>
                 );
               })}
@@ -192,18 +192,18 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
             </div>
             <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-gray-700">
               <select value={newTaetigkeitId} onChange={(e) => setNewTaetigkeitId(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm">
+                className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
                 <option value="">Keine Tätigkeit</option>
                 {taetigkeitsrollen.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-              <button type="button" onClick={() => addZuweisungen()}
-                disabled={selectedUsers.length === 0 || busy}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-white rounded text-sm">
-                <Plus className="w-3.5 h-3.5" />
+              <Button variant="primary" size="sm" icon={Plus} onClick={() => addZuweisungen()}
+                disabled={selectedUsers.length === 0 || busy}>
                 {busy ? '…' : (selectedUsers.length > 0 ? `${selectedUsers.length} hinzufügen` : 'Hinzufügen')}
-              </button>
-              <button type="button" onClick={() => { setShowAddUsers(false); setSelectedUsers([]); setUserSearch(''); }}
-                className="text-gray-400 hover:text-white text-sm px-2">Abbrechen</button>
+              </Button>
+              <Button variant="ghost" size="sm"
+                onClick={() => { setShowAddUsers(false); setSelectedUsers([]); setUserSearch(''); }}>
+                Abbrechen
+              </Button>
             </div>
             <p className="text-xs text-gray-500">
               Sortierung: voll qualifiziert zuerst. Bei Tätigkeit wird zusätzlich nach Tätigkeits-Kompetenzen gefiltert.
@@ -226,16 +226,16 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
                 <span className="text-white font-medium truncate">{name}</span>
                 {canEdit ? (
                   <select value={z.taetigkeit_id || ''} onChange={(e) => updateZuweisung(z, e.target.value)}
-                    className="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-200 cursor-pointer">
+                    className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-sm text-gray-200 cursor-pointer">
                     <option value="">Keine Tätigkeit</option>
                     {taetigkeitsrollen.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 ) : z.taetigkeit_name ? (
-                  <span className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-purple-600/20 text-purple-400">{z.taetigkeit_name}</span>
+                  <span className="inline-flex px-2 py-0.5 rounded-md text-xs font-medium bg-purple-600/20 text-purple-400">{z.taetigkeit_name}</span>
                 ) : null}
               </div>
               {canEdit && (
-                <button type="button" onClick={() => removeZuweisung(z.user_keycloak_id)}
+                <button type="button" onClick={() => removeZuweisung(z.user_keycloak_id)} aria-label={`${name} entfernen`}
                   className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                   <X className="w-4 h-4" />
                 </button>
