@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import { Button, EmptyState } from '../../components/ui';
 import KompetenzAdminTab from './KompetenzAdminTab';
 import SkillGapTab from './SkillGapTab';
 import KompetenzHistorieGraph from './KompetenzHistorieGraph';
@@ -114,16 +115,17 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
           <div key={kat} className={`bg-gray-900 border rounded-lg overflow-hidden ${KATEGORIE_FARBEN[farbe] || KATEGORIE_FARBEN.blue}`}>
             <button
               onClick={() => toggle(kat)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-800/40 transition-colors"
+              aria-expanded={isOpen}
+              className="w-full flex items-center justify-between p-4 hover:bg-gray-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
             >
-              <div className="flex items-center gap-3">
-                {isOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                <div className="text-left">
-                  <div className="font-semibold text-white">{kat}</div>
-                  <div className="text-xs text-gray-400">{stats.aktiv} / {stats.gesamt} aktiv ({stats.prozent.toFixed(0)}%)</div>
+              <div className="flex items-center gap-3 min-w-0">
+                {isOpen ? <ChevronDown className="w-5 h-5 shrink-0" /> : <ChevronRight className="w-5 h-5 shrink-0" />}
+                <div className="text-left min-w-0">
+                  <div className="font-semibold text-white truncate">{kat}</div>
+                  <div className="text-xs text-gray-400 tabular-nums">{stats.aktiv} / {stats.gesamt} aktiv ({stats.prozent.toFixed(0)}%)</div>
                 </div>
               </div>
-              <div className="w-32">
+              <div className="w-28 hidden sm:block shrink-0">
                 <ProgressBar percent={stats.prozent} color={farbe} />
               </div>
             </button>
@@ -141,18 +143,19 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                         const hatCustomStufen = uk.custom_ablauf_stufen && uk.custom_ablauf_stufen.length > 0;
                         return (
                           <div key={uk.kompetenz_id}
-                               className="rounded bg-gray-800/40 hover:bg-gray-800/80">
-                            <div className="flex items-center justify-between gap-3 p-2">
+                               className="rounded-lg bg-gray-800/40 hover:bg-gray-800/80 transition-colors">
+                            <div className="flex items-center justify-between gap-3 p-2.5">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 {showToggle ? (
                                   <input
                                     type="checkbox"
                                     checked={uk.hat_kompetenz && !uk.ist_abgelaufen}
                                     onChange={(e) => onToggle(uk, e.target.checked)}
-                                    className="w-4 h-4 rounded cursor-pointer"
+                                    aria-label={`${uk.kompetenz_name} bestätigen`}
+                                    className="w-4 h-4 rounded cursor-pointer accent-accent focus-visible:ring-2 focus-visible:ring-accent"
                                   />
                                 ) : (
-                                  <div className="w-4 h-4 flex items-center justify-center">
+                                  <div className="w-4 h-4 flex items-center justify-center shrink-0">
                                     {uk.ist_aktiv ? <CheckCircle2 className="w-4 h-4 text-green-400" /> :
                                      uk.ist_abgelaufen ? <AlertTriangle className="w-4 h-4 text-red-400" /> :
                                      <Circle className="w-4 h-4 text-gray-600" />}
@@ -163,8 +166,8 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                     <div className="text-sm text-white truncate">{uk.kompetenz_name}</div>
                                     {hatCustomStufen && (
                                       <span title="Individuelle Ablauf-Stufen aktiv"
-                                            className="inline-flex items-center px-1.5 py-0 bg-yellow-500/10 text-yellow-400 rounded text-[10px]">
-                                        custom
+                                            className="inline-flex items-center px-1.5 py-0 bg-yellow-500/10 text-yellow-400 rounded text-[10px] font-medium shrink-0">
+                                        Individuell
                                       </span>
                                     )}
                                   </div>
@@ -176,14 +179,15 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                   <button type="button"
                                     onClick={() => setEditingStufen(editingStufen === uk.kompetenz_id ? null : uk.kompetenz_id)}
                                     title="Individuelle Ablauf-Stufen"
-                                    className={`p-1 rounded hover:bg-gray-700 ${
+                                    aria-label="Individuelle Ablauf-Stufen bearbeiten"
+                                    className={`p-1.5 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                                       hatCustomStufen ? 'text-yellow-400' : 'text-gray-500 hover:text-white'
                                     }`}>
                                     <Clock className="w-3.5 h-3.5" />
                                   </button>
                                 )}
-                                <div className="text-xs text-gray-500">
-                                  {uk.punkte}P
+                                <div className="text-xs text-gray-500 tabular-nums">
+                                  {uk.punkte} P
                                 </div>
                               </div>
                             </div>
@@ -228,43 +232,40 @@ function StufenEditor({ uk, onSave, onClose }) {
   const istUnbegrenzt = hatCustom && uk.custom_ablauf_stufen.every(n => n === 0);
 
   return (
-    <div className="px-3 pb-3 pt-1 border-t border-gray-700/40 text-xs">
+    <div className="px-3 pb-3 pt-2 border-t border-gray-700/40 text-xs">
       <div className="text-gray-400 mb-2">
-        Effektiv: <span className="text-gray-300">
-          {effektiv.length && effektiv.every(n => n === 0) ? '∞ unbegrenzt' : (effektiv.join(', ') || '—')}
+        Effektiv: <span className="text-gray-300 tabular-nums">
+          {effektiv.length && effektiv.every(n => n === 0) ? '∞ unbegrenzt' : (effektiv.join(', ') || 'Keine Angabe')}
         </span>
         {hatCustom && <span className="ml-2 text-yellow-400">(individuell)</span>}
       </div>
-      <div className="flex gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-center">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="z.B. 30, 60, 90, 180 (0 = unbegrenzt)"
-          className="flex-1 bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-xs"
+          className="flex-1 min-w-[12rem] bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
-        <button type="button" disabled={saving} onClick={() => save(parse())}
-                className="px-2 py-1 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 text-xs">
+        <Button type="button" variant="primary" size="sm" disabled={saving} onClick={() => save(parse())}>
           Speichern
-        </button>
+        </Button>
         <button type="button" disabled={saving || istUnbegrenzt} onClick={() => save([0])}
-                className="px-2 py-1 bg-green-700 text-white rounded hover:bg-green-600 disabled:opacity-50 text-xs"
-                title="Nie ablaufend">
+                title="Nie ablaufend"
+                className="inline-flex items-center px-2.5 py-1.5 bg-green-700 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
           ∞ Unbegrenzt
         </button>
         {hatCustom && (
-          <button type="button" disabled={saving} onClick={() => save([])}
-                  className="px-2 py-1 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 text-xs"
+          <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => save([])}
                   title="Auf Standard zurücksetzen">
-            Reset
-          </button>
+            Zurücksetzen
+          </Button>
         )}
-        <button type="button" onClick={onClose}
-                className="px-2 py-1 text-gray-500 hover:text-white text-xs">
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Abbrechen
-        </button>
+        </Button>
       </div>
-      <p className="text-gray-500 mt-1">
-        Leer = Standard aus Kompetenz/Global. <code>0</code> oder <code>∞ Unbegrenzt</code> = läuft nie ab. Nach dem Speichern wird bei aktiver Kompetenz das nächste Ablaufdatum neu berechnet.
+      <p className="text-gray-500 mt-2">
+        Leer lassen für den Standard aus Kompetenz oder globaler Einstellung. <code>0</code> oder <code>∞ Unbegrenzt</code> heißt: läuft nie ab. Nach dem Speichern wird bei aktiver Kompetenz das nächste Ablaufdatum neu berechnet.
       </p>
     </div>
   );
@@ -274,7 +275,7 @@ function StufenEditor({ uk, onSave, onClose }) {
 
 function Scoreboard({ data, currentKid }) {
   if (!data.length) {
-    return <div className="text-gray-500 text-center py-12">Noch keine Einträge</div>;
+    return <div className="text-gray-500 text-center py-14">Noch keine Einträge im Scoreboard.</div>;
   }
   return (
     <div className="space-y-2">
@@ -289,7 +290,7 @@ function Scoreboard({ data, currentKid }) {
                className={`flex items-center gap-4 p-4 rounded-lg border ${
                  isMe ? 'bg-accent/10 border-accent/40' : 'bg-gray-900 border-gray-800'
                }`}>
-            <div className="w-10 text-center font-bold text-lg text-gray-400">
+            <div className="w-10 text-center font-bold text-lg text-gray-400 tabular-nums">
               {medal || `#${entry.rang}`}
             </div>
             <div className="flex-1 min-w-0">
@@ -298,13 +299,13 @@ function Scoreboard({ data, currentKid }) {
                   ? [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ')
                   : entry.user_username} {isMe && <span className="text-xs text-accent">(Du)</span>}
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 tabular-nums">
                 {entry.anzahl_aktiv} / {entry.anzahl_gesamt} Kompetenzen aktiv
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-white">{entry.punkte}</div>
-              <div className="text-xs text-gray-500">Punkte</div>
+              <div className="text-2xl font-bold text-white tabular-nums leading-none">{entry.punkte}</div>
+              <div className="text-xs text-gray-500 mt-1">Punkte</div>
             </div>
           </div>
         );
@@ -315,31 +316,32 @@ function Scoreboard({ data, currentKid }) {
 
 // ─── Stats-Cards ────────────────────────────────────────────────
 
+function StatCard({ icon: Icon, label, value, valueCls }) {
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-1.5 text-gray-400 mb-1.5">
+        <Icon className="w-3.5 h-3.5 shrink-0" />
+        <span className="text-xs font-medium truncate">{label}</span>
+      </div>
+      <div className={`text-2xl font-bold tabular-nums leading-none tracking-tight ${valueCls || 'text-white'}`}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function StatsCards({ stats }) {
   if (!stats) return null;
+  const fortschritt = stats.kategorien?.length
+    ? stats.kategorien.reduce((s, k) => s + k.prozent, 0) / stats.kategorien.length
+    : 0;
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-      <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg">
-        <div className="text-gray-400 text-xs uppercase">Aktive Kompetenzen</div>
-        <div className="text-2xl font-bold text-white mt-1">{stats.anzahl_aktiv}</div>
-        <div className="text-xs text-gray-500">von {stats.anzahl_gesamt}</div>
-      </div>
-      <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg">
-        <div className="text-gray-400 text-xs uppercase">Punkte</div>
-        <div className="text-2xl font-bold text-accent mt-1">{stats.punkte}</div>
-      </div>
-      <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg">
-        <div className="text-gray-400 text-xs uppercase">Badges</div>
-        <div className="text-2xl font-bold text-yellow-400 mt-1">{stats.badges?.length || 0}</div>
-      </div>
-      <div className="bg-gray-900 border border-gray-800 p-4 rounded-lg">
-        <div className="text-gray-400 text-xs uppercase">Ø Fortschritt</div>
-        <div className="text-2xl font-bold text-green-400 mt-1">
-          {stats.kategorien?.length
-            ? (stats.kategorien.reduce((s, k) => s + k.prozent, 0) / stats.kategorien.length).toFixed(0)
-            : 0}%
-        </div>
-      </div>
+      <StatCard icon={CheckCircle2} label="Aktive Kompetenzen"
+                value={`${stats.anzahl_aktiv} / ${stats.anzahl_gesamt}`} />
+      <StatCard icon={Trophy} label="Punkte" value={stats.punkte} valueCls="text-accent" />
+      <StatCard icon={Award} label="Badges" value={stats.badges?.length || 0} valueCls="text-yellow-400" />
+      <StatCard icon={TrendingUp} label="Ø Fortschritt" value={`${fortschritt.toFixed(0)}%`} valueCls="text-green-400" />
     </div>
   );
 }
@@ -348,7 +350,7 @@ function BadgeList({ badges }) {
   if (!badges?.length) return null;
   return (
     <div className="mb-6">
-      <div className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+      <div className="text-sm font-semibold text-gray-300 mb-2.5 flex items-center gap-2">
         <Award className="w-4 h-4 text-yellow-400" /> Erreichte Badges
       </div>
       <div className="flex flex-wrap gap-2">
@@ -504,10 +506,9 @@ export default function KompetenzenPage() {
   return (
     <div className="max-w-6xl mx-auto">
       {viewingOther && (
-        <Link to="/kompetenzen" className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white mb-4">
-          <ArrowLeft className="w-4 h-4" />
+        <Button as={Link} to="/kompetenzen" variant="ghost" size="sm" icon={ArrowLeft} className="mb-4 !px-0">
           {kann_view_all_initial ? 'Zurück zur User-Liste' : 'Zurück zu meinen Kompetenzen'}
-        </Link>
+        </Button>
       )}
 
       {/* Tabs */}
@@ -543,10 +544,9 @@ export default function KompetenzenPage() {
         )}
         <div className="flex-1" />
         {(!skipOwnList || viewingOther) && (
-          <button onClick={downloadPDF}
-                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-400 hover:text-white">
-            <Download className="w-4 h-4" /> PDF
-          </button>
+          <Button variant="ghost" size="sm" icon={Download} onClick={downloadPDF} className="shrink-0">
+            PDF
+          </Button>
         )}
       </div>
 
@@ -597,10 +597,11 @@ function TabButton({ active, onClick, icon: Icon, children }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+      aria-current={active ? 'page' : undefined}
+      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset rounded-t-md ${
         active
           ? 'border-accent text-white'
-          : 'border-transparent text-gray-400 hover:text-white'
+          : 'border-transparent text-gray-400 hover:text-white hover:border-gray-700'
       }`}
     >
       <Icon className="w-4 h-4" /> {children}
@@ -643,31 +644,34 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
     return u.username?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
   });
 
-  if (loading) return <Loader2 className="w-5 h-5 animate-spin mx-auto" />;
+  if (loading) {
+    return <div className="flex items-center justify-center py-14"><Loader2 className="w-5 h-5 animate-spin text-gray-500" /></div>;
+  }
 
   return (
     <div>
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="User suchen..."
-            className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-white"
+            placeholder="Nach Name oder E-Mail suchen"
+            className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </div>
         {alleBereiche.length > 0 && (
           <select value={filterBereich} onChange={(e) => setFilterBereich(e.target.value)}
-                  className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white">
+                  className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
             <option value="">Alle Bereiche</option>
             {alleBereiche.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
       </div>
       {filtered.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">Keine User gefunden</div>
+        <EmptyState icon={Search} title="Keine User gefunden"
+          description="Andere Suche oder Bereich probieren." />
       ) : (
         <div className="space-y-2">
           {filtered.map(u => {
@@ -678,9 +682,9 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 key={u.keycloak_id || u.id}
                 onClick={() => onSelectUser(u.keycloak_id)}
                 disabled={!u.keycloak_id}
-                className="w-full flex items-center gap-3 p-3 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center gap-3 p-3 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold ${
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shrink-0 ${
                   istAdmin ? 'bg-purple-600' : 'bg-accent'
                 }`}>
                   {(u.first_name || u.username)?.[0]?.toUpperCase() || '?'}
@@ -688,7 +692,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-white font-medium truncate">
-                      {u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : (u.username || '—')}
+                      {u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : (u.username || 'Unbekannter Nutzer')}
                     </span>
                     {istAdmin && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded text-[10px]">
@@ -715,8 +719,8 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 </div>
                 {s ? (
                   <div className="text-right shrink-0">
-                    <div className="text-lg font-bold text-white">{s.punkte}</div>
-                    <div className="text-[10px] text-gray-500">{s.anzahl_aktiv}/{s.anzahl_gesamt} aktiv</div>
+                    <div className="text-lg font-bold text-white tabular-nums leading-none">{s.punkte}</div>
+                    <div className="text-[10px] text-gray-500 tabular-nums mt-1">{s.anzahl_aktiv}/{s.anzahl_gesamt} aktiv</div>
                   </div>
                 ) : (
                   <div className="text-[10px] text-gray-600 shrink-0">Keine Daten</div>

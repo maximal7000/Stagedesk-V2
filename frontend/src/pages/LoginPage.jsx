@@ -54,7 +54,7 @@ export default function LoginPage() {
 
       {/* Spotlights — Konus-Form über conic-gradient + blur */}
       <div className="spotlight spotlight-blue" />
-      <div className="spotlight spotlight-purple" />
+      <div className="spotlight spotlight-accent" />
       <div className="spotlight spotlight-amber" />
 
       {/* Staub-/Funken-Punkte */}
@@ -76,8 +76,8 @@ export default function LoginPage() {
           <div className="inline-block mb-3 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm bg-white/5 text-[10px] tracking-[0.3em] uppercase text-white/60">
             Backstage
           </div>
-          <h1 className="text-6xl sm:text-7xl font-extrabold text-white tracking-tight"
-              style={{ textShadow: '0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(168,85,247,0.2)' }}>
+          <h1 className="font-display text-6xl sm:text-7xl font-extrabold text-white tracking-tight"
+              style={{ textShadow: '0 4px 60px rgba(37,99,235,0.35)' }}>
             Stagedesk
           </h1>
         </div>
@@ -89,7 +89,7 @@ export default function LoginPage() {
           <button
             onClick={handleLogin}
             disabled={auth.isLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-gray-900 hover:bg-gray-100 font-semibold rounded-xl transition-all duration-200 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-gray-900 hover:bg-gray-100 font-semibold rounded-xl transition-colors duration-200 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {auth.isLoading ? (
               <>
@@ -114,13 +114,13 @@ export default function LoginPage() {
 
           {installPrompt && (
             <button onClick={installApp}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-xl text-sm transition-colors">
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-xl text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
               <Download className="w-4 h-4" /> Als App installieren
             </button>
           )}
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/30 tracking-wide">
+        <p className="mt-6 text-center text-xs text-white/50 tracking-wide">
           Sichere Authentifizierung über Keycloak
         </p>
       </div>
@@ -156,9 +156,9 @@ export default function LoginPage() {
             rgba(59,130,246,0.45) 0%, rgba(59,130,246,0.18) 30%, transparent 70%);
           animation: spotlight-sweep-1 18s ease-in-out infinite;
         }
-        .spotlight-purple {
+        .spotlight-accent {
           background: radial-gradient(ellipse 50% 100% at 50% 0%,
-            rgba(168,85,247,0.40) 0%, rgba(168,85,247,0.15) 30%, transparent 70%);
+            rgba(218,31,61,0.32) 0%, rgba(218,31,61,0.12) 30%, transparent 70%);
           animation: spotlight-sweep-2 22s ease-in-out infinite;
         }
         .spotlight-amber {

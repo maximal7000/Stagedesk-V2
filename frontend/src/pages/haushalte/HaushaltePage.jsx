@@ -13,6 +13,12 @@ import apiClient from '../../lib/api';
 // Polling-Intervall in Millisekunden (5 Sekunden)
 const POLL_INTERVAL = 5000;
 
+// Euro-Betrag im deutschen Format (1.234,56 €)
+const formatEuro = (value) => {
+  const num = parseFloat(value) || 0;
+  return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+};
+
 export default function HaushaltePage() {
   const navigate = useNavigate();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -97,7 +103,7 @@ export default function HaushaltePage() {
         <div>
           <h1 className="font-display text-[1.7rem] leading-none font-bold text-white mb-2">Meine Haushalte</h1>
           <div className="flex items-center gap-3">
-            <p className="text-gray-400">Verwalte deine Haushalte und Budget</p>
+            <p className="text-gray-400">Verwalte deine Haushalte und Budgets</p>
             {/* Live-Update Status */}
             <div className="flex items-center gap-2">
               <button
@@ -149,7 +155,7 @@ export default function HaushaltePage() {
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
           <Wallet className="w-16 h-16 text-gray-700 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-white mb-2">Noch keine Haushalte</h3>
-          <p className="text-gray-400 mb-6">Erstelle deinen ersten Haushalt, um loszulegen!</p>
+          <p className="text-gray-400 mb-6">Erstelle deinen ersten Haushalt, um loszulegen.</p>
           <button
             onClick={() => setShowCreateModal(true)}
             className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors"
@@ -180,7 +186,9 @@ export default function HaushaltePage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">{haushalt.name}</h3>
-                    <p className="text-sm text-gray-400">{haushalt.beschreibung}</p>
+                    {haushalt.beschreibung && (
+                      <p className="text-sm text-gray-400">{haushalt.beschreibung}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <button 
@@ -203,9 +211,9 @@ export default function HaushaltePage() {
                 {/* Budget Bar */}
                 <div className="mb-4">
                   <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-gray-400">Gesamt Budget</span>
-                    <span className="text-white font-semibold">
-                      € {gesamtAusgaben.toFixed(2)} / € {gesamtBudget.toFixed(2)}
+                    <span className="text-gray-400">Gesamtbudget</span>
+                    <span className="tabular-nums text-white font-semibold">
+                      {formatEuro(gesamtAusgaben)} / {formatEuro(gesamtBudget)}
                     </span>
                   </div>
                   <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
@@ -216,8 +224,8 @@ export default function HaushaltePage() {
                       style={{ width: `${Math.min(budgetProzent, 100)}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Verbleibend: € {verbleibendesBudget.toFixed(2)}
+                  <p className="text-xs tabular-nums text-gray-500 mt-1">
+                    Verbleibend: {formatEuro(verbleibendesBudget)}
                   </p>
                 </div>
 
@@ -228,16 +236,16 @@ export default function HaushaltePage() {
                       <TrendingDown className="w-4 h-4 text-orange-400" />
                       <span className="text-xs text-gray-400">Konsumitiv</span>
                     </div>
-                    <p className="text-lg font-bold text-white">€ {gesamtKonsumitiv.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">von € {budgetKonsumitiv.toFixed(2)}</p>
+                    <p className="text-lg font-bold tabular-nums text-white">{formatEuro(gesamtKonsumitiv)}</p>
+                    <p className="text-xs tabular-nums text-gray-500">von {formatEuro(budgetKonsumitiv)}</p>
                   </div>
                   <div className="bg-gray-800 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-1">
                       <TrendingUp className="w-4 h-4 text-green-400" />
                       <span className="text-xs text-gray-400">Investitiv</span>
                     </div>
-                    <p className="text-lg font-bold text-white">€ {gesamtInvestitiv.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">von € {budgetInvestitiv.toFixed(2)}</p>
+                    <p className="text-lg font-bold tabular-nums text-white">{formatEuro(gesamtInvestitiv)}</p>
+                    <p className="text-xs tabular-nums text-gray-500">von {formatEuro(budgetInvestitiv)}</p>
                   </div>
                 </div>
 

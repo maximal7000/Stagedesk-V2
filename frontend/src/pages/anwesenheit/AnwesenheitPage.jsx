@@ -6,14 +6,14 @@ import { toast } from 'sonner';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Plus, Search, ArrowLeft, Loader2, X, Check,
-  ChevronDown, ChevronRight, MapPin, Calendar,
+  ChevronRight, MapPin, Calendar,
   Users, UserPlus, CalendarPlus, Download,
   Copy, CheckCircle, Clock, Trash2, BarChart3,
-  AlertTriangle, Pencil, RefreshCw, Filter,
-  MessageSquare,
+  AlertTriangle, MessageSquare,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
+import { PageHeader, Button, StatusBadge, EmptyState } from '../../components/ui';
 
 // ─── Status-Farben ────────────────────────────────────────────────
 
@@ -33,16 +33,26 @@ const STATUS_LABELS = {
   ausstehend: 'Ausstehend',
 };
 
+// Anwesenheits-Status → StatusBadge-Ton (Farbbedeutung bleibt erhalten:
+// anwesend=grün, teilweise=blau, abwesend=rot, krank=gelb, ausstehend=grau)
+const STATUS_TONE = {
+  anwesend: 'positive',
+  teilweise: 'info',
+  abwesend: 'danger',
+  krank: 'warning',
+  ausstehend: 'neutral',
+};
+
 // ─── Hilfs-Komponenten ────────────────────────────────────────────
 
 function SectionHeader({ title, count, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 w-full py-2 text-left group">
-        {open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-        <span className="font-semibold text-white">{title}</span>
-        <span className="text-sm text-gray-500">({count})</span>
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 w-full py-2 text-left">
+        <span className="font-semibold text-gray-300 text-sm uppercase tracking-wide">{title}</span>
+        <span className="text-xs text-gray-600 tabular-nums">({count})</span>
+        <ChevronRight className={`w-4 h-4 text-gray-500 ml-auto transition-transform ${open ? 'rotate-90' : ''}`} />
       </button>
       {open && <div className="space-y-3 pb-4">{children}</div>}
     </div>
@@ -54,14 +64,14 @@ function ProgressBar({ statistik }) {
   const { anwesend, teilweise = 0, abwesend, krank, ausstehend, gesamt } = statistik;
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden flex">
+      <div className="flex-1 h-1.5 bg-gray-700 rounded-full overflow-hidden flex">
         {anwesend > 0 && <div className="bg-green-500 h-full" style={{ width: `${(anwesend / gesamt) * 100}%` }} />}
         {teilweise > 0 && <div className="bg-blue-500 h-full" style={{ width: `${(teilweise / gesamt) * 100}%` }} />}
         {abwesend > 0 && <div className="bg-red-500 h-full" style={{ width: `${(abwesend / gesamt) * 100}%` }} />}
         {krank > 0 && <div className="bg-yellow-500 h-full" style={{ width: `${(krank / gesamt) * 100}%` }} />}
         {ausstehend > 0 && <div className="bg-gray-600 h-full" style={{ width: `${(ausstehend / gesamt) * 100}%` }} />}
       </div>
-      <span className="text-xs text-gray-400 whitespace-nowrap">{statistik.quote}%</span>
+      <span className="text-xs text-gray-400 whitespace-nowrap tabular-nums">{statistik.quote}%</span>
     </div>
   );
 }
@@ -69,7 +79,7 @@ function ProgressBar({ statistik }) {
 function StatusSelect({ value, onChange, compact = false }) {
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className={`${compact ? 'text-xs px-1.5 py-1' : 'text-sm px-2 py-1.5'} rounded border border-gray-700 bg-gray-800 ${STATUS_COLORS[value]?.text || 'text-gray-400'}`}>
+      className={`${compact ? 'text-xs px-1.5 py-1' : 'text-sm px-2 py-1.5'} rounded-lg border border-gray-700 bg-gray-800 ${STATUS_COLORS[value]?.text || 'text-gray-400'}`}>
       {Object.entries(STATUS_LABELS).map(([k, v]) => (
         <option key={k} value={k}>{compact ? v.charAt(0) : v}</option>
       ))}
@@ -400,7 +410,7 @@ export default function AnwesenheitPage() {
   if (loading && !listId) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent animate-spin" />
       </div>
     );
   }
@@ -413,11 +423,9 @@ export default function AnwesenheitPage() {
     if (!detailListe) {
       return (
         <div className="space-y-6">
-          <button onClick={() => navigate('/anwesenheit')} className="flex items-center gap-2 text-gray-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" /> Zurück
-          </button>
+          <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/anwesenheit')}>Zurück</Button>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 text-gray-500 animate-spin" />
+            <Loader2 className="w-8 h-8 text-accent animate-spin" />
           </div>
         </div>
       );
@@ -431,43 +439,28 @@ export default function AnwesenheitPage() {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate('/anwesenheit')} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        <div className="flex items-start gap-3">
+          <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" title="Zurück" className="mt-1"
+            onClick={() => navigate('/anwesenheit')} />
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold text-white truncate">{detailListe.titel}</h1>
-            <div className="flex items-center gap-3 text-sm text-gray-400 mt-1">
+            <h1 className="font-display text-[1.6rem] leading-none font-bold text-white truncate">{detailListe.titel}</h1>
+            <div className="flex items-center gap-3 text-sm text-gray-400 mt-2">
               {detailListe.ort && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {detailListe.ort}</span>}
-              <span className={`px-2 py-0.5 text-xs rounded ${isAktiv ? 'bg-blue-900/30 text-blue-400' : 'bg-green-900/30 text-green-400'}`}>
-                {isAktiv ? 'Aktiv' : 'Abgeschlossen'}
-              </span>
+              <StatusBadge tone={isAktiv ? 'info' : 'positive'} label={isAktiv ? 'Aktiv' : 'Abgeschlossen'} />
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {isAktiv && hasPermission('anwesenheit.edit') && (
               <>
-                <button onClick={openTeilnehmerModal}
-                  className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  <UserPlus className="w-4 h-4" /> Teilnehmer
-                </button>
-                <button onClick={openTermineModal}
-                  className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  <CalendarPlus className="w-4 h-4" /> Termine
-                </button>
+                <Button variant="secondary" size="sm" icon={UserPlus} onClick={openTeilnehmerModal}>Teilnehmer</Button>
+                <Button variant="secondary" size="sm" icon={CalendarPlus} onClick={openTermineModal}>Termine</Button>
               </>
             )}
             {hasPermission('anwesenheit.statistik') && (
-              <button onClick={openStats}
-                className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                <BarChart3 className="w-4 h-4" /> Statistik
-              </button>
+              <Button variant="secondary" size="sm" icon={BarChart3} onClick={openStats}>Statistik</Button>
             )}
             {hasPermission('anwesenheit.export') && (
-              <button onClick={() => setShowExportModal(true)}
-                className="flex items-center gap-1 px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                <Download className="w-4 h-4" /> Export
-              </button>
+              <Button variant="secondary" size="sm" icon={Download} onClick={() => setShowExportModal(true)}>Export</Button>
             )}
           </div>
         </div>
@@ -479,10 +472,10 @@ export default function AnwesenheitPage() {
           </div>
         )}
 
-        {/* Statistik-Leiste — wraps auf engen Bildschirmen, Quote rechts wenn Platz */}
+        {/* Statistik-Leiste: wraps auf engen Bildschirmen, Quote rechts wenn Platz */}
         {teilnehmer.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tabular-nums">
               <span className="text-gray-400 whitespace-nowrap">
                 <Users className="w-4 h-4 inline mr-1" />{detailListe.statistik.gesamt} Teilnehmer
               </span>
@@ -562,7 +555,7 @@ export default function AnwesenheitPage() {
               {/* Header + Filter */}
               <div className="p-4 border-b border-gray-800 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-white">Teilnehmer ({teilnehmer.length})</h3>
+                  <h3 className="font-medium text-white tabular-nums">Teilnehmer ({teilnehmer.length})</h3>
                   {isAktiv && hasPermission('anwesenheit.edit') && teilnehmer.length > 0 && (
                     <div className="flex gap-1">
                       {Object.entries(STATUS_LABELS).filter(([k]) => k !== 'ausstehend').map(([key, label]) => (
@@ -583,7 +576,7 @@ export default function AnwesenheitPage() {
                             toast.success(`${targets.length}× als "${label}" markiert`);
                           } catch (err) { handleApiError(err, 'Bulk-Update fehlgeschlagen'); }
                         }}
-                          className={`px-2 py-1 text-xs rounded ${STATUS_COLORS[key].bg} ${STATUS_COLORS[key].text} hover:opacity-80`}>
+                          className={`px-2 py-1 text-xs font-medium rounded-lg tabular-nums ${STATUS_COLORS[key].bg} ${STATUS_COLORS[key].text} hover:opacity-80`}>
                           {selectedTeilnehmer.size > 0 ? `${selectedTeilnehmer.size}×` : 'Alle'} {label}
                         </button>
                       ))}
@@ -597,7 +590,7 @@ export default function AnwesenheitPage() {
                     <div className="relative flex-1 max-w-xs">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input type="text" value={teilnehmerSearch} onChange={e => setTeilnehmerSearch(e.target.value)}
-                        placeholder="Teilnehmer suchen..." className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                        placeholder="Teilnehmer suchen…" className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white" />
                     </div>
                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                       className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white">
@@ -607,17 +600,18 @@ export default function AnwesenheitPage() {
                       ))}
                     </select>
                     {(teilnehmerSearch || statusFilter) && (
-                      <span className="text-xs text-gray-500">{filteredTeilnehmer.length} von {teilnehmer.length}</span>
+                      <span className="text-xs text-gray-500 tabular-nums">{filteredTeilnehmer.length} von {teilnehmer.length}</span>
                     )}
                   </div>
                 )}
               </div>
 
               {teilnehmer.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">
-                  <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  Noch keine Teilnehmer hinzugefügt
-                </div>
+                <EmptyState icon={Users} title="Noch keine Teilnehmer"
+                  description="Füge Teilnehmer hinzu, um die Anwesenheit zu erfassen."
+                  action={isAktiv && hasPermission('anwesenheit.edit') && (
+                    <Button variant="primary" icon={UserPlus} onClick={openTeilnehmerModal}>Teilnehmer hinzufügen</Button>
+                  )} />
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -648,7 +642,7 @@ export default function AnwesenheitPage() {
                                 {t.ist_vergangen && <span className="text-[10px] px-1 py-0.5 rounded bg-gray-700 text-gray-400">Verg.</span>}
                                 <div className="flex justify-center gap-0.5 mt-1">
                                   <span className="inline-block w-2 h-2 rounded-full bg-green-500" title={`${ts.anwesend} Anwesend`} />
-                                  <span className="text-[10px] text-gray-400 mx-0.5">{ts.quote}%</span>
+                                  <span className="text-[10px] text-gray-400 mx-0.5 tabular-nums">{ts.quote}%</span>
                                 </div>
                               </th>
                             );
@@ -681,7 +675,7 @@ export default function AnwesenheitPage() {
                             <td className="p-3 sticky left-0 bg-gray-900 z-10">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-medium text-white">{tn.name}</span>
-                                {isSelf && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-400">Du</span>}
+                                {isSelf && <StatusBadge tone="info" label="Du" />}
                               </div>
                               {tn.aufgabe && (
                                 <div className="text-xs text-purple-400 mt-0.5">{tn.aufgabe}</div>
@@ -701,9 +695,7 @@ export default function AnwesenheitPage() {
                                       ) : canSelfEdit ? (
                                         <StatusSelect value={s} onChange={v => handleSelfStatus(t.id, v)} />
                                       ) : (
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${STATUS_COLORS[s]?.bg} ${STATUS_COLORS[s]?.text}`}>
-                                          {STATUS_LABELS[s]}
-                                        </span>
+                                        <StatusBadge tone={STATUS_TONE[s]} label={STATUS_LABELS[s]} />
                                       )}
                                       {(canEdit || canSelfEdit) && (
                                         <button onClick={() => {
@@ -743,9 +735,7 @@ export default function AnwesenheitPage() {
                                       ) : canSelfEdit ? (
                                         <StatusSelect value={s} onChange={v => handleSelfStatus(activeTerminId, v)} />
                                       ) : (
-                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs ${STATUS_COLORS[s]?.bg} ${STATUS_COLORS[s]?.text}`}>
-                                          {STATUS_LABELS[s]}
-                                        </span>
+                                        <StatusBadge tone={STATUS_TONE[s]} label={STATUS_LABELS[s]} />
                                       )}
                                       {(canEdit || canSelfEdit) && (
                                         <button onClick={() => {
@@ -770,9 +760,7 @@ export default function AnwesenheitPage() {
                                 {canEdit ? (
                                   <StatusSelect value={tn.status} onChange={v => handleStatusChange(tn.id, v)} />
                                 ) : (
-                                  <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs ${STATUS_COLORS[tn.status]?.bg} ${STATUS_COLORS[tn.status]?.text}`}>
-                                    {STATUS_LABELS[tn.status]}
-                                  </span>
+                                  <StatusBadge tone={STATUS_TONE[tn.status]} label={STATUS_LABELS[tn.status]} />
                                 )}
                               </td>
                             )}
@@ -811,8 +799,8 @@ export default function AnwesenheitPage() {
         {/* Floating Batch-Bar */}
         {selectedTeilnehmer.size > 0 && isAktiv && hasPermission('anwesenheit.edit') && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-xl px-5 py-3 shadow-2xl z-40 flex items-center gap-4">
-            <span className="text-white font-medium text-sm">{selectedTeilnehmer.size} ausgewählt</span>
-            <button onClick={() => setSelectedTeilnehmer(new Set())} className="text-gray-400 hover:text-white">
+            <span className="text-white font-medium text-sm tabular-nums">{selectedTeilnehmer.size} ausgewählt</span>
+            <button onClick={() => setSelectedTeilnehmer(new Set())} aria-label="Auswahl aufheben" className="text-gray-400 hover:text-white">
               <X className="w-4 h-4" />
             </button>
             <div className="h-5 w-px bg-gray-600" />
@@ -840,18 +828,18 @@ export default function AnwesenheitPage() {
         {isAktiv && hasPermission('anwesenheit.edit') && (
           <div className="flex items-center gap-3">
             <button onClick={handleAbschliessen}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-sm bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">
               <CheckCircle className="w-4 h-4" /> Abschließen
             </button>
-            <button onClick={() => { setKlonForm({ titel: '', termine_uebernehmen: true }); setShowKlonModal(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
-              <Copy className="w-4 h-4" /> Klonen
-            </button>
+            <Button variant="secondary" icon={Copy}
+              onClick={() => { setKlonForm({ titel: '', termine_uebernehmen: true }); setShowKlonModal(true); }}>
+              Klonen
+            </Button>
             {hasPermission('anwesenheit.delete') && (
-              <button onClick={() => handleDelete(listId)}
-                className="flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-900/20 rounded-lg ml-auto">
-                <Trash2 className="w-4 h-4" /> Löschen
-              </button>
+              <Button variant="ghost" icon={Trash2} className="text-red-400 hover:text-red-300 ml-auto"
+                onClick={() => handleDelete(listId)}>
+                Löschen
+              </Button>
             )}
           </div>
         )}
@@ -862,13 +850,13 @@ export default function AnwesenheitPage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Neue Anwesenheitsliste</h2>
-                <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Titel *</label>
                   <input type="text" value={createForm.titel} onChange={e => setCreateForm({ ...createForm, titel: e.target.value })}
-                    placeholder="z.B. Probe Montag, Workshop 2026..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    placeholder="z.B. Probe Montag, Workshop 2026…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
@@ -878,16 +866,15 @@ export default function AnwesenheitPage() {
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Ort</label>
                   <input type="text" value={createForm.ort} onChange={e => setCreateForm({ ...createForm, ort: e.target.value })}
-                    placeholder="z.B. Aula, Studio A..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    placeholder="z.B. Aula, Studio A…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
-                <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleCreate} disabled={saving || !createForm.titel}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
+                <Button variant="primary" className="flex-1" onClick={handleCreate} disabled={saving || !createForm.titel}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Erstellen
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -899,7 +886,7 @@ export default function AnwesenheitPage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
                 <h2 className="text-lg font-semibold text-white">Termine verwalten</h2>
-                <button onClick={() => setShowTermineModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTermineModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
                 {termineForm.map((t, i) => (
@@ -928,12 +915,11 @@ export default function AnwesenheitPage() {
                 </button>
               </div>
               <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
-                <button onClick={() => setShowTermineModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleSaveTermine} disabled={saving}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowTermineModal(false)}>Abbrechen</Button>
+                <Button variant="primary" className="flex-1" onClick={handleSaveTermine} disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Speichern
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -945,16 +931,16 @@ export default function AnwesenheitPage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
                 <h2 className="text-lg font-semibold text-white">Teilnehmer hinzufügen</h2>
-                <button onClick={() => setShowTeilnehmerModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTeilnehmerModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-6 pt-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input type="text" value={benutzerSearch} onChange={e => setBenutzerSearch(e.target.value)}
-                    placeholder="Benutzer suchen..." className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    placeholder="Benutzer suchen…" className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
                 </div>
                 {selectedBenutzer.length > 0 && (
-                  <div className="mt-2 text-sm text-blue-400">{selectedBenutzer.length} ausgewählt</div>
+                  <div className="mt-2 text-sm text-blue-400 tabular-nums">{selectedBenutzer.length} ausgewählt</div>
                 )}
               </div>
               <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
@@ -997,12 +983,11 @@ export default function AnwesenheitPage() {
                 </ul>
               </div>
               <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
-                <button onClick={() => setShowTeilnehmerModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleAddTeilnehmer} disabled={selectedBenutzer.length === 0 || saving}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowTeilnehmerModal(false)}>Abbrechen</Button>
+                <Button variant="primary" className="flex-1 tabular-nums" onClick={handleAddTeilnehmer} disabled={selectedBenutzer.length === 0 || saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                   Hinzufügen ({selectedBenutzer.length})
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1014,7 +999,7 @@ export default function AnwesenheitPage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Liste klonen</h2>
-                <button onClick={() => setShowKlonModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowKlonModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -1027,23 +1012,22 @@ export default function AnwesenheitPage() {
                     <input type="checkbox" checked={klonForm.termine_uebernehmen}
                       onChange={e => setKlonForm({ ...klonForm, termine_uebernehmen: e.target.checked })}
                       className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-blue-600" />
-                    <span className="text-sm text-gray-300">Termine übernehmen ({termine.length} Termine)</span>
+                    <span className="text-sm text-gray-300 tabular-nums">Termine übernehmen ({termine.length} Termine)</span>
                   </label>
                 )}
                 <div className="p-3 bg-gray-800/50 rounded-lg text-xs text-gray-400 space-y-1">
                   <p className="font-medium text-gray-300">Was wird kopiert:</p>
                   <p>• Titel, Beschreibung, Ort</p>
-                  <p>• Teilnehmer ({teilnehmer.length}) — Status wird auf "Ausstehend" zurückgesetzt</p>
+                  <p>• Teilnehmer ({teilnehmer.length}): Status wird auf "Ausstehend" zurückgesetzt</p>
                   {klonForm.termine_uebernehmen && termine.length > 0 && <p>• Termine ({termine.length})</p>}
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
-                <button onClick={() => setShowKlonModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleKlonen} disabled={saving}
-                  className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
+                <Button variant="ghost" className="flex-1" onClick={() => setShowKlonModal(false)}>Abbrechen</Button>
+                <Button variant="primary" className="flex-1" onClick={handleKlonen} disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
                   Klonen
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -1055,16 +1039,16 @@ export default function AnwesenheitPage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-white">Export</h2>
-                <button onClick={() => setShowExportModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowExportModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-3">
                 <button onClick={() => handleExport('csv')}
-                  className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                  className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-accent hover:bg-accent/10 transition-colors">
                   <div className="font-medium text-white">CSV</div>
                   <div className="text-sm text-gray-400">Tabellenformat für Excel</div>
                 </button>
                 <button onClick={() => handleExport('json')}
-                  className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-blue-500 hover:bg-blue-900/20 transition-colors">
+                  className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-accent hover:bg-accent/10 transition-colors">
                   <div className="font-medium text-white">JSON</div>
                   <div className="text-sm text-gray-400">Vollständige Datenstruktur</div>
                 </button>
@@ -1079,7 +1063,7 @@ export default function AnwesenheitPage() {
             <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold text-white">Statistik</h2>
-                <button onClick={() => setShowStatsModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowStatsModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
               </div>
 
               {/* Gesamt */}
@@ -1093,13 +1077,13 @@ export default function AnwesenheitPage() {
                   { label: 'Ausstehend', value: stats.gesamt.ausstehend, color: 'text-gray-400' },
                 ].map(s => (
                   <div key={s.label} className="bg-gray-800 rounded-lg p-3 text-center">
-                    <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
-                    <div className="text-xs text-gray-400">{s.label}</div>
+                    <div className={`text-2xl font-bold tabular-nums leading-none ${s.color}`}>{s.value}</div>
+                    <div className="text-xs text-gray-400 mt-1.5">{s.label}</div>
                   </div>
                 ))}
               </div>
 
-              <div className="text-center text-lg font-bold text-blue-400 mb-6">{stats.gesamt.quote}% Anwesenheitsquote</div>
+              <div className="text-center text-lg font-bold text-blue-400 mb-6 tabular-nums">{stats.gesamt.quote}% Anwesenheitsquote</div>
 
               {/* Pro Termin */}
               {stats.termine.length > 0 && (
@@ -1115,13 +1099,13 @@ export default function AnwesenheitPage() {
                               <span className="text-white text-sm">{t.titel}</span>
                               <span className="text-gray-500 text-xs ml-2">{new Date(t.datum).toLocaleDateString('de-DE')}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs">
+                            <div className="flex items-center gap-3 text-xs tabular-nums">
                               <span className="flex items-center gap-1 text-green-400"><span className="w-1.5 h-1.5 rounded-full bg-green-500" />{t.anwesend}</span>
                               {(t.teilweise || 0) > 0 && <span className="flex items-center gap-1 text-blue-400"><span className="w-1.5 h-1.5 rounded-full bg-blue-500" />{t.teilweise}</span>}
                               <span className="flex items-center gap-1 text-red-400"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{t.abwesend}</span>
                               <span className="flex items-center gap-1 text-yellow-400"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500" />{t.krank}</span>
                             </div>
-                            <span className="text-blue-400 text-sm font-medium w-12 text-right">{t.quote}%</span>
+                            <span className="text-blue-400 text-sm font-medium w-12 text-right tabular-nums">{t.quote}%</span>
                           </div>
                           {total > 0 && (
                             <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden flex">
@@ -1311,13 +1295,13 @@ export default function AnwesenheitPage() {
           <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-white">Neue Anwesenheitsliste</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Titel *</label>
                 <input type="text" value={createForm.titel} onChange={e => setCreateForm({ ...createForm, titel: e.target.value })}
-                  placeholder="z.B. Probe Montag, Workshop 2026..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                  placeholder="z.B. Probe Montag, Workshop 2026…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
               </div>
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
@@ -1327,16 +1311,15 @@ export default function AnwesenheitPage() {
               <div>
                 <label className="block text-sm text-gray-400 mb-1">Ort</label>
                 <input type="text" value={createForm.ort} onChange={e => setCreateForm({ ...createForm, ort: e.target.value })}
-                  placeholder="z.B. Aula, Studio A..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                  placeholder="z.B. Aula, Studio A…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
               </div>
             </div>
             <div className="flex gap-2 mt-6">
-              <button onClick={() => setShowCreateModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleCreate} disabled={saving || !createForm.titel}
-                className="flex items-center justify-center gap-2 flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
+              <Button variant="ghost" className="flex-1" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
+              <Button variant="primary" className="flex-1" onClick={handleCreate} disabled={saving || !createForm.titel}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Erstellen
-              </button>
+              </Button>
             </div>
           </div>
         </div>

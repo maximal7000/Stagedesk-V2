@@ -1,5 +1,5 @@
 /**
- * Aufgaben verwalten — eine Liste, Drag&Drop-Sortierung (touch-fähig
+ * Aufgaben verwalten: eine Liste, Drag&Drop-Sortierung (touch-fähig
  * via @dnd-kit), Status Offen/Abgeschlossen, User zuweisen.
  */
 import { useState, useEffect, useCallback } from 'react';
@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
 import Markdown from '../../components/Markdown';
+import { PageHeader, Button, EmptyState } from '../../components/ui';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, TouchSensor,
   useSensor, useSensors,
@@ -117,33 +118,30 @@ export default function AufgabenPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <ListChecks className="w-5 h-5 text-gray-400" />
-          <h1 className="text-2xl font-bold text-white">Aufgaben</h1>
-          <span className="text-sm text-gray-500">{aufgaben.length}</span>
-        </div>
-        <a href="/aufgaben-monitor" target="_blank" rel="noreferrer"
-          className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg text-sm">
-          <ExternalLink className="w-4 h-4" /> Monitor-Vollbild öffnen
-        </a>
-      </div>
+      <PageHeader
+        eyebrow="Verwaltung"
+        title="Aufgaben"
+        meta={<span className="tabular-nums">{aufgaben.length} {aufgaben.length === 1 ? 'Aufgabe' : 'Aufgaben'}</span>}
+        actions={
+          <Button as="a" href="/aufgaben-monitor" target="_blank" rel="noreferrer" variant="secondary" icon={ExternalLink}>
+            Monitor-Vollbild öffnen
+          </Button>
+        }
+      />
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-2">
         <input type="text" placeholder="Neue Aufgabe…" value={neuerTitel}
           onChange={(e) => setNeuerTitel(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addAufgabe()}
           className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500" />
-        <button onClick={addAufgabe} disabled={!neuerTitel.trim()}
-          className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg inline-flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Hinzufügen
-        </button>
+        <Button variant="primary" icon={Plus} disabled={!neuerTitel.trim()} onClick={addAufgabe}>Hinzufügen</Button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
       ) : aufgaben.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">Keine Aufgaben</div>
+        <EmptyState icon={ListChecks} title="Keine Aufgaben"
+          description="Lege oben deine erste Aufgabe an." />
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={aufgaben.map(a => a.id)} strategy={verticalListSortingStrategy}>
@@ -162,16 +160,16 @@ export default function AufgabenPage() {
         </DndContext>
       )}
       <p className="text-xs text-gray-500">
-        Tipp: Aufgaben per Griff <GripVertical className="w-3 h-3 inline" /> neu sortieren —
-        funktioniert mit Maus, Touch (lang drücken) und Tastatur.
+        Tipp: Aufgaben per Griff <GripVertical className="w-3 h-3 inline" /> neu sortieren.
+        Funktioniert mit Maus, Touch (lang drücken) und Tastatur.
       </p>
     </div>
   );
 }
 
 // Einzelne sortierbare Aufgaben-Karte. Der Griff (GripVertical) trägt die
-// Listener — so kann der Erledigt-Button & der Rest weiterhin normal geklickt
-// werden, und auf Touch-Geräten bleibt das Scrollen erhalten.
+// Listener, damit der Erledigt-Button und der Rest weiterhin normal geklickt
+// werden können, und auf Touch-Geräten bleibt das Scrollen erhalten.
 function SortableAufgabe({
   a, toggleStatus, toggleAssign, remove,
   addSubtask, toggleSubtask, removeSubtask,
@@ -200,6 +198,7 @@ function SortableAufgabe({
         </button>
         <button onClick={() => toggleStatus(a)}
           title={done ? 'Wieder öffnen' : 'Als erledigt markieren'}
+          aria-label={done ? 'Wieder öffnen' : 'Als erledigt markieren'}
           className="shrink-0 mt-0.5">
           {done
             ? <CheckCircle2 className="w-6 h-6 text-green-500" />
@@ -215,7 +214,7 @@ function SortableAufgabe({
               <span key={z.id}
                 className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs">
                 {z.name}
-                <button onClick={() => toggleAssign(a, z.id)} className="hover:text-white">
+                <button onClick={() => toggleAssign(a, z.id)} className="hover:text-white" aria-label={`${z.name} entfernen`}>
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -253,8 +252,8 @@ function SortableAufgabe({
           {(subtasks.length > 0 || !done) && (
             <div className="mt-3 space-y-1">
               {subtasks.length > 0 && (
-                <div className="text-[11px] text-gray-500 mb-1">
-                  Unteraufgaben — {subDone}/{subtasks.length}
+                <div className="text-[11px] text-gray-500 mb-1 tabular-nums">
+                  Unteraufgaben: {subDone}/{subtasks.length}
                 </div>
               )}
               {subtasks.map((s) => (
@@ -268,7 +267,7 @@ function SortableAufgabe({
                   <span className={`text-sm flex-1 ${s.erledigt ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
                     {s.titel}
                   </span>
-                  <button onClick={() => removeSubtask(a.id, s.id)}
+                  <button onClick={() => removeSubtask(a.id, s.id)} aria-label={`Unteraufgabe „${s.titel}" löschen`}
                     className="opacity-0 group-hover/sub:opacity-100 text-gray-500 hover:text-red-400 p-1">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -288,10 +287,8 @@ function SortableAufgabe({
             </div>
           )}
         </div>
-        <button onClick={() => remove(a)}
-          className="p-2 text-gray-500 hover:text-red-400">
-          <Trash2 className="w-4 h-4" />
-        </button>
+        <Button variant="ghost" size="sm" icon={Trash2} title="Löschen" aria-label={`Aufgabe „${a.titel}" löschen`}
+          className="text-gray-500 hover:text-red-400" onClick={() => remove(a)} />
       </div>
     </li>
   );

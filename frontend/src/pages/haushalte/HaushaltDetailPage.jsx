@@ -131,7 +131,7 @@ const EditingRow = memo(function EditingRow({
             onChange={(e) => setLocalData({ ...localData, preis: e.target.value })}
             onKeyDown={handleKeyDown}
             step="0.01"
-            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right focus:ring-2 focus:ring-blue-500"
+            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right tabular-nums focus:ring-2 focus:ring-blue-500"
           />
           <span className="text-gray-500 text-sm">€</span>
         </div>
@@ -143,10 +143,10 @@ const EditingRow = memo(function EditingRow({
           onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
           onKeyDown={handleKeyDown}
           min="1"
-          className="w-16 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center focus:ring-2 focus:ring-blue-500"
+          className="w-16 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center tabular-nums focus:ring-2 focus:ring-blue-500"
         />
       </td>
-      <td className="p-2 text-right text-white font-medium">
+      <td className="p-2 text-right tabular-nums text-white font-medium">
         {formatPreis((parseFloat(localData.preis) || 0) * (parseInt(localData.anzahl) || 1))}
       </td>
       <td className="p-2">
@@ -245,7 +245,7 @@ const NewRowComponent = memo(function NewRowComponent({
             onKeyDown={handleKeyDown}
             placeholder="0.00"
             step="0.01"
-            className="w-20 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-right focus:ring-2 focus:ring-green-500"
+            className="w-20 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-right tabular-nums focus:ring-2 focus:ring-green-500"
           />
           <span className="text-gray-500 text-sm">€</span>
         </div>
@@ -257,10 +257,10 @@ const NewRowComponent = memo(function NewRowComponent({
           onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
           onKeyDown={handleKeyDown}
           min="1"
-          className="w-16 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-center focus:ring-2 focus:ring-green-500"
+          className="w-16 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-center tabular-nums focus:ring-2 focus:ring-green-500"
         />
       </td>
-      <td className="p-2 text-right text-white font-medium">
+      <td className="p-2 text-right tabular-nums text-white font-medium">
         {formatPreis((parseFloat(localData.preis) || 0) * (parseInt(localData.anzahl) || 1))}
       </td>
       <td className="p-2">
@@ -686,16 +686,16 @@ export default function HaushaltDetailPage() {
               <ExternalLink className="w-3 h-3" /> Link
             </a>
           ) : (
-            <span className="text-gray-600 text-sm">—</span>
+            <span className="text-gray-600 text-sm">kein Link</span>
           )}
         </td>
-        <td className="p-2 text-right text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
+        <td className="p-2 text-right tabular-nums text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
           {formatPreis(item.preis)}
         </td>
-        <td className="p-2 text-center text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
+        <td className="p-2 text-center tabular-nums text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
           {item.anzahl}
         </td>
-        <td className="p-2 text-right text-white font-medium">
+        <td className="p-2 text-right tabular-nums text-white font-medium">
           {formatPreis(item.gesamtpreis)}
         </td>
         {/* Reorder ↑↓ (nur bei manueller Sortierung sinnvoll) */}
@@ -770,7 +770,7 @@ export default function HaushaltDetailPage() {
             <h3 className="font-bold text-white">{kategorie === 'konsumitiv' ? 'Konsumitiv' : 'Investitiv'}</h3>
             <span className="text-sm text-gray-400">({items.length})</span>
           </div>
-          <p className={`text-lg font-bold ${color === 'orange' ? 'text-orange-400' : 'text-green-400'}`}>
+          <p className={`text-lg font-bold tabular-nums ${color === 'orange' ? 'text-orange-400' : 'text-green-400'}`}>
             {formatPreis(ausgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(budget)}</span>
           </p>
         </div>
@@ -904,7 +904,7 @@ export default function HaushaltDetailPage() {
             <Wallet className="w-5 h-5 text-blue-400" />
             <span className="text-gray-400">Gesamt</span>
           </div>
-          <p className="text-lg font-bold text-white">
+          <p className="text-lg font-bold tabular-nums text-white">
             {formatPreis(gesamtAusgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(gesamtBudget)}</span>
           </p>
         </div>
@@ -928,32 +928,40 @@ export default function HaushaltDetailPage() {
             className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm" />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded px-2 py-2 text-sm text-white">
+          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white">
           <option value="">Alle Status</option>
           {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <select onChange={(e) => { if (e.target.value) { exportFile(e.target.value); e.target.value = ''; } }}
-          className="bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg px-3 py-2 border border-gray-700">
-          <option value="">📥 Export…</option>
-          <option value="csv">CSV</option>
-          <option value="xlsx">Excel (.xlsx)</option>
-          <option value="pdf">PDF</option>
-        </select>
+        <div className="relative">
+          <FileDown className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <select
+            onChange={(e) => { if (e.target.value) { exportFile(e.target.value); e.target.value = ''; } }}
+            defaultValue=""
+            className="bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg pl-8 pr-3 py-2 border border-gray-700"
+          >
+            <option value="" disabled>Export</option>
+            <option value="csv">CSV</option>
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </div>
         <button onClick={() => setShowSammelQuittung(true)}
           className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
           <Receipt className="w-4 h-4" /> Sammel-Quittung
         </button>
         {selectedIds.size > 0 && (
           <>
-            <span className="text-sm text-gray-400">{selectedIds.size} ausgewählt</span>
+            <span className="text-sm tabular-nums text-gray-400">{selectedIds.size} ausgewählt</span>
             <select onChange={(e) => { if (e.target.value) { bulkSetStatus(e.target.value); e.target.value = ''; } }}
               disabled={bulkBusy}
-              className="bg-accent hover:bg-accent-hover text-white text-sm rounded px-2 py-2 border-0">
+              className="bg-accent hover:bg-accent-hover text-white text-sm rounded-lg px-2 py-2 border-0">
               <option value="">Status setzen…</option>
               {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900">{l}</option>)}
             </select>
-            <button onClick={clearSelection}
-              className="text-sm text-gray-400 hover:text-white px-2">Auswahl×</button>
+            <button onClick={clearSelection} title="Auswahl aufheben"
+              className="flex items-center gap-1 text-sm text-gray-400 hover:text-white px-2 py-2 rounded-lg hover:bg-gray-800">
+              <X className="w-3.5 h-3.5" /> Auswahl
+            </button>
           </>
         )}
       </div>
@@ -974,12 +982,12 @@ export default function HaushaltDetailPage() {
                       const v = sums[s];
                       if (!v) return null;
                       return (
-                        <span key={s} className={`px-2 py-0.5 rounded ${STATUS_CLASS[s]}`}>
-                          {l}: {v.summe.toLocaleString('de-DE', {minimumFractionDigits: 2})} € ({v.anzahl})
+                        <span key={s} className={`px-2 py-0.5 rounded tabular-nums ${STATUS_CLASS[s]}`}>
+                          {l}: {formatPreis(v.summe)} ({v.anzahl})
                         </span>
                       );
                     })}
-                    {total === 0 && <span className="text-gray-600">—</span>}
+                    {total === 0 && <span className="text-gray-600">Keine Ausgaben</span>}
                   </div>
                 </div>
               );

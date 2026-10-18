@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Trash2, Loader2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/api';
+import { PageHeader, Button, EmptyState } from '../components/ui';
 
 const KIND_LABEL = {
   zuweisung: 'Zuweisung', mahnung: 'Mahnung', erinnerung: 'Erinnerung',
@@ -13,14 +14,14 @@ const KIND_LABEL = {
 };
 
 const KIND_CLASS = {
-  zuweisung: 'bg-blue-500/20 text-blue-400',
-  mahnung: 'bg-orange-500/20 text-orange-400',
-  erinnerung: 'bg-amber-500/20 text-amber-400',
-  kompetenz: 'bg-purple-500/20 text-purple-400',
-  deadline: 'bg-red-500/20 text-red-400',
-  konflikt: 'bg-red-500/20 text-red-400',
-  info: 'bg-gray-500/20 text-gray-400',
-  system: 'bg-gray-500/20 text-gray-400',
+  zuweisung: 'bg-blue-500/15 text-blue-300 ring-1 ring-inset ring-blue-500/25',
+  mahnung: 'bg-orange-500/15 text-orange-300 ring-1 ring-inset ring-orange-500/25',
+  erinnerung: 'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
+  kompetenz: 'bg-purple-500/15 text-purple-300 ring-1 ring-inset ring-purple-500/25',
+  deadline: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
+  konflikt: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
+  info: 'bg-gray-500/15 text-gray-300 ring-1 ring-inset ring-gray-500/25',
+  system: 'bg-gray-500/15 text-gray-300 ring-1 ring-inset ring-gray-500/25',
 };
 
 export default function NotificationsPage() {
@@ -66,41 +67,40 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-gray-400" />
-          <h1 className="text-2xl font-bold text-white">Benachrichtigungen</h1>
-          {unread > 0 && <span className="text-sm text-accent">{unread} ungelesen</span>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setOnlyUnread((v) => !v)}
-            className={`px-3 py-1.5 text-sm rounded-lg ${
-              onlyUnread ? 'bg-accent text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}>
-            {onlyUnread ? 'Nur ungelesen' : 'Alle'}
-          </button>
-          {unread > 0 && (
-            <button onClick={markAllRead}
-              className="px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 text-white rounded-lg inline-flex items-center gap-1">
-              <Check className="w-4 h-4" /> Alle gelesen
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Benachrichtigungen"
+        meta={<span className="tabular-nums">{unread > 0 ? `${unread} ungelesen` : 'Alles gelesen'}</span>}
+        actions={
+          <>
+            <Button
+              variant={onlyUnread ? 'primary' : 'secondary'}
+              onClick={() => setOnlyUnread((v) => !v)}
+            >
+              {onlyUnread ? 'Nur ungelesen' : 'Alle'}
+            </Button>
+            {unread > 0 && (
+              <Button variant="secondary" icon={Check} onClick={markAllRead}>
+                Alle gelesen
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
       ) : items.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center text-gray-500">
-          Keine Benachrichtigungen
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <EmptyState icon={Bell} title="Keine Benachrichtigungen"
+            description="Neue Zuweisungen, Erinnerungen und Hinweise erscheinen hier." />
         </div>
       ) : (
         <ul className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
           {items.map((n) => (
             <li key={n.id}
               className={`flex items-start gap-3 p-4 hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/5'}`}>
-              <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${KIND_CLASS[n.kind] || 'bg-gray-500/20 text-gray-400'}`}>
+              <span className={`shrink-0 text-[11px] uppercase font-semibold leading-none tracking-wide px-2 py-[3px] rounded-md ${KIND_CLASS[n.kind] || KIND_CLASS.info}`}>
                 {KIND_LABEL[n.kind] || n.kind}
               </span>
               <button onClick={() => open(n)} className="flex-1 min-w-0 text-left">
@@ -111,12 +111,13 @@ export default function NotificationsPage() {
                   {n.link && <ExternalLink className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
                 </div>
                 {n.body && <p className="text-sm text-gray-400 mt-1 whitespace-pre-wrap">{n.body}</p>}
-                <div className="text-xs text-gray-600 mt-1">
+                <div className="text-xs text-gray-500 tabular-nums mt-1">
                   {n.created_at ? new Date(n.created_at).toLocaleString('de-DE') : ''}
                 </div>
               </button>
               <button onClick={() => remove(n)}
-                className="p-1 text-gray-500 hover:text-red-400" title="Löschen">
+                className="p-1 text-gray-500 hover:text-red-400 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title="Löschen" aria-label="Benachrichtigung löschen">
                 <Trash2 className="w-4 h-4" />
               </button>
             </li>

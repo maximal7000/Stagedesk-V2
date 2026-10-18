@@ -54,14 +54,16 @@ export default function KompetenzHistorieGraph({ userId }) {
     return Object.values(buckets);
   }, [historie]);
 
-  if (loading) return <Loader2 className="w-6 h-6 animate-spin mx-auto" />;
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
+  }
 
   return (
     <div className="space-y-6">
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
         <h3 className="font-semibold text-white mb-4">Kompetenz-Entwicklung</h3>
         {chartData.length === 0 ? (
-          <div className="text-gray-500 text-center py-12">Noch keine Historie</div>
+          <div className="text-gray-500 text-center py-14">Noch keine Historie erfasst.</div>
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
@@ -81,24 +83,28 @@ export default function KompetenzHistorieGraph({ userId }) {
 
       <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
         <h3 className="font-semibold text-white mb-3">Letzte Aktivitäten</h3>
-        <div className="space-y-1 max-h-96 overflow-auto">
-          {historie.slice(0, 50).map(h => (
-            <div key={h.id} className="flex items-center gap-3 py-2 border-b border-gray-800/50 text-sm">
-              <span className={`px-2 py-0.5 text-xs rounded ${
-                h.aktion === 'erworben' ? 'bg-green-500/20 text-green-400' :
-                h.aktion === 'bestaetigt' ? 'bg-blue-500/20 text-blue-400' :
-                h.aktion === 'entzogen' ? 'bg-red-500/20 text-red-400' :
-                'bg-yellow-500/20 text-yellow-400'
-              }`}>
-                {AKTION_LABELS[h.aktion] || h.aktion}
-              </span>
-              <span className="text-white flex-1 truncate">{h.kompetenz_name}</span>
-              <span className="text-xs text-gray-500">
-                {new Date(h.erstellt_am).toLocaleDateString('de-DE')}
-              </span>
-            </div>
-          ))}
-        </div>
+        {historie.length === 0 ? (
+          <div className="text-gray-500 text-sm text-center py-8">Noch keine Aktivitäten erfasst.</div>
+        ) : (
+          <div className="space-y-1 max-h-96 overflow-auto">
+            {historie.slice(0, 50).map(h => (
+              <div key={h.id} className="flex items-center gap-3 py-2 border-b border-gray-800/50 text-sm">
+                <span className={`px-2 py-0.5 text-xs font-medium rounded shrink-0 ${
+                  h.aktion === 'erworben' ? 'bg-green-500/20 text-green-400' :
+                  h.aktion === 'bestaetigt' ? 'bg-blue-500/20 text-blue-400' :
+                  h.aktion === 'entzogen' ? 'bg-red-500/20 text-red-400' :
+                  'bg-yellow-500/20 text-yellow-400'
+                }`}>
+                  {AKTION_LABELS[h.aktion] || h.aktion}
+                </span>
+                <span className="text-white flex-1 truncate">{h.kompetenz_name}</span>
+                <span className="text-xs text-gray-500 tabular-nums shrink-0">
+                  {new Date(h.erstellt_am).toLocaleDateString('de-DE')}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

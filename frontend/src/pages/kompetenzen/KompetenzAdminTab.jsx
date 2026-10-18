@@ -5,8 +5,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, X, Save, Loader2, Clock, Zap } from 'lucide-react';
 import apiClient from '../../lib/api';
+import { Button } from '../../components/ui';
 
 const FALLBACK_ABLAUF = [30, 30, 60, 120, 240];
+const TYPE_LABELS = { kategorie: 'Kategorie', gruppe: 'Gruppe', kompetenz: 'Kompetenz' };
 
 export default function KompetenzAdminTab({ kategorien, onReload }) {
   const [kompetenzen, setKompetenzen] = useState([]);
@@ -30,8 +32,6 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
     } catch (e) { toast.error('Laden fehlgeschlagen'); }
     setLoading(false);
   }, []);
-
-  const effektivStufen = settings?.effektiv || FALLBACK_ABLAUF;
 
   useEffect(() => { load(); }, [load]);
 
@@ -70,7 +70,9 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
     }
   };
 
-  if (loading) return <Loader2 className="w-6 h-6 animate-spin mx-auto" />;
+  if (loading) {
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
+  }
 
   const gefiltert = filterKat ? kompetenzen.filter(k => k.kategorie_id === Number(filterKat)) : kompetenzen;
 
@@ -129,7 +131,7 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
         })}
         extra={
           <select value={filterKat} onChange={(e) => setFilterKat(e.target.value)}
-                  className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-sm text-white">
+                  className="bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
             <option value="">Alle Kategorien</option>
             {kategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
           </select>
@@ -139,7 +141,7 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
           {gefiltert.map(k => (
             <Row key={k.id}
                  title={k.name}
-                 subtitle={`${k.kategorie_name}${k.gruppe_name ? ' / ' + k.gruppe_name : ''} · ${k.punkte}P`}
+                 subtitle={`${k.kategorie_name}${k.gruppe_name ? ' / ' + k.gruppe_name : ''} · ${k.punkte} P`}
                  dim={!k.aktiv}
                  onEdit={() => setEditing({ type: 'kompetenz', data: { ...k } })}
                  onDelete={() => deleteItem('', k.id)}
@@ -164,13 +166,11 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
 function Section({ title, onAdd, children, extra }) {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-3 mb-3.5">
         <h3 className="font-semibold text-white">{title}</h3>
         <div className="flex-1" />
         {extra}
-        <button onClick={onAdd} className="flex items-center gap-1 text-sm px-3 py-1.5 bg-accent text-white rounded hover:bg-accent-hover">
-          <Plus className="w-4 h-4" /> Neu
-        </button>
+        <Button variant="primary" size="sm" icon={Plus} onClick={onAdd}>Neu</Button>
       </div>
       {children}
     </div>
@@ -179,13 +179,13 @@ function Section({ title, onAdd, children, extra }) {
 
 function Row({ title, subtitle, onEdit, onDelete, dim }) {
   return (
-    <div className={`flex items-center gap-3 p-2 bg-gray-800/60 rounded ${dim ? 'opacity-50' : ''}`}>
+    <div className={`flex items-center gap-3 p-2.5 bg-gray-800/60 rounded-lg ${dim ? 'opacity-50' : ''}`}>
       <div className="flex-1 min-w-0">
         <div className="text-sm text-white truncate">{title}</div>
-        <div className="text-xs text-gray-500 truncate">{subtitle}</div>
+        <div className="text-xs text-gray-500 truncate tabular-nums">{subtitle}</div>
       </div>
-      <button onClick={onEdit} className="p-2 text-gray-400 hover:text-white"><Pencil className="w-4 h-4" /></button>
-      <button onClick={onDelete} className="p-2 text-gray-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+      <Button variant="ghost" size="sm" icon={Pencil} onClick={onEdit} title="Bearbeiten" aria-label={`${title} bearbeiten`} />
+      <Button variant="ghost" size="sm" icon={Trash2} onClick={onDelete} title="Löschen" aria-label={`${title} löschen`} />
     </div>
   );
 }
@@ -197,27 +197,26 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-lg max-w-lg w-full p-6">
+      <div role="dialog" aria-modal="true" className="bg-gray-900 border border-gray-800 rounded-lg max-w-lg w-full p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white">
-            {data.id ? 'Bearbeiten' : 'Neu'}: {type}
+            {data.id ? 'Bearbeiten' : 'Neu'}: {TYPE_LABELS[type] || type}
           </h3>
-          <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <Button variant="ghost" size="sm" icon={X} onClick={() => setEditing(null)}
+                  title="Schließen" aria-label="Schließen" />
         </div>
 
         <div className="space-y-3">
           <Field label="Name">
             <input value={data.name || ''} onChange={(e) => updateField('name', e.target.value)}
-                   className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
           </Field>
 
           {type === 'kategorie' && (
             <>
               <Field label="Farbe">
                 <select value={data.farbe || 'blue'} onChange={(e) => updateField('farbe', e.target.value)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white">
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                   <option value="blue">Blau</option>
                   <option value="yellow">Gelb</option>
                   <option value="purple">Lila</option>
@@ -227,7 +226,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               </Field>
               <Field label="Icon (Lucide-Name)">
                 <input value={data.icon || ''} onChange={(e) => updateField('icon', e.target.value)}
-                       className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
               </Field>
             </>
           )}
@@ -235,7 +234,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
           {(type === 'gruppe' || type === 'kompetenz') && (
             <Field label="Kategorie">
               <select value={data.kategorie_id || ''} onChange={(e) => updateField('kategorie_id', Number(e.target.value))}
-                      className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white">
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                 {kategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
               </select>
             </Field>
@@ -246,15 +245,15 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               <Field label="Gruppe (optional)">
                 <select value={data.gruppe_id || ''}
                         onChange={(e) => updateField('gruppe_id', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white">
-                  <option value="">— keine —</option>
+                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                  <option value="">Keine Gruppe</option>
                   {filteredGruppen.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
               </Field>
               <Field label="Punkte">
                 <input type="number" value={data.punkte || 1}
                        onChange={(e) => updateField('punkte', Number(e.target.value))}
-                       className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
               </Field>
               <Field label="Ablauf-Stufen in Tagen (leer = globaler Standard, 0 = unbegrenzt)">
                 <div className="flex gap-2">
@@ -263,10 +262,10 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
                     onChange={(e) => updateField('ablauf_stufen',
                       e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0))}
                     placeholder={FALLBACK_ABLAUF.join(', ')}
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   />
                   <button type="button" onClick={() => updateField('ablauf_stufen', [0])}
-                          className="px-3 py-2 bg-green-700 text-white rounded hover:bg-green-600 text-sm"
+                          className="px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                           title="Nie ablaufend">
                     ∞ Unbegrenzt
                   </button>
@@ -278,10 +277,11 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               <Field label="Beschreibung">
                 <textarea value={data.beschreibung || ''} onChange={(e) => updateField('beschreibung', e.target.value)}
                           rows={2}
-                          className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
               </Field>
-              <label className="flex items-center gap-2 text-white">
-                <input type="checkbox" checked={!!data.aktiv} onChange={(e) => updateField('aktiv', e.target.checked)} />
+              <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+                <input type="checkbox" checked={!!data.aktiv} onChange={(e) => updateField('aktiv', e.target.checked)}
+                       className="w-4 h-4 rounded cursor-pointer accent-accent focus-visible:ring-2 focus-visible:ring-accent" />
                 Aktiv
               </label>
             </>
@@ -289,12 +289,8 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
         </div>
 
         <div className="flex justify-end gap-2 mt-6">
-          <button onClick={() => setEditing(null)} className="px-4 py-2 text-gray-400 hover:text-white">
-            Abbrechen
-          </button>
-          <button onClick={onSave} className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded hover:bg-accent-hover">
-            <Save className="w-4 h-4" /> Speichern
-          </button>
+          <Button variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
+          <Button variant="primary" icon={Save} onClick={onSave}>Speichern</Button>
         </div>
       </div>
     </div>
@@ -374,8 +370,8 @@ function StandardStufenSection({ settings, onSaved }) {
         <h3 className="font-semibold text-white">Standard Ablauf-Stufen</h3>
       </div>
       <p className="text-xs text-gray-500 mb-3">
-        Globaler Default für Kompetenzen ohne eigene Stufen. System-Fallback: <span className="text-gray-400">{systemDefault}</span>.
-        Aktuell effektiv: <span className="text-gray-300">{effektiv}</span>.
+        Globaler Default für Kompetenzen ohne eigene Stufen. System-Fallback: <span className="text-gray-400 tabular-nums">{systemDefault}</span>.
+        Aktuell effektiv: <span className="text-gray-300 tabular-nums">{effektiv}</span>.
       </p>
       <div className="flex gap-2 items-end">
         <div className="flex-1">
@@ -384,28 +380,23 @@ function StandardStufenSection({ settings, onSaved }) {
             value={stufen}
             onChange={(e) => setStufen(e.target.value)}
             placeholder={systemDefault}
-            className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </div>
         <button onClick={() => setStufen('0')} type="button"
-                className="px-3 py-2 bg-green-700 text-white rounded hover:bg-green-600 text-sm"
+                className="px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
                 title="Nie ablaufend">
           ∞
         </button>
-        <button onClick={saveDefault} disabled={saving}
-                className="flex items-center gap-1 px-3 py-2 bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50">
-          <Save className="w-4 h-4" /> Speichern
-        </button>
+        <Button variant="primary" icon={Save} disabled={saving} onClick={saveDefault}>Speichern</Button>
       </div>
-      <div className="flex gap-2 mt-3">
-        <button onClick={() => applyToAll(false)} disabled={saving}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-gray-800 text-gray-300 rounded hover:bg-gray-700 disabled:opacity-50">
-          <Zap className="w-3.5 h-3.5" /> Auf Kompetenzen ohne eigene Stufen anwenden
-        </button>
-        <button onClick={() => applyToAll(true)} disabled={saving}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-red-600/20 text-red-400 rounded hover:bg-red-600/30 disabled:opacity-50">
-          <Zap className="w-3.5 h-3.5" /> Auf ALLE anwenden (überschreibt)
-        </button>
+      <div className="flex flex-wrap gap-2 mt-3">
+        <Button variant="secondary" size="sm" icon={Zap} disabled={saving} onClick={() => applyToAll(false)}>
+          Auf Kompetenzen ohne eigene Stufen anwenden
+        </Button>
+        <Button variant="danger" size="sm" icon={Zap} disabled={saving} onClick={() => applyToAll(true)}>
+          Auf alle anwenden (überschreibt)
+        </Button>
       </div>
     </div>
   );
