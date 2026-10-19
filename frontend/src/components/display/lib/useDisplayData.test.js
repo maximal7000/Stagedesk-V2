@@ -16,12 +16,13 @@ const payload = (extra = {}) => ({ screen: { slug: 'eingang' }, view: { kind: 'i
 
 let root, host, latest, fetchMock, reloadMock
 
+function Probe({ a }) { latest = useDisplayData(a); return null }
 function mount(args) {
-  function Probe() { latest = useDisplayData(args); return null }
   host = document.createElement('div')
   root = createRoot(host)
-  act(() => { root.render(createElement(Probe)) })
+  act(() => { root.render(createElement(Probe, { a: args })) })
 }
+const rerender = (args) => act(() => { root.render(createElement(Probe, { a: args })) })
 const flush = () => act(async () => { await vi.advanceTimersByTimeAsync(0) })
 const advance = (ms) => act(async () => { await vi.advanceTimersByTimeAsync(ms) })
 
@@ -113,7 +114,7 @@ describe('useDisplayData', () => {
     fetchMock.mockImplementation(() => Promise.reject(new Error('offline')))
     await advance(60000)
     expect(latest.state).toBe('stale')
-    expect(latest.retryInSeconds).toBe(5)
+    expect(latest.nextRetryAt - Date.now()).toBe(5000)
     const calls = () => fetchMock.mock.calls.length
     const before = calls()
     await advance(5000); expect(calls()).toBe(before + 1)
@@ -124,7 +125,7 @@ describe('useDisplayData', () => {
     fetchMock.mockImplementation(() => json(payload()))
     await advance(60000)
     expect(latest.state).toBe('ok')
-    expect(latest.retryInSeconds).toBeNull()
+    expect(latest.nextRetryAt).toBeNull()
   })
 
   it('meldet bei 404 den Status', async () => {
@@ -133,5 +134,50 @@ describe('useDisplayData', () => {
     await flush()
     expect(latest.error).toEqual({ status: 404, detail: 'abgelaufen' })
     expect(localStorage.length).toBe(0)
+  })
+
+  it('räumt beim Unmount mit offener Abfrage alles auf und setzt danach keinen State', async () => {
+    let signal
+    fetchMock.mockImplementation((url, opts) => {
+      signal = opts.signal
+      return new Promise((_, reject) => opts.signal.addEventListener('abort', () => reject(new Error('abort'))))
+    })
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mount({ screen: 'eingang' })
+    await flush()
+    act(() => root.unmount())
+    root = undefined
+    expect(signal.aborted).toBe(true)
+    FakeSocket.instances.forEach((ws) => expect(ws.closed).toBe(true))
+    await advance(200000)
+    expect(vi.getTimerCount()).toBe(0)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(errors).not.toHaveBeenCalled()
+  })
+
+  it('ignoriert eine späte Antwort nach Wechsel des Bildschirms', async () => {
+    let resolveOld
+    fetchMock.mockImplementationOnce(() => new Promise((r) => { resolveOld = r }))
+    fetchMock.mockImplementationOnce(() => json(payload({ screen: { slug: 'b' } })))
+    mount({ screen: 'a' })
+    await flush()
+    rerender({ screen: 'b' })
+    await flush()
+    expect(latest.payload.screen.slug).toBe('b')
+    await act(async () => { resolveOld({ ok: true, status: 200, json: () => Promise.resolve(payload({ screen: { slug: 'a' } })) }); await vi.advanceTimersByTimeAsync(0) })
+    expect(latest.payload.screen.slug).toBe('b')
+    await advance(60000)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+  })
+
+  it('bricht eine hängende Abfrage nach 15 s ab und wiederholt', async () => {
+    fetchMock.mockImplementationOnce((url, opts) => new Promise((_, reject) => opts.signal.addEventListener('abort', () => reject(new Error('abort')))))
+    fetchMock.mockImplementation(() => json(payload()))
+    mount({ screen: 'eingang' })
+    await flush()
+    await advance(15000)
+    expect(latest.error).toEqual({ status: null, detail: null })
+    await advance(5000)
+    expect(latest.state).toBe('ok')
   })
 })
