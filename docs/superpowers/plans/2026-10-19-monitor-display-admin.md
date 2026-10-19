@@ -383,6 +383,7 @@ Daten pro `kind`:
   - lädt `/api/monitor/display`
   - öffnet `ws(s)://<host>/ws/monitor/display/<slug>/`
   - lädt bei `changed` neu, macht bei `reload` `location.reload()`
+  - lädt außerdem neu, wenn `reloadNeeded(<Wert beim Start>, reload_requested_at)` wahr ist
   - pollt alle 60 s
   - Rückoff 5→10→30→60 s
   - nutzt `cache`
