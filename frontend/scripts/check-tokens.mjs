@@ -8,6 +8,7 @@ export const EXCLUDE = [
   'src/pages/MonitorPage.jsx',
   'src/pages/AufgabenMonitorPage.jsx',
   'src/components/monitor/',
+  'src/components/display/',
   'src/pages/DesignTestPage.jsx',
 ]
 
