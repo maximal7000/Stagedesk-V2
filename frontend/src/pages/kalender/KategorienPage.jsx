@@ -114,19 +114,19 @@ export default function KategorienPage() {
     <div className="space-y-4 p-4">
       {/* Name */}
       <div>
-        <label className="mb-1 block text-sm text-gray-400">Name *</label>
+        <label className="mb-1 block text-sm font-medium text-fg-muted">Name *</label>
         <input
           type="text"
           value={data.name}
           onChange={(e) => setData({ ...data, name: e.target.value })}
-          className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white transition-colors focus:border-accent focus:outline-none"
+          className="w-full rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           placeholder="z. B. Shows"
         />
       </div>
 
       {/* Farbe */}
       <div>
-        <label className="mb-1.5 block text-sm text-gray-400">Farbe</label>
+        <label className="mb-1.5 block text-sm font-medium text-fg-muted">Farbe</label>
         <div className="flex flex-wrap gap-2">
           {FARBEN.map(farbe => (
             <button
@@ -134,8 +134,8 @@ export default function KategorienPage() {
               type="button"
               onClick={() => setData({ ...data, farbe })}
               aria-label={`Farbe ${farbe}`}
-              className={`h-8 w-8 rounded-lg transition-transform ${
-                data.farbe === farbe ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-gray-900' : 'hover:scale-105'
+              className={`h-8 w-8 rounded-md transition-transform ${
+                data.farbe === farbe ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-surface' : 'hover:scale-105'
               }`}
               style={{ backgroundColor: farbe }}
             />
@@ -145,24 +145,24 @@ export default function KategorienPage() {
 
       {/* Beschreibung */}
       <div>
-        <label className="mb-1 block text-sm text-gray-400">Beschreibung</label>
+        <label className="mb-1 block text-sm font-medium text-fg-muted">Beschreibung</label>
         <textarea
           value={data.beschreibung}
           onChange={(e) => setData({ ...data, beschreibung: e.target.value })}
           rows={2}
-          className="w-full resize-none rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white transition-colors focus:border-accent focus:outline-none"
+          className="w-full resize-none rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           placeholder="Optionaler Hinweis zur Kategorie"
         />
       </div>
 
       {/* Sortierung */}
       <div>
-        <label className="mb-1 block text-sm text-gray-400">Sortierung</label>
+        <label className="mb-1 block text-sm font-medium text-fg-muted">Sortierung</label>
         <input
           type="number"
           value={data.sortierung}
           onChange={(e) => setData({ ...data, sortierung: parseInt(e.target.value) || 0 })}
-          className="w-20 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-white transition-colors focus:border-accent focus:outline-none"
+          className="w-20 rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
         />
       </div>
 
@@ -198,9 +198,9 @@ export default function KategorienPage() {
 
       {/* Neue Kategorie Form */}
       {showNew && (
-        <div className="rounded-xl border border-gray-800 bg-gray-900">
-          <div className="border-b border-gray-800 p-4">
-            <h3 className="text-lg font-semibold text-white">Neue Kategorie</h3>
+        <div className="rounded-lg bg-surface">
+          <div className="border-b border-line-subtle p-4">
+            <h3 className="text-lg font-semibold text-fg">Neue Kategorie</h3>
           </div>
           <KategorieForm
             data={newData}
@@ -216,14 +216,14 @@ export default function KategorienPage() {
       {/* Kategorien Liste */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-gray-500" />
+          <Loader2 className="h-10 w-10 animate-spin text-fg-subtle" />
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-8 text-center">
-          <p className="text-red-400">{error}</p>
+        <div className="rounded-lg bg-surface p-8 text-center">
+          <p className="text-bad">{error}</p>
         </div>
       ) : kategorien.length === 0 ? (
-        <div className="rounded-xl border border-gray-800 bg-gray-900">
+        <div className="rounded-lg bg-surface">
           <EmptyState
             icon={Tags}
             title="Noch keine Kategorien"
@@ -232,13 +232,13 @@ export default function KategorienPage() {
           />
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900">
+        <div className="overflow-hidden rounded-lg bg-surface divide-y divide-line-subtle">
           {kategorien.map((kategorie) => {
             const isEditing = editingId === kategorie.id;
 
             if (isEditing) {
               return (
-                <div key={kategorie.id} className="border-b border-gray-800 bg-gray-800/30 last:border-b-0">
+                <div key={kategorie.id}>
                   <KategorieForm
                     data={editingData}
                     setData={setEditingData}
@@ -253,36 +253,36 @@ export default function KategorienPage() {
             return (
               <div
                 key={kategorie.id}
-                className="group flex items-center justify-between border-b border-gray-800 p-4 transition-colors last:border-b-0 hover:bg-gray-800/30"
+                className="group flex items-center justify-between p-4 transition-colors hover:bg-raised"
               >
                 <div className="flex min-w-0 items-center gap-3">
-                  <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-gray-600" />
+                  <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-fg-subtle" />
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg font-display text-lg font-bold text-white"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md font-display text-lg font-bold text-white"
                     style={{ backgroundColor: kategorie.farbe }}
                   >
                     {kategorie.name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="truncate font-semibold text-white">{kategorie.name}</h3>
+                    <h3 className="truncate font-semibold text-fg">{kategorie.name}</h3>
                     {kategorie.beschreibung && (
-                      <p className="truncate text-sm text-gray-500">{kategorie.beschreibung}</p>
+                      <p className="truncate text-sm text-fg-subtle">{kategorie.beschreibung}</p>
                     )}
                   </div>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-1">
-                  <span className="mr-1 text-xs tabular-nums text-gray-500">#{kategorie.sortierung}</span>
+                  <span className="mr-1 text-xs tabular-nums text-fg-subtle">#{kategorie.sortierung}</span>
                   <button
                     onClick={() => startEditing(kategorie)}
-                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+                    className="rounded-sm p-2 text-fg-muted transition-colors hover:bg-hover hover:text-fg"
                     aria-label="Bearbeiten"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(kategorie.id)}
-                    className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-red-400"
+                    className="rounded-sm p-2 text-fg-muted transition-colors hover:bg-hover hover:text-bad"
                     aria-label="Löschen"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -295,9 +295,9 @@ export default function KategorienPage() {
       )}
 
       {/* Info Box */}
-      <div className="rounded-xl border border-gray-800 bg-gray-900 p-4">
-        <h4 className="mb-1 text-sm font-semibold text-white">So helfen Kategorien</h4>
-        <p className="text-sm text-gray-400">
+      <div className="border-t border-line-subtle pt-4">
+        <h4 className="mb-1 text-sm font-semibold text-fg">So helfen Kategorien</h4>
+        <p className="text-sm text-fg-muted">
           Jede Kategorie gibt ihren Terminen im Kalender eine feste Farbe, sodass sich Shows,
           Proben, Meetings und Wartung auf einen Blick unterscheiden lassen.
         </p>
