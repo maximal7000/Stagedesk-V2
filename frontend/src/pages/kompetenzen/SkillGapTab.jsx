@@ -18,12 +18,12 @@ export default function SkillGapTab() {
   }, []);
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>;
   }
 
   if (!data.length) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+      <div className="bg-surface rounded-lg">
         <EmptyState icon={ShieldCheck} title="Keine Engpässe"
           description="Jede Kompetenz ist bei mehreren Mitgliedern vorhanden." />
       </div>
@@ -34,26 +34,26 @@ export default function SkillGapTab() {
 
   return (
     <div>
-      <p className="text-sm text-gray-400 mb-4">
+      <p className="text-sm text-fg-muted mb-4">
         Kompetenzen, die nur wenige haben, stehen oben.
-        {engpaesse > 0 && <> <span className="text-red-300 font-medium tabular-nums">{engpaesse}</span> davon hat höchstens eine Person.</>}
+        {engpaesse > 0 && <> <span className="text-bad font-medium tabular-nums">{engpaesse}</span> davon hat höchstens eine Person.</>}
       </p>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
+      <div className="bg-surface rounded-lg divide-y divide-line-subtle overflow-hidden">
         {data.map(entry => {
           const ist_eng = entry.anzahl_user <= 1;
           return (
             <div key={entry.kompetenz_id}
-                 className={`relative flex items-start gap-3 px-4 py-3 ${ist_eng ? 'bg-red-500/[0.04]' : ''}`}>
-              <div className={`w-10 text-center text-xl font-bold tabular-nums leading-tight shrink-0 ${ist_eng ? 'text-red-400' : 'text-gray-400'}`}>
+                 className="relative flex items-start gap-3 px-4 py-3">
+              <div className={`w-10 text-center text-xl font-bold tabular-nums leading-tight shrink-0 ${ist_eng ? 'text-bad' : 'text-fg-muted'}`}>
                 {entry.anzahl_user}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 min-w-0">
-                  {ist_eng && <AlertTriangle className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                  <span className="font-medium text-white truncate">{entry.kompetenz_name}</span>
-                  <span className="text-xs text-gray-500 shrink-0">{entry.kategorie_name}</span>
+                  {ist_eng && <AlertTriangle className="w-3.5 h-3.5 text-bad shrink-0" />}
+                  <span className="font-medium text-fg truncate">{entry.kompetenz_name}</span>
+                  <span className="text-xs text-fg-subtle shrink-0">{entry.kategorie_name}</span>
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5 truncate">
+                <div className="text-xs text-fg-muted mt-0.5 truncate">
                   {entry.user_liste.length > 0 ? entry.user_liste.join(', ') : 'Niemand'}
                 </div>
               </div>

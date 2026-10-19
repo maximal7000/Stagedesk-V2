@@ -71,7 +71,7 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>;
   }
 
   const gefiltert = filterKat ? kompetenzen.filter(k => k.kategorie_id === Number(filterKat)) : kompetenzen;
@@ -138,7 +138,7 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
         })}
         extra={
           <select value={filterKat} onChange={(e) => setFilterKat(e.target.value)}
-                  className="bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                  className="px-2.5 py-1.5 text-sm bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
             <option value="">Alle Kategorien</option>
             {kategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
           </select>
@@ -172,16 +172,16 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
 
 // Kategorie-Farben (Katalogdaten) als kleine Farbmarke
 const FARBE_SWATCH = {
-  blue: 'bg-blue-500', yellow: 'bg-amber-500', purple: 'bg-purple-500', gray: 'bg-gray-500', green: 'bg-green-500',
+  blue: 'bg-blue-500', yellow: 'bg-amber-500', purple: 'bg-purple-500', gray: 'bg-[#6b7280]', green: 'bg-green-500',
 };
 const FARBE_LABEL = { blue: 'Blau', yellow: 'Gelb', purple: 'Lila', gray: 'Grau', green: 'Grün' };
 
 function Section({ title, count, onAdd, addLabel = 'Neu', children, extra }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <div className="bg-surface rounded-lg p-4">
       <div className="flex items-center gap-3 mb-3.5 flex-wrap">
-        <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-none">{title}</h3>
-        {count !== undefined && <span className="text-sm tabular-nums text-gray-500">{count}</span>}
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">{title}</h3>
+        {count !== undefined && <span className="text-sm tabular-nums text-fg-subtle">{count}</span>}
         <div className="flex-1" />
         {extra}
         <Button variant="secondary" size="sm" icon={Plus} onClick={onAdd}>{addLabel}</Button>
@@ -193,11 +193,11 @@ function Section({ title, count, onAdd, addLabel = 'Neu', children, extra }) {
 
 function Row({ title, subtitle, swatch, onEdit, onDelete, dim }) {
   return (
-    <div className={`group flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-gray-800/60 transition-colors ${dim ? 'opacity-50' : ''}`}>
+    <div className={`group flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-raised transition-colors ${dim ? 'opacity-50' : ''}`}>
       {swatch && <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${swatch}`} aria-hidden="true" />}
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-white truncate">{title}{dim && <span className="ml-2 text-xs text-gray-500">inaktiv</span>}</div>
-        <div className="text-xs text-gray-500 truncate tabular-nums">{subtitle}</div>
+        <div className="text-sm text-fg truncate">{title}{dim && <span className="ml-2 text-xs text-fg-subtle">inaktiv</span>}</div>
+        <div className="text-xs text-fg-subtle truncate tabular-nums">{subtitle}</div>
       </div>
       <Button variant="ghost" size="sm" icon={Pencil} onClick={onEdit} title="Bearbeiten" aria-label={`${title} bearbeiten`} />
       <Button variant="ghost" size="sm" icon={Trash2} onClick={onDelete} title="Löschen" aria-label={`${title} löschen`} />
@@ -211,10 +211,10 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
   const filteredGruppen = gruppen.filter(g => g.kategorie_id === data.kategorie_id);
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div role="dialog" aria-modal="true" className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+      <div role="dialog" aria-modal="true" className="bg-overlay border border-line rounded-lg shadow-overlay max-w-lg w-full p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-display text-xl font-semibold tracking-tight text-white">
+          <h3 className="font-display text-xl font-semibold tracking-tight text-fg">
             {TYPE_LABELS[type] || type} {data.id ? 'bearbeiten' : 'anlegen'}
           </h3>
           <Button variant="ghost" size="sm" icon={X} onClick={() => setEditing(null)}
@@ -224,14 +224,14 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
         <div className="space-y-3">
           <Field label="Name">
             <input value={data.name || ''} onChange={(e) => updateField('name', e.target.value)}
-                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+                   className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
           </Field>
 
           {type === 'kategorie' && (
             <>
               <Field label="Farbe">
                 <select value={data.farbe || 'blue'} onChange={(e) => updateField('farbe', e.target.value)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                        className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                   <option value="blue">Blau</option>
                   <option value="yellow">Gelb</option>
                   <option value="purple">Lila</option>
@@ -241,7 +241,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               </Field>
               <Field label="Icon (Lucide-Name)">
                 <input value={data.icon || ''} onChange={(e) => updateField('icon', e.target.value)}
-                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+                       className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
               </Field>
             </>
           )}
@@ -249,7 +249,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
           {(type === 'gruppe' || type === 'kompetenz') && (
             <Field label="Kategorie">
               <select value={data.kategorie_id || ''} onChange={(e) => updateField('kategorie_id', Number(e.target.value))}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                      className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                 {kategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
               </select>
             </Field>
@@ -260,7 +260,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               <Field label="Gruppe (optional)">
                 <select value={data.gruppe_id || ''}
                         onChange={(e) => updateField('gruppe_id', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                        className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                   <option value="">Keine Gruppe</option>
                   {filteredGruppen.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>
@@ -268,7 +268,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               <Field label="Punkte">
                 <input type="number" value={data.punkte || 1}
                        onChange={(e) => updateField('punkte', Number(e.target.value))}
-                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+                       className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
               </Field>
               <Field label="Ablaufstufen in Tagen (leer = Standard, 0 = läuft nicht ab)">
                 <div className="flex gap-2">
@@ -277,24 +277,24 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
                     onChange={(e) => updateField('ablauf_stufen',
                       e.target.value.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n) && n >= 0))}
                     placeholder={FALLBACK_ABLAUF.join(', ')}
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                    className="flex-1 px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                   <button type="button" onClick={() => updateField('ablauf_stufen', [0])}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30 rounded-lg hover:bg-emerald-500/25 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-raised text-ok rounded-md hover:bg-hover text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                           title="Läuft nie ab">
                     <Infinity className="w-4 h-4" /> Unbegrenzt
                   </button>
                 </div>
                 {(data.ablauf_stufen || []).length > 0 && (data.ablauf_stufen || []).every(n => n === 0) && (
-                  <p className="text-xs text-green-400 mt-1">Läuft nie ab</p>
+                  <p className="text-xs text-ok mt-1">Läuft nie ab</p>
                 )}
               </Field>
               <Field label="Beschreibung">
                 <textarea value={data.beschreibung || ''} onChange={(e) => updateField('beschreibung', e.target.value)}
                           rows={2}
-                          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
+                          className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
               </Field>
-              <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-fg cursor-pointer">
                 <input type="checkbox" checked={!!data.aktiv} onChange={(e) => updateField('aktiv', e.target.checked)}
                        className="w-4 h-4 rounded cursor-pointer accent-accent focus-visible:ring-2 focus-visible:ring-accent" />
                 Aktiv
@@ -303,7 +303,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
           )}
         </div>
 
-        <div className="flex justify-end gap-2 mt-6">
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-line-subtle">
           <Button variant="ghost" onClick={() => setEditing(null)}>Abbrechen</Button>
           <Button variant="primary" icon={Save} onClick={onSave}>Speichern</Button>
         </div>
@@ -315,7 +315,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
 function Field({ label, children }) {
   return (
     <div>
-      <label className="block text-xs text-gray-400 mb-1">{label}</label>
+      <label className="block text-sm font-medium text-fg-muted mb-1">{label}</label>
       {children}
     </div>
   );
@@ -379,27 +379,27 @@ function StandardStufenSection({ settings, onSaved }) {
   const effektiv = fmt(settings?.effektiv);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+    <div className="bg-surface rounded-lg p-4">
       <div className="flex items-center gap-2 mb-1.5">
-        <Clock className="w-4 h-4 text-gray-400" />
-        <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Standard-Ablaufstufen</h3>
+        <Clock className="w-4 h-4 text-fg-subtle" />
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Standard-Ablaufstufen</h3>
       </div>
-      <p className="text-sm text-gray-400 mb-4">
-        Gilt für Kompetenzen ohne eigene Stufen. Aktuell: <span className="text-white font-medium tabular-nums">{effektiv || '–'}</span>
-        <span className="text-gray-500"> · System-Standard {systemDefault}</span>
+      <p className="text-sm text-fg-muted mb-4">
+        Gilt für Kompetenzen ohne eigene Stufen. Aktuell: <span className="text-fg font-medium tabular-nums">{effektiv || '–'}</span>
+        <span className="text-fg-subtle"> · System-Standard {systemDefault}</span>
       </p>
       <div className="flex gap-2 items-end flex-wrap">
         <div className="flex-1 min-w-[220px]">
-          <label className="block text-xs text-gray-400 mb-1">Tage, kommagetrennt (leer = System-Standard, 0 = läuft nicht ab)</label>
+          <label className="block text-sm font-medium text-fg-muted mb-1">Tage, kommagetrennt (leer = System-Standard, 0 = läuft nicht ab)</label>
           <input
             value={stufen}
             onChange={(e) => setStufen(e.target.value)}
             placeholder={systemDefault}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
           />
         </div>
         <button onClick={() => setStufen('0')} type="button"
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30 rounded-lg hover:bg-emerald-500/25 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-raised text-ok rounded-md hover:bg-hover text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 title="Läuft nie ab" aria-label="Unbegrenzt setzen">
           <Infinity className="w-4 h-4" />
         </button>
