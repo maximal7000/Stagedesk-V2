@@ -138,7 +138,7 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
         })}
         extra={
           <select value={filterKat} onChange={(e) => setFilterKat(e.target.value)}
-                  className="px-2.5 py-1.5 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                  className="px-2.5 py-1.5 text-sm bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
             <option value="">Alle Kategorien</option>
             {kategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
           </select>
@@ -231,7 +231,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
             <>
               <Field label="Farbe">
                 <select value={data.farbe || 'blue'} onChange={(e) => updateField('farbe', e.target.value)}
-                        className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                        className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                   <option value="blue">Blau</option>
                   <option value="yellow">Gelb</option>
                   <option value="purple">Lila</option>
@@ -249,7 +249,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
           {(type === 'gruppe' || type === 'kompetenz') && (
             <Field label="Kategorie">
               <select value={data.kategorie_id || ''} onChange={(e) => updateField('kategorie_id', Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                      className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                 {kategorien.map(k => <option key={k.id} value={k.id}>{k.name}</option>)}
               </select>
             </Field>
@@ -260,7 +260,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
               <Field label="Gruppe (optional)">
                 <select value={data.gruppe_id || ''}
                         onChange={(e) => updateField('gruppe_id', e.target.value ? Number(e.target.value) : null)}
-                        className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                        className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                   <option value="">Keine Gruppe</option>
                   {filteredGruppen.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
                 </select>

@@ -73,18 +73,18 @@ export default function KompetenzHistorieGraph({ userId }) {
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid stroke="#24221f" vertical={false} />
-              <XAxis dataKey="date" stroke="#8a847b" fontSize={12} tickLine={false} axisLine={{ stroke: '#35322e' }}
+              <CartesianGrid stroke="var(--sd-line-subtle)" vertical={false} />
+              <XAxis dataKey="date" stroke="var(--sd-fg-subtle)" fontSize={12} tickLine={false} axisLine={{ stroke: 'var(--sd-line)' }}
                 tickFormatter={(d) => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} />
-              <YAxis stroke="#8a847b" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} width={32} />
+              <YAxis stroke="var(--sd-fg-subtle)" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} width={32} />
               <Tooltip
-                contentStyle={{ background: '#211f1c', border: '1px solid #35322e', borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: '#f2efe9' }}
+                contentStyle={{ background: 'var(--sd-overlay)', border: '1px solid var(--sd-line)', borderRadius: 8, fontSize: 12, color: 'var(--sd-fg)' }}
+                labelStyle={{ color: 'var(--sd-fg)' }}
                 labelFormatter={(d) => new Date(d).toLocaleDateString('de-DE')}
               />
-              <Legend wrapperStyle={{ fontSize: 12, color: '#b3ada4' }} />
-              <Line type="stepAfter" dataKey="gesamt" name="Aktive Kompetenzen" stroke="#da1f3d" strokeWidth={2}
-                dot={{ r: 2.5, fill: '#da1f3d', strokeWidth: 0 }} activeDot={{ r: 4 }} />
+              <Legend wrapperStyle={{ fontSize: 12, color: 'var(--sd-fg-muted)' }} />
+              <Line type="stepAfter" dataKey="gesamt" name="Aktive Kompetenzen" stroke="var(--color-accent)" strokeWidth={2}
+                dot={{ r: 2.5, fill: 'var(--color-accent)', strokeWidth: 0 }} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         )}

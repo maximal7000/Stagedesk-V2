@@ -179,7 +179,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                     onClick={() => setEditingStufen(editingStufen === uk.kompetenz_id ? null : uk.kompetenz_id)}
                                     title="Individuelle Ablauf-Stufen"
                                     aria-label="Individuelle Ablauf-Stufen bearbeiten"
-                                    className={`p-1.5 rounded-sm hover:bg-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                    className={`p-1.5 rounded-md hover:bg-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                                       hatCustomStufen ? 'text-warn' : 'text-fg-subtle hover:text-fg'
                                     }`}>
                                     <Clock className="w-3.5 h-3.5" />
@@ -664,7 +664,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
         </div>
         {alleBereiche.length > 0 && (
           <select value={filterBereich} onChange={(e) => setFilterBereich(e.target.value)}
-                  className="px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
+                  className="px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
             <option value="">Alle Bereiche</option>
             {alleBereiche.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>

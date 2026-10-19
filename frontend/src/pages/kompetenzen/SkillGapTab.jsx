@@ -43,7 +43,7 @@ export default function SkillGapTab() {
           const ist_eng = entry.anzahl_user <= 1;
           return (
             <div key={entry.kompetenz_id}
-                 className={`relative flex items-start gap-3 px-4 py-3 `}>
+                 className="relative flex items-start gap-3 px-4 py-3">
               <div className={`w-10 text-center text-xl font-bold tabular-nums leading-tight shrink-0 ${ist_eng ? 'text-bad' : 'text-fg-muted'}`}>
                 {entry.anzahl_user}
               </div>
