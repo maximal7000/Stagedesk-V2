@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from .api import _legacy_reload_key
 from .models import DisplayView, MonitorSettings, Screen
 
 
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class LegacyAliasTest(TestCase):
     def setUp(self):
         self.view = DisplayView.objects.create(name='V', slug='v', is_default=True, api_token='tok')
@@ -73,6 +74,7 @@ class LegacyAliasTest(TestCase):
         self.assertEqual(self.client.get('/api/monitor/bildschirme').status_code, 404)
 
 
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class GlobalStateApiTest(TestCase):
     """On-Air und Notfall liegen in MonitorSettings; /display und /clock lesen dort (Task 2)."""
 

@@ -3,7 +3,6 @@ Monitor / Public Display Models
 """
 import secrets
 import uuid
-from datetime import date
 from django.db import models
 from django.utils import timezone
 
@@ -419,62 +418,10 @@ class Screen(models.Model):
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
-    @staticmethod
-    def _time_in_window(time: str, start: str, end: str) -> bool:
-        """Prüft ob Uhrzeit HH:MM im Fenster [start, end] liegt (auch über Mitternacht)."""
-        if not start and not end:
-            return True
-        start = start or '00:00'
-        end = end or '23:59'
-        if start <= end:
-            return start <= time <= end
-        # über Mitternacht
-        return time >= start or time <= end
-
-    def _active_exception(self, today: date):
-        """Gibt die erste Ausnahme zurück, deren Datumsbereich heute enthält."""
-        for e in self.power_exceptions or []:
-            if not isinstance(e, dict):
-                continue
-            try:
-                start_date = date.fromisoformat(e.get('from_date', ''))
-                end_date = date.fromisoformat(e.get('until_date') or e.get('from_date', ''))
-            except (ValueError, TypeError):
-                continue
-            if start_date <= today <= end_date:
-                return e
-        return None
-
-    def get_power_state(self):
-        """Soll der Bildschirm gerade an sein? Gibt True/False zurück.
-        Reihenfolge: Manueller Modus > Ausnahme (Datum) > Wochentag-Zeitplan > immer an.
-        Zeit wird in Europe/Berlin (settings.TIME_ZONE) gerechnet."""
-        # Manueller Override hat höchste Priorität
-        if self.power_mode == 'manual_on':
-            return True
-        if self.power_mode == 'manual_off':
-            return False
-
-        now = timezone.localtime()
-        time = now.strftime('%H:%M')
-        weekday = now.weekday()
-
-        exception = self._active_exception(now.date())
-        if exception is not None:
-            return self._time_in_window(time, exception.get('from', ''), exception.get('until', ''))
-
-        schedule = self.power_schedule or []
-        if not schedule:
-            return True  # Kein Zeitplan = immer an
-        for e in schedule:
-            if not isinstance(e, dict):
-                continue
-            days = e.get('days', [])
-            if not isinstance(days, list) or weekday not in days:
-                continue
-            if self._time_in_window(time, e.get('from', ''), e.get('until', '')):
-                return True
-        return False
+    def get_power_state(self, now=None):
+        """Soll der Bildschirm gerade an sein? Regel und Reihenfolge: power.compute_power_state."""
+        from .power import compute_power_state
+        return compute_power_state(self, now or timezone.now())
 
     def get_active_event_view(self):
         """Profil eines aktiven Events für diesen Bildschirm (hat Vorrang vor Zeitplan).

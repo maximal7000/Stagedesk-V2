@@ -62,6 +62,7 @@ from .schemas import (
     MonitorSettingsSchema, MonitorSettingsUpdateSchema,
 )
 from . import oepnv
+from .consumers import push_power_to_all
 
 monitor_router = Router(tags=["Monitor"])
 
@@ -426,12 +427,15 @@ def _set_on_air(active: bool):
     settings.save(update_fields=['on_air_active', 'on_air_since'])
 
 
-def _set_emergency(active: bool, text: str):
+def _set_emergency(active: bool, text: str, note: str):
+    """Notfall setzen und alle Bildschirme neu schalten (Notfall schaltet ein, Spec §3.2)."""
     settings = MonitorSettings.load()
     settings.emergency_active = active
     settings.emergency_text = text
+    settings.emergency_note = note
     settings.emergency_since = timezone.now() if active else None
-    settings.save(update_fields=['emergency_active', 'emergency_text', 'emergency_since'])
+    settings.save(update_fields=['emergency_active', 'emergency_text', 'emergency_note', 'emergency_since'])
+    push_power_to_all()
 
 
 @monitor_router.post("/on-air", response={200: dict, 401: dict, 403: dict})
@@ -467,7 +471,7 @@ def toggle_emergency(request, payload: EmergencySchema):
     token = request.headers.get('X-Monitor-Token', '')
     if token:
         if DisplayView.objects.filter(api_token=token).exists():
-            _set_emergency(payload.active, payload.text)
+            _set_emergency(payload.active, payload.text, payload.note)
             _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '', via_token=True)
             return 200, {"success": True}
         return 401, {"success": False, "message": "Ungültiges Token"}
@@ -480,7 +484,7 @@ def toggle_emergency(request, payload: EmergencySchema):
         _require_perm(request, 'monitor.emergency')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
-    _set_emergency(payload.active, payload.text)
+    _set_emergency(payload.active, payload.text, payload.note)
     _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '')
     return 200, {"success": True}
 
@@ -868,7 +872,7 @@ def create_screen(request, payload: ScreenCreateSchema):
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
-@monitor_router.put("/screens/{id}", response=ScreenListSchema, auth=keycloak_auth)
+@monitor_router.put("/screens/{int:id}", response=ScreenListSchema, auth=keycloak_auth)
 def update_screen(request, id: int, payload: ScreenUpdateSchema):
     _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
@@ -880,7 +884,8 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         val = data.pop('override_view_id')
         screen.override_view_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
-    power_keys = {'schedule', 'power_schedule', 'power_exceptions', 'power_mode'}
+    power_keys = {'schedule', 'power_schedule', 'power_exceptions', 'power_mode',
+                  'off_until', 'off_during_holidays'}
     power_changed = bool(power_keys & set(data.keys()))
     for key, value in data.items():
         setattr(screen, key, value)
@@ -891,7 +896,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
     return screen
 
 
-@monitor_router.delete("/screens/{id}", auth=keycloak_auth)
+@monitor_router.delete("/screens/{int:id}", auth=keycloak_auth)
 def delete_screen(request, id: int):
     _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
@@ -899,7 +904,7 @@ def delete_screen(request, id: int):
     return {"success": True}
 
 
-@monitor_router.post("/screens/{id}/reload", auth=keycloak_auth)
+@monitor_router.post("/screens/{int:id}/reload", auth=keycloak_auth)
 def reload_screen(request, id: int):
     """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt reload_requested_at)."""
     _require_perm(request, 'monitor.setup')
@@ -1054,6 +1059,9 @@ def delete_exam_template(request, id: int):
 
 # ═══ Admin: Globale Einstellungen (Wetter/WebUntis-Zugang) ═══════
 
+ON_AIR_SETTINGS_FIELDS = {'on_air_text', 'on_air_animation', 'on_air_show_clock'}
+
+
 @monitor_router.get("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def get_settings(request):
     _require_perm(request, 'monitor.view')
@@ -1062,9 +1070,14 @@ def get_settings(request):
 
 @monitor_router.put("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def update_settings(request, payload: MonitorSettingsUpdateSchema):
-    _require_perm(request, 'monitor.setup')
+    # On-Air-Darstellung gehört zum Recht onair, alles andere zu setup (Spec §4.5).
+    data = {k: v for k, v in payload.dict(exclude_unset=True).items() if v is not None}
+    if not data or set(data) - ON_AIR_SETTINGS_FIELDS:
+        _require_perm(request, 'monitor.setup')
+    if set(data) & ON_AIR_SETTINGS_FIELDS:
+        _require_perm(request, 'monitor.onair')
     settings = MonitorSettings.load()
-    for key, value in payload.dict(exclude_unset=True).items():
+    for key, value in data.items():
         setattr(settings, key, value)
     settings.save()
     return settings
@@ -1104,3 +1117,10 @@ def legacy_get_screen_power(request, slug: str):
 @monitor_router.post("/bildschirm/cec-status")
 def legacy_report_cec_status(request, slug: str, status: str):
     return report_cec_status(request, slug, status)
+
+
+# ═══ Einrichtung: Ferien, Notfall-Vorlagen, "bis Tagesende aus" ══
+# Am Ende importiert, weil api_setup _require_perm aus diesem Modul nutzt.
+from .api_setup import setup_router  # noqa: E402
+
+monitor_router.add_router("", setup_router)

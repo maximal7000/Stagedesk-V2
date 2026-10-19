@@ -19,6 +19,7 @@ Der Consumer:
 
 import asyncio
 import json
+import logging
 import time
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -26,6 +27,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
 
+
+logger = logging.getLogger(__name__)
 
 TICK_INTERVAL = 30   # Power-Status alle 30s neu auswerten
 PING_INTERVAL = 60   # Heartbeat-ping alle 60s
@@ -48,6 +51,17 @@ def push_power_to_screen(slug: str, power: bool = None) -> None:
         "type": "power_command",
         "power": power,  # None → Consumer fragt DB neu
     })
+
+
+def push_power_to_all() -> None:
+    """Alle Bildschirme neu auswerten lassen (Notfall, Ferien, "bis Tagesende aus")."""
+    from .models import Screen
+    for slug in Screen.objects.values_list('slug', flat=True):
+        try:
+            push_power_to_screen(slug)
+        except Exception:
+            # Der gespeicherte Zustand gilt trotzdem; der 30-s-Tick des Consumers holt ihn nach.
+            logger.exception("Power-Push an %s fehlgeschlagen", slug)
 
 
 class ScreenPiConsumer(AsyncWebsocketConsumer):

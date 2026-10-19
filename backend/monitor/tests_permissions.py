@@ -3,7 +3,7 @@ from unittest import mock
 
 from django.test import SimpleTestCase
 
-from monitor import api
+from monitor import api, api_setup
 from .tests_migrations import MigrationTestCase
 
 
@@ -51,9 +51,10 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
     """Patcht _require_perm und prüft den Code, den der Endpunkt als Erstes verlangt."""
 
     def assertRequires(self, code, func_name, *args, **kwargs):
-        with mock.patch.object(api, '_require_perm', side_effect=_Denied) as guard:
+        module = api if hasattr(api, func_name) else api_setup
+        with mock.patch.object(module, '_require_perm', side_effect=_Denied) as guard:
             with self.assertRaises(_Denied):
-                getattr(api, func_name)(object(), *args, **kwargs)
+                getattr(module, func_name)(object(), *args, **kwargs)
         guard.assert_called_once()
         self.assertEqual(guard.call_args.args[1], code, func_name)
 
@@ -65,7 +66,7 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('create_webuntis_link', None), ('update_webuntis_link', 1, None),
                 ('delete_webuntis_link', 1), ('search_transit_stops',),
                 ('create_screen', None), ('update_screen', 1, None), ('delete_screen', 1),
-                ('reload_screen', 1), ('update_settings', None),
+                ('reload_screen', 1),
             ],
             'monitor.exams': [
                 ('create_exam', None), ('update_exam', 1, None), ('delete_exam', 1),
@@ -77,6 +78,15 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('activate_event', 1), ('deactivate_event', 1),
             ],
             'monitor.media': [('upload_file', None), ('delete_file', 1)],
+            # update_settings: Aufteilung setup/onair in tests_power.SettingsPermissionSplitTest
+            'monitor.power': [
+                ('list_holidays',), ('create_holiday', None), ('update_holiday', 1, None),
+                ('delete_holiday', 1), ('power_off_today', None), ('undo_power_off_today', None),
+            ],
+            'monitor.emergency': [
+                ('list_emergency_templates',), ('create_emergency_template', None),
+                ('update_emergency_template', 1, None), ('delete_emergency_template', 1),
+            ],
         }
         for code, rows in matrix.items():
             for name, *args in rows:

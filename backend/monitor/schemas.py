@@ -1,8 +1,8 @@
 """
 Monitor Schemas
 """
-from typing import Optional, List
-from datetime import datetime
+from typing import Literal, Optional, List
+from datetime import date, datetime
 from ninja import Schema
 
 
@@ -290,6 +290,40 @@ class LegacyEmergencySchema(Schema):
 class EmergencySchema(Schema):
     active: bool
     text: str = ''
+    note: str = ''
+
+
+class HolidayPeriodSchema(Schema):
+    id: int
+    name: str
+    start_date: date
+    end_date: date
+
+
+class HolidayPeriodCreateSchema(Schema):
+    name: str
+    start_date: date
+    end_date: date
+
+
+class EmergencyTemplateSchema(Schema):
+    id: int
+    title: str
+    text: str
+    note: str
+    sort_order: int
+
+
+class EmergencyTemplateCreateSchema(Schema):
+    title: str
+    text: str
+    note: str = ''
+    sort_order: int = 0
+
+
+class ScreenSelectionSchema(Schema):
+    """Leer oder fehlend = alle Bildschirme."""
+    screen_ids: Optional[List[int]] = None
 
 
 class ExamSchema(Schema):
@@ -443,3 +477,6 @@ class MonitorSettingsUpdateSchema(Schema):
     webuntis_school: Optional[str] = None
     webuntis_username: Optional[str] = None
     webuntis_password: Optional[str] = None
+    on_air_text: Optional[str] = None
+    on_air_animation: Optional[Literal['still', 'pulse', 'blink']] = None
+    on_air_show_clock: Optional[bool] = None
