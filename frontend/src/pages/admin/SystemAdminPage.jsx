@@ -79,34 +79,34 @@ export default function SystemAdminPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Background-Jobs */}
-        <section className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-4 h-4 text-gray-400" />
-            <h2 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Hintergrund-Jobs</h2>
-            <span className="text-xs text-gray-500 ml-auto">letzter Lauf je Job</span>
+        <section>
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-line-subtle">
+            <Activity className="w-4 h-4 text-fg-subtle" />
+            <h2 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Hintergrund-Jobs</h2>
+            <span className="text-xs text-fg-subtle ml-auto">letzter Lauf je Job</span>
           </div>
           {latestJobs.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-fg-subtle">
               Noch keine Läufe erfasst. Management-Commands dafür in{' '}
-              <code className="text-gray-400 font-mono">track_job(...)</code> einpacken.
+              <code className="text-fg-muted font-mono">track_job(...)</code> einpacken.
             </p>
           ) : (
-            <ul className="divide-y divide-gray-800 -mx-1">
+            <ul className="divide-y divide-line-subtle -mx-1">
               {latestJobs.map((j) => (
                 <li key={j.name} className="px-1 py-2.5">
                   <div className="flex items-start gap-2">
                     {j.status === 'erfolg'
-                      ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" aria-label="Erfolgreich" />
-                      : <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" aria-label="Fehlgeschlagen" />}
+                      ? <CheckCircle2 className="w-4 h-4 text-ok shrink-0 mt-0.5" aria-label="Erfolgreich" />
+                      : <XCircle className="w-4 h-4 text-bad shrink-0 mt-0.5" aria-label="Fehlgeschlagen" />}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="font-mono text-sm text-white">{j.name}</span>
-                        <span className="text-xs text-gray-500">{formatRelative(j.timestamp)}</span>
+                        <span className="font-mono text-sm text-fg">{j.name}</span>
+                        <span className="text-xs text-fg-subtle">{formatRelative(j.timestamp)}</span>
                         {j.duration_ms != null && (
-                          <span className="text-xs text-gray-500 tabular-nums">· {j.duration_ms} ms</span>
+                          <span className="text-xs text-fg-subtle tabular-nums">· {j.duration_ms} ms</span>
                         )}
                       </div>
-                      {j.message && <p className="text-xs text-gray-400 mt-0.5">{j.message}</p>}
+                      {j.message && <p className="text-xs text-fg-muted mt-0.5">{j.message}</p>}
                     </div>
                   </div>
                 </li>
@@ -116,10 +116,10 @@ export default function SystemAdminPage() {
         </section>
 
         {/* Backups */}
-        <section className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Archive className="w-4 h-4 text-gray-400" />
-            <h2 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Datenbank-Backups</h2>
+        <section>
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-line-subtle">
+            <Archive className="w-4 h-4 text-fg-subtle" />
+            <h2 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Datenbank-Backups</h2>
           </div>
           {['daily', 'weekly'].map((k) => {
             const list = backups[k] || [];
@@ -127,19 +127,19 @@ export default function SystemAdminPage() {
             return (
               <div key={k} className="mb-4 last:mb-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-gray-400">{k === 'daily' ? 'Täglich' : 'Wöchentlich'}</span>
-                  <span className="text-xs text-gray-500 tabular-nums">{list.length} Dateien</span>
+                  <span className="text-xs font-semibold text-fg-muted">{k === 'daily' ? 'Täglich' : 'Wöchentlich'}</span>
+                  <span className="text-xs text-fg-subtle tabular-nums">{list.length} Dateien</span>
                 </div>
                 {newest ? (
-                  <div className="bg-gray-800/40 border border-gray-800 rounded-lg p-3">
-                    <div className="text-sm text-white font-mono truncate">{newest.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
+                  <div className="bg-surface rounded-lg p-3">
+                    <div className="text-sm text-fg font-mono truncate">{newest.name}</div>
+                    <div className="text-xs text-fg-subtle mt-0.5 tabular-nums">
                       {formatDate(newest.mtime)} · {formatBytes(newest.size)} ·{' '}
-                      <span className="text-gray-400">{formatRelative(newest.mtime)}</span>
+                      <span className="text-fg-muted">{formatRelative(newest.mtime)}</span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-500">Kein Backup vorhanden</p>
+                  <p className="text-xs text-fg-subtle">Kein Backup vorhanden</p>
                 )}
               </div>
             );
@@ -147,19 +147,19 @@ export default function SystemAdminPage() {
         </section>
 
         {/* Login-Historie */}
-        <section className="bg-gray-900 border border-gray-800 rounded-xl p-5 xl:col-span-2">
-          <div className="flex items-center gap-2 mb-4">
-            <Users className="w-4 h-4 text-gray-400" />
-            <h2 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Sitzungen</h2>
-            <span className="text-xs text-gray-500 ml-auto">letzte 50</span>
+        <section className="xl:col-span-2">
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-line-subtle">
+            <Users className="w-4 h-4 text-fg-subtle" />
+            <h2 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Sitzungen</h2>
+            <span className="text-xs text-fg-subtle ml-auto">letzte 50</span>
           </div>
           {sessions.length === 0 ? (
-            <p className="text-sm text-gray-500">Keine Sitzungen.</p>
+            <p className="text-sm text-fg-subtle">Keine Sitzungen.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-800 text-left text-xs font-medium text-gray-400">
+                  <tr className="border-b border-line-subtle text-left text-xs font-medium text-fg-muted">
                     <th className="p-2">Benutzer</th>
                     <th className="p-2">Gerät</th>
                     <th className="p-2">IP</th>
@@ -169,19 +169,19 @@ export default function SystemAdminPage() {
                 </thead>
                 <tbody>
                   {sessions.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-800/60 hover:bg-gray-800/30">
+                    <tr key={s.id} className="border-b border-line-subtle hover:bg-raised">
                       <td className="p-2">
-                        <div className="text-white">{s.username || '–'}</div>
-                        <div className="text-xs text-gray-500">{s.email}</div>
+                        <div className="text-fg">{s.username || '–'}</div>
+                        <div className="text-xs text-fg-subtle">{s.email}</div>
                       </td>
-                      <td className="p-2 text-gray-400">{s.device_info || '–'}</td>
-                      <td className="p-2 text-gray-400 font-mono text-xs">{s.ip_address || '–'}</td>
+                      <td className="p-2 text-fg-muted">{s.device_info || '–'}</td>
+                      <td className="p-2 text-fg-muted font-mono text-xs">{s.ip_address || '–'}</td>
                       <td className="p-2">
                         {s.is_current
                           ? <StatusBadge tone="positive" dot label="Aktiv" />
                           : <StatusBadge tone="neutral" label="Beendet" />}
                       </td>
-                      <td className="p-2 text-gray-400 text-xs whitespace-nowrap">
+                      <td className="p-2 text-fg-muted text-xs whitespace-nowrap">
                         {formatRelative(s.last_activity)}
                       </td>
                     </tr>

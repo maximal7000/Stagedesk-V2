@@ -64,29 +64,29 @@ export default function AuditLogPage() {
 
       <div className="flex flex-wrap gap-2">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Name des Eintrags" aria-label="Einträge suchen"
-            className="w-full pl-9 pr-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+            className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle text-sm hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
         <select value={filterType} onChange={(e) => setFilterType(e.target.value)} aria-label="Nach Modul filtern"
-          className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent">
+          className="bg-raised border border-line rounded-md px-3 py-2 text-fg text-sm hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
           <option value="">Alle Module</option>
           {entityTypes.map((t) => <option key={t} value={t}>{ENTITY_LABELS[t] || t}</option>)}
         </select>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-fg-subtle" /></div>
       ) : items.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           <EmptyState icon={ScrollText} title="Keine Einträge"
             description={search || filterType ? 'Für diese Filter gibt es keine Änderungen.' : 'Änderungen an Veranstaltungen, Inventar und Co. erscheinen hier.'} />
         </div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
+        <div className="bg-surface rounded-lg overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-800 text-gray-400 text-xs font-medium">
+            <thead className="border-b border-line-subtle text-fg-muted text-xs font-medium">
               <tr>
                 <th className="px-4 py-2 text-left">Aktion</th>
                 <th className="px-4 py-2 text-left">Modul</th>
@@ -95,19 +95,19 @@ export default function AuditLogPage() {
                 <th className="px-4 py-2 text-right">Zeit</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className="divide-y divide-line-subtle">
               {items.map((e) => (
-                <tr key={e.id} className="hover:bg-gray-800/40">
+                <tr key={e.id} className="hover:bg-raised">
                   <td className="px-4 py-2">
                     <StatusBadge tone={AKTION_TONE[e.aktion] || 'neutral'} label={e.aktion_display || e.aktion} />
                   </td>
-                  <td className="px-4 py-2 text-gray-300">{ENTITY_LABELS[e.entity_type] || e.entity_type}</td>
-                  <td className="px-4 py-2 text-white">
+                  <td className="px-4 py-2 text-fg-muted">{ENTITY_LABELS[e.entity_type] || e.entity_type}</td>
+                  <td className="px-4 py-2 text-fg">
                     {e.entity_name || `#${e.entity_id}`}
-                    {e.entity_name && <span className="text-gray-500 text-xs ml-1">#{e.entity_id}</span>}
+                    {e.entity_name && <span className="text-fg-subtle text-xs ml-1">#{e.entity_id}</span>}
                   </td>
-                  <td className="px-4 py-2 text-gray-400">{e.user_username || '–'}</td>
-                  <td className="px-4 py-2 text-right text-xs text-gray-500 tabular-nums whitespace-nowrap">
+                  <td className="px-4 py-2 text-fg-muted">{e.user_username || '–'}</td>
+                  <td className="px-4 py-2 text-right text-xs text-fg-subtle tabular-nums whitespace-nowrap">
                     {e.timestamp ? new Date(e.timestamp).toLocaleString('de-DE') : '–'}
                   </td>
                 </tr>
