@@ -17,10 +17,10 @@ import apiClient from '../../lib/api';
 import { PageHeader, StatTile } from '../../components/ui';
 
 const STATUS_COLORS = {
-  verfuegbar: '#22C55E',
-  ausgeliehen: '#3B82F6',
-  reserviert: '#EAB308',
-  defekt: '#EF4444',
+  verfuegbar: 'var(--sd-ok)',
+  ausgeliehen: 'var(--sd-info)',
+  reserviert: 'var(--sd-warn)',
+  defekt: 'var(--sd-bad)',
 };
 
 const STATUS_LABELS = {
@@ -65,7 +65,7 @@ export default function AusleiheDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-accent animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent-fg animate-spin" />
       </div>
     );
   }
@@ -85,7 +85,7 @@ export default function AusleiheDashboardPage() {
   const statusDaten = Object.entries(statusRaw).map(([status, anzahl]) => ({
     name: STATUS_LABELS[status] || status,
     value: anzahl,
-    color: STATUS_COLORS[status] || '#6B7280',
+    color: STATUS_COLORS[status] || 'var(--sd-fg-subtle)',
   }));
 
   const topItems = erweitert?.top_items ?? [];
@@ -110,62 +110,62 @@ export default function AusleiheDashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Bar Chart: Ausleihen pro Monat */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-accent" />
+        <div className="border-t border-line-subtle pt-6">
+          <h2 className="text-lg font-semibold text-fg mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-fg-subtle" />
             Ausleihen pro Monat
           </h2>
           {monatsDaten.length > 0 ? (
-            <div className="h-72 bg-gray-950 rounded-lg p-2">
+            <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monatsDaten}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--sd-line-subtle)" />
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                    axisLine={{ stroke: '#1E293B' }}
-                    tickLine={{ stroke: '#1E293B' }}
+                    tick={{ fill: 'var(--sd-fg-subtle)', fontSize: 12 }}
+                    axisLine={{ stroke: 'var(--sd-line-subtle)' }}
+                    tickLine={{ stroke: 'var(--sd-line-subtle)' }}
                   />
                   <YAxis
-                    tick={{ fill: '#9CA3AF', fontSize: 12 }}
-                    axisLine={{ stroke: '#1E293B' }}
-                    tickLine={{ stroke: '#1E293B' }}
+                    tick={{ fill: 'var(--sd-fg-subtle)', fontSize: 12 }}
+                    axisLine={{ stroke: 'var(--sd-line-subtle)' }}
+                    tickLine={{ stroke: 'var(--sd-line-subtle)' }}
                     allowDecimals={false}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#111827',
-                      border: '1px solid #374151',
+                      backgroundColor: 'var(--sd-overlay)',
+                      border: '1px solid var(--sd-line)',
                       borderRadius: '8px',
-                      color: '#F9FAFB',
+                      color: 'var(--sd-fg)',
                     }}
-                    labelStyle={{ color: '#9CA3AF' }}
+                    labelStyle={{ color: 'var(--sd-fg-subtle)' }}
                   />
                   <Bar
                     dataKey="anzahl"
-                    fill="#da1f3d"
+                    fill="var(--color-accent)"
                     radius={[4, 4, 0, 0]}
-                    stroke="#1E293B"
+                    stroke="var(--sd-line-subtle)"
                     name="Ausleihen"
                   />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-72 flex items-center justify-center text-gray-500">
+            <div className="h-72 flex items-center justify-center text-fg-subtle">
               Keine Daten vorhanden
             </div>
           )}
         </div>
 
         {/* Pie Chart: Items nach Status */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <PieChartIcon className="w-5 h-5 text-gray-400" />
+        <div className="border-t border-line-subtle pt-6">
+          <h2 className="text-lg font-semibold text-fg mb-4 flex items-center gap-2">
+            <PieChartIcon className="w-5 h-5 text-fg-subtle" />
             Items nach Status
           </h2>
           {statusDaten.length > 0 ? (
-            <div className="h-72 bg-gray-950 rounded-lg p-2">
+            <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -175,7 +175,7 @@ export default function AusleiheDashboardPage() {
                     innerRadius={50}
                     outerRadius={90}
                     dataKey="value"
-                    stroke="#1E293B"
+                    stroke="var(--sd-line-subtle)"
                     strokeWidth={2}
                     label={({ name, value }) => `${name}: ${value}`}
                   >
@@ -185,20 +185,20 @@ export default function AusleiheDashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#111827',
-                      border: '1px solid #374151',
+                      backgroundColor: 'var(--sd-overlay)',
+                      border: '1px solid var(--sd-line)',
                       borderRadius: '8px',
-                      color: '#F9FAFB',
+                      color: 'var(--sd-fg)',
                     }}
                   />
                   <Legend
-                    wrapperStyle={{ color: '#9CA3AF', fontSize: '13px' }}
+                    wrapperStyle={{ color: 'var(--sd-fg-subtle)', fontSize: '13px' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="h-72 flex items-center justify-center text-gray-500">
+            <div className="h-72 flex items-center justify-center text-fg-subtle">
               Keine Daten vorhanden
             </div>
           )}
@@ -206,52 +206,52 @@ export default function AusleiheDashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Schnellzugriff</h2>
+      <div className="border-t border-line-subtle pt-6">
+        <h2 className="text-lg font-semibold text-fg mb-4">Schnellzugriff</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link
             to="/ausleihen"
-            className="flex items-center gap-3 p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg transition-colors group"
+            className="flex items-center gap-3 p-4 bg-surface hover:bg-raised rounded-lg transition-colors group"
           >
-            <div className="p-2 bg-accent/15 rounded-lg">
-              <Plus className="w-5 h-5 text-accent" />
+            <div className="shrink-0">
+              <Plus className="w-5 h-5 text-fg-subtle" />
             </div>
             <div>
-              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
+              <h3 className="font-semibold text-fg group-hover:text-accent-fg transition-colors">
                 Neue Ausleihe
               </h3>
-              <p className="text-sm text-gray-400">Ausleihliste erstellen</p>
+              <p className="text-sm text-fg-muted">Ausleihliste erstellen</p>
             </div>
           </Link>
 
           <Link
             to="/ausleihen"
-            className="flex items-center gap-3 p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg transition-colors group"
+            className="flex items-center gap-3 p-4 bg-surface hover:bg-raised rounded-lg transition-colors group"
           >
-            <div className="p-2 bg-gray-700/60 rounded-lg">
-              <QrCode className="w-5 h-5 text-gray-300" />
+            <div className="shrink-0">
+              <QrCode className="w-5 h-5 text-fg-subtle" />
             </div>
             <div>
-              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
+              <h3 className="font-semibold text-fg group-hover:text-accent-fg transition-colors">
                 QR-Scanner
               </h3>
-              <p className="text-sm text-gray-400">Item per QR-Code erfassen</p>
+              <p className="text-sm text-fg-muted">Item per QR-Code erfassen</p>
             </div>
           </Link>
 
           <button
             type="button"
-            className="flex items-center gap-3 p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg transition-colors group text-left"
+            className="flex items-center gap-3 p-4 bg-surface hover:bg-raised rounded-lg transition-colors group text-left"
             onClick={() => toast.info('Schnellrückgabe kommt bald')}
           >
-            <div className="p-2 bg-gray-700/60 rounded-lg">
-              <RotateCcw className="w-5 h-5 text-gray-300" />
+            <div className="shrink-0">
+              <RotateCcw className="w-5 h-5 text-fg-subtle" />
             </div>
             <div>
-              <h3 className="font-semibold text-white group-hover:text-accent transition-colors">
+              <h3 className="font-semibold text-fg group-hover:text-accent-fg transition-colors">
                 Schnellrückgabe
               </h3>
-              <p className="text-sm text-gray-400">Rückgabe ohne Listenauswahl</p>
+              <p className="text-sm text-fg-muted">Rückgabe ohne Listenauswahl</p>
             </div>
           </button>
         </div>
@@ -260,59 +260,59 @@ export default function AusleiheDashboardPage() {
       {/* Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Items */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">
+        <div className="border-t border-line-subtle pt-6">
+          <h2 className="text-lg font-semibold text-fg mb-4">
             Meistgeliehene Items
           </h2>
           {topItems.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm tabular-nums">
                 <thead>
-                  <tr className="border-b border-gray-800">
-                    <th className="text-left py-2 pr-4 text-gray-400 font-medium">#</th>
-                    <th className="text-left py-2 pr-4 text-gray-400 font-medium">Item</th>
-                    <th className="text-right py-2 text-gray-400 font-medium">Ausleihen</th>
+                  <tr className="border-b border-line-subtle">
+                    <th className="text-left py-2 pr-4 text-fg-muted font-medium">#</th>
+                    <th className="text-left py-2 pr-4 text-fg-muted font-medium">Item</th>
+                    <th className="text-right py-2 text-fg-muted font-medium">Ausleihen</th>
                   </tr>
                 </thead>
                 <tbody>
                   {topItems.slice(0, 10).map((item, idx) => (
-                    <tr key={item.id || idx} className="border-b border-gray-800/50">
-                      <td className="py-2 pr-4 text-gray-500">{idx + 1}</td>
-                      <td className="py-2 pr-4 text-white">{item.name}</td>
-                      <td className="py-2 text-right text-gray-300">{item.ausleihen_count}</td>
+                    <tr key={item.id || idx} className="border-b border-line-subtle">
+                      <td className="py-2 pr-4 text-fg-subtle">{idx + 1}</td>
+                      <td className="py-2 pr-4 text-fg">{item.name}</td>
+                      <td className="py-2 text-right text-fg-muted">{item.ausleihen_count}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-fg-subtle">
               Keine Daten vorhanden
             </div>
           )}
         </div>
 
         {/* Überfällige Ausleihen */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-400" />
+        <div className="border-t border-line-subtle pt-6">
+          <h2 className="text-lg font-semibold text-fg mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-bad" />
             Überfällige Ausleihen
           </h2>
           {ueberfaelligeListe.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm tabular-nums">
                 <thead>
-                  <tr className="border-b border-gray-800">
-                    <th className="text-left py-2 pr-4 text-gray-400 font-medium">Ausleiher</th>
-                    <th className="text-left py-2 pr-4 text-gray-400 font-medium">Frist</th>
-                    <th className="text-right py-2 text-gray-400 font-medium">Aktion</th>
+                  <tr className="border-b border-line-subtle">
+                    <th className="text-left py-2 pr-4 text-fg-muted font-medium">Ausleiher</th>
+                    <th className="text-left py-2 pr-4 text-fg-muted font-medium">Frist</th>
+                    <th className="text-right py-2 text-fg-muted font-medium">Aktion</th>
                   </tr>
                 </thead>
                 <tbody>
                   {ueberfaelligeListe.map((a) => (
-                    <tr key={a.id} className="border-b border-gray-800/50">
-                      <td className="py-2 pr-4 text-white">{a.ausleiher_name}</td>
-                      <td className="py-2 pr-4 text-red-400">
+                    <tr key={a.id} className="border-b border-line-subtle">
+                      <td className="py-2 pr-4 text-fg">{a.ausleiher_name}</td>
+                      <td className="py-2 pr-4 text-bad">
                         {a.frist
                           ? new Date(a.frist).toLocaleDateString('de-DE')
                           : '–'}
@@ -320,7 +320,7 @@ export default function AusleiheDashboardPage() {
                       <td className="py-2 text-right">
                         <Link
                           to={`/ausleihen/${a.id}`}
-                          className="text-accent hover:opacity-80 hover:underline"
+                          className="text-accent-fg hover:opacity-80 hover:underline"
                         >
                           Details
                         </Link>
@@ -331,7 +331,7 @@ export default function AusleiheDashboardPage() {
               </table>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-fg-subtle">
               Keine überfälligen Ausleihen
             </div>
           )}

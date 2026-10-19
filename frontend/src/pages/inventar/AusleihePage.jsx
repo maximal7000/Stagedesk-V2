@@ -31,11 +31,11 @@ function SectionHeader({ title, count, defaultOpen = true, children }) {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 w-full py-2 text-left group"
       >
-        {open ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-        <span className="font-semibold text-white">{title}</span>
-        <span className="text-sm text-gray-500 tabular-nums">({count})</span>
+        {open ? <ChevronDown className="w-4 h-4 text-fg-muted" /> : <ChevronRight className="w-4 h-4 text-fg-muted" />}
+        <span className="font-semibold text-fg">{title}</span>
+        <span className="text-sm text-fg-subtle tabular-nums">({count})</span>
       </button>
-      {open && <div className="space-y-3 pb-4">{children}</div>}
+      {open && <div className="bg-surface rounded-lg divide-y divide-line-subtle overflow-hidden mb-4">{children}</div>}
     </div>
   );
 }
@@ -53,27 +53,27 @@ function PositionStatusBadge({ pos, isOffen, isAktiv }) {
   if (isOffen) return null;
   if (pos.ist_zurueckgegeben) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-500/20 text-green-400">
+      <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-sm bg-raised text-ok">
         <Check className="w-3 h-3" /> Zurück
         {pos.zustand_rueckgabe && pos.zustand_rueckgabe !== 'ok' && (
-          <span className="text-yellow-400 ml-1">({pos.zustand_rueckgabe})</span>
+          <span className="text-warn ml-1">({pos.zustand_rueckgabe})</span>
         )}
       </span>
     );
   }
-  if (isAktiv) return <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400">Ausgeliehen</span>;
+  if (isAktiv) return <span className="text-xs px-1.5 py-0.5 rounded-sm bg-raised text-info">Ausgeliehen</span>;
   return null;
 }
 
 function PositionsTable({ positionen, isOffen, isAktiv, showBorrower, onRemove, onReturn }) {
   if (!positionen || positionen.length === 0) {
-    return <p className="text-gray-400 py-8 text-center">Noch keine Artikel in der Liste</p>;
+    return <p className="text-fg-muted py-8 text-center">Noch keine Artikel in der Liste</p>;
   }
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-700 text-left text-xs text-gray-400 uppercase tracking-wider">
+          <tr className="border-b border-line-subtle text-left text-xs text-fg-muted uppercase tracking-wider">
             <th className="pb-2 pr-3 font-medium">Artikel</th>
             <th className="pb-2 pr-3 font-medium w-16 text-center">Anz.</th>
             {showBorrower && <th className="pb-2 pr-3 font-medium">Ausleiher</th>}
@@ -82,21 +82,21 @@ function PositionsTable({ positionen, isOffen, isAktiv, showBorrower, onRemove, 
             <th className="pb-2 font-medium w-24 text-right">Aktion</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-800">
+        <tbody className="divide-y divide-line-subtle">
           {positionen.map(pos => (
-            <tr key={pos.id} className={`hover:bg-gray-800/50 ${pos.ist_zurueckgegeben ? 'opacity-60' : ''}`}>
+            <tr key={pos.id} className={`hover:bg-raised ${pos.ist_zurueckgegeben ? 'opacity-60' : ''}`}>
               <td className="py-2.5 pr-3">
-                <span className="font-medium text-white">{pos.item_name}</span>
+                <span className="font-medium text-fg">{pos.item_name}</span>
               </td>
-              <td className="py-2.5 pr-3 text-center text-gray-300 tabular-nums">{pos.anzahl}</td>
+              <td className="py-2.5 pr-3 text-center text-fg-muted tabular-nums">{pos.anzahl}</td>
               {showBorrower && (
-                <td className="py-2.5 pr-3 text-gray-300 text-xs">
-                  {pos.ausleiher_name || <span className="text-gray-600">–</span>}
+                <td className="py-2.5 pr-3 text-fg-muted text-xs">
+                  {pos.ausleiher_name || <span className="text-fg-subtle">–</span>}
                 </td>
               )}
               {showBorrower && (
-                <td className="py-2.5 pr-3 text-gray-300 text-xs">
-                  {pos.ausleiher_ort || <span className="text-gray-600">–</span>}
+                <td className="py-2.5 pr-3 text-fg-muted text-xs">
+                  {pos.ausleiher_ort || <span className="text-fg-subtle">–</span>}
                 </td>
               )}
               {!isOffen && (
@@ -107,13 +107,13 @@ function PositionsTable({ positionen, isOffen, isAktiv, showBorrower, onRemove, 
               <td className="py-2.5 text-right">
                 {isOffen && (
                   <button onClick={() => onRemove(pos.id)}
-                    className="p-1.5 text-red-400 hover:bg-red-900/20 rounded">
+                    className="p-1.5 text-bad hover:bg-raised rounded-sm">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 )}
                 {isAktiv && !pos.ist_zurueckgegeben && (
                   <button onClick={() => onReturn(pos)}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-600 hover:bg-green-700 text-white rounded">
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-raised hover:bg-hover text-fg rounded-sm">
                     <RefreshCw className="w-3 h-3" /> Zurückgeben
                   </button>
                 )}
@@ -597,7 +597,7 @@ export default function AusleihePage() {
   if (loading && !listId) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-accent animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent-fg animate-spin" />
       </div>
     );
   }
@@ -610,11 +610,11 @@ export default function AusleihePage() {
     if (!detailListe) {
       return (
         <div className="space-y-6">
-          <button onClick={() => navigate('/ausleihen')} className="flex items-center gap-2 text-gray-400 hover:text-white">
+          <button onClick={() => navigate('/ausleihen')} className="flex items-center gap-2 text-fg-muted hover:text-fg">
             <ArrowLeft className="w-5 h-5" /> Zurück
           </button>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            <Loader2 className="w-8 h-8 text-accent-fg animate-spin" />
           </div>
         </div>
       );
@@ -630,10 +630,10 @@ export default function AusleihePage() {
           <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" className="mt-1"
             onClick={() => navigate('/ausleihen')} />
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-[1.6rem] leading-none font-bold text-white truncate">
+            <h1 className="font-display text-[1.6rem] leading-none font-bold text-fg truncate">
               {detailListe.titel || `Ausleihliste #${detailListe.id}`}
             </h1>
-            <div className="flex items-center gap-3 text-gray-400 text-sm mt-2">
+            <div className="flex items-center gap-3 text-fg-muted text-sm mt-2">
               {detailListe.ausleiher_name && (
                 <span className="flex items-center gap-1"><User className="w-3.5 h-3.5" /> {detailListe.ausleiher_name}</span>
               )}
@@ -656,17 +656,17 @@ export default function AusleihePage() {
                     {showPdfDropdown && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowPdfDropdown(false)} />
-                        <div className="absolute right-0 mt-1 py-1 bg-gray-800 border border-gray-700 rounded-lg z-20 min-w-[180px] shadow-xl">
+                        <div className="absolute right-0 mt-1 py-1 bg-overlay border border-line rounded-md z-20 min-w-[180px] shadow-overlay">
                           <button onClick={() => handleDownloadPdf(null)}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white text-sm">
+                            className="w-full text-left px-3 py-2 hover:bg-hover text-fg text-sm">
                             Gesamt-PDF
                           </button>
                           <button onClick={() => handleDownloadPdf('person')}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white text-sm">
+                            className="w-full text-left px-3 py-2 hover:bg-hover text-fg text-sm">
                             <User className="w-3.5 h-3.5 inline mr-1.5" />Pro Person
                           </button>
                           <button onClick={() => handleDownloadPdf('ort')}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white text-sm">
+                            className="w-full text-left px-3 py-2 hover:bg-hover text-fg text-sm">
                             <MapPin className="w-3.5 h-3.5 inline mr-1.5" />Pro Ort
                           </button>
                         </div>
@@ -691,15 +691,15 @@ export default function AusleihePage() {
         </div>
 
         {/* Info */}
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-4">
-          <div className="flex flex-wrap gap-4 text-sm text-gray-400">
-            <span className="px-2 py-0.5 rounded bg-gray-800 text-gray-300">
+        <div className="space-y-4">
+          <div className="flex flex-wrap gap-4 text-sm text-fg-muted">
+            <span className="px-2 py-0.5 rounded-sm bg-raised text-fg-muted">
               {detailListe.modus === 'global' ? 'Globale Ausleihe' : 'Individuelle Ausleihe'}
             </span>
             {detailListe.frist && <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Frist: {new Date(detailListe.frist).toLocaleDateString('de-DE')}</span>}
             {detailListe.zweck && <span>Zweck: {detailListe.zweck}</span>}
             {detailListe.veranstaltung_id && (
-              <Link to={`/veranstaltung/${detailListe.veranstaltung_id}`} className="flex items-center gap-1 text-accent hover:opacity-80">
+              <Link to={`/veranstaltung/${detailListe.veranstaltung_id}`} className="flex items-center gap-1 text-accent-fg hover:opacity-80">
                 <ExternalLink className="w-3 h-3" /> Veranstaltung #{detailListe.veranstaltung_id}
               </Link>
             )}
@@ -714,16 +714,16 @@ export default function AusleihePage() {
                 {showSetDropdown && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowSetDropdown(false)} />
-                    <ul className="absolute right-0 mt-1 py-1 bg-gray-800 border border-gray-700 rounded-lg max-h-60 overflow-y-auto z-20 min-w-[220px]">
+                    <ul className="absolute right-0 mt-1 py-1 bg-overlay border border-line rounded-md max-h-60 overflow-y-auto z-20 min-w-[220px] shadow-overlay">
                       {itemSets.length > 0 ? itemSets.map(set => (
                         <li key={set.id}>
                           <button type="button" onClick={() => handleAddSetToList(set)}
-                            className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white">
+                            className="w-full text-left px-3 py-2 hover:bg-hover text-fg">
                             <span className="font-medium">{set.name}</span>
-                            <span className="text-gray-400 text-xs ml-2">({set.positionen?.length || 0} Items)</span>
+                            <span className="text-fg-muted text-xs ml-2">({set.positionen?.length || 0} Items)</span>
                           </button>
                         </li>
-                      )) : <li className="px-3 py-2 text-gray-400 text-sm">Keine Sets</li>}
+                      )) : <li className="px-3 py-2 text-fg-muted text-sm">Keine Sets</li>}
                     </ul>
                   </>
                 )}
@@ -734,10 +734,10 @@ export default function AusleihePage() {
           {/* Items-Liste */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-medium text-white">Enthaltene Artikel (<span className="tabular-nums">{detailListe.positionen?.length || 0}</span>)</h3>
+              <h3 className="font-medium text-fg">Enthaltene Artikel (<span className="tabular-nums">{detailListe.positionen?.length || 0}</span>)</h3>
               {detailListe.modus === 'individuell' && (detailListe.positionen?.length || 0) > 0 && (
                 <select value={groupBy} onChange={e => { setGroupBy(e.target.value); setExpandedGroups({}); }}
-                  className="text-xs bg-gray-800 border border-gray-700 rounded px-2 py-1 text-gray-300">
+                  className="text-xs bg-raised border border-line rounded-md px-2 py-1 text-fg-muted hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                   <option value="none">Keine Gruppierung</option>
                   <option value="borrower">Nach Person</option>
                   <option value="location">Nach Ort</option>
@@ -752,18 +752,18 @@ export default function AusleihePage() {
                   const isExpanded = expandedGroups[groupKey] !== false;
                   const returned = groupItems.filter(p => p.ist_zurueckgegeben).length;
                   return (
-                    <div key={groupKey} className="border border-gray-700 rounded-lg overflow-hidden">
+                    <div key={groupKey} className="bg-surface rounded-lg overflow-hidden">
                       <button onClick={() => toggleGroup(groupKey)}
-                        className="w-full flex items-center justify-between p-3 bg-gray-800/50 hover:bg-gray-800 text-left">
+                        className="w-full flex items-center justify-between p-3 hover:bg-raised text-left">
                         <div className="flex items-center gap-2">
-                          {isExpanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                          {groupBy === 'borrower' ? <User className="w-4 h-4 text-gray-400" /> : <MapPin className="w-4 h-4 text-gray-400" />}
-                          <span className="font-medium text-white">{groupKey}</span>
+                          {isExpanded ? <ChevronDown className="w-4 h-4 text-fg-muted" /> : <ChevronRight className="w-4 h-4 text-fg-muted" />}
+                          {groupBy === 'borrower' ? <User className="w-4 h-4 text-fg-muted" /> : <MapPin className="w-4 h-4 text-fg-muted" />}
+                          <span className="font-medium text-fg">{groupKey}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-gray-400 tabular-nums">
+                        <div className="flex items-center gap-2 text-xs text-fg-muted tabular-nums">
                           <span>{groupItems.length} Artikel</span>
                           {!isOffen && returned > 0 && (
-                            <span className="text-green-400">{returned}/{groupItems.length} zurück</span>
+                            <span className="text-ok">{returned}/{groupItems.length} zurück</span>
                           )}
                         </div>
                       </button>
@@ -794,26 +794,26 @@ export default function AusleihePage() {
             const nochOffen = positionen.filter(p => !p.ist_zurueckgegeben).length;
             const alleZurueck = positionen.length > 0 && nochOffen === 0;
             return (
-              <div className="pt-4 border-t border-gray-700 flex items-center gap-3 flex-wrap">
+              <div className="pt-4 border-t border-line-subtle flex items-center gap-3 flex-wrap">
                 {!alleZurueck && (
                   <button onClick={() => { setRueckgabeAusleihe(detailListe); setShowRueckgabeModal(true); }}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+                    className="flex items-center gap-2 px-4 py-2 bg-raised hover:bg-hover text-fg font-semibold rounded-md">
                     <RefreshCw className="w-4 h-4" /> Alles zurückgeben
                   </button>
                 )}
                 {alleZurueck && (
                   <button onClick={handleAbschliessen}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">
+                    className="flex items-center gap-2 px-4 py-2 bg-raised hover:bg-hover text-fg font-semibold rounded-md">
                     <Check className="w-4 h-4" /> Liste abschließen
                   </button>
                 )}
                 {nochOffen > 0 && (
-                  <span className="text-sm text-yellow-400 tabular-nums">
+                  <span className="text-sm text-warn tabular-nums">
                     {nochOffen} von {positionen.length} noch ausgeliehen
                   </span>
                 )}
                 {alleZurueck && (
-                  <span className="text-sm text-green-400">
+                  <span className="text-sm text-ok">
                     Alle Artikel zurückgegeben
                   </span>
                 )}
@@ -825,27 +825,27 @@ export default function AusleihePage() {
         {/* ─── Item-Auswahl Modal ───────────────────────────── */}
         {showItemModal && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-              <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
-                <h2 className="text-lg font-semibold text-white">Artikel zur Ausleihe hinzufügen</h2>
-                <button onClick={() => setShowItemModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 pb-4 border-b border-line-subtle">
+                <h2 className="text-lg font-semibold text-fg">Artikel zur Ausleihe hinzufügen</h2>
+                <button onClick={() => setShowItemModal(false)} className="text-fg-muted hover:text-fg"><X className="w-5 h-5" /></button>
               </div>
 
               <div className="flex-1 overflow-y-auto min-h-0">
                 {/* Ausleiher-Information (nur bei individuell) */}
                 {detailListe?.modus === 'individuell' && (
-                  <div className="mx-6 mt-4 p-4 border border-gray-700 rounded-lg">
-                    <h3 className="text-sm font-semibold text-white mb-3">Ausleiher-Information</h3>
+                  <div className="mx-6 mt-4 pb-4 border-b border-line-subtle">
+                    <h3 className="text-sm font-semibold text-fg mb-3">Ausleiher-Information</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">Name</label>
+                        <label className="block text-xs font-medium text-fg-muted mb-1">Name</label>
                         <input type="text" value={modalAusleiherName} onChange={e => setModalAusleiherName(e.target.value)}
-                          placeholder="z.B. Max Mustermann" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500" />
+                          placeholder="z.B. Max Mustermann" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-400 mb-1">Ort/Raum</label>
+                        <label className="block text-xs font-medium text-fg-muted mb-1">Ort/Raum</label>
                         <input type="text" value={modalAusleiherOrt} onChange={e => setModalAusleiherOrt(e.target.value)}
-                          placeholder="z.B. Büro 201" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500" />
+                          placeholder="z.B. Büro 201" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                       </div>
                     </div>
                   </div>
@@ -853,18 +853,18 @@ export default function AusleihePage() {
 
                 {/* Ausgewählte Artikel als Chips */}
                 {selectedItems.length > 0 && (
-                  <div className="mx-6 mt-4 p-4 border border-gray-700 rounded-lg">
+                  <div className="mx-6 mt-4 pb-4 border-b border-line-subtle">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-semibold text-white">Ausgewählte Artikel (<span className="tabular-nums">{selectedItems.length}</span>)</h3>
-                      <button onClick={() => setSelectedItems([])} className="flex items-center gap-1 text-xs text-gray-400 hover:text-white">
+                      <h3 className="text-sm font-semibold text-fg">Ausgewählte Artikel (<span className="tabular-nums">{selectedItems.length}</span>)</h3>
+                      <button onClick={() => setSelectedItems([])} className="flex items-center gap-1 text-xs text-fg-muted hover:text-fg">
                         <X className="w-3 h-3" /> Alle entfernen
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {selectedItems.map(sel => (
-                        <span key={sel.item.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 border border-gray-600 rounded-lg text-sm text-white">
+                        <span key={sel.item.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-raised rounded-sm text-sm text-fg">
                           {sel.item.name}
-                          <button onClick={() => toggleItemSelection(sel.item)} className="text-gray-400 hover:text-red-400">
+                          <button onClick={() => toggleItemSelection(sel.item)} className="text-fg-muted hover:text-bad">
                             <X className="w-3.5 h-3.5" />
                           </button>
                         </span>
@@ -876,31 +876,31 @@ export default function AusleihePage() {
                 {/* Suche */}
                 <div className="px-6 pt-4 space-y-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
                     <input type="text" value={itemSearch} onChange={e => setItemSearch(e.target.value)}
-                      placeholder="Artikel suchen..." className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                      placeholder="Artikel suchen..." className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => { setScanMode('add'); setShowQRScanner(true); setShowItemModal(false); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-raised text-fg-muted hover:text-fg hover:bg-hover rounded-md">
                       <ScanLine className="w-3.5 h-3.5" /> Scannen
                     </button>
                     <button onClick={() => setShowQuickAdd(!showQuickAdd)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-raised text-fg-muted hover:text-fg hover:bg-hover rounded-md">
                       <PlusCircle className="w-3.5 h-3.5" /> Neuer Artikel
                     </button>
                     <button onClick={() => {
                       const available = filteredItems.filter(i => !existingPositionIds.has(i.id) && i.status === 'verfuegbar');
                       setSelectedItems(available.slice(0, 50).map(item => ({ item, anzahl: 1 })));
                     }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-raised text-fg-muted hover:text-fg hover:bg-hover rounded-md">
                       <Check className="w-3.5 h-3.5" /> Alle auswählen
                     </button>
                   </div>
                   {showQuickAdd && (
                     <div className="flex gap-2">
                       <input type="text" value={quickAddName} onChange={e => setQuickAddName(e.target.value)}
-                        placeholder="Name des neuen Artikels" className="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white"
+                        placeholder="Name des neuen Artikels" className="flex-1 px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                         onKeyDown={e => e.key === 'Enter' && handleQuickAddItem()} />
                       <Button variant="secondary" size="sm" onClick={handleQuickAddItem} disabled={!quickAddName.trim()}>
                         Hinzufügen
@@ -918,30 +918,30 @@ export default function AusleihePage() {
                       return (
                         <li key={item.id}>
                           <button type="button" onClick={() => !isInList && toggleItemSelection(item)} disabled={isInList}
-                            className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
+                            className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
                               isInList ? 'opacity-40 cursor-not-allowed' :
-                              isSelected ? 'bg-accent/15 ring-1 ring-inset ring-accent/40' :
-                              'hover:bg-gray-800'
+                              isSelected ? 'bg-raised' :
+                              'hover:bg-raised'
                             }`}>
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'bg-accent border-accent' : 'border-gray-600'
+                            <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? 'bg-accent border-accent' : 'border-line'
                             }`}>
                               {isSelected && <Check className="w-3 h-3 text-white" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-white font-medium">{item.name}</span>
-                              {item.seriennummer && <span className="text-gray-500 text-xs ml-2">{item.seriennummer}</span>}
-                              {item.kategorie_name && <span className="text-gray-500 text-xs ml-2">• {item.kategorie_name}</span>}
+                              <span className="text-fg font-medium">{item.name}</span>
+                              {item.seriennummer && <span className="text-fg-subtle text-xs ml-2">{item.seriennummer}</span>}
+                              {item.kategorie_name && <span className="text-fg-subtle text-xs ml-2">• {item.kategorie_name}</span>}
                             </div>
-                            {isInList && <span className="text-xs text-gray-500">Bereits enthalten</span>}
-                            <span className={`text-xs px-1.5 py-0.5 rounded flex items-center gap-1 ${
-                              item.status === 'verfuegbar' ? 'bg-green-900/30 text-green-400' :
-                              item.status === 'ausgeliehen' ? 'bg-blue-900/30 text-blue-400' :
-                              'bg-gray-700 text-gray-400'
+                            {isInList && <span className="text-xs text-fg-subtle">Bereits enthalten</span>}
+                            <span className={`text-xs px-1.5 py-0.5 rounded-sm flex items-center gap-1 ${
+                              item.status === 'verfuegbar' ? 'bg-raised text-ok' :
+                              item.status === 'ausgeliehen' ? 'bg-raised text-info' :
+                              'bg-raised text-fg-muted'
                             }`}>
                               <span className={`w-1.5 h-1.5 rounded-full ${
-                                item.status === 'verfuegbar' ? 'bg-green-400' :
-                                item.status === 'ausgeliehen' ? 'bg-blue-400' : 'bg-gray-400'
+                                item.status === 'verfuegbar' ? 'bg-ok' :
+                                item.status === 'ausgeliehen' ? 'bg-info' : 'bg-fg-subtle'
                               }`} />
                               {item.status_display || item.status}
                             </span>
@@ -949,13 +949,13 @@ export default function AusleihePage() {
                         </li>
                       );
                     })}
-                    {filteredItems.length === 0 && <li className="text-gray-400 py-4 text-center">Keine Artikel gefunden</li>}
+                    {filteredItems.length === 0 && <li className="text-fg-muted py-4 text-center">Keine Artikel gefunden</li>}
                   </ul>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between p-6 pt-4 border-t border-gray-800">
+              <div className="flex items-center justify-between p-6 pt-4 border-t border-line-subtle">
                 <Button variant="ghost" onClick={() => setShowItemModal(false)}>Abbrechen</Button>
                 <Button variant="primary" onClick={handleAddSelectedItems} disabled={selectedItems.length === 0 || addingItems}>
                   {addingItems ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -968,9 +968,9 @@ export default function AusleihePage() {
 
         {/* ─── Signatur-Auswahl (individueller Modus) ──────── */}
         {signaturePhase === 'choose' && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Unterschrift wählen</h2>
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
+              <h2 className="text-lg font-semibold text-fg mb-4">Unterschrift wählen</h2>
               <div className="space-y-3">
                 {[
                   { value: 'none', label: 'Ohne Unterschrift', desc: 'Artikel direkt hinzufügen' },
@@ -978,14 +978,14 @@ export default function AusleihePage() {
                   { value: 'per_item', label: 'Pro Artikel unterschreiben', desc: 'Jeder Artikel wird einzeln unterschrieben' },
                 ].map(opt => (
                   <button key={opt.value} onClick={() => handleSignatureChoice(opt.value)}
-                    className="w-full text-left p-4 rounded-lg border border-gray-700 hover:border-accent hover:bg-accent/10 transition-colors">
-                    <div className="font-medium text-white">{opt.label}</div>
-                    <div className="text-sm text-gray-400">{opt.desc}</div>
+                    className="w-full text-left p-4 rounded-md bg-raised hover:bg-hover transition-colors">
+                    <div className="font-medium text-fg">{opt.label}</div>
+                    <div className="text-sm text-fg-muted">{opt.desc}</div>
                   </button>
                 ))}
               </div>
               <button onClick={() => { setSignaturePhase(null); setPendingSignatureItems([]); }}
-                className="mt-4 w-full py-2 text-gray-400 hover:text-white">Abbrechen</button>
+                className="mt-4 w-full py-2 text-fg-muted hover:text-fg">Abbrechen</button>
             </div>
           </div>
         )}
@@ -1018,31 +1018,31 @@ export default function AusleihePage() {
         {/* ─── Rückgabe Modal ────────────────────────────────── */}
         {showRueckgabeModal && rueckgabeAusleihe && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">Rückgabe bestätigen</h2>
-                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-semibold text-fg">Rückgabe bestätigen</h2>
+                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="text-fg-muted hover:text-fg"><X className="w-5 h-5" /></button>
               </div>
-              <p className="text-gray-400 mb-4">
-                Alle Items von <strong className="text-white">{rueckgabeAusleihe.ausleiher_name || rueckgabeAusleihe.titel}</strong> werden zurückgegeben.
+              <p className="text-fg-muted mb-4">
+                Alle Items von <strong className="text-fg">{rueckgabeAusleihe.ausleiher_name || rueckgabeAusleihe.titel}</strong> werden zurückgegeben.
               </p>
               {rueckgabeSignature ? (
                 <div className="mb-4">
-                  <label className="block text-sm text-gray-400 mb-2">Unterschrift</label>
-                  <div className="bg-white rounded-lg p-3 border border-gray-600 inline-block">
+                  <label className="block text-sm font-medium text-fg-muted mb-2">Unterschrift</label>
+                  <div className="bg-white rounded-lg p-3 inline-block">
                     <img src={rueckgabeSignature} alt="Unterschrift" className="h-16" />
                   </div>
-                  <button onClick={() => setRueckgabeSignature('')} className="block text-xs text-red-400 mt-1 hover:text-red-300">Entfernen</button>
+                  <button onClick={() => setRueckgabeSignature('')} className="block text-xs text-bad mt-1 hover:opacity-80">Entfernen</button>
                 </div>
               ) : (
                 <button onClick={() => setShowRueckgabeSigModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 mb-4 text-sm border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                  className="flex items-center gap-2 px-3 py-2 mb-4 text-sm bg-raised text-fg-muted hover:text-fg hover:bg-hover rounded-md">
                   <Pen className="w-4 h-4" /> Unterschrift hinzufügen (optional)
                 </button>
               )}
               <div className="flex gap-2">
-                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleRueckgabe} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Rückgabe bestätigen</button>
+                <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="flex-1 py-2 text-fg-muted hover:text-fg">Abbrechen</button>
+                <button onClick={handleRueckgabe} className="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md">Rückgabe bestätigen</button>
               </div>
             </div>
           </div>
@@ -1059,17 +1059,17 @@ export default function AusleihePage() {
         {/* ─── Einzelrückgabe Modal ──────────────────────────── */}
         {showEinzelrueckgabe && einzelrueckgabePos && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">Artikel zurückgeben</h2>
-                <button onClick={() => setShowEinzelrueckgabe(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-semibold text-fg">Artikel zurückgeben</h2>
+                <button onClick={() => setShowEinzelrueckgabe(false)} className="text-fg-muted hover:text-fg"><X className="w-5 h-5" /></button>
               </div>
-              <p className="text-gray-300 mb-4"><strong className="text-white">{einzelrueckgabePos.item_name}</strong></p>
+              <p className="text-fg-muted mb-4"><strong className="text-fg">{einzelrueckgabePos.item_name}</strong></p>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Zustand</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Zustand</label>
                   <select value={einzelZustand} onChange={e => setEinzelZustand(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                    className="w-full bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2">
                     <option value="ok">OK</option>
                     <option value="leichte_maengel">Leichte Mängel</option>
                     <option value="beschaedigt">Beschädigt</option>
@@ -1077,14 +1077,14 @@ export default function AusleihePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Notizen</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Notizen</label>
                   <textarea value={einzelNotizen} onChange={e => setEinzelNotizen(e.target.value)}
-                    placeholder="Bemerkungen..." rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500" />
+                    placeholder="Bemerkungen..." rows={2} className="w-full bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2" />
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
-                <button onClick={() => setShowEinzelrueckgabe(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-                <button onClick={handleEinzelrueckgabe} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Zurückgeben</button>
+                <button onClick={() => setShowEinzelrueckgabe(false)} className="flex-1 py-2 text-fg-muted hover:text-fg">Abbrechen</button>
+                <button onClick={handleEinzelrueckgabe} className="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md">Zurückgeben</button>
               </div>
             </div>
           </div>
@@ -1093,25 +1093,25 @@ export default function AusleihePage() {
         {/* ─── E-Mail Modal ──────────────────────────────────── */}
         {showEmailModal && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">Leihschein per E-Mail senden</h2>
-                <button onClick={() => setShowEmailModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+                <h2 className="text-lg font-semibold text-fg">Leihschein per E-Mail senden</h2>
+                <button onClick={() => setShowEmailModal(false)} className="text-fg-muted hover:text-fg"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">E-Mail-Adresse *</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">E-Mail-Adresse *</label>
                   <input type="email" value={emailForm.email} onChange={e => setEmailForm({ ...emailForm, email: e.target.value })}
-                    placeholder="empfaenger@beispiel.de" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    placeholder="empfaenger@beispiel.de" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Betreff</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Betreff</label>
                   <input type="text" value={emailForm.betreff} onChange={e => setEmailForm({ ...emailForm, betreff: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                 </div>
                 {detailListe?.modus === 'individuell' && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-2">PDF-Variante</label>
+                    <label className="block text-sm font-medium text-fg-muted mb-2">PDF-Variante</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
                         { value: 'gesamt', label: 'Gesamt', icon: FileDown },
@@ -1119,10 +1119,10 @@ export default function AusleihePage() {
                         { value: 'ort', label: 'Pro Ort', icon: MapPin },
                       ].map(opt => (
                         <button key={opt.value} onClick={() => setEmailForm({ ...emailForm, pdfMode: opt.value })}
-                          className={`flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-lg border transition-colors ${
+                          className={`flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-md border-b-2 transition-colors ${
                             emailForm.pdfMode === opt.value
-                              ? 'border-accent bg-accent/10 text-accent'
-                              : 'border-gray-700 text-gray-400 hover:border-gray-600'
+                              ? 'border-accent bg-hover text-fg'
+                              : 'border-transparent bg-raised text-fg-muted hover:bg-hover'
                           }`}>
                           <opt.icon className="w-3.5 h-3.5" />
                           {opt.label}
@@ -1132,9 +1132,9 @@ export default function AusleihePage() {
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Nachricht</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Nachricht</label>
                   <textarea value={emailForm.nachricht} onChange={e => setEmailForm({ ...emailForm, nachricht: e.target.value })}
-                    rows={4} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none" />
+                    rows={4} className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none" />
                 </div>
               </div>
               <div className="flex gap-2 mt-6">
@@ -1186,30 +1186,30 @@ export default function AusleihePage() {
       {/* ─── Erstellen Modal ─────────────────────────────── */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Neue Ausleihliste</h2>
-              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-fg">Neue Ausleihliste</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-fg-muted hover:text-fg"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Titel *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Titel *</label>
                 <input type="text" value={createForm.titel} onChange={e => setCreateForm({ ...createForm, titel: e.target.value })}
-                  placeholder="z.B. Stadtfest 2026, Konzert Setup..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                  placeholder="z.B. Stadtfest 2026, Konzert Setup..." className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Art der Ausleihe</label>
+                <label className="block text-sm font-medium text-fg-muted mb-2">Art der Ausleihe</label>
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { value: 'global', label: 'Globale Ausleihe', desc: 'Ein Ausleiher für alle Artikel' },
                     { value: 'individuell', label: 'Individuelle Ausleihe', desc: 'Unterschiedliche Ausleiher pro Artikel' },
                   ].map(opt => (
                     <button key={opt.value} onClick={() => setCreateForm({ ...createForm, modus: opt.value })}
-                      className={`text-left p-3 rounded-lg border transition-colors ${
-                        createForm.modus === opt.value ? 'border-accent bg-accent/10' : 'border-gray-700 hover:border-gray-600'
+                      className={`text-left p-3 rounded-md border-b-2 transition-colors ${
+                        createForm.modus === opt.value ? 'border-accent bg-hover' : 'border-transparent bg-raised hover:bg-hover'
                       }`}>
-                      <div className="font-medium text-white text-sm">{opt.label}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{opt.desc}</div>
+                      <div className="font-medium text-fg text-sm">{opt.label}</div>
+                      <div className="text-xs text-fg-muted mt-0.5">{opt.desc}</div>
                     </button>
                   ))}
                 </div>
@@ -1218,35 +1218,35 @@ export default function AusleihePage() {
               {createForm.modus === 'global' && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Ausleiher (Name)</label>
+                    <label className="block text-sm font-medium text-fg-muted mb-1">Ausleiher (Name)</label>
                     <input type="text" value={createForm.ausleiher_name} onChange={e => setCreateForm({ ...createForm, ausleiher_name: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                      className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                   </div>
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Ausleiher (Ort)</label>
+                    <label className="block text-sm font-medium text-fg-muted mb-1">Ausleiher (Ort)</label>
                     <input type="text" value={createForm.ausleiher_ort} onChange={e => setCreateForm({ ...createForm, ausleiher_ort: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                      className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Rückgabefrist</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Rückgabefrist</label>
                   <input type="date" value={createForm.frist} onChange={e => setCreateForm({ ...createForm, frist: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Zweck</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Zweck</label>
                   <input type="text" value={createForm.zweck} onChange={e => setCreateForm({ ...createForm, zweck: e.target.value })}
-                    placeholder="z.B. Konzert" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                    placeholder="z.B. Konzert" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Notizen</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Notizen</label>
                 <textarea value={createForm.notizen} onChange={e => setCreateForm({ ...createForm, notizen: e.target.value })}
-                  rows={2} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none" />
+                  rows={2} className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none" />
               </div>
             </div>
 
@@ -1264,7 +1264,7 @@ export default function AusleihePage() {
 
       {/* ─── Listen nach Sektionen ───────────────────────── */}
       {sections.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           <EmptyState icon={Package} title="Keine Ausleihen vorhanden"
             description="Erstelle eine Ausleihliste, um Artikel auszugeben."
             action={<Button variant="primary" size="sm" icon={Plus} onClick={() => setShowCreateModal(true)}>Neue Ausleihliste</Button>} />
@@ -1275,18 +1275,18 @@ export default function AusleihePage() {
             <SectionHeader key={section.key} title={section.title} count={section.items.length} defaultOpen={section.defaultOpen}>
               {section.items.map(a => (
                 <div key={a.id}
-                  className={`bg-gray-900 border rounded-xl p-4 ${a.ist_ueberfaellig ? 'border-red-600' : 'border-gray-800'}`}>
+                  className={`p-4`}>
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="min-w-0">
-                        <span className="font-medium text-white">{a.titel || `Liste #${a.id}`}</span>
+                        <span className="font-medium text-fg">{a.titel || `Liste #${a.id}`}</span>
                         {a.ausleiher_name && (
-                          <span className="text-sm text-gray-400 ml-2">
+                          <span className="text-sm text-fg-muted ml-2">
                             <User className="w-3 h-3 inline mr-1" />{a.ausleiher_name}
                           </span>
                         )}
                         {a.ausleiher_ort && (
-                          <span className="text-sm text-gray-400 ml-2">
+                          <span className="text-sm text-fg-muted ml-2">
                             <MapPin className="w-3 h-3 inline mr-1" />{a.ausleiher_ort}
                           </span>
                         )}
@@ -1295,24 +1295,24 @@ export default function AusleihePage() {
                     <StatusBadge status={a.status} statusDisplay={a.status_display} istUeberfaellig={a.ist_ueberfaellig} />
                   </div>
 
-                  <div className="flex items-center gap-4 text-sm text-gray-400 mb-3">
+                  <div className="flex items-center gap-4 text-sm text-fg-muted mb-3">
                     {a.frist && (
                       <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {new Date(a.frist).toLocaleDateString('de-DE')}</span>
                     )}
                     <span className="flex items-center gap-1 tabular-nums"><Package className="w-3.5 h-3.5" /> {a.anzahl_items} Artikel</span>
                     <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {new Date(a.erstellt_am).toLocaleDateString('de-DE')}</span>
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-gray-800">{a.modus === 'global' ? 'Global' : 'Individuell'}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded-sm bg-raised">{a.modus === 'global' ? 'Global' : 'Individuell'}</span>
                   </div>
 
                   <div className="flex justify-end gap-2">
                     {a.ist_ueberfaellig && (
                       <button onClick={() => handleSendMahnung(a.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-orange-400 hover:text-orange-300 hover:bg-orange-900/20 rounded-lg">
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-warn hover:bg-raised rounded-md">
                         <Mail className="w-4 h-4" /> Mahnung
                       </button>
                     )}
                     <Link to={`/ausleihen/${a.id}`}
-                      className="px-3 py-1.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
+                      className="px-3 py-1.5 text-sm text-fg-muted hover:text-fg hover:bg-raised rounded-md">
                       Details
                     </Link>
                     {a.status === 'aktiv' && (
@@ -1323,7 +1323,7 @@ export default function AusleihePage() {
                           setShowRueckgabeModal(true);
                         } catch { toast.error('Liste konnte nicht geladen werden'); }
                       }}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg">
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-raised hover:bg-hover text-fg rounded-md">
                         <RefreshCw className="w-4 h-4" /> Rückgabe
                       </button>
                     )}
@@ -1344,31 +1344,31 @@ export default function AusleihePage() {
       {/* Rückgabe Modal (von Übersicht aus) */}
       {showRueckgabeModal && rueckgabeAusleihe && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-lg p-6">
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Rückgabe bestätigen</h2>
-              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold text-fg">Rückgabe bestätigen</h2>
+              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="text-fg-muted hover:text-fg"><X className="w-5 h-5" /></button>
             </div>
-            <p className="text-gray-400 mb-4">
-              Ausleihe von <strong className="text-white">{rueckgabeAusleihe.ausleiher_name || rueckgabeAusleihe.titel}</strong> wird zurückgegeben.
+            <p className="text-fg-muted mb-4">
+              Ausleihe von <strong className="text-fg">{rueckgabeAusleihe.ausleiher_name || rueckgabeAusleihe.titel}</strong> wird zurückgegeben.
             </p>
             {rueckgabeSignature ? (
               <div className="mb-4">
-                <label className="block text-sm text-gray-400 mb-2">Unterschrift</label>
-                <div className="bg-white rounded-lg p-3 border border-gray-600 inline-block">
+                <label className="block text-sm font-medium text-fg-muted mb-2">Unterschrift</label>
+                <div className="bg-white rounded-lg p-3 inline-block">
                   <img src={rueckgabeSignature} alt="Unterschrift" className="h-16" />
                 </div>
-                <button onClick={() => setRueckgabeSignature('')} className="block text-xs text-red-400 mt-1 hover:text-red-300">Entfernen</button>
+                <button onClick={() => setRueckgabeSignature('')} className="block text-xs text-bad mt-1 hover:opacity-80">Entfernen</button>
               </div>
             ) : (
               <button onClick={() => setShowRueckgabeSigModal(true)}
-                className="flex items-center gap-2 px-3 py-2 mb-4 text-sm border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 rounded-lg">
+                className="flex items-center gap-2 px-3 py-2 mb-4 text-sm bg-raised text-fg-muted hover:text-fg hover:bg-hover rounded-md">
                 <Pen className="w-4 h-4" /> Unterschrift hinzufügen (optional)
               </button>
             )}
             <div className="flex gap-2">
-              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleRueckgabe} className="flex-1 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg">Rückgabe bestätigen</button>
+              <button onClick={() => { setShowRueckgabeModal(false); setRueckgabeAusleihe(null); setRueckgabeSignature(''); }} className="flex-1 py-2 text-fg-muted hover:text-fg">Abbrechen</button>
+              <button onClick={handleRueckgabe} className="flex-1 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md">Rückgabe bestätigen</button>
             </div>
           </div>
         </div>

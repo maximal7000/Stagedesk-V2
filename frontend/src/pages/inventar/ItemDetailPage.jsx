@@ -18,10 +18,10 @@ import AutocompleteInput from '../../components/AutocompleteInput';
 import { PageHeader, Button, StatusBadge } from '../../components/ui';
 
 const STATUS_FARBEN = {
-  verfuegbar: 'bg-green-500',
-  ausgeliehen: 'bg-blue-500',
-  reserviert: 'bg-yellow-500',
-  defekt: 'bg-red-500',
+  verfuegbar: 'bg-ok',
+  ausgeliehen: 'bg-info',
+  reserviert: 'bg-warn',
+  defekt: 'bg-bad',
 };
 
 const STATUS_LABELS = {
@@ -343,7 +343,7 @@ export default function ItemDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-accent animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent-fg animate-spin" />
       </div>
     );
   }
@@ -368,7 +368,7 @@ export default function ItemDetailPage() {
                     </Button>
                     <Button variant="secondary" icon={Edit} onClick={() => setEditing(true)}>Bearbeiten</Button>
                     <Button variant="ghost" icon={Trash2} aria-label="Löschen" title="Löschen"
-                      className="text-red-400 hover:text-red-300" onClick={handleDelete} />
+                      className="text-bad hover:text-bad" onClick={handleDelete} />
                   </>
                 )}
                 {(isNew || editing) && (
@@ -392,23 +392,23 @@ export default function ItemDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Basis-Informationen (links) */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
-            <h3 className="text-lg font-medium text-white">Basis-Informationen</h3>
+          <div className="border-t border-line-subtle pt-6 space-y-6">
+            <h3 className="text-lg font-medium text-fg">Basis-Informationen</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Name *</label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={!editing && !isNew}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60"
                 />
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Kategorie</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Kategorie</label>
                 <AutocompleteInput
                   options={kategorien}
                   valueId={formData.kategorie_id}
@@ -423,7 +423,7 @@ export default function ItemDetailPage() {
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Standort</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Standort</label>
                 <AutocompleteInput
                   options={standorte}
                   valueId={formData.standort_id}
@@ -438,7 +438,7 @@ export default function ItemDetailPage() {
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Hersteller</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Hersteller</label>
                 <AutocompleteInput
                   options={hersteller}
                   valueId={formData.hersteller_id}
@@ -453,44 +453,44 @@ export default function ItemDetailPage() {
               </div>
               
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Seriennummer</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Seriennummer</label>
                 <input
                   type="text"
                   value={formData.seriennummer}
                   onChange={(e) => setFormData({ ...formData, seriennummer: e.target.value })}
                   disabled={!editing && !isNew}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60"
                 />
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Beschreibung</label>
                 <textarea
                   value={formData.beschreibung}
                   onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
                   disabled={!editing && !isNew}
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60 resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60 resize-none"
                 />
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-sm text-gray-400 mb-1">Notizen</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Notizen</label>
                 <textarea
                   value={formData.notizen}
                   onChange={(e) => setFormData({ ...formData, notizen: e.target.value })}
                   disabled={!editing && !isNew}
                   rows={2}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white disabled:opacity-60 resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60 resize-none"
                 />
               </div>
             </div>
           </div>
 
           {/* QR-Codes Liste */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+          <div className="border-t border-line-subtle pt-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-medium text-white">QR-Codes</h3>
+              <h3 className="text-lg font-medium text-fg">QR-Codes</h3>
               {(editing || isNew) && (
                 <Button variant="secondary" size="sm" icon={Plus} onClick={() => setShowQrModal(true)}>
                   QR-Code hinzufügen
@@ -499,23 +499,23 @@ export default function ItemDetailPage() {
             </div>
             
             {formData.qr_codes.length === 0 ? (
-              <p className="text-gray-400 text-center py-4">Keine QR-Codes vorhanden</p>
+              <p className="text-fg-muted text-center py-4">Keine QR-Codes vorhanden</p>
             ) : (
               <div className="space-y-2">
                 {formData.qr_codes.map((qr, idx) => (
-                  <div key={qr.id || idx} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                  <div key={qr.id || idx} className="flex items-center justify-between p-3 bg-raised rounded-lg">
                     <div className="flex items-center gap-3">
-                      <QrCode className="w-5 h-5 text-gray-400" />
+                      <QrCode className="w-5 h-5 text-fg-muted" />
                       <div>
-                        <span className="font-mono text-white">{qr.code}</span>
-                        {qr.bezeichnung && <span className="text-sm text-gray-400 ml-2">({qr.bezeichnung})</span>}
-                        {qr.ist_primaer && <span className="text-xs bg-accent text-white px-2 py-0.5 rounded ml-2">Primär</span>}
+                        <span className="font-mono text-fg">{qr.code}</span>
+                        {qr.bezeichnung && <span className="text-sm text-fg-muted ml-2">({qr.bezeichnung})</span>}
+                        {qr.ist_primaer && <span className="text-xs bg-accent text-white px-2 py-0.5 rounded-sm ml-2">Primär</span>}
                       </div>
                     </div>
                     {(editing || isNew) && (
                       <button
                         onClick={() => handleDeleteQrCode(qr.id, qr.code)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded"
+                        className="p-1.5 text-fg-muted hover:text-bad hover:bg-raised rounded-sm"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -531,7 +531,7 @@ export default function ItemDetailPage() {
         <div className="space-y-6">
           {/* QR Code & Barcode Display */}
           {!isNew && item && item.haupt_qr_code && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+            <div className="bg-surface rounded-lg p-4 space-y-4">
               <div className="text-center">
                 <QRCodeSVG
                   value={item.haupt_qr_code}
@@ -551,43 +551,43 @@ export default function ItemDetailPage() {
                   displayValue={true}
                 />
               </div>
-              <p className="text-xs text-gray-500 text-center font-mono">{item.haupt_qr_code}</p>
+              <p className="text-xs text-fg-subtle text-center font-mono">{item.haupt_qr_code}</p>
             </div>
           )}
 
           {/* Status */}
           {!isNew && item && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-              <h3 className="text-lg font-medium text-white mb-4">Status</h3>
+            <div className="border-t border-line-subtle pt-6">
+              <h3 className="text-lg font-medium text-fg mb-4">Status</h3>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Status</span>
+                  <span className="text-fg-muted">Status</span>
                   <span className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${STATUS_FARBEN[item.status] || 'bg-gray-500'}`} />
+                    <span className={`w-2 h-2 rounded-full ${STATUS_FARBEN[item.status] || 'bg-fg-subtle'}`} />
                     {item.status_display || STATUS_LABELS[item.status] || item.status}
                   </span>
                 </div>
                 {item.menge_gesamt > 1 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Menge</span>
-                    <span className="text-white font-semibold text-lg tabular-nums">
-                      <span className="text-green-400">{item.menge_verfuegbar ?? '?'}</span>
-                      <span className="text-gray-500 mx-1">/</span>
+                    <span className="text-fg-muted">Menge</span>
+                    <span className="text-fg font-semibold text-lg tabular-nums">
+                      <span className="text-ok">{item.menge_verfuegbar ?? '?'}</span>
+                      <span className="text-fg-subtle mx-1">/</span>
                       <span>{item.menge_gesamt}</span>
-                      <span className="text-sm text-gray-400 ml-1 font-normal">verfügbar</span>
+                      <span className="text-sm text-fg-muted ml-1 font-normal">verfügbar</span>
                     </span>
                   </div>
                 )}
                 {item.kategorie_name && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Kategorie</span>
-                    <span className="text-white">{item.kategorie_name}</span>
+                    <span className="text-fg-muted">Kategorie</span>
+                    <span className="text-fg">{item.kategorie_name}</span>
                   </div>
                 )}
                 {item.standort_name && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Standort</span>
-                    <span className="text-white flex items-center gap-1">
+                    <span className="text-fg-muted">Standort</span>
+                    <span className="text-fg flex items-center gap-1">
                       <MapPin className="w-4 h-4" />
                       {item.standort_name}
                     </span>
@@ -595,8 +595,8 @@ export default function ItemDetailPage() {
                 )}
                 {item.hersteller_name && (
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-400">Hersteller</span>
-                    <span className="text-white flex items-center gap-1">
+                    <span className="text-fg-muted">Hersteller</span>
+                    <span className="text-fg flex items-center gap-1">
                       <Building className="w-4 h-4" />
                       {item.hersteller_name}
                     </span>
@@ -610,7 +610,7 @@ export default function ItemDetailPage() {
           {!isNew && item && item.status === 'verfuegbar' && (
             <Link
               to={`/ausleihen?item=${item.id}`}
-              className="block w-full py-3 bg-accent hover:bg-accent-hover text-white font-semibold rounded-xl text-center"
+              className="block w-full py-3 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md text-center"
             >
               Ausleihen
             </Link>
@@ -620,14 +620,14 @@ export default function ItemDetailPage() {
 
       {/* Item-Bilder Upload */}
       {!isNew && item && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div className="border-t border-line-subtle pt-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-medium text-white flex items-center gap-2">
-              <ImageIcon className="w-5 h-5 text-gray-400" />
+            <h3 className="text-lg font-medium text-fg flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-fg-muted" />
               Bilder
             </h3>
             <div className="flex items-center gap-2">
-              <label className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg cursor-pointer">
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-md cursor-pointer">
                 {bilderUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 <span className="hidden sm:inline">Foto aufnehmen</span>
                 <span className="sm:hidden">Kamera</span>
@@ -641,7 +641,7 @@ export default function ItemDetailPage() {
                   className="hidden"
                 />
               </label>
-              <label className="flex items-center gap-2 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg cursor-pointer">
+              <label className="flex items-center gap-2 px-3 py-1.5 bg-raised hover:bg-hover text-fg text-sm rounded-md cursor-pointer">
                 <Upload className="w-4 h-4" />
                 <span className="hidden sm:inline">Hochladen</span>
                 <input
@@ -663,11 +663,11 @@ export default function ItemDetailPage() {
                   <img
                     src={bild.bild_url}
                     alt="Item Bild"
-                    className="w-full h-32 object-cover rounded-lg border border-gray-700"
+                    className="w-full h-32 object-cover rounded-lg"
                   />
                   <button
                     onClick={() => handleDeleteBild(bild.id)}
-                    className="absolute top-1 right-1 p-1 bg-red-600 hover:bg-red-700 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 p-1 bg-bad hover:opacity-90 text-white rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -675,44 +675,44 @@ export default function ItemDetailPage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-400 text-center py-6">Keine Bilder vorhanden</p>
+            <p className="text-fg-muted text-center py-6">Keine Bilder vorhanden</p>
           )}
         </div>
       )}
 
       {/* Zustandshistorie */}
       {!isNew && item && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="border-t border-line-subtle">
           <button
             onClick={handleToggleZustandslog}
-            className="w-full flex items-center justify-between p-6 text-left"
+            className="w-full flex items-center justify-between py-4 text-left"
           >
-            <h3 className="text-lg font-medium text-white flex items-center gap-2">
-              <History className="w-5 h-5 text-gray-400" />
+            <h3 className="text-lg font-medium text-fg flex items-center gap-2">
+              <History className="w-5 h-5 text-fg-muted" />
               Zustandshistorie
             </h3>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${zustandslogOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-4 h-4 text-fg-muted transition-transform ${zustandslogOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {zustandslogOpen && (
-            <div className="px-6 pb-6">
+            <div className="pb-6">
               {zustandslogLoading ? (
                 <div className="flex justify-center py-6">
-                  <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
+                  <Loader2 className="w-6 h-6 text-fg-subtle animate-spin" />
                 </div>
               ) : zustandslog.length === 0 ? (
-                <p className="text-gray-400 text-center py-4">Keine Einträge vorhanden</p>
+                <p className="text-fg-muted text-center py-4">Keine Einträge vorhanden</p>
               ) : (
                 <div className="relative ml-4">
                   {/* Vertical line */}
-                  <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gray-700" />
+                  <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-hover" />
 
                   <div className="space-y-4">
                     {zustandslog.map((entry, idx) => {
                       const dotColor =
-                        entry.typ === 'rueckgabe' ? 'bg-green-500' :
-                        entry.typ === 'ausleihe' ? 'bg-blue-500' :
-                        'bg-gray-500';
+                        entry.typ === 'rueckgabe' ? 'bg-ok' :
+                        entry.typ === 'ausleihe' ? 'bg-info' :
+                        'bg-fg-subtle';
                       const typLabel =
                         entry.typ === 'rueckgabe' ? 'Rückgabe' :
                         entry.typ === 'ausleihe' ? 'Ausleihe' :
@@ -721,34 +721,34 @@ export default function ItemDetailPage() {
                       return (
                         <div key={idx} className="relative flex items-start gap-4 pl-6">
                           {/* Dot */}
-                          <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-gray-900 ${dotColor}`} />
+                          <div className={`absolute left-0 top-1.5 w-4 h-4 rounded-full border-2 border-canvas ${dotColor}`} />
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-medium text-white">{typLabel}</span>
+                              <span className="text-sm font-medium text-fg">{typLabel}</span>
                               {entry.zustand_vorher && entry.zustand_nachher && (
-                                <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                                <span className="inline-flex items-center gap-1 text-xs text-fg-muted">
                                   {entry.zustand_vorher}
-                                  <ArrowRight className="w-3 h-3 text-gray-600" />
+                                  <ArrowRight className="w-3 h-3 text-fg-subtle" />
                                   {entry.zustand_nachher}
                                 </span>
                               )}
                             </div>
                             <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs text-gray-500 tabular-nums">
+                              <span className="text-xs text-fg-subtle tabular-nums">
                                 {new Date(entry.erstellt_am || entry.datum).toLocaleDateString('de-DE', {
                                   day: '2-digit', month: '2-digit', year: 'numeric',
                                   hour: '2-digit', minute: '2-digit',
                                 })}
                               </span>
                               {entry.benutzer_name && (
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-fg-subtle">
                                   · {entry.benutzer_name}
                                 </span>
                               )}
                             </div>
                             {entry.bemerkung && (
-                              <p className="text-sm text-gray-400 mt-1">{entry.bemerkung}</p>
+                              <p className="text-sm text-fg-muted mt-1">{entry.bemerkung}</p>
                             )}
                           </div>
                         </div>
@@ -764,32 +764,32 @@ export default function ItemDetailPage() {
 
       {/* Verfügbarkeit (30 Tage) */}
       {!isNew && item && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-          <h3 className="text-lg font-medium text-white mb-4">Verfügbarkeit (30 Tage)</h3>
+        <div className="border-t border-line-subtle pt-6">
+          <h3 className="text-lg font-medium text-fg mb-4">Verfügbarkeit (30 Tage)</h3>
 
           {verfuegbarkeitLoading ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="w-6 h-6 text-gray-500 animate-spin" />
+              <Loader2 className="w-6 h-6 text-fg-subtle animate-spin" />
             </div>
           ) : verfuegbarkeit.length === 0 ? (
-            <div className="flex items-center gap-2 text-gray-400 py-4 justify-center">
+            <div className="flex items-center gap-2 text-fg-muted py-4 justify-center">
               <AlertCircle className="w-4 h-4" />
               <span>Keine Verfügbarkeitsdaten vorhanden</span>
             </div>
           ) : (
             <div>
               {/* Legend */}
-              <div className="flex items-center gap-4 mb-3 text-xs text-gray-400">
+              <div className="flex items-center gap-4 mb-3 text-xs text-fg-muted">
                 <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-sm bg-green-500 inline-block" />
+                  <span className="w-3 h-3 rounded-sm bg-ok inline-block" />
                   Verfügbar
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-sm bg-blue-500 inline-block" />
+                  <span className="w-3 h-3 rounded-sm bg-info inline-block" />
                   Ausgeliehen
                 </span>
                 <span className="flex items-center gap-1">
-                  <span className="w-3 h-3 rounded-sm bg-yellow-500 inline-block" />
+                  <span className="w-3 h-3 rounded-sm bg-warn inline-block" />
                   Reserviert
                 </span>
               </div>
@@ -798,9 +798,9 @@ export default function ItemDetailPage() {
               <div className="flex gap-0.5 rounded-lg overflow-hidden">
                 {verfuegbarkeit.map((tag, idx) => {
                   const farbe =
-                    tag.status === 'ausgeliehen' ? 'bg-blue-500' :
-                    tag.status === 'reserviert' ? 'bg-yellow-500' :
-                    'bg-green-500';
+                    tag.status === 'ausgeliehen' ? 'bg-info' :
+                    tag.status === 'reserviert' ? 'bg-warn' :
+                    'bg-ok';
                   const datum = new Date(tag.datum);
                   const label = datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
 
@@ -812,7 +812,7 @@ export default function ItemDetailPage() {
                       <div className={`h-8 ${farbe} hover:opacity-80 transition-opacity`} />
                       {/* Tooltip */}
                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block z-10">
-                        <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap border border-gray-700">
+                        <div className="bg-overlay text-fg text-xs rounded-sm px-2 py-1 whitespace-nowrap border border-line shadow-overlay">
                           {label} - {tag.status === 'ausgeliehen' ? 'Ausgeliehen' : tag.status === 'reserviert' ? 'Reserviert' : 'Verfügbar'}
                         </div>
                       </div>
@@ -829,7 +829,7 @@ export default function ItemDetailPage() {
                   return (
                     <div key={idx} className="flex-1 text-center">
                       {showLabel && (
-                        <span className="text-[10px] text-gray-500 tabular-nums">
+                        <span className="text-[10px] text-fg-subtle tabular-nums">
                           {datum.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
                         </span>
                       )}
@@ -845,34 +845,34 @@ export default function ItemDetailPage() {
       {/* QR-Code Modal */}
       {showQrModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md p-6">
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-md p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">QR-Code hinzufügen</h2>
-              <button onClick={() => setShowQrModal(false)} className="text-gray-400 hover:text-white">
+              <h2 className="text-lg font-semibold text-fg">QR-Code hinzufügen</h2>
+              <button onClick={() => setShowQrModal(false)} className="text-fg-muted hover:text-fg">
                 <X className="w-5 h-5" />
               </button>
             </div>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">QR-Code *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">QR-Code *</label>
                 <input
                   type="text"
                   value={newQrCode}
                   onChange={(e) => setNewQrCode(e.target.value)}
                   placeholder="Code eingeben oder scannen..."
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Bezeichnung (optional)</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Bezeichnung (optional)</label>
                 <input
                   type="text"
                   value={newQrBezeichnung}
                   onChange={(e) => setNewQrBezeichnung(e.target.value)}
                   placeholder="z.B. Hauptaufkleber, Ersatz..."
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                 />
               </div>
             </div>
@@ -880,14 +880,14 @@ export default function ItemDetailPage() {
             <div className="flex gap-2 mt-6">
               <button
                 onClick={() => setShowQrModal(false)}
-                className="flex-1 py-2 text-gray-400 hover:text-white"
+                className="flex-1 py-2 text-fg-muted hover:text-fg"
               >
                 Abbrechen
               </button>
               <button
                 onClick={handleAddQrCode}
                 disabled={!newQrCode}
-                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg"
+                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-md"
               >
                 Hinzufügen
               </button>

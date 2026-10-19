@@ -212,7 +212,7 @@ export default function ItemSetsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-accent animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent-fg animate-spin" />
       </div>
     );
   }
@@ -234,7 +234,7 @@ export default function ItemSetsPage() {
 
       {/* Sets Liste */}
       {sets.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           <EmptyState icon={Layers} title="Noch keine Item-Sets vorhanden"
             description="Vordefinierte Zusammenstellungen beschleunigen das Ausleihen."
             action={<Button variant="primary" size="sm" icon={Plus} onClick={openCreateModal}>Erstes Set erstellen</Button>} />
@@ -244,31 +244,30 @@ export default function ItemSetsPage() {
           {sets.map(set => (
             <div
               key={set.id}
-              className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
+              className="bg-surface rounded-lg p-4"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center"
-                    style={{ backgroundColor: set.farbe + '20' }}
+                    className="w-10 h-10 flex items-center justify-center"
                   >
                     <Layers className="w-5 h-5" style={{ color: set.farbe }} />
                   </div>
                   <div>
-                    <h3 className="font-medium text-white">{set.name}</h3>
-                    <p className="text-sm text-gray-400 tabular-nums">{set.anzahl_items} Items</p>
+                    <h3 className="font-medium text-fg">{set.name}</h3>
+                    <p className="text-sm text-fg-muted tabular-nums">{set.anzahl_items} Items</p>
                   </div>
                 </div>
                 <div className="flex gap-1">
                   <button
                     onClick={() => openEditModal(set)}
-                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+                    className="p-2 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(set.id)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded-lg"
+                    className="p-2 text-fg-muted hover:text-bad hover:bg-raised rounded-sm"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -276,19 +275,19 @@ export default function ItemSetsPage() {
               </div>
 
               {set.beschreibung && (
-                <p className="text-sm text-gray-500 mb-3">{set.beschreibung}</p>
+                <p className="text-sm text-fg-subtle mb-3">{set.beschreibung}</p>
               )}
 
               <div className="space-y-1">
                 {set.positionen.slice(0, 3).map(pos => (
                   <div key={pos.id} className="flex items-center gap-2 text-sm">
-                    <Package className="w-3 h-3 text-gray-500" />
-                    <span className="text-gray-400 tabular-nums">{pos.anzahl}x</span>
-                    <span className="text-gray-300 truncate">{pos.item_name}</span>
+                    <Package className="w-3 h-3 text-fg-subtle" />
+                    <span className="text-fg-muted tabular-nums">{pos.anzahl}x</span>
+                    <span className="text-fg-muted truncate">{pos.item_name}</span>
                   </div>
                 ))}
                 {set.positionen.length > 3 && (
-                  <p className="text-xs text-gray-500 mt-1 tabular-nums">
+                  <p className="text-xs text-fg-subtle mt-1 tabular-nums">
                     + {set.positionen.length - 3} weitere Items
                   </p>
                 )}
@@ -296,7 +295,7 @@ export default function ItemSetsPage() {
 
               <button
                 onClick={() => openAusleihenModal(set.id)}
-                className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                className="mt-4 w-full flex items-center justify-center gap-2 px-3 py-2 bg-raised hover:bg-hover text-fg text-sm font-semibold rounded-md transition-colors"
               >
                 <Package className="w-4 h-4" />
                 Set ausleihen
@@ -309,12 +308,12 @@ export default function ItemSetsPage() {
       {/* Ausleihen Modal */}
       {showAusleihenModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md">
-            <div className="border-b border-gray-800 p-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Set ausleihen</h2>
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-md">
+            <div className="border-b border-line-subtle p-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-fg">Set ausleihen</h2>
               <button
                 onClick={() => setShowAusleihenModal(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-fg-muted hover:text-fg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -322,60 +321,60 @@ export default function ItemSetsPage() {
 
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Ausleiher Name *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Ausleiher Name *</label>
                 <input
                   type="text"
                   value={ausleihenForm.ausleiher_name}
                   onChange={(e) => setAusleihenForm({ ...ausleihenForm, ausleiher_name: e.target.value })}
                   placeholder="Name des Ausleihers"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Organisation</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Organisation</label>
                 <input
                   type="text"
                   value={ausleihenForm.ausleiher_organisation}
                   onChange={(e) => setAusleihenForm({ ...ausleihenForm, ausleiher_organisation: e.target.value })}
                   placeholder="Organisation / Firma"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Zweck</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Zweck</label>
                 <input
                   type="text"
                   value={ausleihenForm.zweck}
                   onChange={(e) => setAusleihenForm({ ...ausleihenForm, zweck: e.target.value })}
                   placeholder="Verwendungszweck"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Frist *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Frist *</label>
                 <input
                   type="date"
                   value={ausleihenForm.frist}
                   onChange={(e) => setAusleihenForm({ ...ausleihenForm, frist: e.target.value })}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                 />
               </div>
             </div>
 
-            <div className="border-t border-gray-800 p-4 flex justify-end gap-2">
+            <div className="border-t border-line-subtle p-4 flex justify-end gap-2">
               <button
                 onClick={() => setShowAusleihenModal(false)}
-                className="px-4 py-2 text-gray-400 hover:text-white"
+                className="px-4 py-2 text-fg-muted hover:text-fg"
               >
                 Abbrechen
               </button>
               <button
                 onClick={handleAusleihen}
                 disabled={ausleihenSaving || !ausleihenForm.ausleiher_name || !ausleihenForm.frist}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-semibold rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-md"
               >
                 {ausleihenSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
                 Ausleihen
@@ -388,14 +387,14 @@ export default function ItemSetsPage() {
       {/* Create/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gray-900 border-b border-gray-800 p-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-overlay border-b border-line-subtle p-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-fg">
                 {editingSet ? 'Set bearbeiten' : 'Neues Set erstellen'}
               </h2>
               <button
                 onClick={() => setShowModal(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-fg-muted hover:text-fg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -405,23 +404,23 @@ export default function ItemSetsPage() {
               {/* Name & Farbe */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Name *</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="z.B. PA-Set Klein"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Farbe</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Farbe</label>
                   <div className="flex gap-2 flex-wrap">
                     {FARBEN.map(farbe => (
                       <button
                         key={farbe}
                         onClick={() => setFormData({ ...formData, farbe })}
-                        className={`w-8 h-8 rounded-lg ${formData.farbe === farbe ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-900' : ''}`}
+                        className={`w-8 h-8 rounded-md ${formData.farbe === farbe ? 'ring-2 ring-fg ring-offset-2 ring-offset-overlay' : ''}`}
                         style={{ backgroundColor: farbe }}
                       />
                     ))}
@@ -430,44 +429,44 @@ export default function ItemSetsPage() {
               </div>
 
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Beschreibung</label>
                 <textarea
                   value={formData.beschreibung}
                   onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
                   rows={2}
                   placeholder="Optionale Beschreibung..."
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
                 />
               </div>
 
               {/* Items hinzufügen */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Items hinzufügen *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-2">Items hinzufügen *</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
                   <input
                     type="text"
                     value={itemSearch}
                     onChange={(e) => setItemSearch(e.target.value)}
                     placeholder="Item suchen..."
-                    className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                   {itemSearch && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg max-h-48 overflow-y-auto z-10">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-overlay border border-line rounded-md shadow-overlay max-h-48 overflow-y-auto z-10">
                       {filteredItems.slice(0, 10).map(item => (
                         <button
                           key={item.id}
                           onClick={() => addItem(item)}
-                          className="w-full text-left px-3 py-2 hover:bg-gray-700 text-white"
+                          className="w-full text-left px-3 py-2 hover:bg-hover text-fg"
                         >
                           <span className="font-medium">{item.name}</span>
                           {item.hersteller_name && (
-                            <span className="text-sm text-gray-400 ml-2">{item.hersteller_name}</span>
+                            <span className="text-sm text-fg-muted ml-2">{item.hersteller_name}</span>
                           )}
                         </button>
                       ))}
                       {filteredItems.length === 0 && (
-                        <p className="px-3 py-2 text-gray-400">Keine Items gefunden</p>
+                        <p className="px-3 py-2 text-fg-muted">Keine Items gefunden</p>
                       )}
                     </div>
                   )}
@@ -477,21 +476,21 @@ export default function ItemSetsPage() {
               {/* Ausgewählte Items */}
               {selectedItems.length > 0 && (
                 <div className="space-y-2">
-                  <label className="block text-sm text-gray-400">Enthaltene Items (<span className="tabular-nums">{selectedItems.length}</span>)</label>
+                  <label className="block text-sm font-medium text-fg-muted">Enthaltene Items (<span className="tabular-nums">{selectedItems.length}</span>)</label>
                   {selectedItems.map(si => (
-                    <div key={si.item_id} className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+                    <div key={si.item_id} className="flex items-center gap-3 p-3 bg-raised rounded-md">
                       <input
                         type="number"
                         value={si.anzahl}
                         onChange={(e) => updateItemAnzahl(si.item_id, e.target.value)}
                         min="1"
-                        className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-center tabular-nums"
+                        className="w-16 px-2 py-1 bg-raised border border-line rounded-md text-fg focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-center tabular-nums"
                       />
-                      <span className="text-gray-400">×</span>
-                      <span className="flex-1 font-medium text-white">{si.item_name}</span>
+                      <span className="text-fg-muted">×</span>
+                      <span className="flex-1 font-medium text-fg">{si.item_name}</span>
                       <button
                         onClick={() => removeItem(si.item_id)}
-                        className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-900/20 rounded"
+                        className="p-1.5 text-fg-muted hover:text-bad hover:bg-raised rounded-sm"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -501,7 +500,7 @@ export default function ItemSetsPage() {
               )}
             </div>
 
-            <div className="sticky bottom-0 bg-gray-900 border-t border-gray-800 p-4 flex justify-end gap-2">
+            <div className="sticky bottom-0 bg-overlay border-t border-line-subtle p-4 flex justify-end gap-2">
               <Button variant="ghost" onClick={() => setShowModal(false)}>Abbrechen</Button>
               <Button variant="primary" onClick={handleSave}
                 disabled={saving || !formData.name || selectedItems.length === 0}>
