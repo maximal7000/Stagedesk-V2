@@ -67,6 +67,23 @@ body {
   min-height: 100vh;
 }
 
+/* Browser-Flächen aus der Palette statt Browser-Defaults:
+   Auswahl, Caret, Checkbox/Radio/Range, Scrollbars, Tabellenziffern */
+:root {
+  accent-color: var(--color-accent);
+  scrollbar-color: var(--border-hover) transparent;
+}
+::selection {
+  background-color: rgb(218 31 61 / 0.35);
+  color: inherit;
+}
+input, textarea, [contenteditable] {
+  caret-color: var(--color-accent);
+}
+td, th {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Light Mode Overrides für bestimmte Komponenten */
 :root.light .bg-gray-900 {
   background-color: var(--bg-secondary) !important;

@@ -690,7 +690,7 @@ export default function HaushaltDetailPage() {
               <ExternalLink className="w-3 h-3 text-gray-500" /> Shop
             </a>
           ) : (
-            <span className="text-gray-600 text-sm">–</span>
+            <span className="text-gray-500 text-sm" aria-label="Kein Link">–</span>
           )}
         </td>
         <td className="p-2 text-right tabular-nums text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
@@ -811,7 +811,7 @@ export default function HaushaltDetailPage() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-800 text-left text-[11px] text-gray-500 uppercase tracking-[0.08em] font-semibold">
+            <tr className="border-b border-gray-800 text-left text-xs text-gray-400 font-medium">
               <th className="p-2 w-[32px]"></th>
               <th className="p-2 w-[110px]">Status</th>
               <th className="p-2 w-[48px]"></th>
@@ -853,7 +853,6 @@ export default function HaushaltDetailPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Haushalt</p>
           <div className="flex items-center gap-2">
             <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{haushalt.name}</h1>
             <button
@@ -939,7 +938,7 @@ export default function HaushaltDetailPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input type="text" placeholder="Artikel suchen…" value={search}
+          <input type="text" placeholder="Artikel suchen…" aria-label="Artikel suchen" value={search}
             data-shortcut="search"
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
@@ -983,7 +982,7 @@ export default function HaushaltDetailPage() {
       {/* Status-Summary (Budget-Aufteilung) */}
       {statusSummary && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
-          <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mb-2">Budget nach Status</div>
+          <div className="text-sm font-medium text-gray-300 mb-2">Budget nach Status</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {['konsumitiv', 'investiv'].map((kat) => {
               const sums = statusSummary[kat] || {};
@@ -1001,7 +1000,7 @@ export default function HaushaltDetailPage() {
                         </span>
                       );
                     })}
-                    {total === 0 && <span className="text-gray-600">Keine Ausgaben</span>}
+                    {total === 0 && <span className="text-gray-500">Keine Ausgaben</span>}
                   </div>
                 </div>
               );

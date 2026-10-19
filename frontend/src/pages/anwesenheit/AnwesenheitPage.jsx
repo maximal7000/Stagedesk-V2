@@ -52,8 +52,8 @@ function SectionHeader({ title, count, defaultOpen = true, children }) {
       <button onClick={() => setOpen(!open)} aria-expanded={open}
         className="group flex items-center gap-2 w-full py-2 text-left rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
         <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-90' : ''}`} />
-        <span className="font-semibold text-gray-400 group-hover:text-gray-200 text-[11px] uppercase tracking-[0.14em]">{title}</span>
-        <span className="text-xs text-gray-600 tabular-nums">{count}</span>
+        <span className="font-semibold text-gray-300 group-hover:text-white text-sm">{title}</span>
+        <span className="text-xs text-gray-500 tabular-nums">{count}</span>
         <span className="flex-1 h-px bg-gray-800 ml-2" aria-hidden="true" />
       </button>
       {open && <div className="space-y-2 pt-1 pb-4">{children}</div>}
@@ -445,7 +445,6 @@ export default function AnwesenheitPage() {
           <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" title="Zurück" className="mt-1"
             onClick={() => navigate('/anwesenheit')} />
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Anwesenheitsliste</p>
             <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{detailListe.titel}</h1>
             <div className="flex items-center gap-3 text-sm text-gray-400 mt-2 flex-wrap">
               {detailListe.ort && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {detailListe.ort}</span>}
@@ -511,7 +510,7 @@ export default function AnwesenheitPage() {
             {termine.map(t => (
               <button key={t.id} onClick={() => setActiveTerminId(t.id)}
                 className={`shrink-0 px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  activeTerminId === t.id ? 'border-accent text-white' : t.ist_vergangen ? 'border-transparent text-gray-600 hover:text-gray-300' : 'border-transparent text-gray-400 hover:text-white'
+                  activeTerminId === t.id ? 'border-accent text-white' : t.ist_vergangen ? 'border-transparent text-gray-500 hover:text-gray-300' : 'border-transparent text-gray-400 hover:text-white'
                 }`}>
                 <Calendar className="w-3.5 h-3.5 opacity-70" />
                 {t.titel || new Date(t.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
@@ -595,9 +594,9 @@ export default function AnwesenheitPage() {
                     <div className="relative flex-1 min-w-[180px] max-w-xs">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input type="text" value={teilnehmerSearch} onChange={e => setTeilnehmerSearch(e.target.value)}
-                        placeholder="Name oder E-Mail" className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                        placeholder="Name oder E-Mail" aria-label="Teilnehmer suchen" className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                     </div>
-                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+                    <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Nach Status filtern"
                       className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-accent">
                       <option value="">Alle Status</option>
                       {Object.entries(STATUS_LABELS).map(([k, v]) => (
@@ -621,7 +620,7 @@ export default function AnwesenheitPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-800 text-[11px] uppercase tracking-[0.08em]">
+                      <tr className="border-b border-gray-800 text-xs">
                         {/* Batch-Checkbox */}
                         {isAktiv && hasPermission('anwesenheit.edit') && (
                           <th className="w-10 p-3">
@@ -644,7 +643,7 @@ export default function AnwesenheitPage() {
                                   {t.titel || new Date(t.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
                                 </div>
                                 {t.beginn && <div className="text-xs opacity-60">{t.beginn.slice(0, 5)}</div>}
-                                <div className="flex justify-center items-center gap-1 mt-1 normal-case tracking-normal">
+                                <div className="flex justify-center items-center gap-1 mt-1">
                                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title={`${ts.anwesend} anwesend`} />
                                   <span className="text-[10px] text-gray-400 tabular-nums">{ts.quote}%</span>
                                   {t.ist_vergangen && <span className="text-[10px] text-gray-500">· vorbei</span>}
@@ -709,7 +708,7 @@ export default function AnwesenheitPage() {
                                           setShowNotesModal(true);
                                         }}
                                           title={hasNote ? ta.notizen : 'Notiz hinzufügen'}
-                                          className={`flex items-center gap-0.5 text-[10px] px-1 py-0.5 rounded hover:bg-gray-700 ${
+                                          className={`flex items-center gap-0.5 text-[11px] px-1.5 py-1 rounded-md hover:bg-gray-700 ${
                                             hasNote ? 'text-amber-300' : 'text-gray-600 hover:text-gray-400'
                                           }`}>
                                           <MessageSquare className="w-3 h-3" />
@@ -748,7 +747,7 @@ export default function AnwesenheitPage() {
                                           setNoteForm({ status: s, notizen: ta?.notizen || '' });
                                           setShowNotesModal(true);
                                         }}
-                                          className={`p-1 rounded hover:bg-gray-700 ${hasNote ? 'text-amber-300' : 'text-gray-600 hover:text-gray-400'}`}
+                                          className={`p-1.5 rounded-md hover:bg-gray-700 ${hasNote ? 'text-amber-300' : 'text-gray-600 hover:text-gray-400'}`}
                                           title={hasNote ? ta.notizen : 'Notiz hinzufügen'}>
                                           <MessageSquare className="w-3.5 h-3.5" />
                                         </button>
@@ -941,7 +940,7 @@ export default function AnwesenheitPage() {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input type="text" value={benutzerSearch} onChange={e => setBenutzerSearch(e.target.value)}
-                    placeholder="Name oder E-Mail" className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                    placeholder="Name oder E-Mail" aria-label="Benutzer suchen" className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                 </div>
                 {selectedBenutzer.length > 0 && (
                   <div className="mt-2 text-sm text-gray-300 tabular-nums"><span className="text-white font-semibold">{selectedBenutzer.length}</span> ausgewählt</div>
@@ -1103,7 +1102,7 @@ export default function AnwesenheitPage() {
               {/* Pro Termin */}
               {stats.termine.length > 0 && (
                 <>
-                  <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500 mb-3">Pro Termin</h3>
+                  <h3 className="text-sm font-medium text-gray-300 mb-3">Pro Termin</h3>
                   <div className="space-y-2">
                     {stats.termine.map(t => {
                       const total = (t.anwesend || 0) + (t.teilweise || 0) + (t.abwesend || 0) + (t.krank || 0) + (t.ausstehend || 0);
@@ -1254,7 +1253,7 @@ export default function AnwesenheitPage() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Titel oder Ort" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+            placeholder="Titel oder Ort" aria-label="Listen suchen" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
       )}
 

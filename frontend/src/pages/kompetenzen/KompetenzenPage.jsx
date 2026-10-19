@@ -134,7 +134,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                 {Object.entries(gruppen).map(([gruppe, items]) => (
                   <div key={gruppe}>
                     {gruppe !== '_' && (
-                      <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mt-3 mb-1.5 pl-2.5">
+                      <div className="text-xs font-semibold text-gray-400 mt-3 mb-1 pl-2.5">
                         {gruppe}
                       </div>
                     )}
@@ -292,7 +292,6 @@ function Scoreboard({ data, currentKid }) {
         return (
           <div key={entry.user_keycloak_id}
                className={`relative flex items-center gap-4 px-4 py-3 ${isMe ? 'bg-accent/[0.06]' : ''}`}>
-            {isMe && <span className="absolute left-0 inset-y-0 w-0.5 bg-accent" aria-hidden="true" />}
             <div className="w-8 flex justify-center font-display font-semibold text-lg text-gray-500 tabular-nums">
               {medal || entry.rang}
             </div>
@@ -599,7 +598,7 @@ function TabButton({ active, onClick, icon: Icon, children }) {
     <button
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
-      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset rounded-t-md ${
+      className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
         active
           ? 'border-accent text-white'
           : 'border-transparent text-gray-400 hover:text-white hover:border-gray-700'
@@ -659,6 +658,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Name oder E-Mail"
+            aria-label="Mitglieder suchen"
             className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </div>
@@ -724,7 +724,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                     <div className="text-[10px] text-gray-500 tabular-nums mt-1">{s.anzahl_aktiv}/{s.anzahl_gesamt} aktiv</div>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-600 shrink-0">–</div>
+                  <div className="text-xs text-gray-500 shrink-0" aria-label="Keine Daten">–</div>
                 )}
               </button>
             );

@@ -66,10 +66,10 @@ export default function AuditLogPage() {
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Name des Eintrags"
+            placeholder="Name des Eintrags" aria-label="Einträge suchen"
             className="w-full pl-9 pr-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
-        <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} aria-label="Nach Modul filtern"
           className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-accent">
           <option value="">Alle Module</option>
           {entityTypes.map((t) => <option key={t} value={t}>{ENTITY_LABELS[t] || t}</option>)}
@@ -86,7 +86,7 @@ export default function AuditLogPage() {
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="border-b border-gray-800 text-gray-500 text-[11px] font-semibold uppercase tracking-[0.08em]">
+            <thead className="border-b border-gray-800 text-gray-400 text-xs font-medium">
               <tr>
                 <th className="px-4 py-2 text-left">Aktion</th>
                 <th className="px-4 py-2 text-left">Modul</th>

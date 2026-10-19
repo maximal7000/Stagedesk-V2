@@ -73,8 +73,7 @@ export default function AufgabenMonitorPage() {
             <ListChecks className="w-8 h-8 text-accent" />
           </div>
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Technik-AG</p>
-            <h1 className="font-display text-5xl lg:text-6xl font-bold tracking-tight leading-none mt-1">Aufgaben</h1>
+            <h1 className="font-display text-5xl lg:text-6xl font-bold tracking-tight leading-none">Aufgaben</h1>
           </div>
           <div className="ml-4 pl-5 border-l border-white/10 self-stretch flex flex-col justify-center">
             <div className="text-4xl font-bold tabular-nums leading-none">{offen}</div>
@@ -103,10 +102,10 @@ export default function AufgabenMonitorPage() {
             const done = a.status === 'abgeschlossen';
             return (
               <li key={a.id}
-                  className={`flex items-start gap-4 p-5 rounded-xl border border-l-4 ${
+                  className={`flex items-start gap-4 p-5 rounded-xl border ${
                     done
-                      ? 'bg-white/[0.02] border-white/5 border-l-white/10 opacity-50'
-                      : 'bg-white/[0.04] border-white/10 border-l-accent'
+                      ? 'bg-white/[0.02] border-white/5 opacity-50'
+                      : 'bg-white/[0.05] border-white/10'
                   }`}>
                 {done
                   ? <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0 mt-0.5" />

@@ -1108,7 +1108,6 @@ export default function MonitorAdminPage() {
       {/* ═══ Seitenleiste (Desktop) ═══ */}
       <aside className="hidden md:flex flex-col gap-1 w-52 shrink-0 sticky top-4 self-start">
         <div className="px-3 pt-2 pb-3 mb-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">Admin</p>
           <p className="font-display text-xl font-bold tracking-tight text-white leading-tight">Monitor</p>
         </div>
         {areaNav.map(a => {
@@ -1133,7 +1132,7 @@ export default function MonitorAdminPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Monitor</p>
+              <p className="text-sm text-gray-400 mb-1 md:hidden">Monitor</p>
               <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white">{areaNav.find(a => a.id === activeArea)?.label}</h1>
               {activeArea === 'ansichten' && hasChanges ? (
                 <p className="text-xs text-amber-400 flex items-center gap-1 mt-1.5">
@@ -1567,7 +1566,7 @@ export default function MonitorAdminPage() {
           {/* ═══ Ansichten-Tabs ═══ */}
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Ansichten</span>
+              <span className="text-xs text-gray-400 font-semibold">Ansichten</span>
               <div className="flex items-center gap-1.5">
                 <button onClick={() => setShowPreview(!showPreview)}
                   className={`p-1.5 rounded-lg transition-colors ${showPreview ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'}`}
@@ -2195,7 +2194,7 @@ export default function MonitorAdminPage() {
             <div className="flex items-center gap-3 p-3 bg-gray-800/40 rounded-lg border border-gray-800">
               <Monitor className="w-5 h-5 text-gray-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] uppercase tracking-wider text-gray-500">Monitor-URL für diese Ansicht</p>
+                <p className="text-xs text-gray-400">Monitor-URL für diese Ansicht</p>
                 <code className="text-gray-200 text-sm font-mono">{window.location.origin}/monitor?profil={monitorConfig.slug}</code>
               </div>
               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/monitor?profil=${monitorConfig.slug}`); toast.success('URL kopiert'); }}
@@ -2451,7 +2450,7 @@ export default function MonitorAdminPage() {
             {/* Categorized Widget Grid */}
             {cats.map(cat => (
               <div key={cat}>
-                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-2 font-semibold">{catLabels[cat]}</p>
+                <p className="text-xs text-gray-400 mb-2 font-semibold">{catLabels[cat]}</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mb-4">
                   {widgetDefs.filter(w => w.cat === cat).map(w => {
                     const WIcon = w.icon;
@@ -3133,7 +3132,7 @@ export default function MonitorAdminPage() {
                                 </label>
                               ))}
                             </div>
-                            <div className="text-[9px] text-gray-600 mt-1">Tipp: Hauptstation auf DB (Züge), Zusatz auf NAH.SH (Busse) → mit Bus/Zug-Trennung kombiniert.</div>
+                            <div className="text-[11px] text-gray-500 mt-1">Tipp: Hauptstation auf DB (Züge), Zusatz auf NAH.SH (Busse) → mit Bus/Zug-Trennung kombiniert.</div>
                           </>
                         )}
                       </div>
@@ -3517,7 +3516,7 @@ export default function MonitorAdminPage() {
                       }`}>{o.l}</button>
                   ))}
                 </div>
-                <p className="text-[10px] text-gray-600 mt-1">„Eigene Spalte" gibt Bild + Text deutlich mehr Platz; „Unten" ist der schmale Durchlauf-Streifen.</p>
+                <p className="text-[11px] text-gray-500 mt-1">„Eigene Spalte" gibt Bild + Text deutlich mehr Platz; „Unten" ist der schmale Durchlauf-Streifen.</p>
               </div>
 
               {/* Live-Liste aller Meldungen mit Volltext */}
@@ -3526,7 +3525,7 @@ export default function MonitorAdminPage() {
                   <div className="text-xs text-gray-400">
                     Aktuelle Meldungen
                     {stoerungenListe.length > 0 && (
-                      <span className="text-gray-600"> · {stoerungenListe.length} gesamt · {(monitorConfig.oepnv_stoerung_ausgeblendet || []).length} ausgeblendet</span>
+                      <span className="text-gray-500"> · {stoerungenListe.length} gesamt · {(monitorConfig.oepnv_stoerung_ausgeblendet || []).length} ausgeblendet</span>
                     )}
                   </div>
                   <button onClick={fetchStoerungen} disabled={stoerungenLoading}
@@ -3535,7 +3534,7 @@ export default function MonitorAdminPage() {
                   </button>
                 </div>
                 {stoerungenListe.length === 0 ? (
-                  <div className="p-6 text-center border border-gray-800 rounded-xl text-gray-600">
+                  <div className="p-6 text-center border border-gray-800 rounded-xl text-gray-500">
                     <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-20" />
                     <p className="text-xs">Auf „Laden" klicken, um alle aktuellen Störungen zu sehen.<br />Ausgeblendete verschwinden vom Monitor und werden automatisch entfernt, sobald der Anbieter die Meldung löscht.</p>
                   </div>
@@ -3548,7 +3547,7 @@ export default function MonitorAdminPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-1.5 flex-wrap mb-1">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${s.typ === 'bauarbeiten' ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>{s.typ === 'bauarbeiten' ? 'Baumaßnahme' : 'Störung'}</span>
-                              <span className="text-[10px] text-gray-500 uppercase">{s.quelle}</span>
+                              <span className="text-[11px] text-gray-500">{s.quelle}</span>
                               {(s.linien || []).slice(0, 8).map((l, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 bg-white/10 text-white/70 rounded font-medium">{l}</span>)}
                               {s.hat_bild && <span className="inline-flex items-center gap-1 text-[10px] text-gray-500" title="mit Bild"><ImageIcon className="w-3 h-3" /> Bild</span>}
                             </div>
@@ -3566,7 +3565,7 @@ export default function MonitorAdminPage() {
                   </div>
                 )}
                 {(monitorConfig.oepnv_stoerung_ausgeblendet || []).length > 0 && (
-                  <p className="text-[10px] text-gray-600 mt-2">Änderungen werden mit „Speichern" (oben) übernommen.</p>
+                  <p className="text-[11px] text-gray-500 mt-2">Änderungen werden mit „Speichern" (oben) übernommen.</p>
                 )}
               </div>
             </div>
@@ -3753,7 +3752,7 @@ function ZeitplanTimeline({ zeitplan, profiles }) {
           </div>
         ))}
       </div>
-      <div className="flex justify-between text-[9px] text-gray-600 mt-1"><span>{START}:00</span><span>{END}:00 Uhr</span></div>
+      <div className="flex justify-between text-[10px] text-gray-500 mt-1"><span>{START}:00</span><span>{END}:00 Uhr</span></div>
     </div>
   );
 }
@@ -4192,7 +4191,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-gray-500">Vorlage:</span>
-        {vorlagen.length === 0 && <span className="text-[11px] text-gray-600">noch keine</span>}
+        {vorlagen.length === 0 && <span className="text-[11px] text-gray-500">noch keine</span>}
         {vorlagen.map(v => (
           <button key={v.id} onClick={() => onApply(v)}
             className="px-2.5 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700">
@@ -4320,7 +4319,7 @@ function WebUntisLinkManager({ links, canEdit, onSave, onDelete }) {
             <div className="flex-1 min-w-0">
               <div className="font-medium text-white text-sm">{l.name}</div>
               <div className="text-xs text-gray-500 truncate">{l.url}</div>
-              {l.notiz && <div className="text-xs text-gray-600 mt-0.5">{l.notiz}</div>}
+              {l.notiz && <div className="text-xs text-gray-500 mt-0.5">{l.notiz}</div>}
             </div>
             {canEdit && (
               <div className="flex items-center gap-1 ml-3 shrink-0">

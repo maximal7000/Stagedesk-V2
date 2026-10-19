@@ -127,7 +127,7 @@ export default function SystemAdminPage() {
             return (
               <div key={k} className="mb-4 last:mb-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">{k === 'daily' ? 'Täglich' : 'Wöchentlich'}</span>
+                  <span className="text-xs font-semibold text-gray-400">{k === 'daily' ? 'Täglich' : 'Wöchentlich'}</span>
                   <span className="text-xs text-gray-500 tabular-nums">{list.length} Dateien</span>
                 </div>
                 {newest ? (
@@ -159,7 +159,7 @@ export default function SystemAdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-800 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-[0.08em]">
+                  <tr className="border-b border-gray-800 text-left text-xs font-medium text-gray-400">
                     <th className="p-2">Benutzer</th>
                     <th className="p-2">Gerät</th>
                     <th className="p-2">IP</th>

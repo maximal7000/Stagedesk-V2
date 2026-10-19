@@ -117,7 +117,6 @@ export default function SettingsPage() {
           </button>
         )}
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Konto</p>
           <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">
             <span className="md:hidden">{mobileDetail ? activeTabName : 'Einstellungen'}</span>
             <span className="hidden md:inline">Einstellungen</span>

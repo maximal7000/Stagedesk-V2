@@ -204,7 +204,7 @@ export default function AdminPage() {
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                 aria-current={activeTab === tab.id ? 'page' : undefined}
-                className={`flex items-center gap-2 px-4 py-3 -mb-px text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset rounded-t-md ${
+                className={`flex items-center gap-2 px-4 py-3 -mb-px text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
                   activeTab === tab.id ? 'border-accent text-white' : 'border-transparent text-gray-400 hover:text-white hover:border-gray-700'
                 }`}>
                 <Icon className="w-4 h-4" />
@@ -467,7 +467,7 @@ export default function AdminPage() {
               {Object.entries(permsByCategory).map(([category, perms]) => (
                 <div key={category}>
                   <div className="px-4 py-1.5 bg-gray-950/40">
-                    <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.14em]">{category}</span>
+                    <span className="text-xs font-semibold text-gray-400 capitalize">{category}</span>
                   </div>
                   {perms.map((perm) => (
                     <div key={perm.id} className="group px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-gray-800/30">
@@ -531,7 +531,7 @@ export default function AdminPage() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">Berechtigungen <span className="text-gray-500 font-normal tabular-nums">{groupForm.permission_codes.length} gewählt</span></label>
                 {Object.entries(permsByCategory).map(([category, perms]) => (
                   <div key={category} className="mb-3">
-                    <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.14em] mb-1.5">{category}</div>
+                    <div className="text-xs font-semibold text-gray-400 capitalize mb-1.5">{category}</div>
                     <div className="flex flex-wrap gap-2">
                       {perms.map(perm => {
                         const isSelected = groupForm.permission_codes.includes(perm.code);
@@ -883,7 +883,7 @@ function SystemTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {['daily', 'weekly'].map((kind) => (
               <div key={kind}>
-                <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.14em] mb-1.5">{kind === 'daily' ? 'Täglich' : 'Wöchentlich'}</div>
+                <div className="text-xs font-semibold text-gray-400 mb-1.5">{kind === 'daily' ? 'Täglich' : 'Wöchentlich'}</div>
                 {(backups[kind] || []).length === 0
                   ? <p className="text-sm text-gray-500">Keine Backups vorhanden.</p>
                   : (

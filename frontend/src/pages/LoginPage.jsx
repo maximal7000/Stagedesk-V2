@@ -73,21 +73,16 @@ export default function LoginPage() {
       <div className="relative z-10 max-w-md w-full">
         {/* Logo & Schriftzug */}
         <div className="text-center mb-10">
-          <p className="inline-flex items-center gap-2 mb-4 text-[11px] font-semibold tracking-[0.22em] uppercase text-white/55">
-            <span className="w-4 h-px bg-accent" aria-hidden="true" />
-            Technik-AG · Katharineum
-            <span className="w-4 h-px bg-accent" aria-hidden="true" />
-          </p>
           <h1 className="font-display text-6xl sm:text-7xl font-bold text-white tracking-tight leading-none">
             Stagedesk
           </h1>
-          <p className="mt-3 text-sm text-white/50">Veranstaltungen · Inventar · Anwesenheit</p>
+          <p className="mt-3 text-sm text-white/60">Technik-AG am Katharineum zu Lübeck</p>
         </div>
 
         <LoginBanner />
 
         {/* Anmelde-Karte */}
-        <div className="bg-gray-950/80 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-6 sm:p-7">
+        <div className="bg-gray-950 border border-white/10 rounded-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-6 sm:p-7">
           <button
             onClick={handleLogin}
             disabled={auth.isLoading}
@@ -123,7 +118,7 @@ export default function LoginPage() {
           )}
         </div>
 
-        <p className="mt-5 text-center text-xs text-white/40">
+        <p className="mt-5 text-center text-xs text-white/50">
           Anmeldung über den Keycloak-Login der Technik-AG
         </p>
       </div>

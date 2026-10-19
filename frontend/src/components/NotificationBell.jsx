@@ -132,7 +132,7 @@ export default function NotificationBell() {
                             {n.link && <ExternalLink className="w-3 h-3 text-gray-500 shrink-0" />}
                           </div>
                           {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
-                          <div className="text-[10px] text-gray-600 mt-1">{formatTime(n.created_at)}</div>
+                          <div className="text-[11px] text-gray-500 mt-1 tabular-nums">{formatTime(n.created_at)}</div>
                         </div>
                       </div>
                     </button>

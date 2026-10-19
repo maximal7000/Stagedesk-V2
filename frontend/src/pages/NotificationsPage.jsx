@@ -111,7 +111,6 @@ export default function NotificationsPage() {
           {items.map((n) => (
             <li key={n.id}
               className={`group relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/[0.04]'}`}>
-              {!n.is_read && <span className="absolute left-0 inset-y-0 w-0.5 bg-accent" aria-hidden="true" />}
               <span className="shrink-0 w-24 pt-0.5">
                 <StatusBadge tone={KIND_TONE[n.kind] || 'neutral'} label={KIND_LABEL[n.kind] || n.kind} />
               </span>
