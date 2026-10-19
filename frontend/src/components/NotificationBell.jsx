@@ -121,7 +121,7 @@ export default function NotificationBell() {
                 {items.map((n) => (
                   <li key={n.id}>
                     <button onClick={() => onItemClick(n)}
-                      className={`w-full text-left px-4 py-3 hover:bg-raised`}>
+                      className="w-full text-left px-4 py-3 hover:bg-hover">
                       <div className="flex items-start gap-2">
                         <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${KIND_DOT[n.kind] || 'bg-fg-subtle'}`} />
                         <div className="flex-1 min-w-0">

@@ -31,7 +31,7 @@ export default function ProtectedRoute({ children }) {
   if (auth.error) {
     return (
       <div className="min-h-screen bg-canvas flex items-center justify-center">
-        <div className="text-center max-w-md p-6 bg-surface rounded-lg border border-bad">
+        <div className="text-center max-w-md p-6 bg-surface rounded-lg">
           <h2 className="text-xl font-bold text-bad mb-2">Authentifizierungsfehler</h2>
           <p className="text-fg-muted mb-4">{auth.error.message}</p>
           <button

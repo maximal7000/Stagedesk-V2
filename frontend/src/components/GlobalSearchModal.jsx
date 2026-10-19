@@ -115,7 +115,7 @@ export default function GlobalSearchModal({ open, onClose }) {
           <Search className="w-5 h-5 text-fg-subtle" />
           <input ref={inputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Suchen: Veranstaltungen, Items, Anwesenheit, User..."
-            className="flex-1 bg-transparent text-fg outline-none placeholder:text-fg-subtle" />
+            className="flex-1 bg-transparent text-fg placeholder:text-fg-subtle" />
           {loading && <Loader2 className="w-4 h-4 animate-spin text-fg-subtle" />}
           <button onClick={onClose} className="text-fg-subtle hover:text-fg"><X className="w-4 h-4" /></button>
         </div>
@@ -209,11 +209,11 @@ function Group({ title, icon: Icon, children }) {
 
 function Row({ entry, onClick, onToggleFav, isFavorite }) {
   return (
-    <div className="w-full px-4 py-2 hover:bg-raised flex items-center justify-between gap-2 group">
+    <div className="w-full px-4 py-2 hover:bg-hover flex items-center justify-between gap-2 group">
       <button onClick={onClick} className="flex-1 text-left min-w-0">
         <div className="text-fg truncate">{entry.title}</div>
         <div className="text-xs text-fg-subtle truncate">
-          <span className="text-fg-subtle">{TYPE_LABEL[entry.type] || ''}</span>
+          <span>{TYPE_LABEL[entry.type] || ''}</span>
           {entry.sub && <span> · {entry.sub}</span>}
         </div>
       </button>

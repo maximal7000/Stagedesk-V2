@@ -47,7 +47,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-canvas flex items-center justify-center p-4">
       {/* ── Bühnen-Hintergrund ─────────────────────────────────── */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(58,50,44,0.5),transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--sd-raised)_50%,transparent),transparent_70%)] pointer-events-none" />
 
       {/* "Bühnenboden": dezenter Verlauf nach unten */}
       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-canvas via-canvas/80 to-transparent pointer-events-none" />
