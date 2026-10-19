@@ -20,7 +20,7 @@ import KompetenzHistorieGraph from './KompetenzHistorieGraph';
 
 // Farbstrich links am Kategorie-Kopf (Kategorie-Farbe aus dem Katalog)
 const KATEGORIE_STRICH = {
-  gray: 'bg-gray-500', yellow: 'bg-amber-500', blue: 'bg-blue-500',
+  gray: 'bg-[#6b7280]', yellow: 'bg-amber-500', blue: 'bg-blue-500',
   purple: 'bg-purple-500', green: 'bg-green-500',
 };
 
@@ -38,11 +38,11 @@ function ukStatus(uk) {
 function StatusBadge({ uk }) {
   const s = ukStatus(uk);
   const cfg = {
-    aktiv: { icon: CheckCircle2, cls: 'text-green-400', label: 'Aktiv' },
-    unbegrenzt: { icon: CheckCircle2, cls: 'text-green-400', label: 'Aktiv · läuft nicht ab' },
-    warnung: { icon: Clock, cls: 'text-amber-400', label: `Läuft in ${uk.tage_bis_ablauf} Tagen ab` },
-    abgelaufen: { icon: AlertTriangle, cls: 'text-red-400', label: 'Abgelaufen' },
-    fehlt: { icon: Circle, cls: 'text-gray-500', label: 'Nicht vorhanden' },
+    aktiv: { icon: CheckCircle2, cls: 'text-ok', label: 'Aktiv' },
+    unbegrenzt: { icon: CheckCircle2, cls: 'text-ok', label: 'Aktiv · läuft nicht ab' },
+    warnung: { icon: Clock, cls: 'text-warn', label: `Läuft in ${uk.tage_bis_ablauf} Tagen ab` },
+    abgelaufen: { icon: AlertTriangle, cls: 'text-bad', label: 'Abgelaufen' },
+    fehlt: { icon: Circle, cls: 'text-fg-subtle', label: 'Nicht vorhanden' },
   }[s];
   const Icon = cfg.icon;
   return (
@@ -61,7 +61,7 @@ function ProgressBar({ percent, color = 'blue' }) {
     purple: 'bg-purple-500',
   };
   return (
-    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+    <div className="h-1.5 bg-raised rounded-full overflow-hidden">
       <div className={`h-full ${colors[color] || colors.blue} transition-all`}
            style={{ width: `${Math.min(100, percent)}%` }} />
     </div>
@@ -110,22 +110,22 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
         const stats = katStats[kat];
         const isOpen = open[kat] !== false;
         return (
-          <div key={kat} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div key={kat} className="bg-surface rounded-lg overflow-hidden">
             <button
               onClick={() => toggle(kat)}
               aria-expanded={isOpen}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
+              className="w-full flex items-center justify-between p-4 hover:bg-raised transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className={`w-1 self-stretch rounded-full ${KATEGORIE_STRICH[farbe] || KATEGORIE_STRICH.blue}`} aria-hidden="true" />
-                {isOpen ? <ChevronDown className="w-4 h-4 shrink-0 text-gray-500" /> : <ChevronRight className="w-4 h-4 shrink-0 text-gray-500" />}
+                {isOpen ? <ChevronDown className="w-4 h-4 shrink-0 text-fg-subtle" /> : <ChevronRight className="w-4 h-4 shrink-0 text-fg-subtle" />}
                 <div className="text-left min-w-0">
-                  <div className="font-display text-lg font-semibold tracking-tight text-white truncate leading-tight">{kat}</div>
-                  <div className="text-xs text-gray-400 tabular-nums">{stats.aktiv} von {stats.gesamt} aktiv</div>
+                  <div className="font-display text-lg font-semibold tracking-tight text-fg truncate leading-tight">{kat}</div>
+                  <div className="text-xs text-fg-muted tabular-nums">{stats.aktiv} von {stats.gesamt} aktiv</div>
                 </div>
               </div>
               <div className="hidden sm:flex items-center gap-3 shrink-0">
-                <span className="text-sm font-semibold tabular-nums text-gray-300 w-10 text-right">{stats.prozent.toFixed(0)}%</span>
+                <span className="text-sm font-semibold tabular-nums text-fg-muted w-10 text-right">{stats.prozent.toFixed(0)}%</span>
                 <div className="w-28"><ProgressBar percent={stats.prozent} color={farbe} /></div>
               </div>
             </button>
@@ -134,7 +134,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                 {Object.entries(gruppen).map(([gruppe, items]) => (
                   <div key={gruppe}>
                     {gruppe !== '_' && (
-                      <div className="text-xs font-semibold text-gray-400 mt-3 mb-1 pl-2.5">
+                      <div className="text-xs font-semibold text-fg-muted mt-3 mb-1 pl-2.5">
                         {gruppe}
                       </div>
                     )}
@@ -143,7 +143,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                         const hatCustomStufen = uk.custom_ablauf_stufen && uk.custom_ablauf_stufen.length > 0;
                         return (
                           <div key={uk.kompetenz_id}
-                               className="rounded-lg hover:bg-gray-800/60 transition-colors">
+                               className="rounded-md hover:bg-raised transition-colors">
                             <div className="flex items-center justify-between gap-3 p-2.5">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 {showToggle ? (
@@ -156,14 +156,14 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                   />
                                 ) : (
                                   <div className="w-4 h-4 flex items-center justify-center shrink-0">
-                                    {uk.ist_aktiv ? <CheckCircle2 className="w-4 h-4 text-green-400" /> :
-                                     uk.ist_abgelaufen ? <AlertTriangle className="w-4 h-4 text-red-400" /> :
-                                     <Circle className="w-4 h-4 text-gray-600" />}
+                                    {uk.ist_aktiv ? <CheckCircle2 className="w-4 h-4 text-ok" /> :
+                                     uk.ist_abgelaufen ? <AlertTriangle className="w-4 h-4 text-bad" /> :
+                                     <Circle className="w-4 h-4 text-fg-subtle" />}
                                   </div>
                                 )}
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
-                                    <div className="text-sm text-white truncate">{uk.kompetenz_name}</div>
+                                    <div className="text-sm text-fg truncate">{uk.kompetenz_name}</div>
                                     {hatCustomStufen && (
                                       <span title="Individuelle Ablauf-Stufen aktiv" className="shrink-0">
                                         <UiBadge tone="warning" label="Individuell" />
@@ -179,13 +179,13 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                     onClick={() => setEditingStufen(editingStufen === uk.kompetenz_id ? null : uk.kompetenz_id)}
                                     title="Individuelle Ablauf-Stufen"
                                     aria-label="Individuelle Ablauf-Stufen bearbeiten"
-                                    className={`p-1.5 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                                      hatCustomStufen ? 'text-amber-400' : 'text-gray-500 hover:text-white'
+                                    className={`p-1.5 rounded-sm hover:bg-hover transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                                      hatCustomStufen ? 'text-warn' : 'text-fg-subtle hover:text-fg'
                                     }`}>
                                     <Clock className="w-3.5 h-3.5" />
                                   </button>
                                 )}
-                                <div className="text-xs text-gray-500 tabular-nums">
+                                <div className="text-xs text-fg-subtle tabular-nums">
                                   {uk.punkte} P
                                 </div>
                               </div>
@@ -231,26 +231,26 @@ function StufenEditor({ uk, onSave, onClose }) {
   const istUnbegrenzt = hatCustom && uk.custom_ablauf_stufen.every(n => n === 0);
 
   return (
-    <div className="px-3 pb-3 pt-2 border-t border-gray-700/40 text-xs">
-      <div className="text-gray-400 mb-2">
-        Effektiv: <span className="text-gray-300 tabular-nums">
+    <div className="px-3 pb-3 pt-2 border-t border-line-subtle text-xs">
+      <div className="text-fg-muted mb-2">
+        Effektiv: <span className="text-fg tabular-nums">
           {effektiv.length && effektiv.every(n => n === 0) ? 'läuft nicht ab' : (effektiv.length ? `${effektiv.join(', ')} Tage` : 'Keine Angabe')}
         </span>
-        {hatCustom && <span className="ml-2 text-amber-400">(individuell)</span>}
+        {hatCustom && <span className="ml-2 text-warn">(individuell)</span>}
       </div>
       <div className="flex flex-wrap gap-2 items-center">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Tage, z.B. 30, 60, 90, 180 (0 = läuft nicht ab)"
-          className="flex-1 min-w-[12rem] bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="flex-1 min-w-[12rem] px-2.5 py-1.5 text-xs bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
         />
         <Button type="button" variant="primary" size="sm" disabled={saving} onClick={() => save(parse())}>
           Speichern
         </Button>
         <button type="button" disabled={saving || istUnbegrenzt} onClick={() => save([0])}
                 title="Läuft nie ab"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30 rounded-lg hover:bg-emerald-500/25 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-raised text-ok rounded-md hover:bg-hover disabled:opacity-50 disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
           <Infinity className="w-3.5 h-3.5" /> Unbegrenzt
         </button>
         {hatCustom && (
@@ -263,7 +263,7 @@ function StufenEditor({ uk, onSave, onClose }) {
           Abbrechen
         </Button>
       </div>
-      <p className="text-gray-500 mt-2">
+      <p className="text-fg-subtle mt-2">
         Leer lassen für den Standard aus Kompetenz oder globaler Einstellung. <code>0</code> oder „Unbegrenzt" heißt: läuft nie ab. Nach dem Speichern wird bei aktiver Kompetenz das nächste Ablaufdatum neu berechnet.
       </p>
     </div>
@@ -275,39 +275,39 @@ function StufenEditor({ uk, onSave, onClose }) {
 function Scoreboard({ data, currentKid }) {
   if (!data.length) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+      <div className="bg-surface rounded-lg">
         <EmptyState icon={Trophy} title="Noch keine Punkte vergeben"
           description="Sobald Kompetenzen bestätigt werden, erscheint hier die Rangliste." />
       </div>
     );
   }
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
+    <div className="bg-surface rounded-lg divide-y divide-line-subtle overflow-hidden">
       {data.map((entry) => {
         const isMe = entry.user_keycloak_id === currentKid;
         let medal = null;
-        if (entry.rang === 1) medal = <Medal className="w-5 h-5 text-amber-400" />;
-        else if (entry.rang === 2) medal = <Medal className="w-5 h-5 text-gray-300" />;
-        else if (entry.rang === 3) medal = <Medal className="w-5 h-5 text-orange-400" />;
+        if (entry.rang === 1) medal = <Medal className="w-5 h-5 text-warn" />;
+        else if (entry.rang === 2) medal = <Medal className="w-5 h-5 text-fg-muted" />;
+        else if (entry.rang === 3) medal = <Medal className="w-5 h-5 text-fg-subtle" />;
         return (
           <div key={entry.user_keycloak_id}
-               className={`relative flex items-center gap-4 px-4 py-3 ${isMe ? 'bg-accent/[0.06]' : ''}`}>
-            <div className="w-8 flex justify-center font-display font-semibold text-lg text-gray-500 tabular-nums">
+               className={`relative flex items-center gap-4 px-4 py-3 ${isMe ? 'bg-raised' : ''}`}>
+            <div className="w-8 flex justify-center font-display font-semibold text-lg text-fg-subtle tabular-nums">
               {medal || entry.rang}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-white truncate">
+              <div className="font-medium text-fg truncate">
                 {(entry.user_first_name || entry.user_last_name)
                   ? [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ')
-                  : entry.user_username} {isMe && <span className="ml-1 text-xs font-medium text-accent">Du</span>}
+                  : entry.user_username} {isMe && <span className="ml-1 text-xs font-medium text-accent-fg">Du</span>}
               </div>
-              <div className="text-xs text-gray-500 tabular-nums">
+              <div className="text-xs text-fg-subtle tabular-nums">
                 {entry.anzahl_aktiv} / {entry.anzahl_gesamt} Kompetenzen aktiv
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xl font-bold text-white tabular-nums leading-none">{entry.punkte}</div>
-              <div className="text-[11px] text-gray-500 mt-1">Punkte</div>
+              <div className="text-xl font-bold text-fg tabular-nums leading-none">{entry.punkte}</div>
+              <div className="text-[11px] text-fg-subtle mt-1">Punkte</div>
             </div>
           </div>
         );
@@ -326,7 +326,7 @@ function StatsCards({ stats }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
       <StatTile icon={CheckCircle2} label="Aktive Kompetenzen"
-                value={<>{stats.anzahl_aktiv}<span className="text-base font-semibold text-gray-500"> / {stats.anzahl_gesamt}</span></>} />
+                value={<>{stats.anzahl_aktiv}<span className="text-base font-semibold text-fg-subtle"> / {stats.anzahl_gesamt}</span></>} />
       <StatTile icon={Trophy} label="Punkte" value={stats.punkte} />
       <StatTile icon={Award} label="Badges" value={stats.badges?.length || 0} />
       <StatTile icon={TrendingUp} label="Ø Fortschritt" value={`${fortschritt.toFixed(0)}%`} tone={fortschritt >= 75 ? 'positive' : 'default'} />
@@ -338,13 +338,13 @@ function BadgeList({ badges }) {
   if (!badges?.length) return null;
   return (
     <div className="mb-6">
-      <div className="text-sm font-semibold text-gray-300 mb-2.5 flex items-center gap-2">
-        <Award className="w-4 h-4 text-amber-400" /> Erreichte Badges
+      <div className="text-sm font-semibold text-fg-muted mb-2.5 flex items-center gap-2">
+        <Award className="w-4 h-4 text-warn" /> Erreichte Badges
       </div>
       <div className="flex flex-wrap gap-2">
         {badges.map(b => (
-          <span key={b} className="inline-flex items-center gap-1.5 bg-amber-500/10 ring-1 ring-inset ring-amber-500/25 text-amber-200 px-2.5 py-1 rounded-md text-sm">
-            <Award className="w-3.5 h-3.5" /> {b}
+          <span key={b} className="inline-flex items-center gap-1.5 bg-raised text-fg px-2.5 py-1 rounded-sm text-sm">
+            <Award className="w-3.5 h-3.5 text-warn" /> {b}
           </span>
         ))}
       </div>
@@ -494,7 +494,7 @@ export default function KompetenzenPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>;
+    return <div className="flex items-center justify-center py-20"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>;
   }
 
   return (
@@ -512,7 +512,7 @@ export default function KompetenzenPage() {
       />
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-6 border-b border-gray-800 overflow-x-auto">
+      <div className="flex items-center gap-1 mb-6 border-b border-line-subtle overflow-x-auto">
         {/* "Meine" nur wenn nicht Admin-Einstieg — oder wenn gerade ein User betrachtet wird */}
         {(!skipOwnList || viewingOther) && (
           <TabButton active={activeTab === 'meine'} onClick={() => setActiveTab('meine')} icon={Award}>
@@ -600,8 +600,8 @@ function TabButton({ active, onClick, icon: Icon, children }) {
       aria-current={active ? 'page' : undefined}
       className={`flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
         active
-          ? 'border-accent text-white'
-          : 'border-transparent text-gray-400 hover:text-white hover:border-gray-700'
+          ? 'border-accent text-fg'
+          : 'border-transparent text-fg-muted hover:text-fg hover:border-line-strong'
       }`}
     >
       <Icon className="w-4 h-4" /> {children}
@@ -645,38 +645,38 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
   });
 
   if (loading) {
-    return <div className="flex items-center justify-center py-14"><Loader2 className="w-5 h-5 animate-spin text-gray-500" /></div>;
+    return <div className="flex items-center justify-center py-14"><Loader2 className="w-5 h-5 animate-spin text-fg-subtle" /></div>;
   }
 
   return (
     <div>
       <div className="flex gap-2 mb-4 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Name oder E-Mail"
             aria-label="Mitglieder suchen"
-            className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="w-full pl-10 pr-4 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
           />
         </div>
         {alleBereiche.length > 0 && (
           <select value={filterBereich} onChange={(e) => setFilterBereich(e.target.value)}
-                  className="bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                  className="px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
             <option value="">Alle Bereiche</option>
             {alleBereiche.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
         )}
       </div>
       {filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           <EmptyState icon={Search} title="Niemand gefunden"
             description="Prüfe die Schreibweise oder wähle einen anderen Bereich." />
         </div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
+        <div className="bg-surface rounded-lg divide-y divide-line-subtle overflow-hidden">
           {filtered.map(u => {
             const s = scoreByKid[u.keycloak_id];
             const istAdmin = u.is_admin || (u.keycloak_roles || []).includes('admin');
@@ -685,16 +685,16 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 key={u.keycloak_id || u.id}
                 onClick={() => onSelectUser(u.keycloak_id)}
                 disabled={!u.keycloak_id}
-                className="group w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="group w-full flex items-center gap-3 px-4 py-3 hover:bg-raised text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${
-                  istAdmin ? 'bg-gray-700 text-gray-200' : 'bg-accent/15 text-accent ring-1 ring-inset ring-accent/30'
+                  istAdmin ? 'bg-hover text-fg-muted' : 'bg-raised text-accent-fg'
                 }`}>
                   {(u.first_name || u.username)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-medium truncate group-hover:text-accent transition-colors">
+                    <span className="text-fg font-medium truncate group-hover:text-accent-fg transition-colors">
                       {u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : (u.username || 'Unbekannter Nutzer')}
                     </span>
                     {istAdmin && (
@@ -705,13 +705,13 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {u.bereiche?.map(b => (
                         <span key={`b${b.id}`}
-                              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-sky-500/10 ring-1 ring-inset ring-sky-500/25 text-sky-300 rounded-md text-[10px] font-medium">
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-raised text-info rounded-sm text-[10px] font-medium">
                           <MapPin className="w-2.5 h-2.5" /> {b.name}
                         </span>
                       ))}
                       {u.permission_groups?.map(g => (
                         <span key={`g${g.id}`}
-                              className="inline-flex items-center px-1.5 py-0.5 bg-gray-800 ring-1 ring-inset ring-gray-700 text-gray-400 rounded-md text-[10px] font-medium">
+                              className="inline-flex items-center px-1.5 py-0.5 bg-raised text-fg-muted rounded-sm text-[10px] font-medium">
                           {g.name}
                         </span>
                       ))}
@@ -720,11 +720,11 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 </div>
                 {s ? (
                   <div className="text-right shrink-0">
-                    <div className="text-lg font-bold text-white tabular-nums leading-none">{s.punkte}</div>
-                    <div className="text-[10px] text-gray-500 tabular-nums mt-1">{s.anzahl_aktiv}/{s.anzahl_gesamt} aktiv</div>
+                    <div className="text-lg font-bold text-fg tabular-nums leading-none">{s.punkte}</div>
+                    <div className="text-[10px] text-fg-subtle tabular-nums mt-1">{s.anzahl_aktiv}/{s.anzahl_gesamt} aktiv</div>
                   </div>
                 ) : (
-                  <div className="text-xs text-gray-500 shrink-0" aria-label="Keine Daten">–</div>
+                  <div className="text-xs text-fg-subtle shrink-0" aria-label="Keine Daten">–</div>
                 )}
               </button>
             );
