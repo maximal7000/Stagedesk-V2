@@ -8,6 +8,7 @@ import urllib.request
 import urllib.parse
 from ninja import Router, File, Form
 from ninja.files import UploadedFile
+from django.db import transaction
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
@@ -661,7 +662,7 @@ def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), k
         kind=kind,
         status='processing',
     )
-    media.render_async(obj.id)
+    transaction.on_commit(lambda: media.render_async(obj.id))
     return {
         'id': obj.id, 'name': obj.name, 'kind': obj.kind,
         'file_url': obj.file.url, 'sort_order': obj.sort_order,

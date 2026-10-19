@@ -6,6 +6,7 @@ from unittest import mock
 
 import pypdfium2 as pdfium
 from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.test import TestCase, override_settings
@@ -88,6 +89,43 @@ class RenderFileTest(MediaTestBase):
         self.assertEqual(f.status, 'failed')
         self.assertTrue(f.error)
 
+    def test_failed_rerender_keeps_old_pages_and_files(self):
+        f = self.make('pdf', make_pdf([(100, 100)] * 3), 'pdf')
+        media.render_file(f)
+        old = list(f.pages.all())
+        old_names = [p.image.name for p in old]
+        real = media._store_page
+
+        def boom(mf, index, image):
+            if index == 1:
+                raise RuntimeError('kaputt')
+            return real(mf, index, image)
+
+        with mock.patch.object(media, '_store_page', side_effect=boom), \
+                self.assertLogs('monitor.media', 'WARNING'), \
+                self.captureOnCommitCallbacks(execute=True):
+            media.render_file(f)
+        f.refresh_from_db()
+        self.assertEqual(f.status, 'failed')
+        self.assertEqual([p.id for p in f.pages.all()], [p.id for p in old])
+        for name in old_names:
+            self.assertTrue(default_storage.exists(name))
+        # Teilweise geschriebene neue Dateien sind weg
+        stored = {n for n in default_storage.listdir('monitor/pages')[1]}
+        self.assertEqual(stored, {n.split('/')[-1] for n in old_names})
+
+    def test_successful_rerender_deletes_old_files_after_commit(self):
+        f = self.make('pdf', make_pdf([(100, 100)]), 'pdf')
+        media.render_file(f)
+        old_name = f.pages.get().image.name
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            media.render_file(f)
+        self.assertTrue(default_storage.exists(old_name))
+        for cb in callbacks:
+            cb()
+        self.assertFalse(default_storage.exists(old_name))
+        self.assertTrue(default_storage.exists(f.pages.get().image.name))
+
     def test_rerender_replaces_pages(self):
         f = self.make('pdf', make_pdf([(100, 100)]), 'pdf')
         media.render_file(f)
@@ -112,7 +150,11 @@ class UploadTest(MediaTestBase):
         upload = SimpleUploadedFile('a.pdf', make_pdf([(100, 100)]))
         with mock.patch.object(api, '_require_perm'), \
                 mock.patch.object(media, 'render_async') as started:
-            result = api.upload_file(self._request(), upload, 'A', 'pdf')
+            with self.captureOnCommitCallbacks(execute=False) as callbacks:
+                result = api.upload_file(self._request(), upload, 'A', 'pdf')
+            started.assert_not_called()
+            self.assertEqual(len(callbacks), 1)
+            callbacks[0]()
         self.assertEqual(result['status'], 'processing')
         started.assert_called_once_with(result['id'])
 
