@@ -45,7 +45,7 @@ from .schemas import (
     ExamTemplateSchema, ExamTemplateCreateSchema,
     MonitorSettingsSchema, MonitorSettingsUpdateSchema,
 )
-from . import oepnv
+from . import media, oepnv
 from .consumers import push_power_to_all
 from .permissions import _require_perm
 from .api_setup import setup_router
@@ -653,14 +653,42 @@ def list_files(request, kind: str = None):
 @monitor_router.post("/files", auth=keycloak_auth)
 def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), kind: str = Form("image")):
     _require_perm(request, 'monitor.media')
+    if file.size > media.MAX_BYTES:
+        raise HttpError(422, "Datei zu groß: höchstens 50 MB.")
     obj = MediaFile.objects.create(
         name=name or file.name,
         file=file,
         kind=kind,
+        status='processing',
     )
+    media.render_async(obj.id)
     return {
         'id': obj.id, 'name': obj.name, 'kind': obj.kind,
         'file_url': obj.file.url, 'sort_order': obj.sort_order,
+        'status': obj.status, 'page_count': obj.page_count, 'error': obj.error,
+    }
+
+
+@monitor_router.get("/files/{id}", auth=keycloak_auth)
+def get_file(request, id: int):
+    _require_perm(request, 'monitor.view')
+    obj = get_object_or_404(MediaFile, id=id)
+    used_in = [
+        {'view_id': v.id, 'name': v.name}
+        for v in DisplayView.objects.filter(deleted_at__isnull=True)
+        if id in (v.media_items or [])
+    ]
+    return {
+        'id': obj.id, 'name': obj.name, 'kind': obj.kind,
+        'file_url': obj.file.url if obj.file else '', 'sort_order': obj.sort_order,
+        'created_at': obj.created_at,
+        'status': obj.status, 'page_count': obj.page_count, 'error': obj.error,
+        'pages': [
+            {'index': p.index, 'url': p.image.url, 'width': p.width,
+             'height': p.height, 'orientation': p.orientation}
+            for p in obj.pages.all()
+        ],
+        'used_in': used_in,
     }
 
 

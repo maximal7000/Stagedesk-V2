@@ -516,13 +516,13 @@ class MediaPage(models.Model):
     """Eine gerenderte Seite einer PDF-Datei."""
     file = models.ForeignKey(MediaFile, on_delete=models.CASCADE, related_name='pages')
     index = models.IntegerField()
-    image = models.ImageField(upload_to='monitor/pdf_pages/')
+    image = models.ImageField(upload_to='monitor/pages/')
     width = models.IntegerField(default=0)
     height = models.IntegerField(default=0)
     orientation = models.CharField(max_length=10, default='landscape')
 
     class Meta:
-        ordering = ['file', 'index']
+        ordering = ['file_id', 'index']
         constraints = [
             models.UniqueConstraint(fields=['file', 'index'], name='unique_media_page_index'),
         ]
