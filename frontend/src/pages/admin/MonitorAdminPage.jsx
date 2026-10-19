@@ -3499,7 +3499,7 @@ export default function MonitorAdminPage() {
                             <div className="flex items-center gap-1.5 flex-wrap mb-1">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${s.kind === 'construction' ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>{s.kind === 'construction' ? 'Baumaßnahme' : 'Störung'}</span>
                               <span className="text-[11px] text-gray-500">{DISRUPTION_SOURCE_LABELS[s.source] || s.source}</span>
-                              {(s.lines || []).slice(0, 8).map((l, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 bg-white/10 text-white/70 rounded font-medium">{l}</span>)}
+                              {(s.lines || []).slice(0, 8).map((l, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 bg-white/10 text-white/70 rounded font-medium">{l === 'all' ? 'alle' : l}</span>)}
                               {s.has_image && <span className="inline-flex items-center gap-1 text-[10px] text-gray-500" title="mit Bild"><ImageIcon className="w-3 h-3" /> Bild</span>}
                             </div>
                             <div className={`text-sm font-medium ${hidden ? 'text-gray-500 line-through' : 'text-white'}`}>{s.title}</div>

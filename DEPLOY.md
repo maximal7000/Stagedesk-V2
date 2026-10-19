@@ -125,8 +125,10 @@ Migrationen: `monitor` 0035 bis 0038, `users` 0015. Alte Pi-Displays laden sich 
 2. **`.env`:** In `/opt/stagedesk/backend/.env` die Variablen `NAHSH_HAFAS_AID` und `SWHL_STORYBLOK_TOKEN` eintragen (Werte nie committen).
 3. **Probelauf:** Produktions-Dump in eine Test-DB einspielen, `python manage.py migrate` ausführen, Stichprobe: eine Ansicht, ein Bildschirm, eine Klausur, eine Version.
 4. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`.
-5. **Prüfen:** `/api/monitor/display?screen=glocke` und `?screen=mensa` laden, ATEM On-Air einmal ein- und ausschalten.
-6. **Rollback (Reihenfolge):** `python manage.py migrate monitor 0034`, `python manage.py migrate users 0014`, danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
+   Hinweis: `deploy.sh` führt `migrate` vor Build und Neustart aus. Im Deploy-Fenster können `/display`, ATEM `/onair` und die Pi-Power-Abfragen kurz Fehler liefern. Während des Deploys den ATEM nicht schalten; die Displays erholen sich von selbst.
+5. **Prüfen:** `/api/monitor/display?screen=glocke` und `?screen=mensa` laden, ATEM On-Air einmal ein- und ausschalten. Sichtprüfung: glocke und mensa haben sich innerhalb von ca. 2 Minuten in die neue Oberfläche neu geladen.
+   Das alte `GET /bildschirm/power` behält seine Schlüssel der obersten Ebene, die Zeitplan-Einträge darin nutzen aber jetzt `days`/`from`/`until`. Die Pi-Skripte im Repo nutzen den WebSocket; relevant nur für eigene Cron-Skripte.
+6. **Rollback (Reihenfolge):** Zuerst beide Migrationen zurückfahren, bevor der Code zurückgesetzt wird: `python manage.py migrate monitor 0034` und `python manage.py migrate users 0014`. Erst danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
 
 ---
 

@@ -109,9 +109,9 @@ class TransitCredentialsTest(TestCase):
     @override_settings(NAHSH_HAFAS_AID='')
     def test_nahsh_without_aid_returns_none_and_logs(self):
         with self.assertLogs('monitor.oepnv', level='WARNING') as log, \
-             mock.patch('urllib.request.urlopen') as urlopen:
+             mock.patch.object(oepnv._post_opener, 'open') as opener_open:
             self.assertIsNone(oepnv._nahsh_rpc('StationBoard', {}))
-        urlopen.assert_not_called()
+        opener_open.assert_not_called()
         self.assertIn('NAHSH_HAFAS_AID', log.output[0])
 
     @override_settings(SWHL_STORYBLOK_TOKEN='')
@@ -188,3 +188,35 @@ class OrderingTest(TestCase):
         for k in ('pdf', 'logo', 'background', 'image'):
             MediaFile.objects.create(name=k, file=f'monitor/{k}/x', kind=k)
         self.assertEqual([m.kind for m in MediaFile.objects.all()], ['image', 'background', 'logo', 'pdf'])
+
+
+class DisruptionHiddenPruneTest(TestCase):
+    """Ausblend-Liste wird nur bereinigt, wenn alle aktiven Quellen Daten lieferten."""
+
+    def _view(self):
+        return DisplayView.objects.create(
+            name='D', slug='d', layout='departures',
+            transit_disruption_rail=True, transit_disruption_bus=True,
+            transit_disruption_hidden=['rail1', 'bus1', 'gone'])
+
+    @staticmethod
+    def _item(i, src):
+        return {'id': i, 'source': src, 'kind': 'disruption', 'title': i, 'text': '',
+                'lines': [], 'from': '', 'until': '', 'all_lines': False,
+                'image': '', 'stops': [], 'suggestion': ''}
+
+    def test_failed_source_keeps_hidden_list(self):
+        view = self._view()
+        with mock.patch.object(oepnv, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
+             mock.patch.object(oepnv, 'fetch_disruptions_swl', return_value=[]):
+            _fetch_disruptions(view)
+        view.refresh_from_db()
+        self.assertEqual(view.transit_disruption_hidden, ['rail1', 'bus1', 'gone'])
+
+    def test_all_sources_ok_prunes_stale_ids(self):
+        view = self._view()
+        with mock.patch.object(oepnv, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
+             mock.patch.object(oepnv, 'fetch_disruptions_swl', return_value=[self._item('bus1', 'swl')]):
+            _fetch_disruptions(view)
+        view.refresh_from_db()
+        self.assertEqual(view.transit_disruption_hidden, ['rail1', 'bus1'])

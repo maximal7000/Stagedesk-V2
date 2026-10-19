@@ -211,12 +211,18 @@ def _fetch_disruptions(view):
         if age < 300:
             return view.transit_disruption_cache or []
     result = []
+    all_sources_ok = True
     try:
         if view.transit_disruption_rail:
-            result += oepnv.fetch_disruptions_nahsh(view.transit_disruption_rail_lines or None)
+            rail = oepnv.fetch_disruptions_nahsh(view.transit_disruption_rail_lines or None)
+            all_sources_ok = all_sources_ok and bool(rail)
+            result += rail
         if view.transit_disruption_bus:
-            result += oepnv.fetch_disruptions_swl(view.transit_disruption_bus_lines or None)
+            bus = oepnv.fetch_disruptions_swl(view.transit_disruption_bus_lines or None)
+            all_sources_ok = all_sources_ok and bool(bus)
+            result += bus
     except Exception as e:
+        all_sources_ok = False
         print(f"Störungs-Fehler: {e}")
     # Manuelle Meldungen voranstellen
     for m in (view.transit_disruption_manual or []):
@@ -231,9 +237,14 @@ def _fetch_disruptions(view):
                 'all_lines': False, 'image': m.get('image') or '', 'stops': [], 'suggestion': '',
                 'highlighted': bool(m.get('highlighted')),
             })
-    # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren
-    current_ids = {s.get('id') for s in result}
-    hidden = [h for h in (view.transit_disruption_hidden or []) if h in current_ids]
+    # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren.
+    # Nur wenn jede aktive Quelle Daten geliefert hat; ein Ausfall (fehlender Token,
+    # Netzwerkfehler) darf keine Ausblendungen dauerhaft löschen.
+    if all_sources_ok:
+        current_ids = {s.get('id') for s in result}
+        hidden = [h for h in (view.transit_disruption_hidden or []) if h in current_ids]
+    else:
+        hidden = list(view.transit_disruption_hidden or [])
     fields = ['transit_disruption_cache', 'transit_disruption_cache_at', 'updated_at']
     if hidden != (view.transit_disruption_hidden or []):
         view.transit_disruption_hidden = hidden
