@@ -54,7 +54,6 @@ function contrastRatio(a, b) {
 const AreaContext = createContext(null);
 
 // ─── Section — collapsible; oder `plain` (immer offen, kein Aufklappen) ───
-// Icon-Kachel einheitlich neutral; ein übergebenes `iconColor` wird ignoriert.
 function Section({ id, area, plain, title, description, icon: Icon, open, onToggle, badge, statusDot, children }) {
   const activeArea = useContext(AreaContext);
   if (area && activeArea && area !== activeArea) return null;
@@ -1189,7 +1188,7 @@ export default function MonitorAdminPage() {
 
       {/* ═══ Bildschirme ═══ */}
       <Section id="bildschirme" area="bildschirme" plain title="Bildschirme" description="Physische Monitore mit eigenen Zeitplänen und Power-Steuerung"
-        icon={Monitor} iconColor="bg-indigo-600/30" open={openSections.bildschirme} onToggle={toggleSection}
+        icon={Monitor} open={openSections.bildschirme} onToggle={toggleSection}
         badge={bildschirme.length || null}>
 
         {/* Bildschirm-Liste */}
@@ -1880,7 +1879,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Profil & Zeitplan ═══ */}
           <Section id="profil" area="ansichten" title="Ansicht & Zeitplan" description="Name, Layout-Modus und automatische Zeitsteuerung"
-            icon={CalendarClock} iconColor="bg-green-600/30" open={openSections.profil} onToggle={toggleSection}
+            icon={CalendarClock} open={openSections.profil} onToggle={toggleSection}
             badge={monitorConfig.zeitplan?.length || null}>
 
             <div className="grid grid-cols-3 gap-4">
@@ -2296,7 +2295,7 @@ export default function MonitorAdminPage() {
           {/* ═══ Baukasten-Editor (nur bei layout_modus='baukasten') ═══ */}
           {monitorConfig.layout_modus === 'baukasten' && (
             <Section id="baukasten" area="ansichten" title="Widget-Baukasten" description="Widgets per Drag &amp; Drop platzieren"
-              icon={LayoutGrid} iconColor="bg-cyan-600/30" open={openSections.baukasten !== false} onToggle={toggleSection}
+              icon={LayoutGrid} open={openSections.baukasten !== false} onToggle={toggleSection}
               badge={(monitorConfig.layout_widgets || []).length || null}>
               <BaukastenEditor
                 widgets={monitorConfig.layout_widgets || []}
@@ -2311,7 +2310,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Allgemein ═══ */}
           <Section id="allgemein" area="ansichten" title="Allgemein" description="Titel, Refresh und Import/Export"
-            icon={Settings} iconColor="bg-gray-700" open={openSections.allgemein} onToggle={toggleSection}>
+            icon={Settings} open={openSections.allgemein} onToggle={toggleSection}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">Titel</label>
@@ -2352,7 +2351,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ ON AIR Anpassung ═══ */}
           <Section id="onair" area="ansichten" title="ON AIR Anpassung" description="Text, Farbe, Blinken und Splitscreen"
-            icon={Radio} iconColor="bg-red-600/30" open={openSections.onair} onToggle={toggleSection}>
+            icon={Radio} open={openSections.onair} onToggle={toggleSection}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs text-gray-400 mb-1.5 font-medium">ON AIR Text</label>
@@ -2446,7 +2445,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Widgets ═══ */}
           <Section id="widgets" area={['standard', 'split', 'stundenplan'].includes(monitorConfig.layout_modus) ? 'ansichten' : 'nicht-relevant'} title="Widgets & Bereiche" description={`${activeWidgets} von ${widgetKeys.length} aktiv`}
-            icon={Zap} iconColor="bg-sky-600/30" open={openSections.widgets} onToggle={toggleSection}
+            icon={Zap} open={openSections.widgets} onToggle={toggleSection}
             statusDot={activeWidgets > 0 ? 'bg-emerald-400' : 'bg-gray-600'}>
 
             {/* Categorized Widget Grid */}
@@ -2486,7 +2485,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Theme & Farben ═══ */}
           <Section id="theme" area="ansichten" title="Theme & Farben" description="Farbschema und Design-Vorlagen"
-            icon={Palette} iconColor="bg-purple-600/30" open={openSections.theme} onToggle={toggleSection}>
+            icon={Palette} open={openSections.theme} onToggle={toggleSection}>
             <div>
               <label className="block text-xs text-gray-400 mb-2 font-medium">Theme-Preset</label>
               <div className="flex gap-2 flex-wrap">
@@ -2551,7 +2550,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Medien ═══ */}
           <Section id="medien" area="inhalte" title="Medien & Dateien" description="Logos, Bilder, PDFs und Hintergründe"
-            icon={Image} iconColor="bg-pink-600/30" open={openSections.medien} onToggle={toggleSection}
+            icon={Image} open={openSections.medien} onToggle={toggleSection}
             badge={monitorDateien.length}>
 
             {/* Drag-&-Drop-Upload */}
@@ -2709,7 +2708,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Ankündigungen ═══ */}
           <Section id="ankuendigungen" area="inhalte" title="Ankündigungen" description="Meldungen auf dem Display anzeigen"
-            icon={Megaphone} iconColor="bg-amber-600/30" open={openSections.ankuendigungen} onToggle={toggleSection}
+            icon={Megaphone} open={openSections.ankuendigungen} onToggle={toggleSection}
             badge={monitorAnkuendigungen.length}>
 
             {canEdit && (
@@ -2762,7 +2761,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Events (aktivierbare Modi) ═══ */}
           <Section id="events" area="events" plain title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
-            icon={Radio} iconColor="bg-violet-600/30" open={openSections.events} onToggle={toggleSection}
+            icon={Radio} open={openSections.events} onToggle={toggleSection}
             badge={events.length}
             statusDot={events.some(e => e.aktiv) ? 'bg-accent animate-pulse' : null}>
             <EventManager events={events} bildschirme={bildschirme} profiles={profiles} canEdit={canEdit}
@@ -2771,7 +2770,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ WebUntis-Link-Bibliothek ═══ */}
           <Section id="webuntislinks" area="einstellungen" title="WebUntis-Links" description="Links einmal benennen und überall auswählen"
-            icon={Calendar} iconColor="bg-purple-600/30" open={openSections.webuntislinks} onToggle={toggleSection}
+            icon={Calendar} open={openSections.webuntislinks} onToggle={toggleSection}
             badge={webuntisLinks.length}>
             <WebUntisLinkManager links={webuntisLinks} canEdit={canEdit}
               onSave={saveWebuntisLink} onDelete={deleteWebuntisLink} />
@@ -2780,7 +2779,7 @@ export default function MonitorAdminPage() {
           {/* ═══ ÖPNV Abfahrten (nur bei Abfahrtsmonitor-Layout) ═══ */}
           {monitorConfig.layout_modus === 'abfahrten' && (
           <Section id="oepnv" area="ansichten" title="ÖPNV Abfahrten" description="Stationen und Filter für den Abfahrtsmonitor"
-            icon={Activity} iconColor="bg-sky-600/30" open={openSections.oepnv} onToggle={toggleSection}
+            icon={Activity} open={openSections.oepnv} onToggle={toggleSection}
             badge={monitorConfig.oepnv_stationen?.length || 0}>
 
             {/* API-Auswahl */}
@@ -3502,7 +3501,7 @@ export default function MonitorAdminPage() {
           {/* ═══ Störungen verwalten (eigenes Menü) ═══ */}
           {monitorConfig.layout_modus === 'abfahrten' && (
           <Section id="stoerungen" area="ansichten" title="Störungen verwalten" description="Aktuelle Meldungen ansehen, einzeln ausblenden und die Anzeige-Position wählen"
-            icon={AlertTriangle} iconColor="bg-amber-600/30" open={openSections.stoerungen} onToggle={toggleSection}
+            icon={AlertTriangle} open={openSections.stoerungen} onToggle={toggleSection}
             badge={(monitorConfig.oepnv_stoerung_ausgeblendet || []).length || null}>
             <div className="space-y-4">
               {/* Anzeige-Position */}
@@ -3576,7 +3575,7 @@ export default function MonitorAdminPage() {
 
           {/* ═══ API & Token ═══ */}
           <Section id="globalsettings" area="einstellungen" plain title="Globale Zugänge" description="Einmal eintragen, gilt für alle Ansichten (Wetter-Key, Raumplan-Login)"
-            icon={Key} iconColor="bg-emerald-600/30" open badge={null}>
+            icon={Key} open badge={null}>
             {globalSettings ? (
               <>
                 <div>
@@ -3621,7 +3620,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           <Section id="papierkorb" area="einstellungen" plain title="Papierkorb" description="Gelöschte Ansichten & Medien wiederherstellen oder endgültig entfernen"
-            icon={Trash2} iconColor="bg-gray-600/30" open badge={(papierkorb.ansichten.length + papierkorb.medien.length) || null}>
+            icon={Trash2} open badge={(papierkorb.ansichten.length + papierkorb.medien.length) || null}>
             {papierkorb.ansichten.length === 0 && papierkorb.medien.length === 0 ? (
               <p className="text-sm text-gray-500">Papierkorb ist leer.</p>
             ) : (
@@ -3653,7 +3652,7 @@ export default function MonitorAdminPage() {
           </Section>
 
           <Section id="api" area="einstellungen" plain title="API & Token" description="Externe Steuerung per ATEM, HTTP etc."
-            icon={Key} iconColor="bg-gray-600/30" open={openSections.api} onToggle={toggleSection}>
+            icon={Key} open={openSections.api} onToggle={toggleSection}>
             <div>
               <label className="block text-xs text-gray-400 mb-1.5 font-medium">API-Token (für diese Ansicht)</label>
               <div className="flex gap-2">
