@@ -123,16 +123,16 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-800 sticky top-0 bg-gray-900 z-10">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 sticky top-0 bg-gray-900 z-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 bg-accent/15 ring-1 ring-inset ring-accent/30 rounded-lg flex items-center justify-center">
+              <ShoppingCart className="w-4 h-4 text-accent" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">
-                {isEdit ? 'Artikel bearbeiten' : 'Artikel hinzufügen'}
+              <h2 className="font-display text-xl font-semibold tracking-tight text-white leading-tight">
+                {isEdit ? 'Artikel bearbeiten' : 'Artikel erfassen'}
               </h2>
               <p className="text-sm text-gray-400">
                 {isEdit ? `in ${haushalt.name}` : `zu ${haushalt.name}`}
@@ -141,18 +141,19 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Schließen"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
           {/* Link Parser */}
-          <div className="bg-blue-950/30 border border-blue-900 rounded-lg p-4">
-            <label className="block text-sm font-medium text-blue-300 mb-2">
-              🔗 Produkt-Link (optional)
+          <div className="bg-gray-800/40 border border-gray-700 rounded-lg p-4">
+            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+              <LinkIcon className="w-3.5 h-3.5 text-gray-500" /> Produkt-Link <span className="text-gray-500 font-normal">(optional, füllt Name und Preis aus)</span>
             </label>
             <div className="flex gap-2">
               <input
@@ -160,13 +161,13 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 value={formData.link}
                 onChange={(e) => setFormData({ ...formData, link: e.target.value })}
                 placeholder="https://amazon.de/produkt..."
-                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               />
               <button
                 type="button"
                 onClick={handleParseLink}
                 disabled={!formData.link || isParsingLink}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-colors flex items-center gap-2"
+                className="px-3.5 py-2 text-sm bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-lg transition-colors flex items-center gap-2"
               >
                 {isParsingLink ? (
                   <Loader className="w-4 h-4 animate-spin" />
@@ -196,7 +197,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="z.B. Laptop, Sofa, Lebensmittel"
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               />
             </div>
 
@@ -213,10 +214,10 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 value={formData.preis}
                 onChange={(e) => handlePreisChange(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Bei &gt; 250€ wird automatisch "Investitiv" vorgeschlagen
+                Bei &gt; 250€ wird automatisch „Investiv" vorgeschlagen
               </p>
             </div>
 
@@ -232,7 +233,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 value={formData.anzahl}
                 onChange={(e) => setFormData({ ...formData, anzahl: e.target.value })}
                 placeholder="1"
-                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               />
             </div>
           </div>
@@ -243,8 +244,8 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
               Kategorie * (Budget-Zuweisung)
             </label>
             {kategorieAutoSet && (
-              <p className="text-xs text-blue-400 mb-3">
-                ✨ Automatisch vorgeschlagen basierend auf dem Preis. Du kannst sie jederzeit ändern.
+              <p className="text-xs text-gray-400 mb-3">
+                Anhand des Preises vorgeschlagen. Du kannst sie jederzeit ändern.
               </p>
             )}
             <div className="grid grid-cols-2 gap-4">
@@ -261,7 +262,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 }`}
               >
                 <TrendingDown className="w-6 h-6 text-orange-400 mb-2" />
-                <p className="font-semibold text-orange-300">Konsumitiv</p>
+                <p className="font-semibold text-orange-300">Konsumtiv</p>
                 <p className="text-xs text-gray-400 mt-1">Alltägliche Ausgaben (≤ 250€)</p>
               </button>
 
@@ -278,7 +279,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 }`}
               >
                 <TrendingUp className="w-6 h-6 text-green-400 mb-2" />
-                <p className="font-semibold text-green-300">Investitiv</p>
+                <p className="font-semibold text-green-300">Investiv</p>
                 <p className="text-xs text-gray-400 mt-1">Langfristige Anschaffungen (&gt; 250€)</p>
               </button>
             </div>
@@ -296,7 +297,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
             <select
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s.v} value={s.v}>{s.l}</option>
@@ -315,7 +316,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
                 value={formData.bild_url}
                 onChange={(e) => setFormData({ ...formData, bild_url: e.target.value })}
                 placeholder="https://…/produktbild.jpg"
-                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
               />
               {formData.bild_url && (
                 <img src={formData.bild_url} alt="" className="w-10 h-10 object-cover rounded bg-gray-800"
@@ -334,7 +335,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
               onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
               placeholder="Zusätzliche Details zum Artikel..."
               rows={4}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-mono text-sm"
+              className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none font-mono text-sm"
             />
             <MarkdownHint />
           </div>
@@ -347,27 +348,27 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
           )}
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-800">
             <button
               type="button"
               onClick={onClose}
               disabled={isSaving}
-              className="flex-1 px-4 py-3 bg-gray-800 hover:bg-gray-750 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
+              className="px-3.5 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               Abbrechen
             </button>
             <button
               type="submit"
               disabled={isSaving}
-              className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSaving ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Wird gespeichert...
+                  Speichere…
                 </>
               ) : (
-                isEdit ? 'Speichern' : 'Artikel hinzufügen'
+                isEdit ? 'Speichern' : 'Artikel erfassen'
               )}
             </button>
           </div>

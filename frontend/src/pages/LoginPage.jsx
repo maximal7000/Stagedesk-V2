@@ -1,10 +1,10 @@
 /**
- * Login-Seite — theatralisches Bühnen-Motiv mit animierten Spotlights.
+ * Login-Seite: theatralisches Bühnen-Motiv mit animierten Spotlights.
  * Reine CSS-Animation, kein extra Asset.
  */
 import { useAuth } from 'react-oidc-context';
 import { useEffect, useState } from 'react';
-import { LogIn, Download } from 'lucide-react';
+import { LogIn, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { LoginBanner } from '../components/MaintenanceBanner';
 
 export default function LoginPage() {
@@ -52,8 +52,8 @@ export default function LoginPage() {
       {/* "Bühnenboden": dezenter Verlauf nach unten */}
       <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
 
-      {/* Spotlights — Konus-Form über conic-gradient + blur */}
-      <div className="spotlight spotlight-blue" />
+      {/* Spotlights: Konus-Form über radial-gradient + blur */}
+      <div className="spotlight spotlight-white" />
       <div className="spotlight spotlight-accent" />
       <div className="spotlight spotlight-amber" />
 
@@ -73,55 +73,58 @@ export default function LoginPage() {
       <div className="relative z-10 max-w-md w-full">
         {/* Logo & Schriftzug */}
         <div className="text-center mb-10">
-          <div className="inline-block mb-3 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm bg-white/5 text-[10px] tracking-[0.3em] uppercase text-white/60">
-            Backstage
-          </div>
-          <h1 className="font-display text-6xl sm:text-7xl font-extrabold text-white tracking-tight"
-              style={{ textShadow: '0 4px 60px rgba(37,99,235,0.35)' }}>
+          <p className="inline-flex items-center gap-2 mb-4 text-[11px] font-semibold tracking-[0.22em] uppercase text-white/55">
+            <span className="w-4 h-px bg-accent" aria-hidden="true" />
+            Technik-AG · Katharineum
+            <span className="w-4 h-px bg-accent" aria-hidden="true" />
+          </p>
+          <h1 className="font-display text-6xl sm:text-7xl font-bold text-white tracking-tight leading-none">
             Stagedesk
           </h1>
+          <p className="mt-3 text-sm text-white/50">Veranstaltungen · Inventar · Anwesenheit</p>
         </div>
 
         <LoginBanner />
 
-        {/* Glas-Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-8">
+        {/* Anmelde-Karte */}
+        <div className="bg-gray-950/80 backdrop-blur-md border border-white/10 rounded-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-6 sm:p-7">
           <button
             onClick={handleLogin}
             disabled={auth.isLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-gray-900 hover:bg-gray-100 font-semibold rounded-xl transition-colors duration-200 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors duration-150 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {auth.isLoading ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
-                <span>Lädt…</span>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Verbinde…</span>
               </>
             ) : (
               <>
                 <LogIn className="w-5 h-5" />
-                <span>Anmelden</span>
+                <span>Mit Technik-AG-Konto anmelden</span>
               </>
             )}
           </button>
 
           {auth.error && (
-            <div className="mt-4 p-4 bg-red-950/60 border border-red-800/60 rounded-lg backdrop-blur-sm">
+            <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-red-950/60 border border-red-800/60 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <p className="text-sm text-red-300">
-                <strong>Fehler:</strong> {auth.error.message}
+                <span className="font-semibold">Anmeldung fehlgeschlagen.</span> {auth.error.message}
               </p>
             </div>
           )}
 
           {installPrompt && (
             <button onClick={installApp}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-xl text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-lg text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
               <Download className="w-4 h-4" /> Als App installieren
             </button>
           )}
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/50 tracking-wide">
-          Sichere Authentifizierung über Keycloak
+        <p className="mt-5 text-center text-xs text-white/40">
+          Anmeldung über den Keycloak-Login der Technik-AG
         </p>
       </div>
 
@@ -151,9 +154,9 @@ export default function LoginPage() {
           mix-blend-mode: screen;
           transform-origin: top center;
         }
-        .spotlight-blue {
+        .spotlight-white {
           background: radial-gradient(ellipse 50% 100% at 50% 0%,
-            rgba(59,130,246,0.45) 0%, rgba(59,130,246,0.18) 30%, transparent 70%);
+            rgba(226,232,240,0.30) 0%, rgba(226,232,240,0.10) 30%, transparent 70%);
           animation: spotlight-sweep-1 18s ease-in-out infinite;
         }
         .spotlight-accent {

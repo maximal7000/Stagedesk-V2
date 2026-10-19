@@ -12,6 +12,35 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useUser } from '../contexts/UserContext';
 import { getPushStatus, subscribePush, unsubscribePush, testPush } from '../lib/push';
 import apiClient from '../lib/api';
+import { Button, StatusBadge, EmptyState } from '../components/ui';
+
+// Abschnittskopf innerhalb eines Einstellungs-Panels
+function SectionHead({ title, description, children }) {
+  return (
+    <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+      <div className="min-w-0">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-tight">{title}</h3>
+        {description && <p className="text-sm text-gray-400 mt-1 max-w-prose">{description}</p>}
+      </div>
+      {children && <div className="flex gap-2 flex-wrap">{children}</div>}
+    </div>
+  );
+}
+
+// Hinweiszeile (Info/Warnung) im Panel
+function Notice({ tone = 'neutral', children }) {
+  const cls = {
+    neutral: 'bg-gray-800/50 border-gray-700 text-gray-300',
+    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-200',
+    danger: 'bg-red-500/10 border-red-500/30 text-red-200',
+  }[tone];
+  return (
+    <div className={`mb-4 p-3 border rounded-lg flex items-start gap-2.5 text-sm ${cls}`}>
+      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+      <div>{children}</div>
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { theme, effectiveTheme, forcedTheme, canChangTheme, setTheme } = useTheme();
@@ -79,27 +108,27 @@ export default function SettingsPage() {
 
   return (
     <div className="w-full">
-      {/* Kopf — mobil mit Zurück-Pfeil im Detail */}
+      {/* Kopf: mobil mit Zurück-Pfeil im Detail */}
       <div className="mb-6 flex items-center gap-2">
         {mobileDetail && (
-          <button onClick={() => setMobileDetail(false)}
+          <button onClick={() => setMobileDetail(false)} aria-label="Zurück zur Übersicht"
             className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white rounded-lg">
             <ChevronLeft className="w-5 h-5" />
           </button>
         )}
-        <div>
-          <h1 className="text-2xl font-bold text-white">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Konto</p>
+          <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">
             <span className="md:hidden">{mobileDetail ? activeTabName : 'Einstellungen'}</span>
             <span className="hidden md:inline">Einstellungen</span>
           </h1>
-          <p className="text-gray-400 mt-1 hidden md:block">Verwalte deine persönlichen Einstellungen</p>
         </div>
       </div>
 
       <div className="md:flex md:gap-6 md:items-start">
         {/* Nav-Liste (wie System-Einstellungen) */}
         <aside className={`md:w-60 md:shrink-0 md:sticky md:top-4 ${mobileDetail ? 'hidden md:block' : 'block'}`}>
-          <nav className="space-y-1">
+          <nav className="space-y-0.5 md:bg-gray-900 md:border md:border-gray-800 md:rounded-xl md:p-1.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -107,13 +136,15 @@ export default function SettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id); setMobileDetail(true); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative w-full flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     active
-                      ? 'md:bg-accent/15 md:text-accent text-gray-200 bg-gray-800/60'
-                      : 'text-gray-300 hover:bg-gray-800/70'
+                      ? 'md:bg-gray-800 md:text-white text-gray-200 bg-gray-800/60'
+                      : 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 shrink-0 ${active ? 'md:text-accent' : 'text-gray-400'}`} />
+                  {active && <span className="hidden md:block absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-accent" aria-hidden="true" />}
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'md:text-accent' : 'text-gray-400'}`} />
                   <span className="flex-1 font-medium">{tab.name}</span>
                   <ChevronRight className="w-4 h-4 text-gray-500 md:hidden" />
                 </button>
@@ -124,7 +155,7 @@ export default function SettingsPage() {
 
         {/* Detail-Inhalt */}
         <main className={`flex-1 min-w-0 ${mobileDetail ? 'block' : 'hidden md:block'}`}>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 sm:p-6">
         {/* Profile Tab */}
         {activeTab === 'profile' && <ProfileTab />}
 
@@ -132,44 +163,35 @@ export default function SettingsPage() {
         {activeTab === 'appearance' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Theme</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Wähle das Farbschema für die Anwendung
-              </p>
-              
+              <SectionHead title="Farbschema" description="Gilt für dieses Konto auf allen Geräten." />
+
               {forcedTheme && (
-                <div className="mb-4 p-3 bg-yellow-900/20 border border-yellow-800 rounded-lg flex items-center gap-2 text-yellow-400">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>Das Theme wurde von einem Administrator festgelegt.</span>
-                </div>
+                <Notice tone="warning">Das Farbschema wurde von einem Administrator festgelegt.</Notice>
               )}
 
               {!hasPermission('theme.light_mode') && !forcedTheme && (
-                <div className="mb-4 p-3 bg-gray-800 border border-gray-700 rounded-lg flex items-center gap-2 text-gray-400">
-                  <AlertCircle className="w-5 h-5" />
-                  <span>Light Mode ist für dein Konto nicht verfügbar.</span>
-                </div>
+                <Notice>Der helle Modus ist für dein Konto nicht freigeschaltet.</Notice>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Dark Mode */}
                 <button
                   onClick={() => handleThemeChange('dark')}
                   disabled={!!forcedTheme || saving}
-                  className={`relative p-4 rounded-xl border-2 transition-all ${
+                  className={`relative p-4 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     effectiveTheme === 'dark'
-                      ? 'border-accent bg-accent/10'
-                      : 'border-gray-700 hover:border-gray-600'
+                      ? 'border-accent bg-accent/[0.06] ring-1 ring-inset ring-accent/40'
+                      : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'
                   } ${forcedTheme ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center">
-                      <Moon className="w-6 h-6 text-blue-400" />
+                    <div className="w-11 h-11 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
+                      <Moon className="w-5 h-5 text-gray-200" />
                     </div>
-                    <span className="font-medium text-white">Dark</span>
+                    <span className="text-sm font-medium text-white">Dunkel</span>
                   </div>
                   {effectiveTheme === 'dark' && (
-                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-accent" />
+                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent" />
                   )}
                 </button>
 
@@ -177,20 +199,20 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleThemeChange('light')}
                   disabled={!!forcedTheme || !hasPermission('theme.light_mode') || saving}
-                  className={`relative p-4 rounded-xl border-2 transition-all ${
+                  className={`relative p-4 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     effectiveTheme === 'light'
-                      ? 'border-accent bg-accent/10'
-                      : 'border-gray-700 hover:border-gray-600'
+                      ? 'border-accent bg-accent/[0.06] ring-1 ring-inset ring-accent/40'
+                      : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'
                   } ${(forcedTheme || !hasPermission('theme.light_mode')) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center">
-                      <Sun className="w-6 h-6 text-yellow-400" />
+                    <div className="w-11 h-11 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
+                      <Sun className="w-5 h-5 text-amber-400" />
                     </div>
-                    <span className="font-medium text-white">Light</span>
+                    <span className="text-sm font-medium text-white">Hell</span>
                   </div>
                   {effectiveTheme === 'light' && (
-                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-accent" />
+                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent" />
                   )}
                 </button>
 
@@ -198,20 +220,20 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleThemeChange('system')}
                   disabled={!!forcedTheme || saving}
-                  className={`relative p-4 rounded-xl border-2 transition-all ${
+                  className={`relative p-4 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     effectiveTheme === 'system'
-                      ? 'border-accent bg-accent/10'
-                      : 'border-gray-700 hover:border-gray-600'
+                      ? 'border-accent bg-accent/[0.06] ring-1 ring-inset ring-accent/40'
+                      : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'
                   } ${forcedTheme ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center">
-                      <Monitor className="w-6 h-6 text-gray-400" />
+                    <div className="w-11 h-11 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
+                      <Monitor className="w-5 h-5 text-gray-400" />
                     </div>
-                    <span className="font-medium text-white">System</span>
+                    <span className="text-sm font-medium text-white">Wie System</span>
                   </div>
                   {effectiveTheme === 'system' && (
-                    <CheckCircle className="absolute top-2 right-2 w-5 h-5 text-accent" />
+                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent" />
                   )}
                 </button>
               </div>
@@ -229,87 +251,71 @@ export default function SettingsPage() {
         {activeTab === 'sessions' && (
           <div className="space-y-6">
             <div>
-              <div className="flex items-start justify-between gap-2 flex-wrap mb-2">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">Aktive Sitzungen</h3>
-                  <p className="text-sm text-gray-400">
-                    Hier siehst du alle Geräte, auf denen du angemeldet bist.
-                  </p>
-                </div>
+              <SectionHead title="Aktive Sitzungen" description="Geräte, auf denen du gerade angemeldet bist.">
                 {sessions.length > 0 && (
-                  <div className="flex gap-2 flex-wrap">
-                    <button
+                  <>
+                    <Button size="sm" variant="secondary"
                       onClick={async () => {
                         if (!confirm('Alle anderen Sitzungen abmelden? Auf diesen Geräten ist eine neue Anmeldung nötig.')) return;
                         const r = await revokeAllSessions({ includeCurrent: false });
                         if (r) toast.success(`${r.revoked} Sitzung(en) abgemeldet`);
                         else toast.error('Fehler');
                       }}
-                      className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
+                    >
                       Alle anderen abmelden
-                    </button>
-                    <button
+                    </Button>
+                    <Button size="sm" variant="danger"
                       onClick={async () => {
                         if (!confirm('ALLE Sitzungen inkl. diese abmelden? Du musst dich danach neu anmelden.')) return;
                         await revokeAllSessions({ includeCurrent: true });
                       }}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg">
-                      Auch hier abmelden
-                    </button>
-                  </div>
+                    >
+                      Überall abmelden
+                    </Button>
+                  </>
                 )}
-              </div>
+              </SectionHead>
 
               {sessions.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <Globe className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Keine Sitzungen gefunden</p>
-                </div>
+                <EmptyState icon={Globe} title="Keine Sitzungen gefunden"
+                  description="Sitzungen erscheinen hier, sobald du dich auf einem Gerät anmeldest." />
               ) : (
-                <div className="space-y-3">
+                <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
                   {sessions.map((session) => {
                     const DeviceIcon = getDeviceIcon(session.device_info);
                     return (
                       <div
                         key={session.id}
-                        className={`p-4 rounded-lg border ${
-                          session.is_current
-                            ? 'border-green-600 bg-green-950/20'
-                            : 'border-gray-700 bg-gray-800/50'
-                        }`}
+                        className={`p-3.5 ${session.is_current ? 'bg-emerald-500/[0.05]' : 'bg-gray-800/20'}`}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                              session.is_current ? 'bg-green-600/20' : 'bg-gray-700'
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+                              session.is_current ? 'bg-emerald-500/15' : 'bg-gray-800'
                             }`}>
-                              <DeviceIcon className={`w-5 h-5 ${
-                                session.is_current ? 'text-green-400' : 'text-gray-400'
+                              <DeviceIcon className={`w-4 h-4 ${
+                                session.is_current ? 'text-emerald-400' : 'text-gray-400'
                               }`} />
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-medium text-white">
+                                <span className="text-sm font-medium text-white truncate">
                                   {session.device_info}
                                 </span>
-                                {session.is_current && (
-                                  <span className="text-xs px-2 py-0.5 bg-green-600/20 text-green-400 rounded">
-                                    Aktuell
-                                  </span>
-                                )}
+                                {session.is_current && <StatusBadge tone="positive" dot label="Dieses Gerät" />}
                               </div>
-                              <div className="text-sm text-gray-400">
-                                IP: {session.ip_address || 'Unbekannt'} • Letzte Aktivität: {new Date(session.last_activity).toLocaleString('de-DE')}
+                              <div className="text-xs text-gray-500 tabular-nums mt-0.5">
+                                {session.ip_address || 'IP unbekannt'} · zuletzt aktiv {new Date(session.last_activity).toLocaleString('de-DE')}
                               </div>
                             </div>
                           </div>
                           {!session.is_current && (
                             <button
                               onClick={() => handleRevokeSession(session.id)}
-                              className="p-2 text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
-                              title="Sitzung beenden"
+                              className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
+                              title="Sitzung beenden" aria-label="Sitzung beenden"
                             >
-                              <LogOut className="w-5 h-5" />
+                              <LogOut className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -326,33 +332,33 @@ export default function SettingsPage() {
         {activeTab === 'security' && (
           <div className="space-y-6">
             <div>
-              <h3 className="text-lg font-semibold text-white mb-2">Zwei-Faktor-Authentifizierung</h3>
-              <p className="text-sm text-gray-400 mb-4">
-                Erhöhe die Sicherheit deines Kontos mit 2FA
-              </p>
+              <SectionHead title="Zwei-Faktor-Anmeldung"
+                description="Schützt dein Konto zusätzlich mit einem Code aus einer Authenticator-App." />
 
-              <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      profile?.two_factor_enabled ? 'bg-green-600/20' : 'bg-gray-700'
+              <div className="p-4 rounded-lg border border-gray-800 bg-gray-800/30">
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                      profile?.two_factor_enabled ? 'bg-emerald-500/15' : 'bg-gray-800'
                     }`}>
-                      <Key className={`w-5 h-5 ${
-                        profile?.two_factor_enabled ? 'text-green-400' : 'text-gray-400'
+                      <Key className={`w-4 h-4 ${
+                        profile?.two_factor_enabled ? 'text-emerald-400' : 'text-gray-400'
                       }`} />
                     </div>
                     <div>
-                      <span className="font-medium text-white">2FA Status</span>
-                      <p className="text-sm text-gray-400">
-                        {profile?.two_factor_enabled ? 'Aktiviert' : 'Nicht aktiviert'}
-                      </p>
+                      <span className="text-sm font-medium text-white">Status</span>
+                      <div className="mt-1">
+                        {profile?.two_factor_enabled
+                          ? <StatusBadge tone="positive" dot label="Aktiviert" />
+                          : <StatusBadge tone="warning" dot label="Nicht aktiviert" />}
+                      </div>
                     </div>
                   </div>
                   <a
                     href={`${import.meta.env.VITE_KEYCLOAK_URL || 'https://auth.t410.de'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'technik-ag'}/account/#/security/signingin`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-4 py-2 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
                   >
                     {profile?.two_factor_enabled ? 'Verwalten' : 'Aktivieren'}
                   </a>
@@ -360,7 +366,7 @@ export default function SettingsPage() {
               </div>
 
               <p className="text-xs text-gray-500 mt-2">
-                2FA wird über Keycloak verwaltet. Klicke auf den Button, um die Einstellungen zu öffnen.
+                Die Einrichtung läuft über dein Keycloak-Konto und öffnet sich in einem neuen Tab.
               </p>
             </div>
 
@@ -403,51 +409,43 @@ function NotificationsTab() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Push-Benachrichtigungen</h3>
-        <p className="text-sm text-gray-400 mb-4">
-          Bekomme Browser-Hinweise auf Zuweisungen, Erinnerungen und Mahnungen — auch wenn die App nicht offen ist.
-        </p>
+        <SectionHead title="Push-Benachrichtigungen"
+          description="Hinweise zu Zuweisungen, Erinnerungen und Mahnungen, auch wenn Stagedesk nicht geöffnet ist." />
         {!status.supported ? (
-          <div className="p-4 bg-gray-800/50 border border-gray-700 rounded-lg text-sm text-gray-400 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5" /> Dein Browser unterstützt keine Web-Push-Notifications.
-          </div>
+          <Notice>Dieser Browser unterstützt keine Push-Benachrichtigungen.</Notice>
         ) : status.permission === 'denied' ? (
-          <div className="p-4 bg-red-900/20 border border-red-800 rounded-lg text-sm text-red-300">
-            <p className="font-medium">Permission verweigert.</p>
-            <p className="mt-1">Du hast die Berechtigung im Browser blockiert. Bitte über das Schloss-Symbol neben der URL wieder freigeben.</p>
-          </div>
+          <Notice tone="danger">
+            <p className="font-medium">Im Browser blockiert.</p>
+            <p className="mt-0.5 opacity-90">Über das Schloss-Symbol neben der Adresszeile kannst du Benachrichtigungen wieder erlauben.</p>
+          </Notice>
         ) : (
-          <div className="p-4 rounded-lg border border-gray-700 bg-gray-800/50 flex items-center justify-between">
+          <div className="p-4 rounded-lg border border-gray-800 bg-gray-800/30 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <Bell className={`w-5 h-5 ${status.subscribed ? 'text-green-400' : 'text-gray-400'}`} />
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${status.subscribed ? 'bg-emerald-500/15' : 'bg-gray-800'}`}>
+                <Bell className={`w-4 h-4 ${status.subscribed ? 'text-emerald-400' : 'text-gray-400'}`} />
+              </div>
               <div>
-                <span className="font-medium text-white">{status.subscribed ? 'Aktiviert' : 'Nicht aktiviert'}</span>
-                <p className="text-xs text-gray-500">Pro Browser/Gerät — auf jedem Endgerät separat aktivieren.</p>
+                <span className="text-sm font-medium text-white">{status.subscribed ? 'Auf diesem Gerät aktiv' : 'Auf diesem Gerät aus'}</span>
+                <p className="text-xs text-gray-500 mt-0.5">Gilt pro Browser. Jedes Gerät einzeln aktivieren.</p>
               </div>
             </div>
             <div className="flex gap-2">
               {status.subscribed && (
-                <button onClick={onTest} disabled={busy}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  Test
-                </button>
+                <Button size="sm" variant="ghost" onClick={onTest} disabled={busy}>Test senden</Button>
               )}
               {status.subscribed ? (
-                <button onClick={onUnsubscribe} disabled={busy}
-                  className="px-3 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm">
-                  Deaktivieren
-                </button>
+                <Button size="sm" variant="secondary" onClick={onUnsubscribe} disabled={busy}>Deaktivieren</Button>
               ) : (
-                <button onClick={onSubscribe} disabled={busy}
-                  className="px-4 py-2 bg-accent hover:bg-accent-hover text-white font-medium rounded-lg text-sm disabled:opacity-50">
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin inline" /> : 'Aktivieren'}
-                </button>
+                <Button size="sm" variant="primary" onClick={onSubscribe} disabled={busy}
+                  icon={busy ? Loader2 : undefined} className={busy ? '[&>svg]:animate-spin' : ''}>
+                  Aktivieren
+                </Button>
               )}
             </div>
           </div>
         )}
         <p className="text-xs text-gray-500 mt-2">
-          Hinweis: Auf iOS funktionieren Push-Notifications nur, wenn Stagedesk als PWA über „Zum Home-Bildschirm" installiert ist.
+          Auf iPhone und iPad klappt Push nur, wenn Stagedesk über „Zum Home-Bildschirm" installiert ist.
         </p>
       </div>
 
@@ -459,7 +457,8 @@ function NotificationsTab() {
 function NotifSwitch({ on, onClick, disabled, offColor = 'bg-gray-600' }) {
   return (
     <button onClick={onClick} disabled={disabled}
-      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${on ? 'bg-accent' : offColor} disabled:opacity-40`}>
+      role="switch" aria-checked={on}
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${on ? 'bg-accent' : offColor} disabled:opacity-40`}>
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${on ? 'translate-x-5' : ''}`} />
     </button>
   );
@@ -491,17 +490,16 @@ function NotificationCategories() {
   return (
     <>
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Kategorien</h3>
-        <p className="text-sm text-gray-400 mb-4">Welche Benachrichtigungen möchtest du bekommen?</p>
-        <div className="space-y-2">
+        <SectionHead title="Kategorien" description="Wähle, worüber du informiert werden willst." />
+        <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
           {cfg.kinds.map(k => {
             const globalOff = cfg.global_disabled.includes(k.value);
             const on = !cfg.my_disabled.includes(k.value) && !globalOff;
             return (
-              <div key={k.value} className="flex items-center justify-between p-3 rounded-lg border border-gray-700 bg-gray-800/50">
-                <div>
-                  <span className="text-white">{k.label}</span>
-                  {globalOff && <span className="ml-2 text-xs text-amber-400">systemweit deaktiviert</span>}
+              <div key={k.value} className="flex items-center justify-between gap-3 px-3.5 py-3 bg-gray-800/20">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-sm text-white">{k.label}</span>
+                  {globalOff && <StatusBadge tone="warning" label="Systemweit aus" />}
                 </div>
                 <NotifSwitch on={on} disabled={globalOff} onClick={() => toggleMine(k.value)} />
               </div>
@@ -511,17 +509,15 @@ function NotificationCategories() {
       </div>
 
       {cfg.is_admin && (
-        <div>
-          <h3 className="text-lg font-semibold text-white mb-2">Global (Admin)</h3>
-          <p className="text-sm text-gray-400 mb-4">
-            Kategorien hier systemweit abschalten — diese Benachrichtigungen werden dann für <strong>alle</strong> Nutzer nicht mehr verschickt.
-          </p>
-          <div className="space-y-2">
+        <div className="pt-6 border-t border-gray-800">
+          <SectionHead title="Systemweit (Admin)"
+            description="Abgeschaltete Kategorien werden an niemanden mehr verschickt, unabhängig von den persönlichen Einstellungen." />
+          <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
             {cfg.kinds.map(k => {
               const on = !cfg.global_disabled.includes(k.value);
               return (
-                <div key={k.value} className="flex items-center justify-between p-3 rounded-lg border border-gray-700 bg-gray-800/50">
-                  <span className="text-white">{k.label}</span>
+                <div key={k.value} className="flex items-center justify-between gap-3 px-3.5 py-3 bg-gray-800/20">
+                  <span className="text-sm text-white">{k.label}</span>
                   <NotifSwitch on={on} offColor="bg-red-600" onClick={() => toggleGlobal(k.value)} />
                 </div>
               );
@@ -582,16 +578,16 @@ function ProfileTab() {
     <div className="space-y-6">
       {/* Avatar */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-3">Profilbild</h3>
+        <SectionHead title="Profilbild" description="Erscheint in der Seitenleiste, bei Zuweisungen und in der Anwesenheit." />
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-accent flex items-center justify-center">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 ring-1 ring-gray-700 flex items-center justify-center shrink-0">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              : <User className="w-9 h-9 text-white" />
+              : <User className="w-9 h-9 text-gray-500" />
             }
           </div>
           <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg cursor-pointer">
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm font-medium rounded-lg cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-accent">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {profile?.avatar_url ? 'Bild ersetzen' : 'Bild hochladen'}
               <input type="file" className="hidden" accept="image/*"
@@ -599,24 +595,21 @@ function ProfileTab() {
             </label>
             {profile?.avatar_url && (
               <button onClick={removeAvatar}
-                className="inline-flex items-center gap-1 text-sm text-red-400 hover:text-red-300">
+                className="inline-flex items-center gap-1.5 self-start text-sm text-gray-400 hover:text-red-400">
                 <Trash2 className="w-3.5 h-3.5" /> Entfernen
               </button>
             )}
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-2">Max. 5 MB · JPG/PNG/GIF/WebP</p>
+        <p className="text-xs text-gray-500 mt-3">Max. 5 MB · JPG, PNG, GIF oder WebP</p>
       </div>
 
       {/* Landing Page */}
       <div className="pt-6 border-t border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-2">Startseite nach Login</h3>
-        <p className="text-sm text-gray-400 mb-3">
-          Welche Seite soll direkt nach dem Anmelden geöffnet werden?
-        </p>
+        <SectionHead title="Startseite" description="Diese Seite öffnet sich direkt nach dem Anmelden." />
         <select value={landing} onChange={(e) => saveLanding(e.target.value)}
           disabled={saving}
-          className="w-full md:w-80 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+          className="w-full md:w-80 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-60">
           {LANDING_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
         </select>
       </div>
@@ -660,48 +653,36 @@ function KalenderAboTab() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-400" /> Kalender-Abo
-        </h3>
-        <p className="text-sm text-gray-400 mb-4">
-          Abonniere alle Stagedesk-Events in deinem Lieblings-Kalender
-          (Apple Calendar, Google Calendar, Thunderbird, Outlook).
-          Änderungen in Stagedesk erscheinen dort automatisch.
-        </p>
-      </div>
+      <SectionHead title="Kalender-Abo"
+        description="Alle Stagedesk-Termine in Apple Kalender, Google Kalender, Thunderbird oder Outlook. Änderungen kommen dort automatisch an." />
 
       {loading ? (
         <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
       ) : (
         <>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Deine persönliche Abo-URL</label>
+            <label className="block text-xs font-medium text-gray-400 mb-1.5">Persönliche Abo-Adresse</label>
             <div className="flex gap-2 flex-wrap">
               <input type="text" readOnly value={url}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 min-w-[260px] bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
-              <button onClick={copy}
-                className="inline-flex items-center gap-1.5 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
-                <Copy className="w-4 h-4" /> Kopieren
-              </button>
+                className="flex-1 min-w-[260px] bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 text-xs font-mono focus:outline-none focus:border-accent" />
+              <Button variant="primary" icon={Copy} onClick={copy}>Kopieren</Button>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              Tipp: In Apple Calendar als <code className="text-gray-400">webcal://</code>-Link öffnen —{' '}
-              <a href={webcalUrl} className="text-accent underline">direkt abonnieren</a>.
+              Für Apple Kalender als <code className="text-gray-400">webcal://</code>-Link:{' '}
+              <a href={webcalUrl} className="text-gray-200 underline decoration-accent underline-offset-2 hover:text-white">direkt abonnieren</a>.
             </p>
           </div>
 
           <div className="pt-4 border-t border-gray-800">
-            <p className="text-sm text-gray-400 mb-2">
-              Falls du den Link versehentlich geteilt hast: Token neu erzeugen.
-              <span className="text-yellow-500"> Bestehende Abos werden ungültig.</span>
+            <p className="text-sm text-gray-400 mb-3">
+              Adresse versehentlich geteilt? Erzeuge eine neue.
+              <span className="text-amber-400"> Bestehende Abos funktionieren danach nicht mehr.</span>
             </p>
-            <button onClick={regenerate} disabled={regenerating}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white text-sm rounded-lg">
-              {regenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Token neu erzeugen
-            </button>
+            <Button variant="secondary" onClick={regenerate} disabled={regenerating}
+              icon={regenerating ? Loader2 : RefreshCw} className={regenerating ? '[&>svg]:animate-spin' : ''}>
+              Neue Adresse erzeugen
+            </Button>
           </div>
         </>
       )}

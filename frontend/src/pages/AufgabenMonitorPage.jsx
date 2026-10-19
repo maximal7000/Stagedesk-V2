@@ -67,16 +67,22 @@ export default function AufgabenMonitorPage() {
   return (
     <div className="min-h-screen bg-black text-white p-6 lg:p-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8 pb-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <ListChecks className="w-10 h-10 text-blue-400" />
+      <div className="flex items-end justify-between mb-8 pb-6 border-b border-white/10">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-accent/15 ring-1 ring-inset ring-accent/30 flex items-center justify-center">
+            <ListChecks className="w-8 h-8 text-accent" />
+          </div>
           <div>
-            <h1 className="text-4xl lg:text-5xl font-bold tracking-tight">Aufgaben</h1>
-            <p className="text-sm text-white/50 mt-1">{offen} offen</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/45">Technik-AG</p>
+            <h1 className="font-display text-5xl lg:text-6xl font-bold tracking-tight leading-none mt-1">Aufgaben</h1>
+          </div>
+          <div className="ml-4 pl-5 border-l border-white/10 self-stretch flex flex-col justify-center">
+            <div className="text-4xl font-bold tabular-nums leading-none">{offen}</div>
+            <div className="text-sm text-white/50 mt-1">offen</div>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-4xl lg:text-5xl font-mono tabular-nums">
+          <div className="font-display text-5xl lg:text-6xl font-semibold tabular-nums leading-none">
             {now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
           </div>
           <div className="text-sm text-white/60 mt-1">
@@ -86,8 +92,10 @@ export default function AufgabenMonitorPage() {
       </div>
 
       {aufgaben.length === 0 ? (
-        <div className="flex items-center justify-center min-h-[60vh] text-2xl text-white/40">
-          Keine Aufgaben — heute ist frei? 😊
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
+          <CheckCircle2 className="w-16 h-16 text-white/20 mb-5" />
+          <div className="font-display text-4xl font-semibold text-white/70">Keine offenen Aufgaben</div>
+          <div className="text-xl text-white/40 mt-2">Neue Aufgaben erscheinen hier automatisch.</div>
         </div>
       ) : (
         <ul className="space-y-3 max-w-5xl mx-auto">
@@ -95,10 +103,10 @@ export default function AufgabenMonitorPage() {
             const done = a.status === 'abgeschlossen';
             return (
               <li key={a.id}
-                  className={`flex items-start gap-4 p-5 rounded-2xl border ${
+                  className={`flex items-start gap-4 p-5 rounded-xl border border-l-4 ${
                     done
-                      ? 'bg-white/[0.02] border-white/5 opacity-50'
-                      : 'bg-white/[0.04] border-white/10'
+                      ? 'bg-white/[0.02] border-white/5 border-l-white/10 opacity-50'
+                      : 'bg-white/[0.04] border-white/10 border-l-accent'
                   }`}>
                 {done
                   ? <CheckCircle2 className="w-8 h-8 text-green-400 shrink-0 mt-0.5" />
@@ -129,7 +137,7 @@ export default function AufgabenMonitorPage() {
                     <div className="flex flex-wrap gap-1.5 mt-3">
                       {a.zugewiesene.map(z => (
                         <span key={z.id}
-                          className="inline-block px-3 py-1 bg-blue-500/20 text-blue-200 rounded-md text-base">
+                          className="inline-block px-3 py-1 bg-white/10 text-white/80 ring-1 ring-inset ring-white/10 rounded-md text-base">
                           {z.kurzname || z.name}
                         </span>
                       ))}

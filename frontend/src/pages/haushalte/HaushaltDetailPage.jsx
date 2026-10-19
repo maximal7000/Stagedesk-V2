@@ -16,6 +16,7 @@ import EditHaushaltModal from '../../components/EditHaushaltModal';
 import ArtikelModal from '../../components/ArtikelModal';
 import ArtikelDetailsPanel from '../../components/ArtikelDetailsPanel';
 import SammelQuittungModal from '../../components/SammelQuittungModal';
+import { Button } from '../../components/ui';
 
 // Sortier-Optionen für Tabelle
 const SORT_OPTIONS = [
@@ -37,14 +38,16 @@ const STATUS_LABEL = {
   geliefert: 'Geliefert',
   abgelehnt: 'Abgelehnt',
 };
+// Ablauf geplant → geliefert: neutral, gelb (wartet), blau (freigegeben), türkis (unterwegs), grün (da)
 const STATUS_CLASS = {
-  geplant:   'bg-gray-500/20 text-gray-300',
-  beantragt: 'bg-amber-500/20 text-amber-300',
-  genehmigt: 'bg-blue-500/20 text-blue-300',
-  bestellt:  'bg-purple-500/20 text-purple-300',
-  geliefert: 'bg-green-500/20 text-green-300',
-  abgelehnt: 'bg-red-500/20 text-red-300',
+  geplant:   'bg-gray-700/40 text-gray-300 ring-1 ring-inset ring-gray-600/30',
+  beantragt: 'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
+  genehmigt: 'bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25',
+  bestellt:  'bg-teal-500/15 text-teal-300 ring-1 ring-inset ring-teal-500/25',
+  geliefert: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/25',
+  abgelehnt: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
 };
+const KATEGORIE_LABEL = { konsumitiv: 'Konsumtiv', investiv: 'Investiv' };
 
 const POLL_INTERVAL = 5000;
 
@@ -92,7 +95,7 @@ const EditingRow = memo(function EditingRow({
   };
 
   return (
-    <tr className="bg-blue-950/20 border-b border-gray-800">
+    <tr className="bg-accent/[0.04] border-b border-gray-800">
       <td className="p-2">
         <input
           type="text"
@@ -100,7 +103,7 @@ const EditingRow = memo(function EditingRow({
           onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </td>
       <td className="p-2">
@@ -111,7 +114,7 @@ const EditingRow = memo(function EditingRow({
             onChange={(e) => setLocalData({ ...localData, link: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="https://..."
-            className="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
           <button
             onClick={handleParse}
@@ -131,7 +134,7 @@ const EditingRow = memo(function EditingRow({
             onChange={(e) => setLocalData({ ...localData, preis: e.target.value })}
             onKeyDown={handleKeyDown}
             step="0.01"
-            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right tabular-nums focus:ring-2 focus:ring-blue-500"
+            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right tabular-nums focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
           />
           <span className="text-gray-500 text-sm">€</span>
         </div>
@@ -143,7 +146,7 @@ const EditingRow = memo(function EditingRow({
           onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
           onKeyDown={handleKeyDown}
           min="1"
-          className="w-16 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center tabular-nums focus:ring-2 focus:ring-blue-500"
+          className="w-16 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center tabular-nums focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
         />
       </td>
       <td className="p-2 text-right tabular-nums text-white font-medium">
@@ -646,13 +649,13 @@ export default function HaushaltDetailPage() {
             checked={selectedIds.has(item.id)}
             onClick={(e) => { e.preventDefault(); handleSelectClick(item, e, orderedItems); }}
             onChange={() => {}}
-            className="rounded border-gray-600 bg-gray-700 text-blue-500" />
+            className="rounded border-gray-600 bg-gray-700 accent-accent" />
         </td>
         {/* Status */}
         <td className="p-2 w-[110px]">
           <select value={item.status || 'beantragt'}
             onChange={(e) => handleStatusChange(item, e.target.value)}
-            className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border-0 cursor-pointer ${STATUS_CLASS[item.status] || STATUS_CLASS.beantragt}`}>
+            className={`text-[11px] font-semibold tracking-wide px-1.5 py-[3px] rounded-md border-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${STATUS_CLASS[item.status] || STATUS_CLASS.beantragt}`}>
             {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900 text-white">{l}</option>)}
           </select>
         </td>
@@ -674,7 +677,8 @@ export default function HaushaltDetailPage() {
           </span>
           <button onClick={() => toggleDesc(item.id)}
             title={descOpen ? 'Details verbergen' : 'Details (Beschreibung, Kommentare, Verlauf, Quittung)'}
-            className="ml-1.5 text-gray-500 hover:text-gray-300 align-middle">
+            aria-expanded={descOpen}
+            className={`ml-1.5 align-middle ${descOpen ? 'text-accent' : 'text-gray-500 hover:text-gray-300'}`}>
             <Info className="w-3.5 h-3.5 inline" />
           </button>
         </td>
@@ -682,11 +686,11 @@ export default function HaushaltDetailPage() {
         <td className="p-2">
           {item.link ? (
             <a href={item.link} target="_blank" rel="noopener noreferrer"
-              className="text-accent hover:opacity-80 flex items-center gap-1 text-sm">
-              <ExternalLink className="w-3 h-3" /> Link
+              className="text-gray-300 hover:text-white flex items-center gap-1 text-sm">
+              <ExternalLink className="w-3 h-3 text-gray-500" /> Shop
             </a>
           ) : (
-            <span className="text-gray-600 text-sm">kein Link</span>
+            <span className="text-gray-600 text-sm">–</span>
           )}
         </td>
         <td className="p-2 text-right tabular-nums text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
@@ -702,11 +706,11 @@ export default function HaushaltDetailPage() {
         <td className="p-2 w-[60px]">
           {manuellOrder && (
             <div className="flex flex-col gap-0.5 items-center opacity-50 group-hover:opacity-100">
-              <button onClick={() => moveItem(item, allKatItems, -1)}
+              <button onClick={() => moveItem(item, allKatItems, -1)} aria-label="Nach oben"
                 className="p-0.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
                 <ChevronUp className="w-3.5 h-3.5" />
               </button>
-              <button onClick={() => moveItem(item, allKatItems, +1)}
+              <button onClick={() => moveItem(item, allKatItems, +1)} aria-label="Nach unten"
                 className="p-0.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
@@ -715,12 +719,12 @@ export default function HaushaltDetailPage() {
         </td>
         <td className="p-2">
           <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onClick={openEdit}
-              className="p-1.5 text-gray-400 hover:text-accent hover:bg-gray-700 rounded">
+            <button onClick={openEdit} title="Bearbeiten" aria-label="Artikel bearbeiten"
+              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
               <Edit className="w-4 h-4" />
             </button>
-            <button onClick={() => handleDeleteArtikel(item.id)}
-              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-gray-700 rounded">
+            <button onClick={() => handleDeleteArtikel(item.id)} title="Löschen" aria-label="Artikel löschen"
+              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-md">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
@@ -763,14 +767,16 @@ export default function HaushaltDetailPage() {
     const sorted = sortItems(items, sortBy[kategorie]);
     return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-      <div className={`p-4 border-b border-gray-800 ${color === 'orange' ? 'bg-orange-950/20' : 'bg-green-950/20'}`}>
+      <div className="p-4 border-b border-gray-800">
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <Icon className={`w-5 h-5 ${color === 'orange' ? 'text-orange-400' : 'text-green-400'}`} />
-            <h3 className="font-bold text-white">{kategorie === 'konsumitiv' ? 'Konsumitiv' : 'Investitiv'}</h3>
-            <span className="text-sm text-gray-400">({items.length})</span>
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color === 'orange' ? 'bg-orange-500/15' : 'bg-emerald-500/15'}`}>
+              <Icon className={`w-4 h-4 ${color === 'orange' ? 'text-orange-400' : 'text-emerald-400'}`} />
+            </div>
+            <h3 className="font-display text-lg font-semibold tracking-tight text-white">{KATEGORIE_LABEL[kategorie]}</h3>
+            <span className="text-sm tabular-nums text-gray-500">{items.length}</span>
           </div>
-          <p className={`text-lg font-bold tabular-nums ${color === 'orange' ? 'text-orange-400' : 'text-green-400'}`}>
+          <p className="text-lg font-bold tabular-nums text-white">
             {formatPreis(ausgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(budget)}</span>
           </p>
         </div>
@@ -779,27 +785,23 @@ export default function HaushaltDetailPage() {
             className={`h-full transition-all ${
               budget > 0 && (ausgaben / budget) > 0.9
                 ? 'bg-red-500'
-                : color === 'orange' ? 'bg-orange-500' : 'bg-green-500'
+                : color === 'orange' ? 'bg-orange-500' : 'bg-emerald-500'
             }`}
             style={{ width: `${budget > 0 ? Math.min((ausgaben / budget) * 100, 100) : 0}%` }}
           />
         </div>
         {/* Action-Bar: Add-Button + Sortierung */}
         <div className="flex items-center justify-between gap-2 mt-3 flex-wrap">
-          <button onClick={() => setAddModalKategorie(kategorie)}
-            data-shortcut="new"
-            className={`inline-flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg ${
-              color === 'orange'
-                ? 'bg-orange-600 hover:bg-orange-700 text-white'
-                : 'bg-green-600 hover:bg-green-700 text-white'
-            }`}>
-            <Plus className="w-4 h-4" /> Artikel hinzufügen
-          </button>
+          <Button size="sm" variant="secondary" icon={Plus} onClick={() => setAddModalKategorie(kategorie)}
+            data-shortcut="new">
+            Artikel erfassen
+          </Button>
           <div className="flex items-center gap-1.5">
             <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
             <select value={sortBy[kategorie]}
               onChange={(e) => setSortBy(s => ({ ...s, [kategorie]: e.target.value }))}
-              className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-white">
+              aria-label="Sortierung"
+              className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-accent">
               {SORT_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           </div>
@@ -809,7 +811,7 @@ export default function HaushaltDetailPage() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase tracking-wider">
+            <tr className="border-b border-gray-800 text-left text-[11px] text-gray-500 uppercase tracking-[0.08em] font-semibold">
               <th className="p-2 w-[32px]"></th>
               <th className="p-2 w-[110px]">Status</th>
               <th className="p-2 w-[48px]"></th>
@@ -827,7 +829,10 @@ export default function HaushaltDetailPage() {
               <ArtikelRow key={item.id} item={item} kategorie={kategorie} orderedItems={sorted} />
             ))}
             {sorted.length === 0 && (
-              <tr><td colSpan={10} className="p-6 text-center text-gray-500 text-sm">Noch keine Artikel</td></tr>
+              <tr><td colSpan={10} className="p-8 text-center text-sm">
+                <span className="text-gray-400">Noch keine Artikel.</span>{' '}
+                <button onClick={() => setAddModalKategorie(kategorie)} className="text-gray-200 underline decoration-accent underline-offset-2 hover:text-white">Ersten erfassen</button>
+              </td></tr>
             )}
           </tbody>
         </table>
@@ -839,57 +844,64 @@ export default function HaushaltDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-3">
         <button
           onClick={() => navigate('/haushalte')}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+          className="p-2 -ml-2 mt-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+          title="Zurück zu den Haushalten" aria-label="Zurück zu den Haushalten"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">{haushalt.name}</h1>
+        <div className="flex-1 min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Haushalt</p>
+          <div className="flex items-center gap-2">
+            <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{haushalt.name}</h1>
             <button
               onClick={() => setShowEditModal(true)}
-              className="p-1.5 text-gray-400 hover:text-accent hover:bg-gray-800 rounded"
+              className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-md"
+              title="Haushalt bearbeiten" aria-label="Haushalt bearbeiten"
             >
               <Edit className="w-4 h-4" />
             </button>
           </div>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             {haushalt.beschreibung && <p className="text-gray-400 text-sm">{haushalt.beschreibung}</p>}
             <button
               onClick={() => setIsPolling(!isPolling)}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-                isPolling ? 'bg-green-900/50 text-green-400' : 'bg-gray-800 text-gray-500'
+              className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-xs font-medium ${
+                isPolling ? 'text-emerald-300 hover:bg-emerald-500/10' : 'text-gray-500 hover:bg-gray-800'
               }`}
+              title={isPolling ? 'Live-Updates aktiv (klicken zum Pausieren)' : 'Live-Updates pausiert (klicken zum Fortsetzen)'}
             >
-              <RefreshCw className={`w-3 h-3 ${isPolling ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
+              <span className={`w-1.5 h-1.5 rounded-full ${isPolling ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
               {isPolling ? 'Live' : 'Pausiert'}
             </button>
-            {lastUpdate && <span className="text-xs text-gray-600">{lastUpdate.toLocaleTimeString('de-DE')}</span>}
+            {lastUpdate && <span className="text-xs text-gray-500 tabular-nums">Stand {lastUpdate.toLocaleTimeString('de-DE')}</span>}
           </div>
         </div>
         
         {/* Ansicht-Umschalter */}
-        <div className="flex bg-gray-800 rounded-lg p-1">
+        <div className="flex gap-0.5 bg-gray-800/60 border border-gray-700 rounded-lg p-0.5 shrink-0">
           <button
             onClick={() => setViewMode('tabs')}
-            className={`p-2 rounded ${viewMode === 'tabs' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-            title="Tabs"
+            className={`p-1.5 rounded-md ${viewMode === 'tabs' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            aria-pressed={viewMode === 'tabs'}
+            title="Als Tabs"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('split')}
-            className={`p-2 rounded ${viewMode === 'split' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            className={`p-1.5 rounded-md ${viewMode === 'split' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            aria-pressed={viewMode === 'split'}
             title="Nebeneinander"
           >
             <Columns className="w-4 h-4" />
           </button>
           <button
             onClick={() => setViewMode('stacked')}
-            className={`p-2 rounded ${viewMode === 'stacked' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
+            className={`p-1.5 rounded-md ${viewMode === 'stacked' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            aria-pressed={viewMode === 'stacked'}
             title="Untereinander"
           >
             <List className="w-4 h-4" />
@@ -899,19 +911,24 @@ export default function HaushaltDetailPage() {
 
       {/* Budget Übersicht */}
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Wallet className="w-5 h-5 text-blue-400" />
-            <span className="text-gray-400">Gesamt</span>
+        <div className="flex items-end justify-between gap-3 flex-wrap">
+          <div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+              <Wallet className="w-3.5 h-3.5" /> Verbleibend gesamt
+            </div>
+            <p className={`text-2xl font-bold tabular-nums leading-none tracking-tight ${gesamtBudget - gesamtAusgaben < 0 ? 'text-red-400' : 'text-white'}`}>
+              {formatPreis(gesamtBudget - gesamtAusgaben)}
+            </p>
           </div>
-          <p className="text-lg font-bold tabular-nums text-white">
-            {formatPreis(gesamtAusgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(gesamtBudget)}</span>
+          <p className="text-sm tabular-nums text-gray-400">
+            {formatPreis(gesamtAusgaben)} ausgegeben <span className="text-gray-600">/</span> {formatPreis(gesamtBudget)} Budget
           </p>
         </div>
-        <div className="h-2 bg-gray-800 rounded-full overflow-hidden mt-3">
+        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mt-3">
           <div
             className={`h-full transition-all ${
-              gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.9 ? 'bg-red-500' : 'bg-blue-500'
+              gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.9 ? 'bg-red-500'
+                : gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.75 ? 'bg-amber-500' : 'bg-emerald-500'
             }`}
             style={{ width: `${gesamtBudget > 0 ? Math.min((gesamtAusgaben / gesamtBudget) * 100, 100) : 0}%` }}
           />
@@ -922,10 +939,10 @@ export default function HaushaltDetailPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input type="text" placeholder="Suchen…" value={search}
+          <input type="text" placeholder="Artikel suchen…" value={search}
             data-shortcut="search"
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm" />
+            className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
           className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white">
@@ -945,10 +962,7 @@ export default function HaushaltDetailPage() {
             <option value="pdf">PDF</option>
           </select>
         </div>
-        <button onClick={() => setShowSammelQuittung(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
-          <Receipt className="w-4 h-4" /> Sammel-Quittung
-        </button>
+        <Button variant="secondary" icon={Receipt} onClick={() => setShowSammelQuittung(true)}>Sammel-Quittung</Button>
         {selectedIds.size > 0 && (
           <>
             <span className="text-sm tabular-nums text-gray-400">{selectedIds.size} ausgewählt</span>
@@ -969,21 +983,21 @@ export default function HaushaltDetailPage() {
       {/* Status-Summary (Budget-Aufteilung) */}
       {statusSummary && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-2">Budget nach Status</div>
+          <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mb-2">Budget nach Status</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {['konsumitiv', 'investiv'].map((kat) => {
               const sums = statusSummary[kat] || {};
               const total = Object.values(sums).reduce((s, x) => s + (x.summe || 0), 0);
               return (
                 <div key={kat}>
-                  <div className="text-xs text-gray-400 mb-1 capitalize">{kat}</div>
+                  <div className="text-xs text-gray-400 mb-1.5">{KATEGORIE_LABEL[kat]}</div>
                   <div className="flex flex-wrap gap-1.5 text-xs">
                     {Object.entries(STATUS_LABEL).map(([s, l]) => {
                       const v = sums[s];
                       if (!v) return null;
                       return (
-                        <span key={s} className={`px-2 py-0.5 rounded tabular-nums ${STATUS_CLASS[s]}`}>
-                          {l}: {formatPreis(v.summe)} ({v.anzahl})
+                        <span key={s} className={`px-2 py-[3px] rounded-md tabular-nums ${STATUS_CLASS[s]}`}>
+                          {l} {formatPreis(v.summe)} <span className="opacity-60">· {v.anzahl}</span>
                         </span>
                       );
                     })}
@@ -1000,28 +1014,28 @@ export default function HaushaltDetailPage() {
       {viewMode === 'tabs' && (
         <div>
           {/* Tab-Buttons */}
-          <div className="flex gap-2 mb-4">
+          <div className="flex gap-1 mb-4 border-b border-gray-800">
             <button
               onClick={() => setActiveTab('konsumitiv')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2.5 -mb-px border-b-2 text-sm font-medium transition-colors ${
                 activeTab === 'konsumitiv'
-                  ? 'bg-orange-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  ? 'border-orange-500 text-white'
+                  : 'border-transparent text-gray-400 hover:text-white'
               }`}
             >
-              <TrendingDown className="w-5 h-5" />
-              Konsumitiv ({artikelKonsumitiv.length})
+              <TrendingDown className={`w-4 h-4 ${activeTab === 'konsumitiv' ? 'text-orange-400' : ''}`} />
+              Konsumtiv <span className="tabular-nums text-gray-500">{artikelKonsumitiv.length}</span>
             </button>
             <button
               onClick={() => setActiveTab('investiv')}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2.5 -mb-px border-b-2 text-sm font-medium transition-colors ${
                 activeTab === 'investiv'
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                  ? 'border-emerald-500 text-white'
+                  : 'border-transparent text-gray-400 hover:text-white'
               }`}
             >
-              <TrendingUp className="w-5 h-5" />
-              Investitiv ({artikelInvestitiv.length})
+              <TrendingUp className={`w-4 h-4 ${activeTab === 'investiv' ? 'text-emerald-400' : ''}`} />
+              Investiv <span className="tabular-nums text-gray-500">{artikelInvestitiv.length}</span>
             </button>
           </div>
           

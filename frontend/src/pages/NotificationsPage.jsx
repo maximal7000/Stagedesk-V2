@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Trash2, Loader2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/api';
-import { PageHeader, Button, EmptyState } from '../components/ui';
+import { PageHeader, Button, EmptyState, StatusBadge } from '../components/ui';
 
 const KIND_LABEL = {
   zuweisung: 'Zuweisung', mahnung: 'Mahnung', erinnerung: 'Erinnerung',
@@ -13,16 +13,23 @@ const KIND_LABEL = {
   info: 'Info', system: 'System',
 };
 
-const KIND_CLASS = {
-  zuweisung: 'bg-blue-500/15 text-blue-300 ring-1 ring-inset ring-blue-500/25',
-  mahnung: 'bg-orange-500/15 text-orange-300 ring-1 ring-inset ring-orange-500/25',
-  erinnerung: 'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
-  kompetenz: 'bg-purple-500/15 text-purple-300 ring-1 ring-inset ring-purple-500/25',
-  deadline: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
-  konflikt: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
-  info: 'bg-gray-500/15 text-gray-300 ring-1 ring-inset ring-gray-500/25',
-  system: 'bg-gray-500/15 text-gray-300 ring-1 ring-inset ring-gray-500/25',
+// Töne für StatusBadge (semantisch: rot = dringend, gelb = Erinnerung)
+const KIND_TONE = {
+  zuweisung: 'accent', mahnung: 'danger', erinnerung: 'warning',
+  kompetenz: 'info', deadline: 'danger', konflikt: 'danger',
+  info: 'neutral', system: 'neutral',
 };
+
+function FilterTab({ active, onClick, children }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+        active ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+      }`}>
+      {children}
+    </button>
+  );
+}
 
 export default function NotificationsPage() {
   const [items, setItems] = useState([]);
@@ -73,12 +80,10 @@ export default function NotificationsPage() {
         meta={<span className="tabular-nums">{unread > 0 ? `${unread} ungelesen` : 'Alles gelesen'}</span>}
         actions={
           <>
-            <Button
-              variant={onlyUnread ? 'primary' : 'secondary'}
-              onClick={() => setOnlyUnread((v) => !v)}
-            >
-              {onlyUnread ? 'Nur ungelesen' : 'Alle'}
-            </Button>
+            <div className="flex items-center gap-0.5 p-0.5 bg-gray-800/60 border border-gray-700 rounded-lg">
+              <FilterTab active={!onlyUnread} onClick={() => setOnlyUnread(false)}>Alle</FilterTab>
+              <FilterTab active={onlyUnread} onClick={() => setOnlyUnread(true)}>Ungelesen</FilterTab>
+            </div>
             {unread > 0 && (
               <Button variant="secondary" icon={Check} onClick={markAllRead}>
                 Alle gelesen
@@ -92,20 +97,28 @@ export default function NotificationsPage() {
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
       ) : items.length === 0 ? (
         <div className="bg-gray-900 border border-gray-800 rounded-xl">
-          <EmptyState icon={Bell} title="Keine Benachrichtigungen"
-            description="Neue Zuweisungen, Erinnerungen und Hinweise erscheinen hier." />
+          {onlyUnread ? (
+            <EmptyState icon={Check} title="Alles gelesen"
+              description="Es gibt keine ungelesenen Benachrichtigungen."
+              action={<Button variant="secondary" onClick={() => setOnlyUnread(false)}>Alle anzeigen</Button>} />
+          ) : (
+            <EmptyState icon={Bell} title="Keine Benachrichtigungen"
+              description="Neue Zuweisungen, Erinnerungen und Hinweise erscheinen hier." />
+          )}
         </div>
       ) : (
         <ul className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
           {items.map((n) => (
             <li key={n.id}
-              className={`flex items-start gap-3 p-4 hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/5'}`}>
-              <span className={`shrink-0 text-[11px] uppercase font-semibold leading-none tracking-wide px-2 py-[3px] rounded-md ${KIND_CLASS[n.kind] || KIND_CLASS.info}`}>
-                {KIND_LABEL[n.kind] || n.kind}
+              className={`group relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/[0.04]'}`}>
+              {!n.is_read && <span className="absolute left-0 inset-y-0 w-0.5 bg-accent" aria-hidden="true" />}
+              <span className="shrink-0 w-24 pt-0.5">
+                <StatusBadge tone={KIND_TONE[n.kind] || 'neutral'} label={KIND_LABEL[n.kind] || n.kind} />
               </span>
-              <button onClick={() => open(n)} className="flex-1 min-w-0 text-left">
+              <button onClick={() => open(n)} className="flex-1 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded">
                 <div className="flex items-center gap-2">
-                  <span className={`truncate ${n.is_read ? 'text-gray-300' : 'text-white font-medium'}`}>
+                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-label="ungelesen" />}
+                  <span className={`truncate ${n.is_read ? 'text-gray-300' : 'text-white font-semibold'}`}>
                     {n.title}
                   </span>
                   {n.link && <ExternalLink className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
@@ -116,7 +129,7 @@ export default function NotificationsPage() {
                 </div>
               </button>
               <button onClick={() => remove(n)}
-                className="p-1 text-gray-500 hover:text-red-400 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 title="Löschen" aria-label="Benachrichtigung löschen">
                 <Trash2 className="w-4 h-4" />
               </button>
