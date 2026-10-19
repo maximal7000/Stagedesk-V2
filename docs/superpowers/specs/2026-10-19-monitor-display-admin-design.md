@@ -83,7 +83,7 @@ Die öffentliche Monitor-Anzeige und das Monitor-Admin werden in **einem** Proje
 | Feld | Werte | Bedeutung |
 |---|---|---|
 | `location` | Text | Ort, zum Beispiel "Eingangshalle" |
-| `scale` | `auto`, `100`, `150`, `200` (Standard `auto`) | Skalierung der Anzeige |
+| `scale` | `auto`, `75`, `90`, `100`, `110`, `125`, `150`, `175`, `200` (Standard `auto`) | Skalierung der Anzeige; `?zoom=` in der URL hat Vorrang und sollte deshalb aus `kiosk.sh` entfernt werden |
 | `orientation` | `landscape`, `portrait` | Ausrichtung |
 | `access_key` | 32 Zeichen, zufällig, eindeutig | Schlüssel in der Kiosk-URL; wird beim Anlegen erzeugt, per Admin neu erzeugbar |
 | `off_during_holidays` | bool, Standard true | in Ferienzeiträumen aus |

@@ -79,7 +79,7 @@
   - `split_left`/`split_right` erlauben zusätzlich `substitutions` und `departures`
   - `on_air_split_side` bleibt mit default `right`
 - **Screen** bekommt dazu:
-  - `location`, `scale` (`auto|100|150|200`, default `auto`), `orientation` (`landscape|portrait`)
+  - `location`, `scale` (`auto|75|90|100|110|125|150|175|200`, CharField, default `auto`), `orientation` (`landscape|portrait`)
   - `access_key` (CharField 32, unique, default `secrets.token_urlsafe(24)[:32]`)
   - `off_during_holidays` (default True), `off_until` (nullable)
 - **Neue Models:**
@@ -371,7 +371,7 @@ Daten pro `kind`:
 - **Fehlen die Dateien,** meldet der Implementierer NEEDS_CONTEXT.
 
 **Interfaces — Produces:**
-- `scale.computeRootPx({width, height, orientation, scale, zoom}) -> number`: `16 * (zoom ?? (width / (orientation==='portrait' ? 1080 : 1920)) * scaleFactor)`, wobei `scaleFactor` für `'auto'` = 1 ist und für `'150'` = 1.5
+- `scale.computeRootPx({width, height, orientation, scale, zoom}) -> number`: `16 * (zoom ?? (width / (orientation==='portrait' ? 1080 : 1920)) * scaleFactor)`, wobei `scaleFactor` für `'auto'` = 1 ist und sonst Prozentwert / 100 (`'75'` = 0.75 … `'200'` = 2)
 - `pager.paginate(items, perPage) -> items[][]`, `usePager(pages, seconds) -> {index, count}`
 - `connection.connectionState({lastOkAt, now, online}) -> 'ok'|'stale'|'lost'`
   - `stale` ab der ersten fehlgeschlagenen Abfrage oder bei `online=false`, solange `now - lastOkAt < 120000`
@@ -393,6 +393,7 @@ Daten pro `kind`:
   - mit `scale:'150'` → 48
   - mit `zoom:2` → 32
   - mit `zoom:2` und `scale:'200'` → 32
+  - mit `scale:'75'` → 24, mit `scale:'110'` → 35.2
   - **Festlegung:** `root = 16 * (zoom ?? (width/basis) * scaleFactor)`. Ein gesetztes `?zoom=` ist also ein absoluter Faktor. So zeigt die bestehende Kiosk-URL von glocke (`?zoom=2` auf 4K) dieselbe Größe wie "Automatisch", statt doppelt zu vergrößern.
   - `paginate([1..25], 10)` → 3 Seiten
   - `connectionState`: 0 s → `ok`; erster Fehler bei 30 s → `stale`; 121 s → `lost`
@@ -595,7 +596,7 @@ Daten pro `kind`:
 - **Liste:** Tabelle wie in der Übersicht, mit "Neuer Bildschirm".
 - **Detail:**
   - Abschnitte "Anzeige", "Ein- und Ausschalten" und "Kiosk-URL", jeweils mit `useDraft` und `SaveBar`.
-  - **Anzeige:** Name, Ort, Standard-Ansicht, Skalierung (Segmente Automatisch/100 %/150 %/200 %, Hilfetext "Automatisch passt die Größe an die Auflösung des Bildschirms an."), Ausrichtung.
+  - **Anzeige:** Name, Ort, Standard-Ansicht, Skalierung (Auswahlliste Automatisch, 75 %, 90 %, 100 %, 110 %, 125 %, 150 %, 175 %, 200 %, Hilfetext "Automatisch passt die Größe an die Auflösung des Bildschirms an."), Ausrichtung.
   - **Ein- und Ausschalten:** Steuerung (Automatisch/Immer an/Immer aus), Zeitplan (`ScheduleEditor`: Zeilen mit Tagen und von/bis), "In den Ferien ausgeschaltet", Ausnahmen nach Datum.
   - **Kiosk-URL:** `<origin>/monitor?screen=<slug>&key=<key>` mit "Kopieren" und "Neu erzeugen" (ConfirmDialog: "Der alte Link funktioniert danach nicht mehr für den Vertretungsplan.").
   - **Rechts "Gerät":** CEC-Status, zuletzt gemeldet, "Neu laden", Platzhalter "Kein Agent installiert. WLAN, Temperatur und Updates erscheinen hier, sobald der Geräte-Agent eingerichtet ist."
@@ -707,7 +708,7 @@ Daten pro `kind`:
   4. `python manage.py monitor_render_media`
   5. `python manage.py monitor_webuntis_check`
   6. Sichtprüfung von glocke und mensa
-  7. Kiosk-URL mit Schlüssel aus dem Admin pro Pi in `kiosk.sh` eintragen
+  7. Kiosk-URL mit Schlüssel aus dem Admin pro Pi in `kiosk.sh` eintragen und dabei `?zoom=` entfernen; sonst überstimmt die URL die Skalierung aus dem Admin. Das Admin zeigt die URL ohne `zoom`.
   8. Rückweg: `migrate monitor 0038`, `migrate users 0015`, Code auf den Backup-Tag
 - [ ] **Step 2: Gesamtprüfung**
   - `python manage.py test` und `makemigrations --check`
