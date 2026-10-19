@@ -132,7 +132,7 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
               placeholder="Kommentar schreiben…"
               className="flex-1 px-2 py-1 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
             <button onClick={addKomm} disabled={!newKommentar.trim()}
-              className="px-3 py-1 bg-accent hover:bg-accent-hover disabled:opacity-60 text-white text-sm rounded-md">
+              className="px-3 py-1 bg-accent hover:bg-accent-hover disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none text-white text-sm rounded-md">
               Senden
             </button>
           </div>

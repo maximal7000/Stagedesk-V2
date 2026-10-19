@@ -42,9 +42,7 @@ export default function CreateHaushaltModal({ onClose, onCreated }) {
       <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle">
-          <div className="flex items-center gap-3">
-            <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neuer Haushalt</h2>
-          </div>
+          <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neuer Haushalt</h2>
           <button
             onClick={onClose}
             className="p-1.5 -mr-1.5 text-fg-subtle hover:text-fg hover:bg-raised rounded-sm transition-colors"
@@ -141,7 +139,7 @@ export default function CreateHaushaltModal({ onClose, onCreated }) {
             <button
               type="submit"
               disabled={loading}
-              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

@@ -98,7 +98,7 @@ export default function SammelQuittungModal({ haushaltId, artikel, onClose, onSa
                   className="flex items-center gap-2 px-3 py-2 hover:bg-raised cursor-pointer">
                   <input type="checkbox" checked={selectedIds.has(a.id)}
                     onChange={() => toggle(a.id)}
-                    className="rounded-sm border-line bg-raised accent-[var(--color-accent)]" />
+                    className="rounded-sm border-line bg-raised accent-accent" />
                   <span className="text-sm text-fg flex-1">{a.name}</span>
                   <span className="text-xs text-fg-subtle">{a.kategorie}</span>
                 </label>
@@ -113,7 +113,7 @@ export default function SammelQuittungModal({ haushaltId, artikel, onClose, onSa
             Abbrechen
           </button>
           <button onClick={submit} disabled={uploading || !file || selectedIds.size === 0}
-            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-60 text-white font-semibold rounded-md inline-flex items-center justify-center gap-2">
+            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none text-white font-semibold rounded-md inline-flex items-center justify-center gap-2">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             Hochladen
           </button>

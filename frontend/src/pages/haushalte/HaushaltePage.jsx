@@ -155,7 +155,7 @@ export default function HaushaltePage() {
             return (
               <div
                 key={haushalt.id}
-                className="group bg-surface rounded-lg p-5 hover:bg-raised transition-colors flex flex-col"
+                className="group bg-surface rounded-lg p-5 hover:bg-hover transition-colors flex flex-col"
               >
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-5">
@@ -196,7 +196,7 @@ export default function HaushaltePage() {
                       {formatEuro(gesamtAusgaben)} <span className="text-fg-subtle">/</span> {formatEuro(gesamtBudget)}
                     </span>
                   </div>
-                  <div className="h-1.5 bg-hover rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-hover rounded-sm overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${barColor}`}
                       style={{ width: `${Math.min(budgetProzent, 100)}%` }}

@@ -642,7 +642,7 @@ export default function HaushaltDetailPage() {
     const descOpen = openDesc.has(item.id);
     return (
       <>
-      <tr className="border-b border-line-subtle hover:bg-raised group align-middle">
+      <tr className="border-b border-line-subtle hover:bg-hover group align-middle">
         {/* Checkbox — Shift+Klick wählt einen Bereich aus */}
         <td className="p-2 w-[32px]">
           <input type="checkbox"
@@ -778,7 +778,7 @@ export default function HaushaltDetailPage() {
             {formatPreis(ausgaben)} <span className="text-fg-subtle text-sm font-normal">/ {formatPreis(budget)}</span>
           </p>
         </div>
-        <div className="h-1.5 bg-hover rounded-full overflow-hidden mt-3">
+        <div className="h-1.5 bg-hover rounded-sm overflow-hidden mt-3">
           <div
             className={`h-full transition-all ${
               budget > 0 && (ausgaben / budget) > 0.9
@@ -799,7 +799,7 @@ export default function HaushaltDetailPage() {
             <select value={sortBy[kategorie]}
               onChange={(e) => setSortBy(s => ({ ...s, [kategorie]: e.target.value }))}
               aria-label="Sortierung"
-              className="bg-raised border border-line rounded-md px-2 py-1 text-xs text-fg hover:border-line-strong focus:border-accent focus:outline-none">
+              className="bg-raised border border-line rounded-md px-2 py-1 text-xs text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
               {SORT_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           </div>
@@ -855,7 +855,7 @@ export default function HaushaltDetailPage() {
             <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-fg truncate">{haushalt.name}</h1>
             <button
               onClick={() => setShowEditModal(true)}
-              className="p-1.5 text-fg-subtle hover:text-fg hover:bg-raised rounded-sm"
+              className="p-1.5 text-fg-subtle hover:text-fg hover:bg-raised rounded-md"
               title="Haushalt bearbeiten" aria-label="Haushalt bearbeiten"
             >
               <Edit className="w-4 h-4" />
@@ -921,7 +921,7 @@ export default function HaushaltDetailPage() {
             {formatPreis(gesamtAusgaben)} ausgegeben <span className="text-fg-subtle">/</span> {formatPreis(gesamtBudget)} Budget
           </p>
         </div>
-        <div className="h-1.5 bg-hover rounded-full overflow-hidden mt-3">
+        <div className="h-1.5 bg-hover rounded-sm overflow-hidden mt-3">
           <div
             className={`h-full transition-all ${
               gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.9 ? 'bg-bad'
@@ -942,7 +942,7 @@ export default function HaushaltDetailPage() {
             className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm" />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-raised border border-line rounded-md px-2 py-2 text-sm text-fg hover:border-line-strong focus:border-accent focus:outline-none">
+          className="bg-raised border border-line rounded-md px-2 py-2 text-sm text-fg hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
           <option value="">Alle Status</option>
           {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
@@ -951,7 +951,7 @@ export default function HaushaltDetailPage() {
           <select
             onChange={(e) => { if (e.target.value) { exportFile(e.target.value); e.target.value = ''; } }}
             defaultValue=""
-            className="bg-raised border border-line rounded-md text-fg text-sm pl-8 pr-3 py-2 hover:border-line-strong focus:border-accent focus:outline-none"
+            className="bg-raised border border-line rounded-md text-fg text-sm pl-8 pr-3 py-2 hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
           >
             <option value="" disabled>Export</option>
             <option value="csv">CSV</option>
@@ -965,7 +965,7 @@ export default function HaushaltDetailPage() {
             <span className="text-sm tabular-nums text-fg-muted">{selectedIds.size} ausgewählt</span>
             <select onChange={(e) => { if (e.target.value) { bulkSetStatus(e.target.value); e.target.value = ''; } }}
               disabled={bulkBusy}
-              className="bg-raised hover:bg-hover text-fg text-sm rounded-md px-2 py-2 border-0">
+              className="bg-raised hover:bg-hover text-fg text-sm rounded-md px-2 py-2 border-0 focus:outline-none focus:ring-1 focus:ring-accent">
               <option value="">Status setzen…</option>
               {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-surface">{l}</option>)}
             </select>

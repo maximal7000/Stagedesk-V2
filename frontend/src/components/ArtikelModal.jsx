@@ -126,15 +126,13 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
       <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle sticky top-0 bg-overlay z-10">
-          <div className="flex items-center gap-3">
-            <div>
-              <h2 className="font-display text-xl font-semibold tracking-tight text-fg leading-tight">
-                {isEdit ? 'Artikel bearbeiten' : 'Artikel erfassen'}
-              </h2>
-              <p className="text-sm text-fg-muted">
-                {isEdit ? `in ${haushalt.name}` : `zu ${haushalt.name}`}
-              </p>
-            </div>
+          <div>
+            <h2 className="font-display text-xl font-semibold tracking-tight text-fg leading-tight">
+              {isEdit ? 'Artikel bearbeiten' : 'Artikel erfassen'}
+            </h2>
+            <p className="text-sm text-fg-muted">
+              {isEdit ? `in ${haushalt.name}` : `zu ${haushalt.name}`}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -357,7 +355,7 @@ export default function ArtikelModal({ haushalt, onClose, onCreated, initialKate
             <button
               type="submit"
               disabled={isSaving}
-              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none flex items-center justify-center gap-2"
             >
               {isSaving ? (
                 <>
