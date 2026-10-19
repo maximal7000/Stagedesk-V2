@@ -26,10 +26,15 @@ export function findViolations(source, filePath) {
     if (text.includes('legacy-gray:start')) { inLegacy = true; return }
     if (text.includes('legacy-gray:end')) { inLegacy = false; return }
     if (inLegacy) return
-    const trimmed = text.trim()
-    if (trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) return
+    let code = text.trim()
+    if (code.startsWith('//') || code.startsWith('*')) return
+    if (code.startsWith('/*')) {
+      const end = code.indexOf('*/')
+      if (end === -1) return
+      code = code.slice(end + 2)
+    }
     for (const re of PATTERNS) {
-      for (const m of text.matchAll(re)) violations.push({ line: i + 1, match: m[0] })
+      for (const m of code.matchAll(re)) violations.push({ line: i + 1, match: m[0] })
     }
   })
   return violations
@@ -45,18 +50,30 @@ function walk(dir, out) {
 }
 
 function main() {
-  const root = resolve(fileURLToPath(import.meta.url), '..', '..')
+  const root = process.env.CHECK_TOKENS_ROOT
+    ? resolve(process.env.CHECK_TOKENS_ROOT)
+    : resolve(fileURLToPath(import.meta.url), '..', '..')
   const args = process.argv.slice(2)
   const idx = args.indexOf('--only')
   const only = idx === -1 ? [] : args.slice(idx + 1).filter((a) => !a.startsWith('--'))
   const norm = (p) => p.split(sep).join('/').replace(/^\.\//, '')
   const onlyPrefixes = only.map(norm)
+  if (idx !== -1 && !onlyPrefixes.length) {
+    console.error('Fehler: --only erwartet mindestens einen Pfad.')
+    process.exit(2)
+  }
 
-  const files = walk(join(root, 'src'), [])
+  const allFiles = walk(join(root, 'src'), [])
     .map((f) => norm(relative(root, f)))
     .filter((f) => !EXCLUDE.some((x) => f === x || (x.endsWith('/') && f.startsWith(x))))
-    .filter((f) => !onlyPrefixes.length || onlyPrefixes.some((p) => f === p || f.startsWith(p.endsWith('/') ? p : p + '/')))
     .sort()
+  const matches = (f, p) => f === p || f.startsWith(p.endsWith('/') ? p : p + '/')
+  const unmatched = onlyPrefixes.filter((p) => !allFiles.some((f) => matches(f, p)))
+  if (unmatched.length) {
+    for (const p of unmatched) console.error(`Fehler: --only Pfad trifft keine Datei: ${p}`)
+    process.exit(2)
+  }
+  const files = onlyPrefixes.length ? allFiles.filter((f) => onlyPrefixes.some((p) => matches(f, p))) : allFiles
 
   let count = 0
   for (const f of files) {
