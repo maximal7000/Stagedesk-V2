@@ -149,6 +149,14 @@ class DisplayViewSchema(Schema):
     on_air_fullscreen: bool
     on_air_split: bool = False
     on_air_split_side: str = 'right'
+    kind: str = 'info'
+    style: str = 'auto'
+    on_air_behavior: str = 'fullscreen'
+    rotation_items: list = []
+    media_items: list = []
+    media_seconds: int = 10
+    substitutions_next_day: bool = True
+    page_seconds: int = 15
     api_token: str
     refresh_interval: int
 
@@ -252,6 +260,14 @@ class DisplayViewUpdateSchema(Schema):
     on_air_fullscreen: Optional[bool] = None
     on_air_split: Optional[bool] = None
     on_air_split_side: Optional[str] = None
+    kind: Optional[str] = None
+    style: Optional[str] = None
+    on_air_behavior: Optional[str] = None
+    rotation_items: Optional[list] = None
+    media_items: Optional[list] = None
+    media_seconds: Optional[int] = None
+    substitutions_next_day: Optional[bool] = None
+    page_seconds: Optional[int] = None
     refresh_interval: Optional[int] = None
 
 
@@ -308,6 +324,12 @@ class ScreenListSchema(Schema):
     power_mode: str = 'auto'
     cec_status: str = ''
     cec_status_at: Optional[datetime] = None
+    location: str = ''
+    scale: str = 'auto'
+    orientation: str = 'landscape'
+    access_key: str = ''
+    off_during_holidays: bool = True
+    off_until: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -329,6 +351,11 @@ class ScreenUpdateSchema(Schema):
     holiday_mode: Optional[bool] = None
     power_exceptions: Optional[list] = None
     power_mode: Optional[str] = None
+    location: Optional[str] = None
+    scale: Optional[str] = None
+    orientation: Optional[str] = None
+    off_during_holidays: Optional[bool] = None
+    off_until: Optional[datetime] = None
 
 
 class DisplayViewVersionSchema(Schema):
@@ -483,6 +510,17 @@ class MonitorSettingsSchema(Schema):
     webuntis_school: str = ''
     webuntis_username: str = ''
     webuntis_password: str = ''
+    on_air_active: bool = False
+    on_air_since: Optional[datetime] = None
+    on_air_text: str = 'ON AIR'
+    on_air_animation: str = 'pulse'
+    on_air_show_clock: bool = True
+    emergency_active: bool = False
+    emergency_text: str = ''
+    emergency_note: str = ''
+    emergency_since: Optional[datetime] = None
+    webuntis_source: str = ''
+    webuntis_checked_at: Optional[datetime] = None
 
 
 class MonitorSettingsUpdateSchema(Schema):

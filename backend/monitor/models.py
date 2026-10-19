@@ -1,6 +1,7 @@
 """
 Monitor / Public Display Models
 """
+import secrets
 import uuid
 from datetime import date
 from django.db import models
@@ -32,6 +33,16 @@ class MediaFile(models.Model):
     sort_order = models.IntegerField(default=0)
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # ─── Verarbeitung (PDF -> Seitenbilder) ───
+    STATUS_CHOICES = [
+        ('processing', 'Wird verarbeitet'),
+        ('ready', 'Bereit'),
+        ('failed', 'Fehlgeschlagen'),
+    ]
+    status = models.CharField(max_length=12, choices=STATUS_CHOICES, default='ready')
+    page_count = models.IntegerField(default=0)
+    error = models.TextField(blank=True, default='')
 
     class Meta:
         # Feste Reihenfolge der Arten wie vor der Umbenennung (bild, hintergrund, logo, pdf)
@@ -94,6 +105,36 @@ class DisplayView(models.Model):
     fullscreen_header = models.BooleanField(default=False,
         help_text="Vollbild-Layouts: Standard-Header (Titel/Logo) oben einblenden")
 
+    # ─── Ansichtsart und Stil ───
+    KIND_CHOICES = [
+        ('departures', 'Abfahrten'),
+        ('substitutions', 'Vertretungsplan'),
+        ('split', 'Geteilte Ansicht'),
+        ('media', 'Medien'),
+        ('info', 'Info'),
+        ('rotation', 'Rotation'),
+    ]
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='info')
+    STYLE_CHOICES = [
+        ('auto', 'Automatisch'),
+        ('ci', 'CI'),
+        ('dense', 'Dicht'),
+        ('dark', 'Dunkel'),
+    ]
+    style = models.CharField(max_length=10, choices=STYLE_CHOICES, default='auto')
+    ON_AIR_BEHAVIOR_CHOICES = [
+        ('fullscreen', 'Vollbild'),
+        ('split', 'Geteilt'),
+        ('none', 'Keine'),
+    ]
+    on_air_behavior = models.CharField(max_length=12, choices=ON_AIR_BEHAVIOR_CHOICES, default='fullscreen')
+    rotation_items = models.JSONField(default=list, blank=True,
+        help_text='[{"view_id": 3, "seconds": 15}]')
+    media_items = models.JSONField(default=list, blank=True)
+    media_seconds = models.IntegerField(default=10, help_text="Sekunden pro Medium")
+    substitutions_next_day = models.BooleanField(default=True)
+    page_seconds = models.IntegerField(default=15, help_text="Sekunden pro Seite")
+
     # ─── Splitscreen (layout='split') ───
     SPLIT_CONTENT_CHOICES = [
         ('exam',     'Klausur'),
@@ -101,6 +142,8 @@ class DisplayView(models.Model):
         ('webuntis', 'WebUntis'),
         ('clock',    'Uhr'),
         ('empty',    'Leer'),
+        ('substitutions', 'Vertretungsplan'),
+        ('departures',    'Abfahrten'),
     ]
     split_left = models.CharField(max_length=20, choices=SPLIT_CONTENT_CHOICES, default='webuntis',
         help_text="Inhalt der linken Split-Seite")
@@ -420,12 +463,55 @@ class DisplayView(models.Model):
             return self.webuntis_link_next_day.url
         return self.webuntis_url_next_day
 
+    def effective_style(self):
+        """Stil der Anzeige: 'auto' wird aus der Ansichtsart abgeleitet."""
+        if self.style != 'auto':
+            return self.style
+        return 'dense' if self.kind in ('departures', 'substitutions', 'split') else 'ci'
+
     def __str__(self):
         return f"{self.name} ({self.slug})"
 
 
+def validate_rotation_items(items, own_id=None):
+    """Prüft die Einträge einer Rotations-Ansicht. Wirft ValueError mit deutscher Meldung."""
+    if not isinstance(items, list) or not items:
+        raise ValueError('Die Rotation braucht mindestens eine Ansicht.')
+    for item in items:
+        if not isinstance(item, dict):
+            raise ValueError('Ungültiger Rotationseintrag. Bitte Ansicht und Dauer neu wählen.')
+        view_id = item.get('view_id')
+        seconds = item.get('seconds')
+        if isinstance(seconds, bool) or not isinstance(seconds, int) or not 5 <= seconds <= 3600:
+            raise ValueError('Die Dauer pro Ansicht muss zwischen 5 und 3600 Sekunden liegen.')
+        if isinstance(view_id, bool) or not isinstance(view_id, int):
+            raise ValueError('Ungültiger Rotationseintrag. Bitte eine Ansicht wählen.')
+        if own_id is not None and view_id == own_id:
+            raise ValueError('Eine Rotation kann sich nicht selbst enthalten.')
+        target = DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).first()
+        if target is None:
+            raise ValueError(f'Die Ansicht {view_id} existiert nicht. Bitte eine andere wählen.')
+        if target.kind == 'rotation':
+            raise ValueError('Eine Rotation kann keine andere Rotation enthalten.')
+    return items
+
+
+def generate_access_key():
+    return secrets.token_urlsafe(24)[:32]
+
+
 class Screen(models.Model):
     """Ein physischer Monitor-Bildschirm mit eigenem Zeitplan"""
+
+    SCALE_CHOICES = [(v, v if v == 'auto' else f'{v} %')
+                     for v in ('auto', '75', '90', '100', '110', '125', '150', '175', '200')]
+    ORIENTATION_CHOICES = [('landscape', 'Querformat'), ('portrait', 'Hochformat')]
+    location = models.CharField(max_length=100, blank=True, default='')
+    scale = models.CharField(max_length=4, choices=SCALE_CHOICES, default='auto')
+    orientation = models.CharField(max_length=10, choices=ORIENTATION_CHOICES, default='landscape')
+    access_key = models.CharField(max_length=32, unique=True, default=generate_access_key)
+    off_during_holidays = models.BooleanField(default=True)
+    off_until = models.DateTimeField(null=True, blank=True)
 
     name = models.CharField(max_length=100, help_text="z.B. Eingang, Lehrerzimmer")
     slug = models.SlugField(max_length=50, unique=True)
@@ -595,6 +681,57 @@ class Screen(models.Model):
                 .first())
 
 
+class HolidayPeriod(models.Model):
+    """Ferienzeitraum: Bildschirme mit off_during_holidays bleiben darin aus."""
+    name = models.CharField(max_length=100)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['start_date']
+        verbose_name = 'Ferienzeitraum'
+        verbose_name_plural = 'Ferienzeiträume'
+
+    def __str__(self):
+        return self.name
+
+
+class EmergencyTemplate(models.Model):
+    """Vorlage für eine Notfallmeldung."""
+    title = models.CharField(max_length=100)
+    text = models.CharField(max_length=300)
+    note = models.CharField(max_length=300, blank=True, default='')
+    sort_order = models.IntegerField(default=0)
+
+    class Meta:
+        ordering = ['sort_order', 'id']
+        verbose_name = 'Notfall-Vorlage'
+        verbose_name_plural = 'Notfall-Vorlagen'
+
+    def __str__(self):
+        return self.title
+
+
+class MediaPage(models.Model):
+    """Eine gerenderte Seite einer PDF-Datei."""
+    file = models.ForeignKey(MediaFile, on_delete=models.CASCADE, related_name='pages')
+    index = models.IntegerField()
+    image = models.ImageField(upload_to='monitor/pdf_pages/')
+    width = models.IntegerField(default=0)
+    height = models.IntegerField(default=0)
+    orientation = models.CharField(max_length=10, default='landscape')
+
+    class Meta:
+        ordering = ['file', 'index']
+        constraints = [
+            models.UniqueConstraint(fields=['file', 'index'], name='unique_media_page_index'),
+        ]
+
+    def __str__(self):
+        return f"{self.file_id} Seite {self.index}"
+
+
 class Exam(models.Model):
     """Hinweis auf laufende Klausur — blockiert ausgewählte Bildschirme in Zeitfenster."""
 
@@ -761,6 +898,30 @@ class MonitorSettings(models.Model):
     webuntis_school = models.CharField(max_length=200, blank=True, default='')
     webuntis_username = models.CharField(max_length=200, blank=True, default='')
     webuntis_password = models.CharField(max_length=200, blank=True, default='')
+
+    # ─── ON AIR (global) ───
+    ON_AIR_ANIMATION_CHOICES = [('still', 'Still'), ('pulse', 'Pulsieren'), ('blink', 'Blinken')]
+    on_air_active = models.BooleanField(default=False)
+    on_air_since = models.DateTimeField(null=True, blank=True)
+    on_air_text = models.CharField(max_length=100, default='ON AIR')
+    on_air_animation = models.CharField(max_length=10, choices=ON_AIR_ANIMATION_CHOICES, default='pulse')
+    on_air_show_clock = models.BooleanField(default=True)
+
+    # ─── Notfall (global) ───
+    emergency_active = models.BooleanField(default=False)
+    emergency_text = models.CharField(max_length=300, blank=True, default='')
+    emergency_note = models.CharField(max_length=300, blank=True, default='')
+    emergency_since = models.DateTimeField(null=True, blank=True)
+
+    # ─── WebUntis-Status ───
+    WEBUNTIS_SOURCE_CHOICES = [
+        ('substitutions', 'Vertretungen'),
+        ('timetable', 'Stundenplan'),
+        ('unavailable', 'Nicht erreichbar'),
+        ('', 'Unbekannt'),
+    ]
+    webuntis_source = models.CharField(max_length=20, choices=WEBUNTIS_SOURCE_CHOICES, blank=True, default='')
+    webuntis_checked_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = 'Globale Monitor-Einstellung'

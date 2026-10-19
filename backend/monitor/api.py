@@ -19,6 +19,7 @@ from ninja.errors import HttpError
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
+    validate_rotation_items,
 )
 
 
@@ -74,7 +75,7 @@ def _clamp_int(v, lo, hi):
         return None
 
 
-def _validate_view_data(data: dict) -> dict:
+def _validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     """Serverseitige Validierung/Sanitisierung der Ansicht-Update-Daten.
     Klemmt Zahlenbereiche, verwirft ungültige Hex-Farben, prüft Zeitfenster."""
     for key, lo, hi in [
@@ -98,6 +99,13 @@ def _validate_view_data(data: dict) -> dict:
                 start, end = e.get('from'), e.get('until')
                 if start and end and str(start) >= str(end):
                     raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
+    # Leere Liste ist nur bei Rotations-Ansichten ein Fehler; andere Ansichten tragen sie mit.
+    kind = data.get('kind', current_kind)
+    if 'rotation_items' in data and (data['rotation_items'] or kind == 'rotation'):
+        try:
+            data['rotation_items'] = validate_rotation_items(data['rotation_items'], own_id=own_id)
+        except ValueError as e:
+            raise HttpError(422, str(e))
     return data
 
 
@@ -598,7 +606,7 @@ def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
     _snapshot_view(view)  # Zustand vor der Änderung sichern
 
     data = payload.dict(exclude_unset=True)
-    data = _validate_view_data(data)
+    data = _validate_view_data(data, own_id=view.id, current_kind=view.kind)
 
     # FK-Felder separat behandeln
     for fk_key in ('active_logo_id', 'active_pdf_id', 'active_background_image_id',
