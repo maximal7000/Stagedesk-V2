@@ -1,5 +1,6 @@
 /**
  * PageHeader — einheitlicher Seitenkopf für alle Module.
+ * Farben: Titel `fg`, Eyebrow und Meta `fg-subtle`.
  * Ersetzt die uneinheitlichen Header (kein doppelter Titel mehr — die Topbar
  * benennt den Bereich, der Content trägt Eyebrow + Titel).
  *
@@ -18,13 +19,13 @@ export default function PageHeader({ eyebrow, title, meta, actions }) {
     <div className="flex items-start justify-between gap-4 mb-6">
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-fg-subtle mb-1">
             {eyebrow}
           </p>
         )}
         <div className="flex items-baseline gap-3 flex-wrap">
-          <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{title}</h1>
-          {meta && <span className="text-sm text-gray-400">{meta}</span>}
+          <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-fg truncate">{title}</h1>
+          {meta && <span className="text-sm text-fg-subtle">{meta}</span>}
         </div>
       </div>
       {actions && <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">{actions}</div>}

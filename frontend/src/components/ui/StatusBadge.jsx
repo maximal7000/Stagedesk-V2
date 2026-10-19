@@ -1,5 +1,6 @@
 /**
  * StatusBadge — konsistenter Status-Chip (ersetzt die uneinheitlichen Badges).
+ * Optik: `bg-raised rounded-sm`, Text und Punkt in der Statusfarbe, kein Ring, keine Tönung.
  *
  * Props:
  *   label  — Text (z.B. "Verfügbar")
@@ -11,18 +12,27 @@
  *   <StatusBadge tone="neutral" label="Abgeschlossen" />
  */
 const tones = {
-  neutral: 'bg-gray-700/40 text-gray-300 ring-1 ring-inset ring-gray-600/30',
-  positive: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/25',
-  warning: 'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
-  danger: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
-  info: 'bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25',
-  accent: 'bg-accent/15 text-accent ring-1 ring-inset ring-accent/25',
+  neutral: 'text-fg-muted',
+  positive: 'text-ok',
+  warning: 'text-warn',
+  danger: 'text-bad',
+  info: 'text-info',
+  accent: 'text-accent-fg',
+};
+
+const dotColor = {
+  neutral: 'bg-fg-subtle',
+  positive: 'bg-ok',
+  warning: 'bg-warn',
+  danger: 'bg-bad',
+  info: 'bg-info',
+  accent: 'bg-accent-fg',
 };
 
 export default function StatusBadge({ label, tone = 'neutral', dot = false }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-[3px] rounded-md text-[11px] font-semibold leading-none tracking-wide ${tones[tone] || tones.neutral}`}>
-      {dot && <span className="w-1.5 h-1.5 rounded-full bg-current shrink-0" />}
+    <span className={`inline-flex items-center gap-1.5 px-2 py-[3px] rounded-sm bg-raised text-[11px] font-semibold leading-none tracking-wide ${tones[tone] || tones.neutral}`}>
+      {dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor[tone] || dotColor.neutral}`} />}
       {label}
     </span>
   );
