@@ -406,7 +406,7 @@ export default function InventarPage() {
                   <Tag className="w-3 h-3" /> Status
                 </button>
                 {showBulkStatus && (
-                  <div className="absolute top-full mt-1 left-0 bg-overlay border border-line rounded-md shadow-overlay z-20 py-0.5 min-w-[140px]">
+                  <div className="absolute top-full mt-1 left-0 bg-overlay border border-line rounded-lg shadow-overlay z-20 py-0.5 min-w-[140px]">
                     {Object.entries(STATUS_LABELS).map(([k, l]) => (
                       <button key={k} onClick={() => handleBulkStatusChange(k)} className="w-full text-left px-3 py-1.5 text-xs text-fg hover:bg-hover flex items-center gap-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${STATUS_FARBEN[k]}`} />{l}
@@ -420,7 +420,7 @@ export default function InventarPage() {
                   <Layers className="w-3 h-3" /> Kategorie
                 </button>
                 {showBulkKategorie && (
-                  <div className="absolute top-full mt-1 left-0 bg-overlay border border-line rounded-md shadow-overlay z-20 py-0.5 min-w-[140px] max-h-40 overflow-y-auto">
+                  <div className="absolute top-full mt-1 left-0 bg-overlay border border-line rounded-lg shadow-overlay z-20 py-0.5 min-w-[140px] max-h-40 overflow-y-auto">
                     {kategorien.map(k => (
                       <button key={k.id} onClick={() => handleBulkKategorieChange(k.id)} className="w-full text-left px-3 py-1.5 text-xs text-fg hover:bg-hover">{k.name}</button>
                     ))}
@@ -513,7 +513,7 @@ export default function InventarPage() {
                     </button>
                   )}
                   <Link to={`/inventar/${item.id}`}
-                    className={`block bg-surface rounded-lg overflow-hidden hover:bg-raised transition-colors ${selectedIds.has(item.id) ? 'bg-raised' : ''}`}>
+                    className={`block rounded-lg overflow-hidden hover:bg-raised transition-colors ${selectedIds.has(item.id) ? 'bg-raised' : 'bg-surface'}`}>
                     <div className="aspect-[4/3] bg-raised relative">
                       {item.bild_url ? <img src={item.bild_url} alt={item.name} className="w-full h-full object-cover" />
                         : <div className="w-full h-full flex items-center justify-center"><Package className="w-8 h-8 text-fg-subtle" /></div>}

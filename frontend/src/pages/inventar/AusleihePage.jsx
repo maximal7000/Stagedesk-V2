@@ -656,7 +656,7 @@ export default function AusleihePage() {
                     {showPdfDropdown && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setShowPdfDropdown(false)} />
-                        <div className="absolute right-0 mt-1 py-1 bg-overlay border border-line rounded-md z-20 min-w-[180px] shadow-overlay">
+                        <div className="absolute right-0 mt-1 py-1 bg-overlay border border-line rounded-lg z-20 min-w-[180px] shadow-overlay">
                           <button onClick={() => handleDownloadPdf(null)}
                             className="w-full text-left px-3 py-2 hover:bg-hover text-fg text-sm">
                             Gesamt-PDF
@@ -714,7 +714,7 @@ export default function AusleihePage() {
                 {showSetDropdown && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowSetDropdown(false)} />
-                    <ul className="absolute right-0 mt-1 py-1 bg-overlay border border-line rounded-md max-h-60 overflow-y-auto z-20 min-w-[220px] shadow-overlay">
+                    <ul className="absolute right-0 mt-1 py-1 bg-overlay border border-line rounded-lg max-h-60 overflow-y-auto z-20 min-w-[220px] shadow-overlay">
                       {itemSets.length > 0 ? itemSets.map(set => (
                         <li key={set.id}>
                           <button type="button" onClick={() => handleAddSetToList(set)}
@@ -920,8 +920,8 @@ export default function AusleihePage() {
                           <button type="button" onClick={() => !isInList && toggleItemSelection(item)} disabled={isInList}
                             className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
                               isInList ? 'opacity-40 cursor-not-allowed' :
-                              isSelected ? 'bg-raised' :
-                              'hover:bg-raised'
+                              isSelected ? 'bg-hover' :
+                              'hover:bg-hover'
                             }`}>
                             <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${
                               isSelected ? 'bg-accent border-accent' : 'border-line'
@@ -1119,9 +1119,9 @@ export default function AusleihePage() {
                         { value: 'ort', label: 'Pro Ort', icon: MapPin },
                       ].map(opt => (
                         <button key={opt.value} onClick={() => setEmailForm({ ...emailForm, pdfMode: opt.value })}
-                          className={`flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-md border-b-2 transition-colors ${
+                          className={`flex items-center justify-center gap-1.5 px-2 py-2 text-xs rounded-md border transition-colors ${
                             emailForm.pdfMode === opt.value
-                              ? 'border-accent bg-hover text-fg'
+                              ? 'border-accent bg-raised text-fg'
                               : 'border-transparent bg-raised text-fg-muted hover:bg-hover'
                           }`}>
                           <opt.icon className="w-3.5 h-3.5" />
@@ -1205,8 +1205,8 @@ export default function AusleihePage() {
                     { value: 'individuell', label: 'Individuelle Ausleihe', desc: 'Unterschiedliche Ausleiher pro Artikel' },
                   ].map(opt => (
                     <button key={opt.value} onClick={() => setCreateForm({ ...createForm, modus: opt.value })}
-                      className={`text-left p-3 rounded-md border-b-2 transition-colors ${
-                        createForm.modus === opt.value ? 'border-accent bg-hover' : 'border-transparent bg-raised hover:bg-hover'
+                      className={`text-left p-3 rounded-md border transition-colors ${
+                        createForm.modus === opt.value ? 'border-accent bg-raised' : 'border-transparent bg-raised hover:bg-hover'
                       }`}>
                       <div className="font-medium text-fg text-sm">{opt.label}</div>
                       <div className="text-xs text-fg-muted mt-0.5">{opt.desc}</div>

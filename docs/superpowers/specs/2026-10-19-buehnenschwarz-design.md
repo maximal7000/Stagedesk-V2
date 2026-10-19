@@ -47,7 +47,7 @@ In `frontend/src/index.css`:
 | `canvas` | `#0d0c0b` | `#f6f4f1` | App-Hintergrund |
 | `surface` | `#151412` | `#ffffff` | Seitenleiste, Panels, Tabellen, Listen |
 | `raised` | `#1e1c1a` | `#efece8` | Eingabefelder, Chips, Badges, Hover auf `surface`, ausgewählter Zustand |
-| `overlay` | `#211f1c` | `#ffffff` | Modals, Dropdowns, Popover |
+| `overlay` | `#181715` | `#ffffff` | Modals, Dropdowns, Popover; dunkler als raised, damit Controls und Hover darauf sichtbar sind; Abgrenzung über border-line + shadow-overlay |
 | `hover` | `#2a2825` | `#e6e2dc` | Hover auf `raised` |
 
 ### Linien

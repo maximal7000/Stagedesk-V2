@@ -95,7 +95,7 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
           { v: 'quittung',   l: 'Quittung',   icon: Receipt },
         ].map(({ v, l, icon: Icon }) => (
           <button key={v} onClick={() => setTab(v)}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-sm border-b-2 ${
+            className={`inline-flex items-center gap-1 px-2 py-1 border-b-2 ${
               tab === v ? 'bg-raised text-fg border-accent' : 'border-transparent text-fg-muted hover:text-fg'
             }`}>
             <Icon className="w-3 h-3" /> {l}

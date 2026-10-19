@@ -194,7 +194,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
           <h2 className="text-xl font-semibold text-fg">
             {isEditing ? 'Event bearbeiten' : 'Neues Event'}
           </h2>
-          <button onClick={onClose} className="p-2 text-fg-muted hover:text-fg hover:bg-raised rounded-sm">
+          <button onClick={onClose} className="p-2 text-fg-muted hover:text-fg hover:bg-hover rounded-sm">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -324,7 +324,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, status: opt.value }))}
                       className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                        formData.status === opt.value ? `bg-raised ${opt.color}` : 'text-fg-muted hover:bg-raised hover:text-fg'
+                        formData.status === opt.value ? `bg-hover ${opt.color}` : 'text-fg-muted hover:bg-hover hover:text-fg'
                       }`}
                     >
                       {opt.label}
@@ -496,7 +496,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                               setSelectedRessourcen(newRessourcen);
                             }}
                             min="1"
-                            className="w-16 px-2 py-1 bg-hover border border-line rounded-sm text-fg text-center text-sm"
+                            className="w-16 px-2 py-1 bg-raised border border-line rounded-md text-fg text-center text-sm hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                           />
                           <button
                             type="button"
@@ -550,7 +550,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center gap-2 px-4 py-2 text-bad hover:bg-raised rounded-md disabled:text-fg-disabled"
+                className="flex items-center gap-2 px-4 py-2 text-bad hover:bg-hover rounded-md disabled:text-fg-disabled"
               >
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Löschen
@@ -562,7 +562,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-fg-muted hover:text-fg hover:bg-raised rounded-md"
+              className="px-4 py-2 text-fg-muted hover:text-fg hover:bg-hover rounded-md"
             >
               Abbrechen
             </button>

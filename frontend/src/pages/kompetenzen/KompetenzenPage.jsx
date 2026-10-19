@@ -250,7 +250,7 @@ function StufenEditor({ uk, onSave, onClose }) {
         </Button>
         <button type="button" disabled={saving || istUnbegrenzt} onClick={() => save([0])}
                 title="Läuft nie ab"
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-raised text-ok rounded-md hover:bg-hover disabled:opacity-50 disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-raised text-ok rounded-md hover:bg-hover disabled:text-fg-disabled disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
           <Infinity className="w-3.5 h-3.5" /> Unbegrenzt
         </button>
         {hatCustom && (
@@ -685,7 +685,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 key={u.keycloak_id || u.id}
                 onClick={() => onSelectUser(u.keycloak_id)}
                 disabled={!u.keycloak_id}
-                className="group w-full flex items-center gap-3 px-4 py-3 hover:bg-raised text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="group w-full flex items-center gap-3 px-4 py-3 hover:bg-raised text-left transition-colors disabled:text-fg-disabled disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
                 <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${
                   istAdmin ? 'bg-hover text-fg-muted' : 'bg-raised text-accent-fg'

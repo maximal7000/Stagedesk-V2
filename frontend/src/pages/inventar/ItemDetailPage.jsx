@@ -403,7 +403,7 @@ export default function ItemDetailPage() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   disabled={!editing && !isNew}
-                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:text-fg-disabled"
                 />
               </div>
               
@@ -459,7 +459,7 @@ export default function ItemDetailPage() {
                   value={formData.seriennummer}
                   onChange={(e) => setFormData({ ...formData, seriennummer: e.target.value })}
                   disabled={!editing && !isNew}
-                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:text-fg-disabled"
                 />
               </div>
               
@@ -470,7 +470,7 @@ export default function ItemDetailPage() {
                   onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
                   disabled={!editing && !isNew}
                   rows={3}
-                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60 resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:text-fg-disabled resize-none"
                 />
               </div>
               
@@ -481,7 +481,7 @@ export default function ItemDetailPage() {
                   onChange={(e) => setFormData({ ...formData, notizen: e.target.value })}
                   disabled={!editing && !isNew}
                   rows={2}
-                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:opacity-60 resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none disabled:text-fg-disabled resize-none"
                 />
               </div>
             </div>
@@ -667,7 +667,7 @@ export default function ItemDetailPage() {
                   />
                   <button
                     onClick={() => handleDeleteBild(bild.id)}
-                    className="absolute top-1 right-1 p-1 bg-bad hover:opacity-90 text-white rounded-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 p-1 bg-bad hover:brightness-110 text-white rounded-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>
@@ -887,7 +887,7 @@ export default function ItemDetailPage() {
               <button
                 onClick={handleAddQrCode}
                 disabled={!newQrCode}
-                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-md"
+                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none text-white font-semibold rounded-md"
               >
                 Hinzufügen
               </button>

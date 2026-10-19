@@ -374,7 +374,7 @@ export default function ItemSetsPage() {
               <button
                 onClick={handleAusleihen}
                 disabled={ausleihenSaving || !ausleihenForm.ausleiher_name || !ausleihenForm.frist}
-                className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-md"
+                className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none text-white font-semibold rounded-md"
               >
                 {ausleihenSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Package className="w-4 h-4" />}
                 Ausleihen
@@ -452,7 +452,7 @@ export default function ItemSetsPage() {
                     className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                   {itemSearch && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-overlay border border-line rounded-md shadow-overlay max-h-48 overflow-y-auto z-10">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-overlay border border-line rounded-lg shadow-overlay max-h-48 overflow-y-auto z-10">
                       {filteredItems.slice(0, 10).map(item => (
                         <button
                           key={item.id}
@@ -490,7 +490,7 @@ export default function ItemSetsPage() {
                       <span className="flex-1 font-medium text-fg">{si.item_name}</span>
                       <button
                         onClick={() => removeItem(si.item_id)}
-                        className="p-1.5 text-fg-muted hover:text-bad hover:bg-raised rounded-sm"
+                        className="p-1.5 text-fg-muted hover:text-bad hover:bg-hover rounded-sm"
                       >
                         <X className="w-4 h-4" />
                       </button>

@@ -852,7 +852,7 @@ export default function AnwesenheitPage() {
             <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neue Anwesenheitsliste</h2>
-                <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -888,7 +888,7 @@ export default function AnwesenheitPage() {
             <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-6 pb-4 border-b border-line-subtle">
                 <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Termine verwalten</h2>
-                <button onClick={() => setShowTermineModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTermineModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
                 {termineForm.map((t, i) => (
@@ -913,7 +913,7 @@ export default function AnwesenheitPage() {
                   </div>
                 ))}
                 <button onClick={() => setTermineForm([...termineForm, { id: null, titel: '', datum: '', beginn: '', ende: '', notizen: '' }])}
-                  className="flex items-center justify-center gap-2 w-full p-3 text-sm font-medium text-fg-muted hover:text-fg hover:bg-raised hover:border-line-strong rounded-md border border-dashed border-line transition-colors">
+                  className="flex items-center justify-center gap-2 w-full p-3 text-sm font-medium text-fg-muted hover:text-fg hover:bg-hover hover:border-line-strong rounded-md border border-dashed border-line transition-colors">
                   <Plus className="w-4 h-4" /> Termin hinzufügen
                 </button>
               </div>
@@ -934,7 +934,7 @@ export default function AnwesenheitPage() {
             <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg max-h-[90vh] flex flex-col">
               <div className="flex items-center justify-between p-6 pb-4 border-b border-line-subtle">
                 <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Teilnehmer hinzufügen</h2>
-                <button onClick={() => setShowTeilnehmerModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowTeilnehmerModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-6 pt-4">
                 <div className="relative">
@@ -968,7 +968,7 @@ export default function AnwesenheitPage() {
                             );
                           }}
                             className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
-                              isSelected ? 'bg-raised' : 'hover:bg-raised'
+                              isSelected ? 'bg-hover' : 'hover:bg-hover'
                             }`}>
                             <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${
                               isSelected ? 'bg-accent border-accent' : 'border-line-strong'
@@ -1002,7 +1002,7 @@ export default function AnwesenheitPage() {
             <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Liste klonen</h2>
-                <button onClick={() => setShowKlonModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowKlonModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -1044,7 +1044,7 @@ export default function AnwesenheitPage() {
             <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-sm p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Export</h2>
-                <button onClick={() => setShowExportModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowExportModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-3">
                 <button onClick={() => handleExport('csv')}
@@ -1074,7 +1074,7 @@ export default function AnwesenheitPage() {
             <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Statistik</h2>
-                <button onClick={() => setShowStatsModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowStatsModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
 
               {/* Gesamt */}
@@ -1149,7 +1149,7 @@ export default function AnwesenheitPage() {
                   Status und Notiz
                   <span className="block text-sm font-sans font-normal text-fg-muted mt-0.5">{editingNote.name}</span>
                 </h2>
-                <button onClick={() => setShowNotesModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowNotesModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
@@ -1322,7 +1322,7 @@ export default function AnwesenheitPage() {
           <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neue Anwesenheitsliste</h2>
-              <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
+              <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-hover rounded-sm"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div>
@@ -1400,7 +1400,7 @@ function ListCard({ liste, onOpen, onDelete, canDelete }) {
           {canDelete && (
             <span onClick={e => { e.stopPropagation(); onDelete(); }}
               title="Liste löschen" aria-label="Liste löschen"
-              className="p-1.5 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              className="p-1.5 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity cursor-pointer">
               <Trash2 className="w-4 h-4" />
             </span>
           )}

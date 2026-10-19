@@ -106,7 +106,7 @@ export default function TermineSection({ data, refetch, canEdit, eventId }) {
                 </div>
               ))}
               <button onClick={() => setForm([...form, { id: null, titel: '', datum: '', beginn: '', ende: '' }])}
-                className="flex items-center gap-2 w-full p-3 text-sm text-accent-fg hover:bg-raised rounded-md border border-dashed border-line">
+                className="flex items-center gap-2 w-full p-3 text-sm text-accent-fg hover:bg-hover rounded-md border border-dashed border-line">
                 <Plus className="w-4 h-4" /> Termin hinzufügen
               </button>
             </div>

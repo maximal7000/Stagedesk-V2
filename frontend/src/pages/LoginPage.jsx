@@ -86,7 +86,7 @@ export default function LoginPage() {
           <button
             onClick={handleLogin}
             disabled={auth.isLoading}
-            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:bg-raised disabled:text-fg-disabled disabled:cursor-not-allowed"
           >
             {auth.isLoading ? (
               <>

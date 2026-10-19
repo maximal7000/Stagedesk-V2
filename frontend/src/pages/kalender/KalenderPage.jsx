@@ -354,7 +354,7 @@ export default function KalenderPage() {
                   <button
                     onClick={() => { setSelectedKategorie(null); setShowFilter(false); }}
                     className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                      !selectedKategorie ? 'bg-raised text-fg' : 'text-fg-muted hover:bg-raised'
+                      !selectedKategorie ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover'
                     }`}
                   >
                     Alle Kategorien
@@ -365,7 +365,7 @@ export default function KalenderPage() {
                       key={kat.id}
                       onClick={() => { setSelectedKategorie(kat.id); setShowFilter(false); }}
                       className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                        selectedKategorie === kat.id ? 'bg-raised text-fg' : 'text-fg-muted hover:bg-raised'
+                        selectedKategorie === kat.id ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover'
                       }`}
                     >
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: kat.farbe }} />

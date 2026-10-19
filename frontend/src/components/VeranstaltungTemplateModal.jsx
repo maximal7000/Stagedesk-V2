@@ -125,7 +125,7 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
 
         <div className="flex justify-end gap-2 p-5 border-t border-line-subtle">
           <Link to="/veranstaltung/vorlagen" onClick={onClose}
-            className="mr-auto px-3 py-2 text-fg-muted hover:text-fg hover:bg-raised rounded-md inline-flex items-center gap-1.5 text-sm">
+            className="mr-auto px-3 py-2 text-fg-muted hover:text-fg hover:bg-hover rounded-md inline-flex items-center gap-1.5 text-sm">
             <Settings className="w-4 h-4" /> Verwalten
           </Link>
           <button onClick={onClose} disabled={creating}

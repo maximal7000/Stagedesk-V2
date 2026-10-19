@@ -95,7 +95,7 @@ export default function SammelQuittungModal({ haushaltId, artikel, onClose, onSa
                 <p className="text-sm text-fg-subtle p-3 text-center">Keine Artikel im Haushalt</p>
               ) : artikel.map((a) => (
                 <label key={a.id}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-raised cursor-pointer">
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-hover cursor-pointer">
                   <input type="checkbox" checked={selectedIds.has(a.id)}
                     onChange={() => toggle(a.id)}
                     className="rounded-sm border-line bg-raised accent-accent" />

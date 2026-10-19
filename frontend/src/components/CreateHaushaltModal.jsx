@@ -45,7 +45,7 @@ export default function CreateHaushaltModal({ onClose, onCreated }) {
           <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neuer Haushalt</h2>
           <button
             onClick={onClose}
-            className="p-1.5 -mr-1.5 text-fg-subtle hover:text-fg hover:bg-raised rounded-sm transition-colors"
+            className="p-1.5 -mr-1.5 text-fg-subtle hover:text-fg hover:bg-hover rounded-sm transition-colors"
             aria-label="Schließen"
           >
             <X className="w-5 h-5" />
@@ -132,7 +132,7 @@ export default function CreateHaushaltModal({ onClose, onCreated }) {
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-3.5 py-2 text-sm text-fg-muted hover:text-fg hover:bg-raised font-medium rounded-md transition-colors disabled:text-fg-disabled"
+              className="px-3.5 py-2 text-sm text-fg-muted hover:text-fg hover:bg-hover font-medium rounded-md transition-colors disabled:text-fg-disabled"
             >
               Abbrechen
             </button>

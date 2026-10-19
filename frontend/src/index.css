@@ -42,7 +42,7 @@
   --sd-canvas: #0d0c0b;
   --sd-surface: #151412;
   --sd-raised: #1e1c1a;
-  --sd-overlay: #211f1c;
+  --sd-overlay: #181715;
   --sd-hover: #2a2825;
   --sd-line-subtle: #24221f;
   --sd-line: #35322e;
@@ -181,7 +181,7 @@ td, th {
   border-color: var(--border-hover) !important;
 }
 
-:root.light .text-white {
+:root.light .text-white:not([class*="bg-accent"], [class*="bg-bad"]):not([class*="bg-accent"] *, [class*="bg-bad"] *) {
   color: var(--text-primary) !important;
 }
 

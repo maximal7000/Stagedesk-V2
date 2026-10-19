@@ -124,7 +124,7 @@ function UeberfaelligeAusleihenWidget() {
         {namen && <p className="mt-0.5 truncate text-sm text-fg-muted">{namen}</p>}
       </div>
       <Link to="/ausleihen"
-        className="shrink-0 rounded-md bg-bad px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors">
+        className="shrink-0 rounded-md bg-bad px-4 py-2 text-sm font-medium text-white hover:brightness-110 transition">
         Anzeigen
       </Link>
     </div>

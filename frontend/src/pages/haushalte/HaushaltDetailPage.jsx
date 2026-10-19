@@ -718,7 +718,7 @@ export default function HaushaltDetailPage() {
           )}
         </td>
         <td className="p-2">
-          <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
             <button onClick={openEdit} title="Bearbeiten" aria-label="Artikel bearbeiten"
               className="p-1.5 text-fg-subtle hover:text-fg hover:bg-hover rounded-sm">
               <Edit className="w-4 h-4" />

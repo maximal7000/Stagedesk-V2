@@ -221,7 +221,7 @@ function Row({ entry, onClick, onToggleFav, isFavorite }) {
         onClick={(e) => { e.stopPropagation(); onToggleFav(entry); }}
         title={isFavorite ? 'Favorit entfernen' : 'Als Favorit speichern'}
         className={`p-1 rounded-sm ${
-          isFavorite ? 'text-warn' : 'text-fg-subtle opacity-0 group-hover:opacity-100 hover:text-warn'
+          isFavorite ? 'text-warn' : 'text-fg-subtle opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-warn'
         }`}>
         {isFavorite ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
       </button>

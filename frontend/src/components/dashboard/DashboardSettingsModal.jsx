@@ -121,7 +121,7 @@ export default function DashboardSettingsModal({ active, onClose, onSaved }) {
                     {inactiveWidgets.map(w => (
                       <li key={w.code}>
                         <button onClick={() => toggle(w.code)}
-                          className="w-full flex items-center gap-3 p-3 hover:bg-raised rounded-md text-left transition-colors">
+                          className="w-full flex items-center gap-3 p-3 hover:bg-hover rounded-md text-left transition-colors">
                           <div className="flex-1 min-w-0">
                             <div className="text-sm text-fg truncate">{w.name}</div>
                             <div className="text-xs text-fg-subtle truncate">{w.description}</div>

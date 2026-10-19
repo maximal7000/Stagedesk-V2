@@ -135,7 +135,7 @@ export default function KategorienPage() {
               onClick={() => setData({ ...data, farbe })}
               aria-label={`Farbe ${farbe}`}
               className={`h-8 w-8 rounded-md transition-transform ${
-                data.farbe === farbe ? 'scale-110 ring-2 ring-white ring-offset-2 ring-offset-surface' : 'hover:scale-105'
+                data.farbe === farbe ? 'scale-110 ring-2 ring-fg ring-offset-2 ring-offset-surface' : 'hover:scale-105'
               }`}
               style={{ backgroundColor: farbe }}
             />
