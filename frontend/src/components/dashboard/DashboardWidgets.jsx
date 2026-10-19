@@ -28,7 +28,7 @@ function formatKurz(d) {
 
 function Card({ children }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <div className="bg-surface rounded-lg p-6">
       {children}
     </div>
   );
@@ -38,8 +38,8 @@ function Card({ children }) {
 function WidgetHeader({ icon: Icon, title, action }) {
   return (
     <div className="flex items-center justify-between gap-4 mb-5">
-      <h2 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-white">
-        {Icon && <Icon className="w-4 h-4 shrink-0 text-gray-500" />}
+      <h2 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-fg">
+        {Icon && <Icon className="w-4 h-4 shrink-0 text-fg-subtle" />}
         {title}
       </h2>
       {action}
@@ -63,13 +63,13 @@ function MeineVeranstaltungenWidget() {
         icon={Calendar}
         title="Meine Veranstaltungen"
         action={(
-          <Link to="/veranstaltung" className="text-sm text-gray-400 hover:text-accent transition-colors">
+          <Link to="/veranstaltung" className="text-sm text-fg-muted hover:text-fg transition-colors">
             Alle anzeigen
           </Link>
         )}
       />
       {loading ? (
-        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-gray-600" /></div>
+        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : items.length === 0 ? (
         <EmptyState icon={Calendar} title="Keine Veranstaltung zugewiesen"
           description="Sobald dir eine Veranstaltung zugeteilt wird, erscheint sie hier." />
@@ -78,22 +78,22 @@ function MeineVeranstaltungenWidget() {
           {items.map((v) => (
             <li key={v.id}>
               <Link to={`/veranstaltung/${v.id}`}
-                className="group flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-800/70 transition-colors">
+                className="group flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-raised transition-colors">
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium text-white group-hover:text-accent transition-colors">
+                  <div className="truncate font-medium text-fg">
                     {v.titel}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-sm text-gray-500">
+                  <div className="mt-0.5 flex items-center gap-1.5 text-sm text-fg-subtle">
                     <span className="tabular-nums">{formatDatum(v.datum_von)}</span>
                     {v.ort && (
                       <>
-                        <span className="text-gray-700">·</span>
+                        <span className="text-fg-disabled">·</span>
                         <span className="truncate">{v.ort}</span>
                       </>
                     )}
                   </div>
                 </div>
-                <ChevronRight className="w-4 h-4 shrink-0 text-gray-600 group-hover:text-accent transition-colors" />
+                <ChevronRight className="w-4 h-4 shrink-0 text-fg-subtle group-hover:text-fg transition-colors" />
               </Link>
             </li>
           ))}
@@ -115,18 +115,16 @@ function UeberfaelligeAusleihenWidget() {
     `${a.ausleiher_name}, fällig am ${new Date(a.frist).toLocaleDateString('de-DE')}`
   ).join(' · ');
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-red-900/60 bg-red-950/30 p-5">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-red-900/50 bg-red-500/10">
-        <AlertTriangle className="w-5 h-5 text-red-400" />
-      </div>
+    <div className="flex items-center gap-4 rounded-lg bg-surface p-5">
+      <AlertTriangle className="w-5 h-5 shrink-0 text-bad" />
       <div className="min-w-0 flex-1">
-        <h3 className="font-display text-base font-semibold tracking-tight text-red-200">
+        <h3 className="font-display text-base font-semibold tracking-tight text-fg">
           <span className="tabular-nums">{anzahl}</span> überfällige Ausleihe{anzahl > 1 ? 'n' : ''}
         </h3>
-        {namen && <p className="mt-0.5 truncate text-sm text-red-400/80">{namen}</p>}
+        {namen && <p className="mt-0.5 truncate text-sm text-fg-muted">{namen}</p>}
       </div>
       <Link to="/ausleihen"
-        className="shrink-0 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 transition-colors">
+        className="shrink-0 rounded-md bg-bad px-4 py-2 text-sm font-medium text-white hover:opacity-90 transition-colors">
         Anzeigen
       </Link>
     </div>
@@ -142,7 +140,7 @@ function InventarStatsWidget() {
   if (!stats) return null;
   return (
     <section className="space-y-3">
-      <h2 className="px-1 font-display text-lg font-semibold tracking-tight text-white">Inventar</h2>
+      <h2 className="px-1 font-display text-lg font-semibold tracking-tight text-fg">Inventar</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatTile icon={Boxes} label="Items gesamt" value={stats.total_items} />
         <StatTile icon={Package} label="Aktive Ausleihen" value={stats.aktive_ausleihen} />
@@ -173,20 +171,20 @@ function AuditLogWidget() {
           {items.map(log => (
             <li key={log.id} className="flex items-start gap-3">
               <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                log.aktion === 'erstellt' ? 'bg-green-500' :
-                log.aktion === 'zurueckgegeben' ? 'bg-blue-500' :
-                log.aktion === 'geloescht' ? 'bg-red-500' :
-                log.aktion === 'mahnung' ? 'bg-orange-500' : 'bg-gray-500'
+                log.aktion === 'erstellt' ? 'bg-ok' :
+                log.aktion === 'zurueckgegeben' ? 'bg-info' :
+                log.aktion === 'geloescht' ? 'bg-bad' :
+                log.aktion === 'mahnung' ? 'bg-warn' : 'bg-fg-subtle'
               }`} />
               <div className="min-w-0 flex-1">
                 <p className="text-sm leading-snug">
-                  <span className="font-medium text-white">{log.aktion_display}</span>
-                  <span className="text-gray-600"> · </span>
-                  <span className="text-gray-300">{log.entity_name || `${log.entity_type} #${log.entity_id}`}</span>
+                  <span className="font-medium text-fg">{log.aktion_display}</span>
+                  <span className="text-fg-disabled"> · </span>
+                  <span className="text-fg-muted">{log.entity_name || `${log.entity_type} #${log.entity_id}`}</span>
                 </p>
-                <p className="mt-0.5 text-xs text-gray-500">
+                <p className="mt-0.5 text-xs text-fg-subtle">
                   {log.user_username}
-                  <span className="text-gray-700"> · </span>
+                  <span className="text-fg-disabled"> · </span>
                   <span className="tabular-nums">{formatKurz(log.timestamp)}</span>
                 </p>
               </div>
@@ -209,16 +207,14 @@ function SchnellzugriffWidget() {
   return (
     <Card>
       <WidgetHeader title="Schnellzugriff" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
         {SCHNELLZUGRIFF.map(({ to, icon: Icon, title, desc }) => (
           <Link key={to} to={to}
-            className="group flex flex-col gap-3 rounded-lg border border-gray-800 bg-gray-800/40 p-4 hover:border-gray-700 hover:bg-gray-800 transition-colors">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-700/60 bg-gray-900/60 text-gray-400 transition-colors group-hover:border-accent/40 group-hover:text-accent">
-              <Icon className="w-5 h-5" />
-            </span>
+            className="group flex flex-col gap-3 rounded-md p-4 hover:bg-raised transition-colors">
+            <Icon className="w-5 h-5 text-fg-subtle transition-colors group-hover:text-accent-fg" />
             <div>
-              <h3 className="font-medium text-white transition-colors group-hover:text-accent">{title}</h3>
-              <p className="mt-0.5 text-sm text-gray-500">{desc}</p>
+              <h3 className="font-medium text-fg">{title}</h3>
+              <p className="mt-0.5 text-sm text-fg-subtle">{desc}</p>
             </div>
           </Link>
         ))}
@@ -237,25 +233,25 @@ function KompetenzPunkteWidget() {
     <Card>
       <WidgetHeader icon={Award} title="Meine Kompetenz-Punkte" />
       {!stats ? (
-        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-gray-600" /></div>
+        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : (
-        <div className="grid grid-cols-3 divide-x divide-gray-800">
+        <div className="grid grid-cols-3 divide-x divide-line-subtle">
           <div className="pr-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Punkte</div>
-            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-accent">
+            <div className="text-xs uppercase tracking-wide text-fg-subtle">Punkte</div>
+            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-accent-fg">
               {stats.punkte}
             </div>
           </div>
           <div className="px-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Kompetenzen</div>
-            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-white">
+            <div className="text-xs uppercase tracking-wide text-fg-subtle">Kompetenzen</div>
+            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-fg">
               {stats.anzahl_aktiv}
-              <span className="text-lg font-semibold text-gray-500"> / {stats.anzahl_gesamt}</span>
+              <span className="text-lg font-semibold text-fg-subtle"> / {stats.anzahl_gesamt}</span>
             </div>
           </div>
           <div className="pl-4">
-            <div className="text-xs uppercase tracking-wide text-gray-500">Badges</div>
-            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-yellow-400">
+            <div className="text-xs uppercase tracking-wide text-fg-subtle">Badges</div>
+            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-warn">
               {stats.badges?.length || 0}
             </div>
           </div>
