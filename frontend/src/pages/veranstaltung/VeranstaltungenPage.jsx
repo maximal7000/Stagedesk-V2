@@ -51,8 +51,8 @@ function MeldenButton({ v, onRefetch }) {
       disabled={loading}
       className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
         v.ist_gemeldet
-          ? 'bg-green-500/20 text-green-400 hover:bg-red-500/20 hover:text-red-400'
-          : 'bg-gray-700 hover:bg-green-600/30 text-gray-400 hover:text-green-400'
+          ? 'bg-hover text-ok hover:text-bad'
+          : 'bg-hover hover:bg-line text-fg-muted hover:text-ok'
       }`}
       title={v.ist_gemeldet ? 'Abmelden' : 'Melden'}
     >
@@ -104,13 +104,13 @@ function VeranstaltungCard({ v, onRefetch }) {
   return (
     <div
       onClick={() => navigate(`/veranstaltung/${v.id}`)}
-      className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-colors group cursor-pointer"
+      className="w-full text-left bg-surface rounded-lg p-4 hover:bg-raised transition-colors group cursor-pointer"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           {/* Titel + Status */}
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <span className="font-semibold text-white group-hover:text-accent transition-colors truncate">
+            <span className="font-semibold text-fg truncate">
               {v.titel}
             </span>
             <StatusBadge tone={STATUS_TONE[eff] || 'neutral'} label={STATUS_LABELS[eff] || eff} />
@@ -118,14 +118,14 @@ function VeranstaltungCard({ v, onRefetch }) {
           </div>
 
           {/* Datum */}
-          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-400 mb-2">
+          <div className="flex flex-wrap items-center gap-3 text-sm text-fg-muted mb-2">
             <span className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-gray-500" />
+              <Calendar className="w-3.5 h-3.5 text-fg-subtle" />
               {isSameDay ? (
                 <>
                   {formatDateFull(v.datum_von)}
                   {v.datum_von && (
-                    <span className="text-gray-500">
+                    <span className="text-fg-subtle">
                       {formatTime(v.datum_von)}{formatTime(v.datum_bis) ? `–${formatTime(v.datum_bis)}` : ''}
                     </span>
                   )}
@@ -138,14 +138,14 @@ function VeranstaltungCard({ v, onRefetch }) {
             </span>
             {v.ort && (
               <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-gray-500" />
+                <MapPin className="w-3.5 h-3.5 text-fg-subtle" />
                 {v.ort}
               </span>
             )}
           </div>
 
           {/* Meta-Zeile */}
-          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 tabular-nums">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-fg-subtle tabular-nums">
             <span className="flex items-center gap-1">
               <Users className="w-3 h-3" />
               {v.anzahl_zuweisungen ?? 0} Personen
@@ -157,7 +157,7 @@ function VeranstaltungCard({ v, onRefetch }) {
               </span>
             )}
             {v.zammad_ticket_number && (
-              <span className="flex items-center gap-1 text-accent/70">
+              <span className="flex items-center gap-1 text-fg-subtle">
                 <Ticket className="w-3 h-3" />
                 #{v.zammad_ticket_number}
               </span>
@@ -167,7 +167,7 @@ function VeranstaltungCard({ v, onRefetch }) {
 
         <div className="flex flex-col items-end gap-2 shrink-0">
           {isActive && v.meldung_aktiv !== false && <MeldenButton v={v} onRefetch={onRefetch} />}
-          <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+          <ChevronRight className="w-5 h-5 text-fg-subtle group-hover:text-fg transition-colors" />
         </div>
       </div>
     </div>
@@ -183,9 +183,9 @@ function SectionGroup({ title, items, onRefetch }) {
         onClick={() => setOpen(!open)}
         className="flex items-center gap-2 w-full py-2 text-left mb-2"
       >
-        <span className="font-semibold text-gray-300 text-sm uppercase tracking-wide">{title}</span>
-        <span className="text-xs text-gray-600">({items.length})</span>
-        <ChevronRight className={`w-4 h-4 text-gray-500 ml-auto transition-transform ${open ? 'rotate-90' : ''}`} />
+        <span className="font-semibold text-fg-muted text-sm uppercase tracking-wide">{title}</span>
+        <span className="text-xs text-fg-subtle">({items.length})</span>
+        <ChevronRight className={`w-4 h-4 text-fg-subtle ml-auto transition-transform ${open ? 'rotate-90' : ''}`} />
       </button>
       {open && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -329,31 +329,31 @@ export default function VeranstaltungenPage() {
       {/* Filter */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-muted" />
           <input
             type="text"
             placeholder="Suchen…"
             value={suche}
             onChange={(e) => setSuche(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm"
+            className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-fg placeholder:text-fg-subtle text-sm"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+          className="px-3 py-2 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-fg text-sm"
         >
           <option value="">Alle Status</option>
           {Object.entries(STATUS_LABELS).map(([k, v]) => (
             <option key={k} value={k}>{v}</option>
           ))}
         </select>
-        <label className="flex items-center gap-2 text-gray-400 cursor-pointer text-sm">
+        <label className="flex items-center gap-2 text-fg-muted cursor-pointer text-sm">
           <input
             type="checkbox"
             checked={nurMeine}
             onChange={(e) => setNurMeine(e.target.checked)}
-            className="rounded border-gray-600 bg-gray-800 text-accent"
+            className="rounded-sm border-line bg-raised text-accent-fg"
           />
           Nur meine
         </label>
@@ -368,10 +368,10 @@ export default function VeranstaltungenPage() {
       {/* Inhalt */}
       {loading ? (
         <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <Loader2 className="w-8 h-8 animate-spin text-accent-fg" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           {suche || filterStatus || nurMeine ? (
             <EmptyState icon={CalendarX2} title="Keine Veranstaltungen gefunden"
               description="Passe deine Suche oder Filter an." />
@@ -394,28 +394,28 @@ export default function VeranstaltungenPage() {
 
       {/* Zammad-Modal */}
       {showZammad && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-white">Aus Zammad-Ticket erstellen</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-2xl w-full max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-line-subtle flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-fg">Aus Zammad-Ticket erstellen</h2>
               <button type="button" onClick={() => setShowZammad(false)} aria-label="Schließen"
-                className="text-gray-400 hover:text-white">
+                className="text-fg-muted hover:text-fg">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-4 overflow-y-auto flex-1">
               {zammadLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-accent" /></div>
+                <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-accent-fg" /></div>
               ) : zammadTickets.length === 0 ? (
-                <p className="text-gray-500 text-center py-8">Keine Tickets gefunden oder Zammad nicht konfiguriert.</p>
+                <p className="text-fg-subtle text-center py-8">Keine Tickets gefunden oder Zammad nicht konfiguriert.</p>
               ) : (
-                <ul className="space-y-2">
+                <ul className="divide-y divide-line-subtle">
                   {zammadTickets.map((t) => (
-                    <li key={t.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                    <li key={t.id} className="flex items-center justify-between py-3">
                       <div>
-                        <span className="text-white font-medium">#{t.number ?? t.id} – {t.title || '(ohne Titel)'}</span>
+                        <span className="text-fg font-medium">#{t.number ?? t.id} – {t.title || '(ohne Titel)'}</span>
                         {t.created_at && (
-                          <p className="text-sm text-gray-500 mt-0.5">{new Date(t.created_at).toLocaleDateString('de-DE')}</p>
+                          <p className="text-sm text-fg-subtle mt-0.5">{new Date(t.created_at).toLocaleDateString('de-DE')}</p>
                         )}
                       </div>
                       <Button

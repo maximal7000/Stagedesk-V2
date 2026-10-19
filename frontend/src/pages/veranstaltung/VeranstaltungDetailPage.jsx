@@ -226,7 +226,7 @@ export default function VeranstaltungDetailPage() {
   if (loading && !isNew) {
     return (
       <div className="flex items-center justify-center py-16">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <Loader2 className="w-8 h-8 animate-spin text-accent-fg" />
       </div>
     );
   }
@@ -235,47 +235,47 @@ export default function VeranstaltungDetailPage() {
   if (isNew) {
     return (
       <div className="space-y-6">
-        <Link to="/veranstaltung" className="inline-flex items-center gap-2 text-gray-400 hover:text-white">
+        <Link to="/veranstaltung" className="inline-flex items-center gap-2 text-fg-muted hover:text-fg">
           <ArrowLeft className="w-4 h-4" /> Zurück
         </Link>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-2xl">
-          <h1 className="text-xl font-bold text-white mb-6">Neue Veranstaltung</h1>
+        <div className="bg-surface rounded-lg p-6 max-w-2xl">
+          <h1 className="text-xl font-bold text-fg mb-6">Neue Veranstaltung</h1>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Titel *</label>
+              <label className="block text-sm font-medium text-fg-muted mb-1">Titel *</label>
               <input type="text" required value={form.titel}
                 onChange={(e) => setForm((f) => ({ ...f, titel: e.target.value }))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+              <label className="block text-sm font-medium text-fg-muted mb-1">Beschreibung</label>
               <textarea value={form.beschreibung} onChange={(e) => setForm((f) => ({ ...f, beschreibung: e.target.value }))}
-                rows={4} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white font-mono text-sm" />
+                rows={4} className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg font-mono text-sm" />
               <MarkdownHint />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Start *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Start *</label>
                 <input type="datetime-local" required value={form.datum_von}
                   onChange={(e) => setForm((f) => ({ ...f, datum_von: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                  className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Ende <span className="text-gray-600 text-xs">(optional)</span></label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Ende <span className="text-fg-subtle text-xs">(optional)</span></label>
                 <input type="datetime-local" value={form.datum_bis}
                   onChange={(e) => setForm((f) => ({ ...f, datum_bis: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                  className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
               </div>
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Ort</label>
+              <label className="block text-sm font-medium text-fg-muted mb-1">Ort</label>
               <input type="text" value={form.ort} onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Adresse</label>
+              <label className="block text-sm font-medium text-fg-muted mb-1">Adresse</label>
               <textarea value={form.adresse} onChange={(e) => setForm((f) => ({ ...f, adresse: e.target.value }))}
-                rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
+                rows={2} className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
             </div>
             <div className="flex gap-3 pt-4">
               <Button type="submit" variant="primary" disabled={saving}>
@@ -292,7 +292,7 @@ export default function VeranstaltungDetailPage() {
   // ─── Nicht gefunden ──────────────────────────────────
   if (!data) {
     return (
-      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+      <div className="bg-surface rounded-lg">
         <EmptyState icon={CalendarX2} title="Veranstaltung nicht gefunden"
           description="Sie wurde gelöscht oder der Link ist falsch."
           action={<Button as={Link} to="/veranstaltung" variant="secondary" icon={ArrowLeft}>Zur Liste</Button>} />
@@ -303,45 +303,45 @@ export default function VeranstaltungDetailPage() {
   // ─── Detail View ─────────────────────────────────────
   return (
     <div className="space-y-6">
-      <Link to="/veranstaltung" className="inline-flex items-center gap-2 text-gray-400 hover:text-white">
+      <Link to="/veranstaltung" className="inline-flex items-center gap-2 text-fg-muted hover:text-fg">
         <ArrowLeft className="w-4 h-4" /> Zurück
       </Link>
 
       {/* ─── Header ───────────────────────────────────── */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+      <div className="pb-6 border-b border-line-subtle">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             {editMode ? (
               <input type="text" value={form.titel}
                 onChange={(e) => setForm((f) => ({ ...f, titel: e.target.value }))}
-                className="text-xl font-bold bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white w-full max-w-md" />
+                className="text-xl font-bold bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg w-full max-w-md" />
             ) : (
-              <h1 className="text-2xl font-bold text-white">{data.titel}</h1>
+              <h1 className="text-2xl font-bold text-fg">{data.titel}</h1>
             )}
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-gray-400">
+            <div className="flex flex-wrap items-center gap-4 mt-2 text-fg-muted">
               <span className="flex items-center gap-1 tabular-nums"><Calendar className="w-4 h-4" /> {formatDatum(data.datum_von)} – {formatDatum(data.datum_bis)}</span>
               {data.ort && <span className="flex items-center gap-1"><MapPin className="w-4 h-4" /> {data.ort}</span>}
-              {data.zammad_ticket_number && <span className="text-accent tabular-nums">Zammad #{data.zammad_ticket_number}</span>}
+              {data.zammad_ticket_number && <span className="text-accent-fg tabular-nums">Zammad #{data.zammad_ticket_number}</span>}
             </div>
             {editMode && (
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Von</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Von</label>
                   <input type="datetime-local" value={form.datum_von}
                     onChange={(e) => setForm((f) => ({ ...f, datum_von: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 mb-1">Bis</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Bis</label>
                   <input type="datetime-local" value={form.datum_bis}
                     onChange={(e) => setForm((f) => ({ ...f, datum_bis: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg text-sm" />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-xs text-gray-500 mb-1">Ort</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Ort</label>
                   <input type="text" value={form.ort}
                     onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-sm" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg text-sm" />
                 </div>
               </div>
             )}
@@ -354,9 +354,9 @@ export default function VeranstaltungDetailPage() {
             {canEdit && !editMode && (
               data.status === 'abgesagt' ? (
                 <button type="button" onClick={() => handleStatusToggle('geplant')}
-                  className="inline-flex items-center gap-2 rounded-lg text-sm px-3.5 py-2 font-medium leading-none
-                             bg-emerald-600/90 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-sm transition-colors
-                             focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
+                  className="inline-flex items-center gap-2 rounded-md text-xs px-2.5 py-1.5 font-medium leading-none
+                             bg-raised hover:bg-hover active:bg-hover text-ok transition-colors
+                             focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   Wieder aktivieren
                 </button>

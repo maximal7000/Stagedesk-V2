@@ -9,11 +9,11 @@ function deadlineState(item) {
   const d = new Date(item.deadline);
   const now = new Date();
   const diff = (d - now) / (1000 * 60 * 60); // Stunden
-  if (item.erledigt) return { cls: 'text-gray-500', label: d.toLocaleDateString('de-DE') };
-  if (diff < 0) return { cls: 'text-red-400', label: `überfällig (${d.toLocaleDateString('de-DE')})`, urgent: true };
-  if (diff < 24) return { cls: 'text-orange-400', label: `${Math.round(diff)}h verbleibend` };
-  if (diff < 72) return { cls: 'text-amber-400', label: `${Math.round(diff/24)} Tage` };
-  return { cls: 'text-gray-400', label: d.toLocaleDateString('de-DE') };
+  if (item.erledigt) return { cls: 'text-fg-subtle', label: d.toLocaleDateString('de-DE') };
+  if (diff < 0) return { cls: 'text-bad', label: `überfällig (${d.toLocaleDateString('de-DE')})`, urgent: true };
+  if (diff < 24) return { cls: 'text-warn', label: `${Math.round(diff)}h verbleibend` };
+  if (diff < 72) return { cls: 'text-warn', label: `${Math.round(diff/24)} Tage` };
+  return { cls: 'text-fg-muted', label: d.toLocaleDateString('de-DE') };
 }
 
 export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
@@ -67,30 +67,28 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
           <input type="text" placeholder="Punkt hinzufügen…" value={newItem}
             onChange={(e) => setNewItem(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addItem())}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500" />
+            className="flex-1 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg placeholder:text-fg-subtle" />
           <input type="datetime-local" value={newDeadline}
             onChange={(e) => setNewDeadline(e.target.value)}
             title="Optionale Frist"
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm" />
           <Button variant="secondary" icon={Plus} onClick={addItem} title="Punkt hinzufügen" aria-label="Punkt hinzufügen" />
         </div>
       )}
-      <ul className="space-y-2">
+      <ul className="bg-surface rounded-lg divide-y divide-line-subtle">
         {(data?.checkliste || []).map((item) => {
           const ds = deadlineState(item);
           return (
-            <li key={item.id} className={`flex flex-wrap items-center gap-3 py-2 px-3 rounded-lg ${
-              ds?.urgent ? 'bg-red-900/20 border border-red-800/40' : 'bg-gray-800'
-            }`}>
+            <li key={item.id} className="flex flex-wrap items-center gap-3 py-2 px-3">
               {canEdit ? (
                 <button type="button" onClick={() => toggleItem(item.id, !item.erledigt)}
                   aria-label={item.erledigt ? 'Als offen markieren' : 'Als erledigt markieren'} className="flex-shrink-0">
-                  <CheckSquare className={`w-5 h-5 ${item.erledigt ? 'text-green-500' : 'text-gray-500'}`} />
+                  <CheckSquare className={`w-5 h-5 ${item.erledigt ? 'text-ok' : 'text-fg-subtle'}`} />
                 </button>
               ) : (
-                <CheckSquare className={`w-5 h-5 flex-shrink-0 ${item.erledigt ? 'text-green-500' : 'text-gray-500'}`} />
+                <CheckSquare className={`w-5 h-5 flex-shrink-0 ${item.erledigt ? 'text-ok' : 'text-fg-subtle'}`} />
               )}
-              <span className={`flex-1 min-w-0 ${item.erledigt ? 'text-gray-500 line-through' : 'text-white'}`}>{item.titel}</span>
+              <span className={`flex-1 min-w-0 ${item.erledigt ? 'text-fg-subtle line-through' : 'text-fg'}`}>{item.titel}</span>
               {ds && (
                 <span className={`text-xs inline-flex items-center gap-1 tabular-nums ${ds.cls}`}>
                   {ds.urgent ? <AlertCircle className="w-3 h-3" /> : <Calendar className="w-3 h-3" />}
@@ -102,16 +100,16 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
                   defaultValue={item.deadline ? new Date(item.deadline).toISOString().slice(0, 16) : ''}
                   onBlur={(e) => setDeadline(item.id, e.target.value ? new Date(e.target.value).toISOString() : null)}
                   autoFocus
-                  className="bg-gray-700 border border-gray-600 rounded-lg px-2 py-1 text-white text-xs" />
+                  className="bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg text-xs" />
               ) : canEdit && (
                 <button type="button" onClick={() => setEditingDeadlineId(item.id)}
                   title={item.deadline ? 'Frist ändern' : 'Frist setzen'}
-                  className="text-gray-500 hover:text-white">
+                  className="text-fg-subtle hover:text-fg">
                   <Calendar className="w-4 h-4" />
                 </button>
               )}
               {canEdit && (
-                <button type="button" onClick={() => deleteItem(item.id)} aria-label="Punkt löschen" className="text-gray-400 hover:text-red-400">
+                <button type="button" onClick={() => deleteItem(item.id)} aria-label="Punkt löschen" className="text-fg-muted hover:text-bad">
                   <Trash2 className="w-4 h-4" />
                 </button>
               )}
@@ -119,7 +117,7 @@ export default function ChecklisteSection({ data, refetch, canEdit, eventId }) {
           );
         })}
         {(!data?.checkliste || data.checkliste.length === 0) && (
-          <li className="text-gray-500 text-sm">Keine Punkte</li>
+          <li className="text-fg-subtle text-sm px-3 py-2">Keine Punkte</li>
         )}
       </ul>
     </CollapsibleSection>

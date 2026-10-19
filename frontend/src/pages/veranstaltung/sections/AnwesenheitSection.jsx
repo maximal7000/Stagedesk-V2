@@ -84,33 +84,33 @@ export default function AnwesenheitSection({ data, refetch, canEdit, eventId }) 
       )}
     >
       {showLink && (
-        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-800/50 rounded-lg">
+        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-surface rounded-lg">
           <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white min-w-[200px]">
+            className="flex-1 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg min-w-[200px]">
             <option value="">Anwesenheitsliste wählen…</option>
             {alleAnwesenheit.map((a) => (
               <option key={a.id} value={a.id}>{a.titel} {a.ort ? `(${a.ort})` : ''} – {a.status === 'aktiv' ? 'Aktiv' : 'Abgeschlossen'}</option>
             ))}
           </select>
           <Button variant="primary" size="sm" onClick={link} disabled={!selectedId}>Verknüpfen</Button>
-          <button type="button" onClick={() => setShowLink(false)} aria-label="Abbrechen" className="px-3 py-2 text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={() => setShowLink(false)} aria-label="Abbrechen" className="px-3 py-2 text-fg-muted hover:text-fg"><X className="w-4 h-4" /></button>
         </div>
       )}
 
       {data?.anwesenheitsliste_id ? (
-        <div className="flex items-center justify-between py-3 px-4 bg-gray-800 rounded-lg">
+        <div className="flex items-center justify-between py-3 px-4 bg-surface rounded-lg">
           <div className="flex-1 min-w-0">
             <Link to={`/anwesenheit/${data.anwesenheitsliste_id}`}
-              className="text-white hover:text-accent font-medium flex items-center gap-2">
+              className="text-fg hover:text-accent-fg font-medium flex items-center gap-2">
               <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
               {data.anwesenheitsliste_titel || `Anwesenheitsliste #${data.anwesenheitsliste_id}`}
             </Link>
           </div>
           <button type="button" onClick={unlink} title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen"
-            className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"><Unlink className="w-4 h-4" /></button>
+            className="text-fg-muted hover:text-bad ml-2 flex-shrink-0"><Unlink className="w-4 h-4" /></button>
         </div>
       ) : (
-        <p className="text-gray-500 text-sm">Keine Anwesenheitsliste verknüpft</p>
+        <p className="text-fg-subtle text-sm">Keine Anwesenheitsliste verknüpft</p>
       )}
     </CollapsibleSection>
   );

@@ -50,24 +50,24 @@ export default function MitteilungSection({ data, canEdit, eventId }) {
     <CollapsibleSection icon={Megaphone} title="Mitteilung senden">
       <div className="space-y-3">
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Titel (optional)</label>
+          <label className="block text-sm font-medium text-fg-muted mb-1">Titel (optional)</label>
           <input type="text" value={titel}
             onChange={(e) => setTitel(e.target.value)}
             placeholder={`Mitteilung: ${data?.titel || ''}`}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm" />
         </div>
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Nachricht *</label>
+          <label className="block text-sm font-medium text-fg-muted mb-1">Nachricht *</label>
           <textarea rows={4} value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Infos, Treffpunkt, Änderungen ..."
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono" />
+            className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm font-mono" />
         </div>
         <div className="flex items-end gap-2 flex-wrap">
           <div className="flex-1 min-w-[180px]">
-            <label className="block text-xs text-gray-400 mb-1">An</label>
+            <label className="block text-sm font-medium text-fg-muted mb-1">An</label>
             <select value={an} onChange={(e) => setAn(e.target.value)}
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+              className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm">
               {ZIELE.map(z => (
                 <option key={z.v} value={z.v}>
                   {z.l} ({counts[z.v]})
@@ -81,7 +81,7 @@ export default function MitteilungSection({ data, canEdit, eventId }) {
             Senden
           </Button>
         </div>
-        <p className="text-[11px] text-gray-500">
+        <p className="text-[11px] text-fg-subtle">
           Empfänger erhalten eine In-App-Notification und (falls aktiviert) eine Web-Push-Notification.
         </p>
       </div>
