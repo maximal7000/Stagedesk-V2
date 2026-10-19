@@ -55,43 +55,43 @@ export default function AusleihllistenSection({ data, refetch, canEdit, eventId,
       )}
     >
       {showLink && (
-        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-800/50 rounded-lg">
+        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-surface rounded-lg">
           <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white min-w-[200px]">
+            className="flex-1 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg min-w-[200px]">
             <option value="">Ausleihliste wählen…</option>
             {alleAusleihlisten.filter((a) => !a.veranstaltung_id).map((a) => (
               <option key={a.id} value={a.id}>#{a.id} – {a.ausleiher_name || 'Unbekannt'} ({a.status_display || a.status})</option>
             ))}
           </select>
           <Button variant="primary" size="sm" onClick={link} disabled={!selectedId}>Verknüpfen</Button>
-          <button type="button" onClick={() => setShowLink(false)} aria-label="Abbrechen" className="px-3 py-2 text-gray-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={() => setShowLink(false)} aria-label="Abbrechen" className="px-3 py-2 text-fg-muted hover:text-fg"><X className="w-4 h-4" /></button>
         </div>
       )}
 
       {ausleihlisten.length > 0 ? (
-        <div className="space-y-2">
+        <div className="bg-surface rounded-lg divide-y divide-line-subtle">
           {ausleihlisten.map((a) => (
-            <div key={a.id} className="flex items-center justify-between py-3 px-4 bg-gray-800 rounded-lg">
+            <div key={a.id} className="flex items-center justify-between py-3 px-4">
               <div className="flex-1 min-w-0">
-                <Link to={`/ausleihen/${a.id}`} className="text-white hover:text-accent font-medium flex items-center gap-2">
+                <Link to={`/ausleihen/${a.id}`} className="text-fg hover:text-accent-fg font-medium flex items-center gap-2">
                   <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                   #{a.id} – {a.ausleiher_name || 'Unbekannt'}
                 </Link>
-                <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-400 tabular-nums">
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-fg-muted tabular-nums">
                   {a.zweck && <span>{a.zweck}</span>}
                   <StatusBadge tone={AUSLEIHE_TONE[a.status] || 'neutral'} label={a.status_display || a.status} />
                   <span>{a.anzahl_items} Items</span>
                   {a.frist && <span>Frist: {new Date(a.frist).toLocaleDateString('de-DE')}</span>}
-                  {a.ist_ueberfaellig && <span className="text-red-400 font-medium">Überfällig</span>}
+                  {a.ist_ueberfaellig && <span className="text-bad font-medium">Überfällig</span>}
                 </div>
               </div>
               <button type="button" onClick={() => unlink(a.id)} title="Verknüpfung entfernen" aria-label="Verknüpfung entfernen"
-                className="text-gray-400 hover:text-red-400 ml-2 flex-shrink-0"><Unlink className="w-4 h-4" /></button>
+                className="text-fg-muted hover:text-bad ml-2 flex-shrink-0"><Unlink className="w-4 h-4" /></button>
             </div>
           ))}
         </div>
       ) : (
-        <p className="text-gray-500 text-sm">Keine Ausleihlisten verknüpft</p>
+        <p className="text-fg-subtle text-sm">Keine Ausleihlisten verknüpft</p>
       )}
     </CollapsibleSection>
   );

@@ -30,21 +30,21 @@ export default function NotizenSection({ data, refetch, canEdit, eventId }) {
           <div className="flex gap-2">
             <textarea placeholder="Notiz hinzufügen…" value={newNotiz}
               onChange={(e) => setNewNotiz(e.target.value)} rows={2}
-              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 font-mono text-sm" />
+              className="flex-1 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg placeholder:text-fg-subtle font-mono text-sm" />
             <Button variant="secondary" icon={Plus} onClick={addNotiz} disabled={!newNotiz.trim()}
               className="self-end" title="Notiz hinzufügen" aria-label="Notiz hinzufügen" />
           </div>
           <MarkdownHint />
         </div>
       )}
-      <ul className="space-y-3">
+      <ul className="bg-surface rounded-lg divide-y divide-line-subtle">
         {(data?.notizen || []).map((n) => (
-          <li key={n.id} className="py-2 px-3 bg-gray-800 rounded-lg">
+          <li key={n.id} className="py-2 px-3">
             <Markdown>{n.text}</Markdown>
-            <p className="text-xs text-gray-500 mt-1">{n.created_by_username || 'Unbekannt'} · {formatDatum(n.created_at)}</p>
+            <p className="text-xs text-fg-subtle mt-1">{n.created_by_username || 'Unbekannt'} · {formatDatum(n.created_at)}</p>
           </li>
         ))}
-        {(!data?.notizen || data.notizen.length === 0) && <li className="text-gray-500 text-sm">Keine Notizen</li>}
+        {(!data?.notizen || data.notizen.length === 0) && <li className="text-fg-subtle text-sm px-3 py-2">Keine Notizen</li>}
       </ul>
     </CollapsibleSection>
   );
