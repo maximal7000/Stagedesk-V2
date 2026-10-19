@@ -186,14 +186,14 @@ export default function SettingsPage() {
                     effectiveTheme === 'dark'
                       ? 'bg-raised'
                       : 'bg-surface hover:bg-raised'
-                  } ${forcedTheme ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg]:!text-fg-disabled' : ''}`}
+                  } ${forcedTheme ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg:not([data-check])]:!text-fg-disabled' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <Moon className="w-6 h-6 text-fg-subtle" />
                     <span className="text-sm font-medium text-fg">Dunkel</span>
                   </div>
                   {effectiveTheme === 'dark' && (
-                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
+                    <CheckCircle data-check className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
                   )}
                 </button>
 
@@ -205,14 +205,14 @@ export default function SettingsPage() {
                     effectiveTheme === 'light'
                       ? 'bg-raised'
                       : 'bg-surface hover:bg-raised'
-                  } ${(forcedTheme || !hasPermission('theme.light_mode')) ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg]:!text-fg-disabled' : ''}`}
+                  } ${(forcedTheme || !hasPermission('theme.light_mode')) ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg:not([data-check])]:!text-fg-disabled' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <Sun className="w-6 h-6 text-warn" />
+                    <Sun className="w-6 h-6 text-fg-subtle" />
                     <span className="text-sm font-medium text-fg">Hell</span>
                   </div>
                   {effectiveTheme === 'light' && (
-                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
+                    <CheckCircle data-check className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
                   )}
                 </button>
 
@@ -224,14 +224,14 @@ export default function SettingsPage() {
                     effectiveTheme === 'system'
                       ? 'bg-raised'
                       : 'bg-surface hover:bg-raised'
-                  } ${forcedTheme ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg]:!text-fg-disabled' : ''}`}
+                  } ${forcedTheme ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg:not([data-check])]:!text-fg-disabled' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
                     <Monitor className="w-6 h-6 text-fg-subtle" />
                     <span className="text-sm font-medium text-fg">Wie System</span>
                   </div>
                   {effectiveTheme === 'system' && (
-                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
+                    <CheckCircle data-check className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
                   )}
                 </button>
               </div>

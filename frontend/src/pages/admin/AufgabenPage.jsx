@@ -283,7 +283,7 @@ function SortableAufgabe({
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') { e.preventDefault(); addSubtask(a.id, newSubtask); setNewSubtask(''); }
                     }}
-                    className="flex-1 bg-transparent border-b border-line-subtle focus:border-line px-1 py-0.5 text-sm text-fg placeholder:text-fg-subtle outline-none" />
+                    className="flex-1 bg-transparent border-b border-line-subtle focus:border-accent px-1 py-0.5 text-sm text-fg placeholder:text-fg-subtle outline-none" />
                 </div>
               )}
             </div>

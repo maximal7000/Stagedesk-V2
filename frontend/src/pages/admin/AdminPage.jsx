@@ -241,7 +241,7 @@ export default function AdminPage() {
               {users.length === 0 ? (
                 <EmptyState icon={Users} title="Keine Benutzer gefunden" />
               ) : users.map((user) => (
-                <div key={user.id} className={`px-4 py-3 flex items-start gap-3 transition-colors ${editingUser?.id === user.id ? 'bg-raised' : selectedUserIds.has(user.id) ? 'bg-raised' : 'hover:bg-raised'}`}>
+                <div key={user.id} className={`px-4 py-3 flex items-start gap-3 transition-colors ${editingUser?.id === user.id ? 'bg-surface border-y border-line-subtle' : selectedUserIds.has(user.id) ? 'bg-raised' : 'hover:bg-raised'}`}>
                   {editingUser?.id !== user.id && (
                     <input type="checkbox"
                       aria-label="Benutzer auswählen"
@@ -309,7 +309,7 @@ export default function AdminPage() {
                               }} className={`px-2.5 py-1 rounded-md text-sm transition-colors flex items-center gap-1 ${isSelected ? 'bg-hover text-fg ring-1 ring-inset ring-accent' : 'bg-raised text-fg-muted hover:bg-hover hover:text-fg'}`}>
                                 {isSelected ? <Check className="w-3 h-3" /> : <FolderOpen className="w-3.5 h-3.5 text-fg-subtle" />}
                                 {g.name}
-                                {g.is_default && <span className="text-[10px] opacity-60">(Standard)</span>}
+                                {g.is_default && <span className="text-[10px] text-fg-subtle">(Standard)</span>}
                               </button>
                             );
                           })}
