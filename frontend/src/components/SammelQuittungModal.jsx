@@ -40,80 +40,80 @@ export default function SammelQuittungModal({ haushaltId, artikel, onClose, onSa
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
       onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl w-full max-w-lg max-h-[85vh] flex flex-col"
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <div className="flex items-center gap-2 text-white">
-            <Receipt className="w-5 h-5" />
-            <h2 className="font-semibold">Quittung für mehrere Artikel</h2>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle">
+          <div className="flex items-center gap-2 text-fg">
+            <Receipt className="w-5 h-5 text-fg-subtle" />
+            <h2 className="font-display text-xl font-semibold tracking-tight">Quittung für mehrere Artikel</h2>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} aria-label="Schließen" className="text-fg-subtle hover:text-fg rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Name (optional)</label>
+            <label className="block text-sm font-medium text-fg-muted mb-1">Name (optional)</label>
             <input value={name} onChange={(e) => setName(e.target.value)}
               placeholder="z.B. Conrad-Bestellung 12.05."
-              className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+              className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
           </div>
 
           <div>
-            <label className="block text-xs text-gray-400 mb-2">Quittung-Datei</label>
+            <label className="block text-sm font-medium text-fg-muted mb-2">Quittung-Datei</label>
             <div className="flex items-center gap-2 flex-wrap">
-              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded cursor-pointer">
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-raised hover:bg-hover text-fg text-sm rounded-md cursor-pointer">
                 <Camera className="w-4 h-4" /> Foto
                 <input type="file" className="hidden"
                   accept="image/*" capture="environment"
                   onChange={(e) => setFile(e.target.files?.[0] || null)} />
               </label>
-              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded cursor-pointer">
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-raised hover:bg-hover text-fg text-sm rounded-md cursor-pointer">
                 <Upload className="w-4 h-4" /> Hochladen
                 <input type="file" className="hidden"
                   accept="image/*,.pdf"
                   onChange={(e) => setFile(e.target.files?.[0] || null)} />
               </label>
-              {file && <span className="text-xs text-gray-300 truncate">{file.name}</span>}
+              {file && <span className="text-xs text-fg-muted truncate">{file.name}</span>}
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs text-gray-400">Artikel ({selectedIds.size} gewählt)</label>
+              <label className="text-sm font-medium text-fg-muted">Artikel ({selectedIds.size} gewählt)</label>
               <div className="flex gap-1">
                 <button onClick={selectAll}
-                  className="text-xs text-blue-400 hover:text-blue-300">Alle</button>
-                <span className="text-gray-600 text-xs">·</span>
+                  className="text-xs text-info hover:text-fg rounded-sm">Alle</button>
+                <span className="text-fg-subtle text-xs">·</span>
                 <button onClick={clearAll}
-                  className="text-xs text-gray-400 hover:text-white">Keine</button>
+                  className="text-xs text-fg-muted hover:text-fg rounded-sm">Keine</button>
               </div>
             </div>
-            <div className="border border-gray-800 rounded max-h-64 overflow-y-auto bg-gray-900/40">
+            <div className="bg-surface rounded-md max-h-64 overflow-y-auto divide-y divide-line-subtle">
               {artikel.length === 0 ? (
-                <p className="text-sm text-gray-500 p-3 text-center">Keine Artikel im Haushalt</p>
+                <p className="text-sm text-fg-subtle p-3 text-center">Keine Artikel im Haushalt</p>
               ) : artikel.map((a) => (
                 <label key={a.id}
-                  className="flex items-center gap-2 px-3 py-2 hover:bg-gray-800/60 cursor-pointer border-b border-gray-800 last:border-0">
+                  className="flex items-center gap-2 px-3 py-2 hover:bg-raised cursor-pointer">
                   <input type="checkbox" checked={selectedIds.has(a.id)}
                     onChange={() => toggle(a.id)}
-                    className="rounded border-gray-600 bg-gray-700 text-blue-500" />
-                  <span className="text-sm text-white flex-1">{a.name}</span>
-                  <span className="text-xs text-gray-500">{a.kategorie}</span>
+                    className="rounded-sm border-line bg-raised accent-[var(--color-accent)]" />
+                  <span className="text-sm text-fg flex-1">{a.name}</span>
+                  <span className="text-xs text-fg-subtle">{a.kategorie}</span>
                 </label>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="flex gap-2 p-5 border-t border-gray-800">
+        <div className="flex gap-2 p-5 border-t border-line-subtle">
           <button onClick={onClose} disabled={uploading}
-            className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">
+            className="flex-1 px-4 py-2 bg-raised hover:bg-hover text-fg rounded-md disabled:text-fg-disabled">
             Abbrechen
           </button>
           <button onClick={submit} disabled={uploading || !file || selectedIds.size === 0}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-lg inline-flex items-center justify-center gap-2">
+            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-60 text-white font-semibold rounded-md inline-flex items-center justify-center gap-2">
             {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             Hochladen
           </button>

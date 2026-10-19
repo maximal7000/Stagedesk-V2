@@ -2,7 +2,7 @@
  * Modal zum Bearbeiten eines Haushalts
  */
 import { useState } from 'react';
-import { X, Wallet, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import apiClient from '../lib/api';
 
 export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
@@ -37,19 +37,16 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-accent/15 ring-1 ring-inset ring-accent/30 rounded-lg flex items-center justify-center">
-              <Wallet className="w-4 h-4 text-accent" />
-            </div>
-            <h2 className="font-display text-xl font-semibold tracking-tight text-white">Haushalt bearbeiten</h2>
+            <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Haushalt bearbeiten</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            className="p-1.5 -mr-1.5 text-fg-subtle hover:text-fg hover:bg-raised rounded-sm transition-colors"
             aria-label="Schließen"
           >
             <X className="w-5 h-5" />
@@ -60,8 +57,8 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Name <span className="text-accent">*</span>
+            <label className="block text-sm font-medium text-fg-muted mb-1.5">
+              Name <span className="text-accent-fg">*</span>
             </label>
             <input
               type="text"
@@ -69,14 +66,14 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="z.B. Schuljahr 2026/27"
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+              className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
             />
           </div>
 
           {/* Budget Konsumitiv */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Budget konsumtiv (€) <span className="text-accent">*</span>
+            <label className="block text-sm font-medium text-fg-muted mb-1.5">
+              Budget konsumtiv (€) <span className="text-accent-fg">*</span>
             </label>
             <input
               type="number"
@@ -86,14 +83,14 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
               value={formData.budget_konsumitiv}
               onChange={(e) => setFormData({ ...formData, budget_konsumitiv: e.target.value })}
               placeholder="z.B. 1500.00"
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+              className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
             />
           </div>
 
           {/* Budget Investitiv */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Budget investiv (€) <span className="text-accent">*</span>
+            <label className="block text-sm font-medium text-fg-muted mb-1.5">
+              Budget investiv (€) <span className="text-accent-fg">*</span>
             </label>
             <input
               type="number"
@@ -103,45 +100,45 @@ export default function EditHaushaltModal({ haushalt, onClose, onUpdated }) {
               value={formData.budget_investiv}
               onChange={(e) => setFormData({ ...formData, budget_investiv: e.target.value })}
               placeholder="z.B. 1000.00"
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+              className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
             />
           </div>
 
           {/* Beschreibung */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              Beschreibung <span className="text-gray-500 font-normal">(optional)</span>
+            <label className="block text-sm font-medium text-fg-muted mb-1.5">
+              Beschreibung <span className="text-fg-subtle font-normal">(optional)</span>
             </label>
             <textarea
               value={formData.beschreibung}
               onChange={(e) => setFormData({ ...formData, beschreibung: e.target.value })}
               placeholder="Wofür ist dieses Budget gedacht?"
               rows={3}
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none"
+              className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
             />
           </div>
 
           {/* Fehleranzeige */}
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-300 text-sm">
+            <div className="p-3 bg-raised rounded-md text-bad text-sm">
               {error}
             </div>
           )}
 
           {/* Buttons */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-gray-800 -mx-5 px-5 mt-5">
+          <div className="flex justify-end gap-2 pt-3 border-t border-line-subtle -mx-5 px-5 mt-5">
             <button
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-3.5 py-2 text-sm text-gray-300 hover:text-white hover:bg-gray-800 font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="px-3.5 py-2 text-sm text-fg-muted hover:text-fg hover:bg-raised font-medium rounded-md transition-colors disabled:text-fg-disabled"
             >
               Abbrechen
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              className="px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

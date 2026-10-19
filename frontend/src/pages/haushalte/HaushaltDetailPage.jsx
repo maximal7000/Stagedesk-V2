@@ -38,14 +38,14 @@ const STATUS_LABEL = {
   geliefert: 'Geliefert',
   abgelehnt: 'Abgelehnt',
 };
-// Ablauf geplant → geliefert: neutral, gelb (wartet), blau (freigegeben), türkis (unterwegs), grün (da)
+// Ablauf geplant → geliefert: neutral, gelb (wartet), blau (freigegeben), Standardtext (unterwegs), grün (da)
 const STATUS_CLASS = {
-  geplant:   'bg-gray-700/40 text-gray-300 ring-1 ring-inset ring-gray-600/30',
-  beantragt: 'bg-amber-500/15 text-amber-300 ring-1 ring-inset ring-amber-500/25',
-  genehmigt: 'bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25',
-  bestellt:  'bg-teal-500/15 text-teal-300 ring-1 ring-inset ring-teal-500/25',
-  geliefert: 'bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/25',
-  abgelehnt: 'bg-red-500/15 text-red-300 ring-1 ring-inset ring-red-500/25',
+  geplant:   'bg-raised text-fg-muted',
+  beantragt: 'bg-raised text-warn',
+  genehmigt: 'bg-raised text-info',
+  bestellt:  'bg-raised text-fg',
+  geliefert: 'bg-raised text-ok',
+  abgelehnt: 'bg-raised text-bad',
 };
 const KATEGORIE_LABEL = { konsumitiv: 'Konsumtiv', investiv: 'Investiv' };
 
@@ -95,7 +95,7 @@ const EditingRow = memo(function EditingRow({
   };
 
   return (
-    <tr className="bg-accent/[0.04] border-b border-gray-800">
+    <tr className="bg-canvas border-b border-line-subtle">
       <td className="p-2">
         <input
           type="text"
@@ -103,7 +103,7 @@ const EditingRow = memo(function EditingRow({
           onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
           onKeyDown={handleKeyDown}
           autoFocus
-          className="w-full px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="w-full px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm"
         />
       </td>
       <td className="p-2">
@@ -114,12 +114,12 @@ const EditingRow = memo(function EditingRow({
             onChange={(e) => setLocalData({ ...localData, link: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="https://..."
-            className="flex-1 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="flex-1 px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm"
           />
           <button
             onClick={handleParse}
             disabled={!localData.link || parsingId === item.id}
-            className="p-1.5 bg-accent hover:bg-accent-hover disabled:bg-gray-700 text-white rounded"
+            className="p-1.5 bg-raised hover:bg-hover disabled:text-fg-disabled text-fg rounded-sm"
             title="Auto-Vervollständigen"
           >
             {parsingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
@@ -134,9 +134,9 @@ const EditingRow = memo(function EditingRow({
             onChange={(e) => setLocalData({ ...localData, preis: e.target.value })}
             onKeyDown={handleKeyDown}
             step="0.01"
-            className="w-20 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-right tabular-nums focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+            className="w-20 px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm text-right tabular-nums"
           />
-          <span className="text-gray-500 text-sm">€</span>
+          <span className="text-fg-subtle text-sm">€</span>
         </div>
       </td>
       <td className="p-2">
@@ -146,10 +146,10 @@ const EditingRow = memo(function EditingRow({
           onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
           onKeyDown={handleKeyDown}
           min="1"
-          className="w-16 px-2 py-1.5 bg-gray-800 border border-gray-600 rounded text-white text-sm text-center tabular-nums focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          className="w-16 px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm text-center tabular-nums"
         />
       </td>
-      <td className="p-2 text-right tabular-nums text-white font-medium">
+      <td className="p-2 text-right tabular-nums text-fg font-medium">
         {formatPreis((parseFloat(localData.preis) || 0) * (parseInt(localData.anzahl) || 1))}
       </td>
       <td className="p-2">
@@ -157,11 +157,11 @@ const EditingRow = memo(function EditingRow({
           <button
             onClick={() => onSave(localData)}
             disabled={savingId === item.id}
-            className="p-1.5 bg-green-600 hover:bg-green-700 text-white rounded"
+            className="p-1.5 bg-accent hover:bg-accent-hover text-white rounded-sm"
           >
             {savingId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           </button>
-          <button onClick={onCancel} className="p-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded">
+          <button onClick={onCancel} className="p-1.5 bg-raised hover:bg-hover text-fg rounded-sm">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -208,7 +208,7 @@ const NewRowComponent = memo(function NewRowComponent({
   };
 
   return (
-    <tr className="bg-green-950/20 border-b border-gray-800">
+    <tr className="bg-canvas border-b border-line-subtle">
       <td className="p-2">
         <input
           type="text"
@@ -216,7 +216,7 @@ const NewRowComponent = memo(function NewRowComponent({
           onChange={(e) => setLocalData({ ...localData, name: e.target.value })}
           onKeyDown={handleKeyDown}
           placeholder="Produktname..."
-          className="w-full px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm focus:ring-2 focus:ring-green-500"
+          className="w-full px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm"
           autoFocus
         />
       </td>
@@ -228,12 +228,12 @@ const NewRowComponent = memo(function NewRowComponent({
             onChange={(e) => setLocalData({ ...localData, link: e.target.value })}
             onKeyDown={handleKeyDown}
             placeholder="https://..."
-            className="flex-1 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm focus:ring-2 focus:ring-green-500"
+            className="flex-1 px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm"
           />
           <button
             onClick={handleParse}
             disabled={!localData.link || parsingId === 'new'}
-            className="p-1.5 bg-accent hover:bg-accent-hover disabled:bg-gray-700 text-white rounded"
+            className="p-1.5 bg-raised hover:bg-hover disabled:text-fg-disabled text-fg rounded-sm"
           >
             {parsingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
           </button>
@@ -248,9 +248,9 @@ const NewRowComponent = memo(function NewRowComponent({
             onKeyDown={handleKeyDown}
             placeholder="0.00"
             step="0.01"
-            className="w-20 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-right tabular-nums focus:ring-2 focus:ring-green-500"
+            className="w-20 px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm text-right tabular-nums"
           />
-          <span className="text-gray-500 text-sm">€</span>
+          <span className="text-fg-subtle text-sm">€</span>
         </div>
       </td>
       <td className="p-2">
@@ -260,10 +260,10 @@ const NewRowComponent = memo(function NewRowComponent({
           onChange={(e) => setLocalData({ ...localData, anzahl: e.target.value })}
           onKeyDown={handleKeyDown}
           min="1"
-          className="w-16 px-2 py-1.5 bg-gray-800 border border-green-600 rounded text-white text-sm text-center tabular-nums focus:ring-2 focus:ring-green-500"
+          className="w-16 px-2 py-1.5 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm text-center tabular-nums"
         />
       </td>
-      <td className="p-2 text-right tabular-nums text-white font-medium">
+      <td className="p-2 text-right tabular-nums text-fg font-medium">
         {formatPreis((parseFloat(localData.preis) || 0) * (parseInt(localData.anzahl) || 1))}
       </td>
       <td className="p-2">
@@ -271,11 +271,11 @@ const NewRowComponent = memo(function NewRowComponent({
           <button
             onClick={() => onSave(localData, kategorie)}
             disabled={!localData.name || savingId === 'new'}
-            className="p-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 text-white rounded"
+            className="p-1.5 bg-accent hover:bg-accent-hover disabled:bg-raised disabled:text-fg-disabled text-white rounded-sm"
           >
             {savingId === 'new' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           </button>
-          <button onClick={onCancel} className="p-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded">
+          <button onClick={onCancel} className="p-1.5 bg-raised hover:bg-hover text-fg rounded-sm">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -563,18 +563,18 @@ export default function HaushaltDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-12 h-12 text-gray-500 animate-spin" />
+        <Loader2 className="w-12 h-12 text-fg-subtle animate-spin" />
       </div>
     );
   }
 
   if (error || !haushalt) {
     return (
-      <div className="bg-gray-900 border border-red-800 rounded-xl p-12 text-center">
-        <p className="text-red-400 mb-4">{error || 'Haushalt nicht gefunden'}</p>
+      <div className="bg-surface rounded-lg p-12 text-center">
+        <p className="text-bad mb-4">{error || 'Haushalt nicht gefunden'}</p>
         <button
           onClick={() => navigate('/haushalte')}
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg"
+          className="px-4 py-2 bg-raised hover:bg-hover text-fg font-semibold rounded-md"
         >
           Zurück zur Übersicht
         </button>
@@ -642,43 +642,43 @@ export default function HaushaltDetailPage() {
     const descOpen = openDesc.has(item.id);
     return (
       <>
-      <tr className="border-b border-gray-800 hover:bg-gray-800/30 group align-middle">
+      <tr className="border-b border-line-subtle hover:bg-raised group align-middle">
         {/* Checkbox — Shift+Klick wählt einen Bereich aus */}
         <td className="p-2 w-[32px]">
           <input type="checkbox"
             checked={selectedIds.has(item.id)}
             onClick={(e) => { e.preventDefault(); handleSelectClick(item, e, orderedItems); }}
             onChange={() => {}}
-            className="rounded border-gray-600 bg-gray-700 accent-accent" />
+            className="rounded-sm border-line bg-raised accent-accent" />
         </td>
         {/* Status */}
         <td className="p-2 w-[110px]">
           <select value={item.status || 'beantragt'}
             onChange={(e) => handleStatusChange(item, e.target.value)}
-            className={`text-[11px] font-semibold tracking-wide px-1.5 py-[3px] rounded-md border-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${STATUS_CLASS[item.status] || STATUS_CLASS.beantragt}`}>
-            {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900 text-white">{l}</option>)}
+            className={`text-[11px] font-semibold tracking-wide px-1.5 py-[3px] rounded-sm border-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${STATUS_CLASS[item.status] || STATUS_CLASS.beantragt}`}>
+            {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-surface text-fg">{l}</option>)}
           </select>
         </td>
         {/* Bild */}
         <td className="p-2 w-[48px]">
           {item.bild_url ? (
-            <img src={item.bild_url} alt="" className="w-9 h-9 object-cover rounded bg-gray-800" loading="lazy" />
+            <img src={item.bild_url} alt="" className="w-9 h-9 object-cover rounded-sm bg-raised" loading="lazy" />
           ) : (
-            <div className="w-9 h-9 bg-gray-800 rounded flex items-center justify-center">
-              <Package className="w-4 h-4 text-gray-600" />
+            <div className="w-9 h-9 flex items-center justify-center">
+              <Package className="w-4 h-4 text-fg-subtle" />
             </div>
           )}
         </td>
         {/* Name + Beschreibung-Toggle */}
         <td className="p-2">
-          <span className="text-white cursor-pointer hover:text-accent"
+          <span className="text-fg cursor-pointer hover:text-accent-fg"
             onClick={openEdit}>
             {item.name}
           </span>
           <button onClick={() => toggleDesc(item.id)}
             title={descOpen ? 'Details verbergen' : 'Details (Beschreibung, Kommentare, Verlauf, Quittung)'}
             aria-expanded={descOpen}
-            className={`ml-1.5 align-middle ${descOpen ? 'text-accent' : 'text-gray-500 hover:text-gray-300'}`}>
+            className={`ml-1.5 align-middle ${descOpen ? 'text-accent-fg' : 'text-fg-subtle hover:text-fg-muted'}`}>
             <Info className="w-3.5 h-3.5 inline" />
           </button>
         </td>
@@ -686,20 +686,20 @@ export default function HaushaltDetailPage() {
         <td className="p-2">
           {item.link ? (
             <a href={item.link} target="_blank" rel="noopener noreferrer"
-              className="text-gray-300 hover:text-white flex items-center gap-1 text-sm">
-              <ExternalLink className="w-3 h-3 text-gray-500" /> Shop
+              className="text-fg-muted hover:text-fg flex items-center gap-1 text-sm">
+              <ExternalLink className="w-3 h-3 text-fg-subtle" /> Shop
             </a>
           ) : (
-            <span className="text-gray-500 text-sm" aria-label="Kein Link">–</span>
+            <span className="text-fg-subtle text-sm" aria-label="Kein Link">–</span>
           )}
         </td>
-        <td className="p-2 text-right tabular-nums text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
+        <td className="p-2 text-right tabular-nums text-fg-muted cursor-pointer hover:text-accent-fg" onClick={openEdit}>
           {formatPreis(item.preis)}
         </td>
-        <td className="p-2 text-center tabular-nums text-gray-300 cursor-pointer hover:text-accent" onClick={openEdit}>
+        <td className="p-2 text-center tabular-nums text-fg-muted cursor-pointer hover:text-accent-fg" onClick={openEdit}>
           {item.anzahl}
         </td>
-        <td className="p-2 text-right tabular-nums text-white font-medium">
+        <td className="p-2 text-right tabular-nums text-fg font-medium">
           {formatPreis(item.gesamtpreis)}
         </td>
         {/* Reorder ↑↓ (nur bei manueller Sortierung sinnvoll) */}
@@ -707,11 +707,11 @@ export default function HaushaltDetailPage() {
           {manuellOrder && (
             <div className="flex flex-col gap-0.5 items-center opacity-50 group-hover:opacity-100">
               <button onClick={() => moveItem(item, allKatItems, -1)} aria-label="Nach oben"
-                className="p-0.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
+                className="p-0.5 text-fg-subtle hover:text-fg hover:bg-hover rounded-sm">
                 <ChevronUp className="w-3.5 h-3.5" />
               </button>
               <button onClick={() => moveItem(item, allKatItems, +1)} aria-label="Nach unten"
-                className="p-0.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded">
+                className="p-0.5 text-fg-subtle hover:text-fg hover:bg-hover rounded-sm">
                 <ChevronDown className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -720,18 +720,18 @@ export default function HaushaltDetailPage() {
         <td className="p-2">
           <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
             <button onClick={openEdit} title="Bearbeiten" aria-label="Artikel bearbeiten"
-              className="p-1.5 text-gray-400 hover:text-white hover:bg-gray-700 rounded-md">
+              className="p-1.5 text-fg-subtle hover:text-fg hover:bg-hover rounded-sm">
               <Edit className="w-4 h-4" />
             </button>
             <button onClick={() => handleDeleteArtikel(item.id)} title="Löschen" aria-label="Artikel löschen"
-              className="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-md">
+              className="p-1.5 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm">
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
         </td>
       </tr>
       {descOpen && (
-        <tr className="border-b border-gray-800 bg-gray-900/40">
+        <tr className="border-b border-line-subtle bg-canvas">
           <td colSpan={10} className="px-0 py-0">
             <ArtikelDetailsPanel
               haushaltId={id}
@@ -766,26 +766,24 @@ export default function HaushaltDetailPage() {
   const ArtikelTabelle = ({ items, kategorie, color, icon: Icon, budget, ausgaben }) => {
     const sorted = sortItems(items, sortBy[kategorie]);
     return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-      <div className="p-4 border-b border-gray-800">
+    <div className="bg-surface rounded-lg overflow-hidden">
+      <div className="p-4 border-b border-line-subtle">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-2.5">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color === 'orange' ? 'bg-orange-500/15' : 'bg-emerald-500/15'}`}>
-              <Icon className={`w-4 h-4 ${color === 'orange' ? 'text-orange-400' : 'text-emerald-400'}`} />
-            </div>
-            <h3 className="font-display text-lg font-semibold tracking-tight text-white">{KATEGORIE_LABEL[kategorie]}</h3>
-            <span className="text-sm tabular-nums text-gray-500">{items.length}</span>
+            <Icon className={`w-4 h-4 ${color === 'orange' ? 'text-orange-400' : 'text-ok'}`} />
+            <h3 className="font-display text-lg font-semibold tracking-tight text-fg">{KATEGORIE_LABEL[kategorie]}</h3>
+            <span className="text-sm tabular-nums text-fg-subtle">{items.length}</span>
           </div>
-          <p className="text-lg font-bold tabular-nums text-white">
-            {formatPreis(ausgaben)} <span className="text-gray-500 text-sm font-normal">/ {formatPreis(budget)}</span>
+          <p className="text-lg font-bold tabular-nums text-fg">
+            {formatPreis(ausgaben)} <span className="text-fg-subtle text-sm font-normal">/ {formatPreis(budget)}</span>
           </p>
         </div>
-        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mt-3">
+        <div className="h-1.5 bg-hover rounded-full overflow-hidden mt-3">
           <div
             className={`h-full transition-all ${
               budget > 0 && (ausgaben / budget) > 0.9
-                ? 'bg-red-500'
-                : color === 'orange' ? 'bg-orange-500' : 'bg-emerald-500'
+                ? 'bg-bad'
+                : color === 'orange' ? 'bg-orange-500' : 'bg-ok'
             }`}
             style={{ width: `${budget > 0 ? Math.min((ausgaben / budget) * 100, 100) : 0}%` }}
           />
@@ -797,11 +795,11 @@ export default function HaushaltDetailPage() {
             Artikel erfassen
           </Button>
           <div className="flex items-center gap-1.5">
-            <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
+            <ArrowUpDown className="w-3.5 h-3.5 text-fg-subtle" />
             <select value={sortBy[kategorie]}
               onChange={(e) => setSortBy(s => ({ ...s, [kategorie]: e.target.value }))}
               aria-label="Sortierung"
-              className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-accent">
+              className="bg-raised border border-line rounded-md px-2 py-1 text-xs text-fg hover:border-line-strong focus:border-accent focus:outline-none">
               {SORT_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
             </select>
           </div>
@@ -811,7 +809,7 @@ export default function HaushaltDetailPage() {
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-gray-800 text-left text-xs text-gray-400 font-medium">
+            <tr className="border-b border-line-subtle text-left text-xs text-fg-muted font-medium">
               <th className="p-2 w-[32px]"></th>
               <th className="p-2 w-[110px]">Status</th>
               <th className="p-2 w-[48px]"></th>
@@ -830,8 +828,8 @@ export default function HaushaltDetailPage() {
             ))}
             {sorted.length === 0 && (
               <tr><td colSpan={10} className="p-8 text-center text-sm">
-                <span className="text-gray-400">Noch keine Artikel.</span>{' '}
-                <button onClick={() => setAddModalKategorie(kategorie)} className="text-gray-200 underline decoration-accent underline-offset-2 hover:text-white">Ersten erfassen</button>
+                <span className="text-fg-muted">Noch keine Artikel.</span>{' '}
+                <button onClick={() => setAddModalKategorie(kategorie)} className="text-fg underline decoration-accent underline-offset-2 hover:text-fg-muted">Ersten erfassen</button>
               </td></tr>
             )}
           </tbody>
@@ -847,43 +845,43 @@ export default function HaushaltDetailPage() {
       <div className="flex items-start gap-3">
         <button
           onClick={() => navigate('/haushalte')}
-          className="p-2 -ml-2 mt-1 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+          className="p-2 -ml-2 mt-1 text-fg-subtle hover:text-fg hover:bg-raised rounded-md"
           title="Zurück zu den Haushalten" aria-label="Zurück zu den Haushalten"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{haushalt.name}</h1>
+            <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-fg truncate">{haushalt.name}</h1>
             <button
               onClick={() => setShowEditModal(true)}
-              className="p-1.5 text-gray-500 hover:text-white hover:bg-gray-800 rounded-md"
+              className="p-1.5 text-fg-subtle hover:text-fg hover:bg-raised rounded-sm"
               title="Haushalt bearbeiten" aria-label="Haushalt bearbeiten"
             >
               <Edit className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            {haushalt.beschreibung && <p className="text-gray-400 text-sm">{haushalt.beschreibung}</p>}
+            {haushalt.beschreibung && <p className="text-fg-muted text-sm">{haushalt.beschreibung}</p>}
             <button
               onClick={() => setIsPolling(!isPolling)}
-              className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md text-xs font-medium ${
-                isPolling ? 'text-emerald-300 hover:bg-emerald-500/10' : 'text-gray-500 hover:bg-gray-800'
+              className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm text-xs font-medium ${
+                isPolling ? 'text-ok hover:bg-raised' : 'text-fg-subtle hover:bg-raised'
               }`}
               title={isPolling ? 'Live-Updates aktiv (klicken zum Pausieren)' : 'Live-Updates pausiert (klicken zum Fortsetzen)'}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${isPolling ? 'bg-emerald-400 animate-pulse' : 'bg-gray-600'}`} />
+              <span className={`w-1.5 h-1.5 rounded-full ${isPolling ? 'bg-ok animate-pulse' : 'bg-fg-disabled'}`} />
               {isPolling ? 'Live' : 'Pausiert'}
             </button>
-            {lastUpdate && <span className="text-xs text-gray-500 tabular-nums">Stand {lastUpdate.toLocaleTimeString('de-DE')}</span>}
+            {lastUpdate && <span className="text-xs text-fg-subtle tabular-nums">Stand {lastUpdate.toLocaleTimeString('de-DE')}</span>}
           </div>
         </div>
         
         {/* Ansicht-Umschalter */}
-        <div className="flex gap-0.5 bg-gray-800/60 border border-gray-700 rounded-lg p-0.5 shrink-0">
+        <div className="flex gap-0.5 bg-raised rounded-md p-0.5 shrink-0">
           <button
             onClick={() => setViewMode('tabs')}
-            className={`p-1.5 rounded-md ${viewMode === 'tabs' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            className={`p-1.5 rounded-sm ${viewMode === 'tabs' ? 'bg-hover text-fg' : 'text-fg-muted hover:text-fg'}`}
             aria-pressed={viewMode === 'tabs'}
             title="Als Tabs"
           >
@@ -891,7 +889,7 @@ export default function HaushaltDetailPage() {
           </button>
           <button
             onClick={() => setViewMode('split')}
-            className={`p-1.5 rounded-md ${viewMode === 'split' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            className={`p-1.5 rounded-sm ${viewMode === 'split' ? 'bg-hover text-fg' : 'text-fg-muted hover:text-fg'}`}
             aria-pressed={viewMode === 'split'}
             title="Nebeneinander"
           >
@@ -899,7 +897,7 @@ export default function HaushaltDetailPage() {
           </button>
           <button
             onClick={() => setViewMode('stacked')}
-            className={`p-1.5 rounded-md ${viewMode === 'stacked' ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'}`}
+            className={`p-1.5 rounded-sm ${viewMode === 'stacked' ? 'bg-hover text-fg' : 'text-fg-muted hover:text-fg'}`}
             aria-pressed={viewMode === 'stacked'}
             title="Untereinander"
           >
@@ -909,25 +907,25 @@ export default function HaushaltDetailPage() {
       </div>
 
       {/* Budget Übersicht */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div className="pb-5 border-b border-line-subtle">
         <div className="flex items-end justify-between gap-3 flex-wrap">
           <div>
-            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
+            <div className="flex items-center gap-1.5 text-xs text-fg-muted mb-1">
               <Wallet className="w-3.5 h-3.5" /> Verbleibend gesamt
             </div>
-            <p className={`text-2xl font-bold tabular-nums leading-none tracking-tight ${gesamtBudget - gesamtAusgaben < 0 ? 'text-red-400' : 'text-white'}`}>
+            <p className={`text-2xl font-bold tabular-nums leading-none tracking-tight ${gesamtBudget - gesamtAusgaben < 0 ? 'text-bad' : 'text-fg'}`}>
               {formatPreis(gesamtBudget - gesamtAusgaben)}
             </p>
           </div>
-          <p className="text-sm tabular-nums text-gray-400">
-            {formatPreis(gesamtAusgaben)} ausgegeben <span className="text-gray-600">/</span> {formatPreis(gesamtBudget)} Budget
+          <p className="text-sm tabular-nums text-fg-muted">
+            {formatPreis(gesamtAusgaben)} ausgegeben <span className="text-fg-subtle">/</span> {formatPreis(gesamtBudget)} Budget
           </p>
         </div>
-        <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden mt-3">
+        <div className="h-1.5 bg-hover rounded-full overflow-hidden mt-3">
           <div
             className={`h-full transition-all ${
-              gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.9 ? 'bg-red-500'
-                : gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.75 ? 'bg-amber-500' : 'bg-emerald-500'
+              gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.9 ? 'bg-bad'
+                : gesamtBudget > 0 && (gesamtAusgaben / gesamtBudget) > 0.75 ? 'bg-warn' : 'bg-ok'
             }`}
             style={{ width: `${gesamtBudget > 0 ? Math.min((gesamtAusgaben / gesamtBudget) * 100, 100) : 0}%` }}
           />
@@ -935,25 +933,25 @@ export default function HaushaltDetailPage() {
       </div>
 
       {/* Such/Filter/Bulk + CSV-Export */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
           <input type="text" placeholder="Artikel suchen…" aria-label="Artikel suchen" value={search}
             data-shortcut="search"
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+            className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-sm" />
         </div>
         <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-white">
+          className="bg-raised border border-line rounded-md px-2 py-2 text-sm text-fg hover:border-line-strong focus:border-accent focus:outline-none">
           <option value="">Alle Status</option>
           {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <div className="relative">
-          <FileDown className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <FileDown className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-fg-subtle" />
           <select
             onChange={(e) => { if (e.target.value) { exportFile(e.target.value); e.target.value = ''; } }}
             defaultValue=""
-            className="bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg pl-8 pr-3 py-2 border border-gray-700"
+            className="bg-raised border border-line rounded-md text-fg text-sm pl-8 pr-3 py-2 hover:border-line-strong focus:border-accent focus:outline-none"
           >
             <option value="" disabled>Export</option>
             <option value="csv">CSV</option>
@@ -964,15 +962,15 @@ export default function HaushaltDetailPage() {
         <Button variant="secondary" icon={Receipt} onClick={() => setShowSammelQuittung(true)}>Sammel-Quittung</Button>
         {selectedIds.size > 0 && (
           <>
-            <span className="text-sm tabular-nums text-gray-400">{selectedIds.size} ausgewählt</span>
+            <span className="text-sm tabular-nums text-fg-muted">{selectedIds.size} ausgewählt</span>
             <select onChange={(e) => { if (e.target.value) { bulkSetStatus(e.target.value); e.target.value = ''; } }}
               disabled={bulkBusy}
-              className="bg-accent hover:bg-accent-hover text-white text-sm rounded-lg px-2 py-2 border-0">
+              className="bg-raised hover:bg-hover text-fg text-sm rounded-md px-2 py-2 border-0">
               <option value="">Status setzen…</option>
-              {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-gray-900">{l}</option>)}
+              {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k} className="bg-surface">{l}</option>)}
             </select>
             <button onClick={clearSelection} title="Auswahl aufheben"
-              className="flex items-center gap-1 text-sm text-gray-400 hover:text-white px-2 py-2 rounded-lg hover:bg-gray-800">
+              className="flex items-center gap-1 text-sm text-fg-muted hover:text-fg px-2 py-2 rounded-md hover:bg-raised">
               <X className="w-3.5 h-3.5" /> Auswahl
             </button>
           </>
@@ -981,26 +979,26 @@ export default function HaushaltDetailPage() {
 
       {/* Status-Summary (Budget-Aufteilung) */}
       {statusSummary && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
-          <div className="text-sm font-medium text-gray-300 mb-2">Budget nach Status</div>
+        <div className="pb-5 border-b border-line-subtle">
+          <div className="text-sm font-medium text-fg-muted mb-2">Budget nach Status</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {['konsumitiv', 'investiv'].map((kat) => {
               const sums = statusSummary[kat] || {};
               const total = Object.values(sums).reduce((s, x) => s + (x.summe || 0), 0);
               return (
                 <div key={kat}>
-                  <div className="text-xs text-gray-400 mb-1.5">{KATEGORIE_LABEL[kat]}</div>
+                  <div className="text-xs text-fg-muted mb-1.5">{KATEGORIE_LABEL[kat]}</div>
                   <div className="flex flex-wrap gap-1.5 text-xs">
                     {Object.entries(STATUS_LABEL).map(([s, l]) => {
                       const v = sums[s];
                       if (!v) return null;
                       return (
-                        <span key={s} className={`px-2 py-[3px] rounded-md tabular-nums ${STATUS_CLASS[s]}`}>
+                        <span key={s} className={`px-2 py-[3px] rounded-sm tabular-nums ${STATUS_CLASS[s]}`}>
                           {l} {formatPreis(v.summe)} <span className="opacity-60">· {v.anzahl}</span>
                         </span>
                       );
                     })}
-                    {total === 0 && <span className="text-gray-500">Keine Ausgaben</span>}
+                    {total === 0 && <span className="text-fg-subtle">Keine Ausgaben</span>}
                   </div>
                 </div>
               );
@@ -1013,28 +1011,28 @@ export default function HaushaltDetailPage() {
       {viewMode === 'tabs' && (
         <div>
           {/* Tab-Buttons */}
-          <div className="flex gap-1 mb-4 border-b border-gray-800">
+          <div className="flex gap-1 mb-4 border-b border-line-subtle">
             <button
               onClick={() => setActiveTab('konsumitiv')}
               className={`flex items-center gap-2 px-4 py-2.5 -mb-px border-b-2 text-sm font-medium transition-colors ${
                 activeTab === 'konsumitiv'
-                  ? 'border-orange-500 text-white'
-                  : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-orange-500 text-fg'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
               <TrendingDown className={`w-4 h-4 ${activeTab === 'konsumitiv' ? 'text-orange-400' : ''}`} />
-              Konsumtiv <span className="tabular-nums text-gray-500">{artikelKonsumitiv.length}</span>
+              Konsumtiv <span className="tabular-nums text-fg-subtle">{artikelKonsumitiv.length}</span>
             </button>
             <button
               onClick={() => setActiveTab('investiv')}
               className={`flex items-center gap-2 px-4 py-2.5 -mb-px border-b-2 text-sm font-medium transition-colors ${
                 activeTab === 'investiv'
-                  ? 'border-emerald-500 text-white'
-                  : 'border-transparent text-gray-400 hover:text-white'
+                  ? 'border-ok text-fg'
+                  : 'border-transparent text-fg-muted hover:text-fg'
               }`}
             >
-              <TrendingUp className={`w-4 h-4 ${activeTab === 'investiv' ? 'text-emerald-400' : ''}`} />
-              Investiv <span className="tabular-nums text-gray-500">{artikelInvestitiv.length}</span>
+              <TrendingUp className={`w-4 h-4 ${activeTab === 'investiv' ? 'text-ok' : ''}`} />
+              Investiv <span className="tabular-nums text-fg-subtle">{artikelInvestitiv.length}</span>
             </button>
           </div>
           
