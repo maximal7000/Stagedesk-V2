@@ -15,6 +15,69 @@
   --font-display: "Barlow Semi Condensed", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Bühnenschwarz: semantische Tokens als Tailwind-Klassen (bg-surface, text-fg-muted, border-line …) */
+@theme inline {
+  --color-canvas: var(--sd-canvas);
+  --color-surface: var(--sd-surface);
+  --color-raised: var(--sd-raised);
+  --color-overlay: var(--sd-overlay);
+  --color-hover: var(--sd-hover);
+  --color-line-subtle: var(--sd-line-subtle);
+  --color-line: var(--sd-line);
+  --color-line-strong: var(--sd-line-strong);
+  --color-fg: var(--sd-fg);
+  --color-fg-muted: var(--sd-fg-muted);
+  --color-fg-subtle: var(--sd-fg-subtle);
+  --color-fg-disabled: var(--sd-fg-disabled);
+  --color-accent-fg: var(--sd-accent-fg);
+  --color-ok: var(--sd-ok);
+  --color-warn: var(--sd-warn);
+  --color-bad: var(--sd-bad);
+  --color-info: var(--sd-info);
+  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+/* Token-Werte: Dunkel ist Standard */
+:root {
+  --sd-canvas: #0d0c0b;
+  --sd-surface: #151412;
+  --sd-raised: #1e1c1a;
+  --sd-overlay: #211f1c;
+  --sd-hover: #2a2825;
+  --sd-line-subtle: #24221f;
+  --sd-line: #35322e;
+  --sd-line-strong: #4b4742;
+  --sd-fg: #f2efe9;
+  --sd-fg-muted: #b3ada4;
+  --sd-fg-subtle: #8a847b;
+  --sd-fg-disabled: #5f5a53;
+  --sd-accent-fg: #f0475f;
+  --sd-ok: #5fca8b;
+  --sd-warn: #e5b14a;
+  --sd-bad: #ef5d5d;
+  --sd-info: #6fa8dc;
+}
+
+:root.light {
+  --sd-canvas: #f6f4f1;
+  --sd-surface: #ffffff;
+  --sd-raised: #efece8;
+  --sd-overlay: #ffffff;
+  --sd-hover: #e6e2dc;
+  --sd-line-subtle: #ebe7e2;
+  --sd-line: #d9d4cd;
+  --sd-line-strong: #b8b1a8;
+  --sd-fg: #1a1816;
+  --sd-fg-muted: #57524b;
+  --sd-fg-subtle: #767067;
+  --sd-fg-disabled: #a59f96;
+  --sd-accent-fg: #b8152f;
+  --sd-ok: #1f7a47;
+  --sd-warn: #93630c;
+  --sd-bad: #b42323;
+  --sd-info: #235f96;
+}
+
 /* ===== DARK MODE (Standard) ===== */
 :root.dark,
 :root:not(.light) {
@@ -52,12 +115,12 @@
 
 /* Global Styles mit CSS Variables */
 * {
-  border-color: var(--border-color);
+  border-color: var(--sd-line-subtle);
 }
 
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--sd-canvas);
+  color: var(--sd-fg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
@@ -71,7 +134,7 @@ body {
    Auswahl, Caret, Checkbox/Radio/Range, Scrollbars, Tabellenziffern */
 :root {
   accent-color: var(--color-accent);
-  scrollbar-color: var(--border-hover) transparent;
+  scrollbar-color: var(--sd-line-strong) transparent;
 }
 ::selection {
   background-color: rgb(218 31 61 / 0.35);
@@ -84,6 +147,7 @@ td, th {
   font-variant-numeric: tabular-nums;
 }
 
+/* legacy-gray:start */
 /* Light Mode Overrides für bestimmte Komponenten */
 :root.light .bg-gray-900 {
   background-color: var(--bg-secondary) !important;
@@ -148,6 +212,7 @@ td, th {
   background-color: var(--bg-secondary) !important;
   border-color: var(--border-color) !important;
 }
+/* legacy-gray:end */
 
 /* ON AIR pulsating text glow */
 @keyframes on-air-pulse {
