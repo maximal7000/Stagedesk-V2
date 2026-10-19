@@ -1,7 +1,7 @@
 /**
  * Öffentliches Monitor-Display — Vollbild, kein Login erforderlich
  * Features: ON AIR, Notfall, Veranstaltungen, Countdown, Ankündigungen,
- *           Wetter, WebUntis, Slideshow, PDF, Ticker, Themes, Uhr,
+ *           Wetter, WebUntis, Slideshow, PDF, Themes, Uhr,
  *           Multi-Profil (?profil=slug), Stundenplan-Vollbild Layout
  */
 import { useState, useEffect, useCallback, useMemo, useRef, lazy, Suspense } from 'react';
@@ -11,8 +11,6 @@ import {
   Thermometer, Droplets, Timer, FileText, QrCode, AlignLeft,
   LayoutGrid, Train, Bus, TramFront, Ship, Footprints, Construction, Megaphone as MegaphoneAlt,
 } from 'lucide-react';
-import BaukastenRenderer from '../components/monitor/BaukastenRenderer';
-import CameraStream from '../components/monitor/CameraStream';
 const PdfFullscreen = lazy(() => import('../components/monitor/PdfFullscreen'));
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
@@ -289,9 +287,7 @@ export default function MonitorPage() {
   const [error, setError] = useState(false);
   const [lastFetchTime, setLastFetchTime] = useState(null);
   const [slideshowIdx, setSlideshowIdx] = useState(0);
-  const [screensaverActive, setScreensaverActive] = useState(false);
   const [rotationIdx, setRotationIdx] = useState(0);
-  const lastActivityRef = useRef(Date.now());
   const reloadRef = useRef(undefined);  // merkt neu_laden_zeit; steigt der Wert → Seite neu laden
 
   // Mauszeiger auf dem TV-Monitor ausblenden (Kiosk hat keine Maus)
@@ -376,36 +372,6 @@ export default function MonitorPage() {
     return () => clearInterval(interval);
   }, [data?.config?.zeige_slideshow, data?.config?.slideshow_intervall, bilder.length]);
 
-  // Bildschirmschoner — Inaktivität erkennen
-  useEffect(() => {
-    if (!data?.config?.zeige_bildschirmschoner) return;
-    const timeout = (data.config.bildschirmschoner_timeout || 5) * 60 * 1000;
-
-    const resetActivity = () => {
-      lastActivityRef.current = Date.now();
-      setScreensaverActive(false);
-    };
-
-    const checkInactivity = setInterval(() => {
-      if (Date.now() - lastActivityRef.current > timeout) {
-        setScreensaverActive(true);
-      }
-    }, 5000);
-
-    window.addEventListener('mousemove', resetActivity);
-    window.addEventListener('keydown', resetActivity);
-    window.addEventListener('touchstart', resetActivity);
-    window.addEventListener('click', resetActivity);
-
-    return () => {
-      clearInterval(checkInactivity);
-      window.removeEventListener('mousemove', resetActivity);
-      window.removeEventListener('keydown', resetActivity);
-      window.removeEventListener('touchstart', resetActivity);
-      window.removeEventListener('click', resetActivity);
-    };
-  }, [data?.config?.zeige_bildschirmschoner, data?.config?.bildschirmschoner_timeout]);
-
   // Seitenrotation
   const rotationSeiten = data?.config?.seitenrotation_seiten || [];
   const isRotating = data?.config?.zeige_seitenrotation && rotationSeiten.length > 1;
@@ -420,7 +386,6 @@ export default function MonitorPage() {
   }, [isRotating, rotationSeiten.length, data?.config?.seitenrotation_intervall]);
 
   const config = data?.config;
-  const raumplan = data?.raumplan;
   const wetter = data?.wetter;
   const ankuendigungen = data?.ankuendigungen || [];
   const veranstaltungen = data?.veranstaltungen || [];
@@ -530,36 +495,6 @@ export default function MonitorPage() {
         </div>
       )}
 
-      {/* Bildschirmschoner */}
-      {screensaverActive && config?.zeige_bildschirmschoner && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center cursor-none"
-          style={{ background: '#000' }}
-          onClick={() => setScreensaverActive(false)}>
-          <div className="animate-screensaver-bounce">
-            <div className="text-center">
-              {config?.zeige_logo && logoUrl && (
-                <img src={logoUrl} alt="" className="h-20 mx-auto mb-6 opacity-30" />
-              )}
-              <div className="text-white/10 text-5xl font-bold">{config?.titel || 'Stagedesk'}</div>
-              <div className="text-white/5 text-lg mt-2">
-                {time.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          </div>
-          <style>{`
-            @keyframes screensaver-bounce {
-              0% { transform: translate(0, 0); }
-              25% { transform: translate(20vw, -15vh); }
-              50% { transform: translate(-15vw, 20vh); }
-              75% { transform: translate(10vw, 10vh); }
-              100% { transform: translate(0, 0); }
-            }
-            .animate-screensaver-bounce {
-              animation: screensaver-bounce 30s ease-in-out infinite;
-            }
-          `}</style>
-        </div>
-      )}
     </>
   );
 
@@ -659,23 +594,9 @@ export default function MonitorPage() {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // ═══ BAUKASTEN-LAYOUT ═════════════════════════════════════════════
-  // ═══════════════════════════════════════════════════════════════════
-  if (config?.layout_modus === 'baukasten') {
-    return (
-      <div className="fixed inset-0 overflow-hidden select-none cursor-none" style={{ background: bgColor }}>
-        <BaukastenRenderer data={data} config={config} accent={accent} mediaBase={MEDIA_BASE} />
-        {overlays}
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════════════════
   // ═══ STUNDENPLAN-VOLLBILD LAYOUT ═══════════════════════════════════
   // ═══════════════════════════════════════════════════════════════════
   if (config?.layout_modus === 'stundenplan') {
-    const hasRaumplan = config?.zeige_raumplan && raumplan && raumplan.eintraege?.length > 0;
-
     return (
       <div className="fixed inset-0 overflow-hidden select-none flex flex-col" style={{ background: bgColor }}>
         {overlays}
@@ -683,7 +604,7 @@ export default function MonitorPage() {
         {/* Uhr — floating oben rechts (im Dark-Mode wie das Iframe invertiert) */}
         {config?.zeige_uhr && <StundenplanUhr time={time} dark={config?.webuntis_dark_mode} />}
 
-        {/* Hauptbereich: WebUntis + optionaler Raumplan */}
+        {/* Hauptbereich: WebUntis */}
         <div className="flex-1 flex overflow-hidden min-h-0">
 
           {/* WebUntis Iframe — Vollbild (nutzt gespeicherten Link oder Freitext-URL) */}
@@ -702,46 +623,6 @@ export default function MonitorPage() {
             </div>
           )}
 
-          {/* Raumplan Sidebar */}
-          {hasRaumplan && (
-            <div className="w-80 border-l border-white/10 bg-white/[0.02] flex flex-col shrink-0 overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-white/10">
-                <LayoutGrid className="w-4 h-4 text-indigo-400" />
-                <h2 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider">
-                  {raumplan.raum || 'Raum'}
-                </h2>
-                <span className="text-white/30 text-xs ml-auto">{raumplan.datum}</span>
-              </div>
-              <div className="flex-1 overflow-y-auto px-3 py-2" style={{ scrollbarWidth: 'none' }}>
-                <div className="space-y-1">
-                  {raumplan.eintraege.map((e, i) => {
-                    const now = new Date();
-                    const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                    const isActive = nowStr >= e.von && nowStr <= e.bis;
-                    return (
-                      <div key={i} className={`rounded-lg px-3 py-2 ${isActive ? 'bg-indigo-500/15 border border-indigo-500/30' : 'border border-transparent'}`}>
-                        <div className="flex items-center justify-between">
-                          <span className={`font-mono text-xs ${isActive ? 'text-indigo-300 font-bold' : 'text-white/50'}`}>
-                            {e.von}–{e.bis}
-                          </span>
-                          {isActive && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />}
-                        </div>
-                        <div className={`text-sm mt-0.5 ${isActive ? 'text-white font-semibold' : 'text-white/80'}`}>
-                          {e.fach}
-                        </div>
-                        {e.lehrer && (
-                          <div className="text-xs text-white/40 mt-0.5">{e.lehrer}</div>
-                        )}
-                        {e.klassen && (
-                          <div className="text-xs text-white/30">{e.klassen}</div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     );
@@ -1379,16 +1260,13 @@ export default function MonitorPage() {
   const hasFreitext = config?.zeige_freitext && (config?.freitext_titel || config?.freitext_inhalt);
   const hasQrCode = config?.zeige_qr_code && config?.qr_code_url;
   const hasHintergrundbild = config?.zeige_hintergrundbild && hintergrundbildUrl;
-  const hasRaumplan = config?.zeige_raumplan && raumplan && raumplan.eintraege?.length > 0;
 
   // Welche Spalten aktiv?
   const hasLeft = (config?.zeige_veranstaltungen && veranstaltungen.length > 0) || eigenerCountdown;
-  const hasMiddle = (config?.zeige_ankuendigungen && ankuendigungen.length > 0) || hasFreitext || hasRaumplan;
-  const hasKamera = config?.zeige_kamera && config?.kamera_url;
-  const hasRight = (config?.zeige_webuntis && (config?.webuntis_url_resolved || config?.webuntis_url)) || (config?.zeige_pdf && pdfUrl) || (config?.zeige_slideshow && bilder.length > 0) || hasQrCode || hasKamera;
+  const hasMiddle = (config?.zeige_ankuendigungen && ankuendigungen.length > 0) || hasFreitext;
+  const hasRight = (config?.zeige_webuntis && (config?.webuntis_url_resolved || config?.webuntis_url)) || (config?.zeige_pdf && pdfUrl) || (config?.zeige_slideshow && bilder.length > 0) || hasQrCode;
 
   const WetterIcon = wetter?.icon ? (weatherIcons[wetter.icon] || Cloud) : Cloud;
-  const hasTicker = config?.zeige_ticker && config?.ticker_text;
 
   return (
     <div className="fixed inset-0 overflow-hidden select-none cursor-none" style={{ background: bgColor }}>
@@ -1456,7 +1334,7 @@ export default function MonitorPage() {
       <div
         className="relative z-10 flex gap-6 px-8 pt-5 overflow-hidden"
         style={{
-          height: hasTicker ? 'calc(100vh - 170px - 48px)' : 'calc(100vh - 170px)',
+          height: 'calc(100vh - 170px)',
           paddingTop: onAirIsBanner ? '0.75rem' : undefined,
         }}
       >
@@ -1564,8 +1442,8 @@ export default function MonitorPage() {
           </div>
         )}
 
-        {/* ─── Mittlere Spalte: Ankündigungen + Freitext + Raumplan ─── */}
-        {hasMiddle && (!isRotating || currentPage === 'main' || currentPage === 'ankuendigungen' || currentPage === 'raumplan' || currentPage === 'freitext') && (
+        {/* ─── Mittlere Spalte: Ankündigungen + Freitext ─── */}
+        {hasMiddle && (!isRotating || currentPage === 'main' || currentPage === 'ankuendigungen' || currentPage === 'freitext') && (
           <div className={`${hasLeft && hasRight ? 'w-1/3' : hasLeft || hasRight ? 'w-1/2' : 'flex-1'} flex flex-col gap-3 overflow-hidden`}>
             {config?.zeige_ankuendigungen && ankuendigungen.length > 0 && (
               <>
@@ -1611,49 +1489,6 @@ export default function MonitorPage() {
               </div>
             )}
 
-            {/* Raumplan */}
-            {hasRaumplan && (
-              <div className="rounded-xl p-5 border border-white/10 bg-white/[0.04] flex-1 overflow-hidden">
-                <div className="flex items-center gap-2 mb-3">
-                  <LayoutGrid className="w-4 h-4 text-indigo-400" />
-                  <h2 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider">
-                    {raumplan.raum || 'Raumplan'} — {raumplan.datum}
-                  </h2>
-                </div>
-                <div className="overflow-y-auto" style={{ scrollbarWidth: 'none', maxHeight: '100%' }}>
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-white/40 text-xs uppercase">
-                        <th className="text-left pb-2 pr-3">Zeit</th>
-                        <th className="text-left pb-2 pr-3">Fach</th>
-                        <th className="text-left pb-2 pr-3">Lehrer</th>
-                        <th className="text-left pb-2">Klassen</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                      {raumplan.eintraege.map((e, i) => {
-                        const now = new Date();
-                        const nowStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-                        const isActive = nowStr >= e.von && nowStr <= e.bis;
-                        return (
-                          <tr key={i} className={isActive ? 'bg-indigo-500/10' : ''}>
-                            <td className="py-2 pr-3 whitespace-nowrap">
-                              <span className={`font-mono ${isActive ? 'text-indigo-300 font-semibold' : 'text-white/70'}`}>
-                                {e.von}–{e.bis}
-                              </span>
-                              {isActive && <span className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />}
-                            </td>
-                            <td className={`py-2 pr-3 ${isActive ? 'text-white font-medium' : 'text-white/80'}`}>{e.fach}</td>
-                            <td className="py-2 pr-3 text-white/50">{e.lehrer}</td>
-                            <td className="py-2 text-white/50">{e.klassen}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -1730,21 +1565,6 @@ export default function MonitorPage() {
               </div>
             )}
 
-            {/* Kamera-Stream */}
-            {hasKamera && (
-              <div className="flex flex-col rounded-xl overflow-hidden border border-white/10 bg-black">
-                {config.kamera_titel && (
-                  <div className="px-4 py-2 text-sm font-semibold uppercase tracking-wider text-white/70 border-b border-white/10">
-                    {config.kamera_titel}
-                  </div>
-                )}
-                <div className="flex-1 min-h-[200px] flex items-center justify-center">
-                  <CameraStream url={config.kamera_url} typ={config.kamera_typ}
-                                title={config.kamera_titel} />
-                </div>
-              </div>
-            )}
-
             {/* QR-Code */}
             {hasQrCode && (
               <div className="flex flex-col items-center mt-4 rounded-xl p-5 border border-white/10 bg-white/[0.04]">
@@ -1769,31 +1589,6 @@ export default function MonitorPage() {
           </div>
         )}
       </div>
-
-      {/* ═══ Ticker ═══ */}
-      {hasTicker && (
-        <div className="absolute left-0 right-0 z-10 overflow-hidden py-3 border-t border-white/5"
-          style={{ bottom: '32px', background: `${bgColor}ee` }}>
-          <div className="animate-marquee whitespace-nowrap text-lg font-medium text-white/80" style={{
-            animationDuration: `${Math.max(10, (config.ticker_text?.length || 50) * 1000 / (config.ticker_geschwindigkeit || 50))}s`,
-          }}>
-            <span className="mx-8">{config.ticker_text}</span>
-            <span className="mx-8" style={{ color: accent }}>●</span>
-            <span className="mx-8">{config.ticker_text}</span>
-            <span className="mx-8" style={{ color: accent }}>●</span>
-            <span className="mx-8">{config.ticker_text}</span>
-          </div>
-          <style>{`
-            @keyframes marquee {
-              0% { transform: translateX(0); }
-              100% { transform: translateX(-40%); }
-            }
-            .animate-marquee {
-              animation: marquee linear infinite;
-            }
-          `}</style>
-        </div>
-      )}
 
       {/* ═══ Seitenrotation Indikator ═══ */}
       {isRotating && (

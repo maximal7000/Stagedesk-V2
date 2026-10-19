@@ -67,9 +67,6 @@ class MonitorConfigSchema(Schema):
     zeige_ankuendigungen: bool
     zeige_onair: bool
     zeige_countdown: bool
-    zeige_ticker: bool
-    ticker_text: str
-    ticker_geschwindigkeit: int
     notfall_aktiv: bool
     notfall_text: str
     zeige_wetter: bool
@@ -108,17 +105,9 @@ class MonitorConfigSchema(Schema):
     zeige_freitext: bool
     freitext_titel: str
     freitext_inhalt: str
-    zeige_raumplan: bool
-    raumplan_server: str
-    raumplan_schule: str
-    raumplan_raum: str
-    raumplan_benutzername: str
-    raumplan_passwort: str
     zeige_eigener_countdown: bool
     eigener_countdown_name: str
     eigener_countdown_datum: Optional[datetime] = None
-    zeige_bildschirmschoner: bool
-    bildschirmschoner_timeout: int
     zeige_seitenrotation: bool
     seitenrotation_intervall: int
     seitenrotation_seiten: list = []
@@ -162,13 +151,6 @@ class MonitorConfigSchema(Schema):
     on_air_split_seite: str = 'rechts'
     api_token: str
     refresh_intervall: int
-    zeige_kamera: bool = False
-    kamera_url: str = ''
-    kamera_titel: str = ''
-    kamera_typ: str = 'img'
-    layout_widgets: list = []
-    baukasten_spalten: int = 24
-    baukasten_zeilenhoehe: int = 40
 
 
 class MonitorConfigUpdateSchema(Schema):
@@ -190,14 +172,15 @@ class MonitorConfigUpdateSchema(Schema):
     zeige_ankuendigungen: Optional[bool] = None
     zeige_onair: Optional[bool] = None
     zeige_countdown: Optional[bool] = None
-    zeige_ticker: Optional[bool] = None
-    ticker_text: Optional[str] = None
-    ticker_geschwindigkeit: Optional[int] = None
     notfall_aktiv: Optional[bool] = None
     notfall_text: Optional[str] = None
     zeige_wetter: Optional[bool] = None
     wetter_stadt: Optional[str] = None
     wetter_api_key: Optional[str] = None
+    raumplan_server: Optional[str] = None
+    raumplan_schule: Optional[str] = None
+    raumplan_benutzername: Optional[str] = None
+    raumplan_passwort: Optional[str] = None
     zeige_slideshow: Optional[bool] = None
     slideshow_intervall: Optional[int] = None
     zeige_pdf: Optional[bool] = None
@@ -231,17 +214,9 @@ class MonitorConfigUpdateSchema(Schema):
     zeige_freitext: Optional[bool] = None
     freitext_titel: Optional[str] = None
     freitext_inhalt: Optional[str] = None
-    zeige_raumplan: Optional[bool] = None
-    raumplan_server: Optional[str] = None
-    raumplan_schule: Optional[str] = None
-    raumplan_raum: Optional[str] = None
-    raumplan_benutzername: Optional[str] = None
-    raumplan_passwort: Optional[str] = None
     zeige_eigener_countdown: Optional[bool] = None
     eigener_countdown_name: Optional[str] = None
     eigener_countdown_datum: Optional[datetime] = None
-    zeige_bildschirmschoner: Optional[bool] = None
-    bildschirmschoner_timeout: Optional[int] = None
     zeige_seitenrotation: Optional[bool] = None
     seitenrotation_intervall: Optional[int] = None
     seitenrotation_seiten: Optional[list] = None
@@ -282,13 +257,6 @@ class MonitorConfigUpdateSchema(Schema):
     on_air_split: Optional[bool] = None
     on_air_split_seite: Optional[str] = None
     refresh_intervall: Optional[int] = None
-    zeige_kamera: Optional[bool] = None
-    kamera_url: Optional[str] = None
-    kamera_titel: Optional[str] = None
-    kamera_typ: Optional[str] = None
-    layout_widgets: Optional[list] = None
-    baukasten_spalten: Optional[int] = None
-    baukasten_zeilenhoehe: Optional[int] = None
 
 
 class MonitorProfileCreateSchema(Schema):

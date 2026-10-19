@@ -6,8 +6,6 @@ import re
 import uuid
 import urllib.request
 import urllib.parse
-import http.cookiejar
-from datetime import datetime as dt
 from ninja import Router, File, Form
 from ninja.files import UploadedFile
 from django.utils import timezone
@@ -155,111 +153,6 @@ def _fetch_weather(config):
         return wetter
     except Exception:
         return config.wetter_cache or None
-
-
-def _fetch_raumplan(config):
-    """Raumplan von WebUntis JSONRPC API holen und cachen (15 Min)"""
-    gs = MonitorGlobalSettings.load()
-    server = gs.raumplan_server or config.raumplan_server        # global hat Vorrang
-    schule = gs.raumplan_schule or config.raumplan_schule
-    if not config.zeige_raumplan or not server or not schule:
-        return None
-
-    # Cache noch gültig?
-    if config.raumplan_cache and config.raumplan_cache_zeit:
-        age = (timezone.now() - config.raumplan_cache_zeit).total_seconds()
-        if age < 900:
-            return config.raumplan_cache
-
-    base_url = f"https://{server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(schule)}"
-
-    def _rpc(method, params=None, cookie_jar=None):
-        body = json.dumps({
-            "id": "1", "method": method,
-            "params": params or {}, "jsonrpc": "2.0"
-        }).encode()
-        req = urllib.request.Request(base_url, data=body,
-            headers={"Content-Type": "application/json"})
-        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
-        with opener.open(req, timeout=5) as resp:
-            return json.loads(resp.read())
-
-    try:
-        jar = http.cookiejar.CookieJar()
-
-        # 1. Authentifizieren (anonym oder mit Credentials; global hat Vorrang)
-        user = gs.raumplan_benutzername or config.raumplan_benutzername or "#anonymous#"
-        pwd = gs.raumplan_passwort or config.raumplan_passwort or ""
-        auth_resp = _rpc("authenticate", {"user": user, "password": pwd, "client": "stagedesk"}, jar)
-        if "error" in auth_resp:
-            return config.raumplan_cache or None
-
-        # 2. Räume holen und Zielraum finden
-        rooms_resp = _rpc("getRooms", {}, jar)
-        rooms = rooms_resp.get("result", [])
-        target_room = None
-        raum_kuerzel = config.raumplan_raum.lower()
-        for r in rooms:
-            if r.get("name", "").lower() == raum_kuerzel or r.get("longName", "").lower() == raum_kuerzel:
-                target_room = r
-                break
-
-        if not target_room:
-            _rpc("logout", {}, jar)
-            return config.raumplan_cache or None
-
-        # 3. Stundenplan für heute holen
-        today = dt.now().strftime("%Y%m%d")
-        today_int = int(today)
-        tt_resp = _rpc("getTimetable", {
-            "options": {
-                "element": {"id": target_room["id"], "type": 4},
-                "startDate": today_int,
-                "endDate": today_int,
-                "showInfo": True,
-                "showSubstText": True,
-                "showLsText": True,
-                "showStudentgroup": True,
-            }
-        }, jar)
-
-        # 4. Logout
-        _rpc("logout", {}, jar)
-
-        # 5. Daten aufbereiten
-        entries = []
-        for lesson in tt_resp.get("result", []):
-            start = str(lesson.get("startTime", "")).zfill(4)
-            end = str(lesson.get("endTime", "")).zfill(4)
-            subjects = [s.get("longname", s.get("name", "")) for s in lesson.get("su", [])]
-            teachers = [t.get("longname", t.get("name", "")) for t in lesson.get("te", [])]
-            classes = [k.get("name", "") for k in lesson.get("kl", [])]
-            entries.append({
-                'von': f"{start[:2]}:{start[2:]}",
-                'bis': f"{end[:2]}:{end[2:]}",
-                'fach': ", ".join(subjects) or "—",
-                'lehrer': ", ".join(teachers) or "",
-                'klassen': ", ".join(classes) or "",
-                'info': lesson.get("info", "") or lesson.get("substText", "") or "",
-            })
-
-        entries.sort(key=lambda x: x['von'])
-
-        raumplan = {
-            'raum': target_room.get("longName", target_room.get("name", "")),
-            'raum_kurz': target_room.get("name", ""),
-            'eintraege': entries,
-            'datum': dt.now().strftime("%d.%m.%Y"),
-        }
-
-        config.raumplan_cache = raumplan
-        config.raumplan_cache_zeit = timezone.now()
-        config.save(update_fields=['raumplan_cache', 'raumplan_cache_zeit', 'aktualisiert_am'])
-        return raumplan
-
-    except Exception as e:
-        print(f"Raumplan-Fehler: {e}")
-        return config.raumplan_cache or None
 
 
 def _fetch_oepnv(config):
@@ -427,9 +320,6 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     # Wetter
     wetter = _fetch_weather(config)
 
-    # Raumplan
-    raumplan = _fetch_raumplan(config)
-
     # ÖPNV Abfahrten
     abfahrten = _fetch_oepnv(config)
     # Ausgeblendete Störungen nicht ans Display schicken
@@ -440,8 +330,6 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     config_data = MonitorConfigSchema.from_orm(config).dict()
     config_data['api_token'] = ''
     config_data['wetter_api_key'] = ''
-    config_data['raumplan_benutzername'] = ''
-    config_data['raumplan_passwort'] = ''
     config_data['logo_url_resolved'] = config.get_logo_url()
     config_data['pdf_url_resolved'] = config.get_pdf_url()
     config_data['hintergrundbild_url_resolved'] = config.get_hintergrundbild_url()
@@ -469,7 +357,6 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
         'veranstaltungen': veranstaltungen,
         'dateien': dateien,
         'wetter': wetter,
-        'raumplan': raumplan,
         'abfahrten': abfahrten,
         'stoerungen': stoerungen,
         'on_air_profil': on_air_profil,

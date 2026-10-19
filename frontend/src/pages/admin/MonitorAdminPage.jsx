@@ -8,14 +8,13 @@ import { toast } from 'sonner';
 import {
   Save, Loader2, Moon, AlertCircle, ChevronDown,
   Monitor, Radio, Megaphone, ExternalLink, RefreshCw, Copy, Eye, EyeOff,
-  AlertTriangle, Upload, Image, FileText, Palette, Clock, CloudSun, Type,
+  AlertTriangle, Upload, Image, FileText, Palette, Clock, CloudSun,
   Calendar, Plus, Trash2, Check, Edit, QrCode, AlignLeft, ImageIcon, Settings, Key,
-  Timer, RotateCw, LayoutGrid, MonitorOff, Activity, Zap, X, Maximize2,
+  Timer, RotateCw, LayoutGrid, Activity, Zap, X, Maximize2,
   Download, UploadCloud, Layers, CalendarClock, Move, Sparkles,
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import apiClient from '../../lib/api';
-import BaukastenEditor from '../../components/monitor/BaukastenEditor';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 const MEDIA_BASE = API_BASE.replace(/\/api\/?$/, '');
@@ -28,7 +27,6 @@ const LAYOUT_MODI = [
   ['stundenplan', 'Stundenplan-Vollbild'],
   ['onair', 'ON AIR Display'],
   ['abfahrten', 'Abfahrtsmonitor (ÖPNV)'],
-  ['baukasten', 'Widget-Baukasten (frei)'],
   ['pdf_vollbild', 'PDF-Vollbild'],
   ['bild_vollbild', 'Bild-Vollbild'],
   ['split', 'Splitscreen'],
@@ -451,7 +449,7 @@ export default function MonitorAdminPage() {
     'name','slug','ist_standard','zeitplan','layout_modus','titel','untertitel',
     'hintergrund_farbe','akzent_farbe','zeige_logo','logo_url','aktives_logo_id',
     'zeige_uhr','zeige_veranstaltungen','zeige_ankuendigungen','zeige_onair',
-    'zeige_countdown','zeige_ticker','ticker_text','ticker_geschwindigkeit',
+    'zeige_countdown',
     'notfall_aktiv','notfall_text','zeige_wetter','wetter_stadt','wetter_api_key',
     'zeige_slideshow','slideshow_intervall','zeige_pdf','aktive_pdf_id','theme_preset',
     'vollbild_header','pdf_modus','pdf_intervall','pdf_pro_ansicht','pdf_seiten','pdf_statische_seite','aktives_bild_id','bild_fit','bild_fokus_x','bild_fokus_y',
@@ -460,9 +458,7 @@ export default function MonitorAdminPage() {
     'zeige_hintergrundbild','aktives_hintergrundbild_id',
     'zeige_qr_code','qr_code_url','qr_code_label',
     'zeige_freitext','freitext_titel','freitext_inhalt',
-    'zeige_raumplan','raumplan_server','raumplan_schule','raumplan_raum','raumplan_benutzername','raumplan_passwort',
     'zeige_eigener_countdown','eigener_countdown_name','eigener_countdown_datum',
-    'zeige_bildschirmschoner','bildschirmschoner_timeout',
     'zeige_seitenrotation','seitenrotation_intervall','seitenrotation_seiten',
     'zeige_oepnv','oepnv_stationen','oepnv_dauer','oepnv_max_abfahrten',
     'oepnv_zeige_bus','oepnv_zeige_bahn','oepnv_zeige_fernverkehr','oepnv_api_db','oepnv_api_nahsh',
@@ -473,8 +469,6 @@ export default function MonitorAdminPage() {
     'oepnv_stoerung_ausgeblendet','oepnv_stoerung_position',
     'on_air_text','on_air_groesse','on_air_position','on_air_blinken','on_air_farbe','on_air_vollbild','on_air_split','on_air_split_seite',
     'refresh_intervall',
-    'zeige_kamera','kamera_url','kamera_titel','kamera_typ',
-    'layout_widgets','baukasten_spalten','baukasten_zeilenhoehe',
   ];
 
   const handleSaveMonitorConfig = async () => {
@@ -906,9 +900,9 @@ export default function MonitorAdminPage() {
   // Active widget count
   const widgetKeys = [
     'zeige_uhr', 'zeige_veranstaltungen', 'zeige_ankuendigungen', 'zeige_onair',
-    'zeige_countdown', 'zeige_ticker', 'zeige_wetter', 'zeige_webuntis', 'zeige_slideshow',
+    'zeige_countdown', 'zeige_wetter', 'zeige_webuntis', 'zeige_slideshow',
     'zeige_pdf', 'zeige_logo', 'zeige_hintergrundbild', 'zeige_qr_code', 'zeige_freitext',
-    'zeige_raumplan', 'zeige_eigener_countdown', 'zeige_bildschirmschoner', 'zeige_seitenrotation',
+    'zeige_eigener_countdown', 'zeige_seitenrotation',
   ];
   const activeWidgets = monitorConfig ? widgetKeys.filter(k => monitorConfig[k]).length : 0;
 
@@ -980,15 +974,11 @@ export default function MonitorAdminPage() {
     { key: 'zeige_countdown', label: 'Event-Countdown', icon: Clock, cat: 'inhalt' },
     { key: 'zeige_eigener_countdown', label: 'Eigener Countdown', icon: Timer, cat: 'inhalt' },
     { key: 'zeige_freitext', label: 'Freier Text', icon: AlignLeft, cat: 'inhalt' },
-    { key: 'zeige_raumplan', label: 'Raumplan', icon: LayoutGrid, cat: 'inhalt' },
     { key: 'zeige_wetter', label: 'Wetter', icon: CloudSun, cat: 'extern' },
     { key: 'zeige_webuntis', label: 'WebUntis', icon: Calendar, cat: 'extern' },
     { key: 'zeige_qr_code', label: 'QR-Code', icon: QrCode, cat: 'extern' },
-    { key: 'zeige_kamera', label: 'Kamera-Stream', icon: Activity, cat: 'extern' },
-    { key: 'zeige_ticker', label: 'Lauftext / Ticker', icon: Type, cat: 'erweitert' },
     { key: 'zeige_slideshow', label: 'Slideshow', icon: Image, cat: 'erweitert' },
     { key: 'zeige_pdf', label: 'PDF-Anzeige', icon: FileText, cat: 'erweitert' },
-    { key: 'zeige_bildschirmschoner', label: 'Bildschirmschoner', icon: MonitorOff, cat: 'erweitert' },
     { key: 'zeige_seitenrotation', label: 'Seitenrotation', icon: RotateCw, cat: 'erweitert' },
   ];
 
@@ -1010,11 +1000,6 @@ export default function MonitorAdminPage() {
     const c = monitorConfig; if (!c) return null;
     const inp = 'w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50';
     switch (key) {
-      case 'zeige_ticker': return settingsCard(<Type className="w-4 h-4 text-gray-400" />, 'Ticker', <>
-        <input type="text" value={c.ticker_text} onChange={e => updateConfig('ticker_text', e.target.value)} disabled={!canEdit} placeholder="Text der durchläuft..." className={inp} />
-        <div><label className="block text-xs text-gray-500 mb-1">Geschwindigkeit: {c.ticker_geschwindigkeit} px/s</label>
-          <input type="range" min={10} max={200} value={c.ticker_geschwindigkeit} onChange={e => updateConfig('ticker_geschwindigkeit', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>
-      </>);
       case 'zeige_wetter': return settingsCard(<CloudSun className="w-4 h-4 text-gray-400" />, 'Wetter', <>
         <div><label className="block text-xs text-gray-500 mb-1">Stadt</label>
           <input type="text" value={c.wetter_stadt} onChange={e => updateConfig('wetter_stadt', e.target.value)} disabled={!canEdit} placeholder="z.B. Lübeck" className={inp} /></div>
@@ -1048,25 +1033,9 @@ export default function MonitorAdminPage() {
         <div><label className="block text-xs text-gray-500 mb-1">Beschriftung</label>
           <input type="text" value={c.qr_code_label} onChange={e => updateConfig('qr_code_label', e.target.value)} disabled={!canEdit} placeholder="z.B. Event-Anmeldung" className={inp} /></div>
       </div>);
-      case 'zeige_kamera': return settingsCard(<Activity className="w-4 h-4 text-gray-400" />, 'Kamera-Stream', <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className="block text-xs text-gray-500 mb-1">Titel</label>
-            <input type="text" value={c.kamera_titel || ''} onChange={e => updateConfig('kamera_titel', e.target.value)} disabled={!canEdit} placeholder="z.B. Saal" className={inp} /></div>
-          <div><label className="block text-xs text-gray-500 mb-1">Typ</label>
-            <select value={c.kamera_typ || 'img'} onChange={e => updateConfig('kamera_typ', e.target.value)} disabled={!canEdit} className={inp}>
-              <option value="img">MJPEG / Bild-Stream</option><option value="video">HLS / MP4</option><option value="iframe">iframe / Embed</option></select></div>
-        </div>
-        <div><label className="block text-xs text-gray-500 mb-1">Stream-URL</label>
-          <input type="url" value={c.kamera_url || ''} onChange={e => updateConfig('kamera_url', e.target.value)} disabled={!canEdit} placeholder="http://kamera.lan/stream.mjpg" className={inp} /></div>
-      </>);
       case 'zeige_freitext': return settingsCard(<AlignLeft className="w-4 h-4 text-gray-400" />, 'Freier Textblock', <>
         <input type="text" value={c.freitext_titel} onChange={e => updateConfig('freitext_titel', e.target.value)} disabled={!canEdit} placeholder="Titel" className={inp} />
         <textarea value={c.freitext_inhalt} onChange={e => updateConfig('freitext_inhalt', e.target.value)} disabled={!canEdit} placeholder="Inhalt..." rows={3} className={`${inp} resize-none`} />
-      </>);
-      case 'zeige_raumplan': return settingsCard(<LayoutGrid className="w-4 h-4 text-gray-400" />, 'Raumplan (WebUntis API)', <>
-        <div><label className="block text-xs text-gray-500 mb-1">Raum-Kürzel (pro Ansicht)</label>
-          <input type="text" value={c.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)} disabled={!canEdit} placeholder="z.B. Aul" className={inp} /></div>
-        <p className="text-[11px] text-gray-500">Server, Schule und Login werden einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
       </>);
       case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-gray-400" />, 'Eigener Countdown', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><label className="block text-xs text-gray-500 mb-1">Event-Name</label>
@@ -1074,15 +1043,12 @@ export default function MonitorAdminPage() {
         <div><label className="block text-xs text-gray-500 mb-1">Datum &amp; Uhrzeit</label>
           <input type="datetime-local" value={c.eigener_countdown_datum ? c.eigener_countdown_datum.slice(0, 16) : ''} onChange={e => updateConfig('eigener_countdown_datum', e.target.value ? e.target.value + ':00Z' : null)} disabled={!canEdit} className={inp} /></div>
       </div>);
-      case 'zeige_bildschirmschoner': return settingsCard(<MonitorOff className="w-4 h-4 text-gray-400" />, 'Bildschirmschoner',
-        <div><label className="block text-xs text-gray-500 mb-1">Timeout: {c.bildschirmschoner_timeout} Minuten</label>
-          <input type="range" min={1} max={60} value={c.bildschirmschoner_timeout} onChange={e => updateConfig('bildschirmschoner_timeout', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>);
       case 'zeige_seitenrotation': return settingsCard(<RotateCw className="w-4 h-4 text-gray-400" />, 'Seitenrotation', <>
         <div><label className="block text-xs text-gray-500 mb-1">Intervall: {c.seitenrotation_intervall} Sekunden</label>
           <input type="range" min={5} max={120} value={c.seitenrotation_intervall} onChange={e => updateConfig('seitenrotation_intervall', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>
         <div><label className="block text-xs text-gray-500 mb-2">Seiten zum Rotieren</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {[{ id: 'main', label: 'Hauptansicht' }, { id: 'veranstaltungen', label: 'Veranstaltungen' }, { id: 'ankuendigungen', label: 'Ankündigungen' }, { id: 'raumplan', label: 'Raumplan' }, { id: 'wetter', label: 'Wetter' }, { id: 'slideshow', label: 'Slideshow' }, { id: 'pdf', label: 'PDF' }, { id: 'freitext', label: 'Freier Text' }].map(page => {
+            {[{ id: 'main', label: 'Hauptansicht' }, { id: 'veranstaltungen', label: 'Veranstaltungen' }, { id: 'ankuendigungen', label: 'Ankündigungen' }, { id: 'wetter', label: 'Wetter' }, { id: 'slideshow', label: 'Slideshow' }, { id: 'pdf', label: 'PDF' }, { id: 'freitext', label: 'Freier Text' }].map(page => {
               const selected = (c.seitenrotation_seiten || []).includes(page.id);
               return (<button key={page.id} onClick={() => { if (!canEdit) return; const s = c.seitenrotation_seiten || []; updateConfig('seitenrotation_seiten', selected ? s.filter(x => x !== page.id) : [...s, page.id]); }} disabled={!canEdit}
                 className={`p-2 rounded-lg text-xs border transition-colors disabled:opacity-50 ${selected ? 'bg-accent/10 border-accent/50 text-white' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>{page.label}</button>);
@@ -1931,20 +1897,11 @@ export default function MonitorAdminPage() {
               );
             })()}
 
-            {monitorConfig.layout_modus === 'baukasten' && (
-              <div className="p-3 bg-gray-800/40 border border-gray-700 rounded-lg">
-                <p className="text-xs text-gray-300">
-                  <LayoutGrid className="w-3.5 h-3.5 inline mr-1" />
-                  Widget-Baukasten: Widgets per Drag &amp; Drop frei platzieren und skalieren. Der Editor erscheint unten als eigene Section.
-                </p>
-              </div>
-            )}
-
             {monitorConfig.layout_modus === 'stundenplan' && (
               <div className="p-3 bg-gray-800/40 border border-gray-700 rounded-lg">
                 <p className="text-xs text-gray-300">
                   <Sparkles className="w-3.5 h-3.5 inline mr-1" />
-                  Stundenplan-Vollbild: WebUntis-iFrame so groß wie möglich, mit optionalem Raumplan als Sidebar, Uhr und ON AIR.
+                  Stundenplan-Vollbild: WebUntis-iFrame so groß wie möglich, mit Uhr und ON AIR.
                 </p>
               </div>
             )}
@@ -2290,22 +2247,6 @@ export default function MonitorAdminPage() {
 
             {/* Löschen erfolgt über die Toolbar oben (Aktive Ansicht → Löschen) */}
           </Section>
-
-          {/* ═══ Baukasten-Editor (nur bei layout_modus='baukasten') ═══ */}
-          {monitorConfig.layout_modus === 'baukasten' && (
-            <Section id="baukasten" area="ansichten" title="Widget-Baukasten" description="Widgets per Drag &amp; Drop platzieren"
-              icon={LayoutGrid} open={openSections.baukasten !== false} onToggle={toggleSection}
-              badge={(monitorConfig.layout_widgets || []).length || null}>
-              <BaukastenEditor
-                widgets={monitorConfig.layout_widgets || []}
-                cols={monitorConfig.baukasten_spalten || 24}
-                rowHeight={monitorConfig.baukasten_zeilenhoehe || 40}
-                onChange={(w) => updateConfig('layout_widgets', w)}
-                onColsChange={(c) => updateConfig('baukasten_spalten', c)}
-                onRowHeightChange={(r) => updateConfig('baukasten_zeilenhoehe', r)}
-              />
-            </Section>
-          )}
 
           {/* ═══ Allgemein ═══ */}
           <Section id="allgemein" area="ansichten" title="Allgemein" description="Titel, Refresh und Import/Export"

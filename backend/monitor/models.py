@@ -71,7 +71,6 @@ class MonitorConfig(models.Model):
         ('stundenplan', 'Stundenplan-Vollbild'),
         ('onair', 'ON AIR Display'),
         ('abfahrten', 'Abfahrtsmonitor (ÖPNV)'),
-        ('baukasten', 'Widget-Baukasten (frei)'),
         ('pdf_vollbild', 'PDF-Vollbild'),
         ('bild_vollbild', 'Bild-Vollbild'),
         ('split', 'Splitscreen'),
@@ -98,12 +97,6 @@ class MonitorConfig(models.Model):
     split_links_prozent = models.IntegerField(default=50,
         help_text="Breite der linken Seite in Prozent (20–80)")
 
-    # ─── Baukasten-Layout ────────────────
-    layout_widgets = models.JSONField(default=list, blank=True,
-        help_text='[{"i": "uid", "type": "uhr|...", "x": 0, "y": 0, "w": 4, "h": 4, "config": {}}]')
-    baukasten_spalten = models.IntegerField(default=24, help_text="Grid-Spalten (12-48)")
-    baukasten_zeilenhoehe = models.IntegerField(default=40, help_text="Pixel pro Grid-Einheit")
-
     # ─── Allgemein ─────────────────────────
     titel = models.CharField(max_length=200, default='Stagedesk Monitor')
     untertitel = models.CharField(max_length=300, blank=True)
@@ -124,11 +117,6 @@ class MonitorConfig(models.Model):
     zeige_ankuendigungen = models.BooleanField(default=True)
     zeige_onair = models.BooleanField(default=True)
     zeige_countdown = models.BooleanField(default=True)
-
-    # ─── Ticker ────────────────────────────
-    zeige_ticker = models.BooleanField(default=False)
-    ticker_text = models.CharField(max_length=500, blank=True)
-    ticker_geschwindigkeit = models.IntegerField(default=50, help_text="Pixel pro Sekunde")
 
     # ─── Notfall ───────────────────────────
     notfall_aktiv = models.BooleanField(default=False)
@@ -220,24 +208,10 @@ class MonitorConfig(models.Model):
     freitext_titel = models.CharField(max_length=200, blank=True)
     freitext_inhalt = models.TextField(blank=True)
 
-    # ─── Raumplan (WebUntis) ─────────────────
-    zeige_raumplan = models.BooleanField(default=False)
-    raumplan_server = models.CharField(max_length=200, blank=True, help_text="z.B. katharineum.webuntis.com")
-    raumplan_schule = models.CharField(max_length=100, blank=True, help_text="Schulname in WebUntis")
-    raumplan_raum = models.CharField(max_length=50, blank=True, help_text="Raum-Kürzel z.B. Aul")
-    raumplan_benutzername = models.CharField(max_length=100, blank=True)
-    raumplan_passwort = models.CharField(max_length=100, blank=True)
-    raumplan_cache = models.JSONField(default=list, blank=True)
-    raumplan_cache_zeit = models.DateTimeField(null=True, blank=True)
-
     # ─── Eigener Countdown ───────────────────
     zeige_eigener_countdown = models.BooleanField(default=False)
     eigener_countdown_name = models.CharField(max_length=200, blank=True)
     eigener_countdown_datum = models.DateTimeField(null=True, blank=True)
-
-    # ─── Bildschirmschoner ───────────────────
-    zeige_bildschirmschoner = models.BooleanField(default=False)
-    bildschirmschoner_timeout = models.IntegerField(default=5, help_text="Minuten bis Bildschirmschoner")
 
     # ─── Seitenrotation ─────────────────────
     zeige_seitenrotation = models.BooleanField(default=False)
@@ -327,18 +301,6 @@ class MonitorConfig(models.Model):
     ON_AIR_SEITE_CHOICES = [('links', 'Links'), ('rechts', 'Rechts')]
     on_air_split_seite = models.CharField(max_length=6, choices=ON_AIR_SEITE_CHOICES, default='rechts',
         help_text="Auf welcher Seite ON AIR im Splitscreen steht")
-
-    # ─── Kamera ────────────────────────────
-    zeige_kamera = models.BooleanField(default=False)
-    kamera_url = models.URLField(blank=True, help_text="HLS/MJPEG-Stream oder iframe-URL")
-    kamera_titel = models.CharField(max_length=100, blank=True)
-    KAMERA_TYP_CHOICES = [
-        ('img', 'MJPEG / Bild-Stream'),
-        ('video', 'MP4 / nativer Video-Stream'),
-        ('hls', 'HLS-Stream (.m3u8, z.B. RTSP via go2rtc-Bridge)'),
-        ('iframe', 'iframe / Embed'),
-    ]
-    kamera_typ = models.CharField(max_length=10, choices=KAMERA_TYP_CHOICES, default='img')
 
     # ─── API ───────────────────────────────
     api_token = models.CharField(max_length=64, unique=True, blank=True,
