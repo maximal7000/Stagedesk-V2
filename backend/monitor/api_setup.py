@@ -1,5 +1,5 @@
 """
-Monitor API, zweiter Router: Ferien, Notfall-Vorlagen, "bis Tagesende aus".
+Monitor API, zweiter Router: Ferien, Notfall-Vorlagen, "bis Tagesende aus", WebUntis-Test.
 
 Wird in api.py per monitor_router.add_router("", setup_router) eingebunden.
 """
@@ -9,6 +9,7 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
+from . import webuntis
 from .permissions import _require_perm
 from .consumers import push_power_to_all
 from .models import EmergencyTemplate, HolidayPeriod, Screen
@@ -124,3 +125,12 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
     _selected_screens(payload).update(off_until=None, updated_at=timezone.now())
     push_power_to_all()
     return {"success": True}
+
+
+# ═══ WebUntis ═════════════════════════════════════════════════════
+
+@setup_router.post("/webuntis/check", auth=keycloak_auth)
+def check_webuntis(request):
+    """Quelle neu erkennen (Spec §4.3). Nur Ja/Nein pro Weg und die Quelle, keine Daten."""
+    _require_perm(request, 'monitor.setup')
+    return webuntis.check()
