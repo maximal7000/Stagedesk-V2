@@ -12,8 +12,8 @@ import apiClient from '../../lib/api';
 // Nur 'geplant' und 'abgesagt' werden manuell gesetzt — laufend/abgeschlossen
 // leitet das Backend aus start/ende ab (effektiv_status).
 const STATUS_OPTIONS = [
-  { value: 'geplant', label: 'Geplant', color: 'bg-blue-600' },
-  { value: 'abgesagt', label: 'Abgesagt', color: 'bg-red-600' },
+  { value: 'geplant', label: 'Geplant', color: 'text-info' },
+  { value: 'abgesagt', label: 'Abgesagt', color: 'text-bad' },
 ];
 
 const WIEDERHOLUNG_OPTIONS = [
@@ -188,19 +188,19 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-white">
+        <div className="p-4 border-b border-line-subtle flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-fg">
             {isEditing ? 'Event bearbeiten' : 'Neues Event'}
           </h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-white rounded-lg">
+          <button onClick={onClose} className="p-2 text-fg-muted hover:text-fg hover:bg-raised rounded-sm">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-800 px-4">
+        <div className="border-b border-line-subtle px-4">
           <div className="flex gap-4">
             {tabs.map(tab => {
               const Icon = tab.icon;
@@ -210,11 +210,11 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                   onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-2 px-3 py-3 border-b-2 transition-colors ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-gray-400 hover:text-white'
+                      ? 'border-accent text-fg'
+                      : 'border-transparent text-fg-muted hover:text-fg'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
+                  <Icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-accent-fg' : ''}`} />
                   {tab.label}
                 </button>
               );
@@ -225,7 +225,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
           {error && (
-            <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded-lg text-red-400 text-sm">
+            <div className="mb-4 p-3 bg-raised rounded-md text-bad text-sm">
               {error}
             </div>
           )}
@@ -235,26 +235,26 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
             <div className="space-y-4">
               {/* Titel */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Titel *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Titel *</label>
                 <input
                   type="text"
                   name="titel"
                   value={formData.titel}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   placeholder="Event-Titel"
                 />
               </div>
 
               {/* Kategorie */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Kategorie</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Kategorie</label>
                 <select
                   name="kategorie_id"
                   value={formData.kategorie_id}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                 >
                   <option value="">Keine Kategorie</option>
                   {kategorien.map(kat => (
@@ -266,25 +266,25 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
               {/* Datum & Zeit */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Start *</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Start *</label>
                   <input
                     type="datetime-local"
                     name="start"
                     value={formData.start}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Ende *</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Ende *</label>
                   <input
                     type="datetime-local"
                     name="ende"
                     value={formData.ende}
                     onChange={handleChange}
                     required
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                 </div>
               </div>
@@ -296,35 +296,35 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                   name="ganztaegig"
                   checked={formData.ganztaegig}
                   onChange={handleChange}
-                  className="w-4 h-4 rounded"
+                  className="w-4 h-4 rounded-sm accent-accent"
                 />
-                <span className="text-sm text-gray-300">Ganztägig</span>
+                <span className="text-sm text-fg-muted">Ganztägig</span>
               </label>
 
               {/* Ort */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Ort</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Ort</label>
                 <input
                   type="text"
                   name="ort"
                   value={formData.ort}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   placeholder="Veranstaltungsort"
                 />
               </div>
 
               {/* Status */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Status</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Status</label>
                 <div className="flex flex-wrap gap-2">
                   {STATUS_OPTIONS.map(opt => (
                     <button
                       key={opt.value}
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, status: opt.value }))}
-                      className={`px-3 py-1.5 rounded-lg text-sm text-white transition-colors ${
-                        formData.status === opt.value ? opt.color : 'bg-gray-700 hover:bg-gray-600'
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        formData.status === opt.value ? `bg-raised ${opt.color}` : 'text-fg-muted hover:bg-raised hover:text-fg'
                       }`}
                     >
                       {opt.label}
@@ -340,26 +340,26 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
             <div className="space-y-4">
               {/* Beschreibung */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Beschreibung</label>
                 <textarea
                   name="beschreibung"
                   value={formData.beschreibung}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
                   placeholder="Beschreibung des Events..."
                 />
               </div>
 
               {/* Adresse */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Adresse</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Adresse</label>
                 <textarea
                   name="adresse"
                   value={formData.adresse}
                   onChange={handleChange}
                   rows={2}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
                   placeholder="Vollständige Adresse..."
                 />
               </div>
@@ -367,12 +367,12 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
               {/* Wiederholung */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Wiederholung</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Wiederholung</label>
                   <select
                     name="wiederholung"
                     value={formData.wiederholung}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   >
                     {WIEDERHOLUNG_OPTIONS.map(opt => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -381,13 +381,13 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                 </div>
                 {formData.wiederholung !== 'keine' && (
                   <div>
-                    <label className="block text-sm text-gray-400 mb-1">Wiederholung bis</label>
+                    <label className="block text-sm font-medium text-fg-muted mb-1">Wiederholung bis</label>
                     <input
                       type="date"
                       name="wiederholung_ende"
                       value={formData.wiederholung_ende}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                      className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                     />
                   </div>
                 )}
@@ -396,24 +396,24 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
               {/* Verantwortlicher & Teilnehmer */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Verantwortlicher</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Verantwortlicher</label>
                   <input
                     type="text"
                     name="verantwortlicher"
                     value={formData.verantwortlicher}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Teilnehmeranzahl</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Teilnehmeranzahl</label>
                   <input
                     type="number"
                     name="teilnehmer_anzahl"
                     value={formData.teilnehmer_anzahl}
                     onChange={handleChange}
                     min="0"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                 </div>
               </div>
@@ -421,11 +421,11 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
               {/* Budget */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Haushalt verknüpfen</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Haushalt verknüpfen</label>
                   <select
                     value={selectedHaushalt}
                     onChange={(e) => setSelectedHaushalt(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   >
                     <option value="">Kein Haushalt</option>
                     {haushalte.map(h => (
@@ -434,7 +434,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Geschätztes Budget (€)</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Geschätztes Budget (€)</label>
                   <input
                     type="number"
                     name="geschaetztes_budget"
@@ -442,20 +442,20 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                     onChange={handleChange}
                     min="0"
                     step="0.01"
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                 </div>
               </div>
 
               {/* Notizen */}
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Notizen</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Notizen</label>
                 <textarea
                   name="notizen"
                   value={formData.notizen}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+                  className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none resize-none"
                 />
               </div>
             </div>
@@ -466,22 +466,22 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
             <div className="space-y-4">
               {/* Ausgewählte Ressourcen */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Gebuchte Ressourcen</label>
+                <label className="block text-sm font-medium text-fg-muted mb-2">Gebuchte Ressourcen</label>
                 {selectedRessourcen.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic">Keine Ressourcen ausgewählt</p>
+                  <p className="text-sm text-fg-subtle italic">Keine Ressourcen ausgewählt</p>
                 ) : (
                   <div className="space-y-2">
                     {selectedRessourcen.map(res => (
                       <div
                         key={res.ressource_id || res.id}
-                        className="flex items-center justify-between p-3 bg-gray-800 rounded-lg"
+                        className="flex items-center justify-between p-3 bg-raised rounded-md"
                       >
                         <div className="flex items-center gap-3">
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: res.ressource_farbe }}
                           />
-                          <span className="text-white">{res.ressource_name}</span>
+                          <span className="text-fg">{res.ressource_name}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <input
@@ -496,12 +496,12 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                               setSelectedRessourcen(newRessourcen);
                             }}
                             min="1"
-                            className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-center text-sm"
+                            className="w-16 px-2 py-1 bg-hover border border-line rounded-sm text-fg text-center text-sm"
                           />
                           <button
                             type="button"
                             onClick={() => removeRessource(res.ressource_id || res.id)}
-                            className="p-1 text-red-400 hover:bg-red-900/20 rounded"
+                            className="p-1 text-bad hover:bg-hover rounded-sm"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -514,7 +514,7 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
 
               {/* Verfügbare Ressourcen */}
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Ressource hinzufügen</label>
+                <label className="block text-sm font-medium text-fg-muted mb-2">Ressource hinzufügen</label>
                 <div className="grid grid-cols-2 gap-2">
                   {availableRessourcen
                     .filter(r => !selectedRessourcen.find(sr => (sr.ressource_id || sr.id) === r.id))
@@ -523,17 +523,17 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
                         key={res.id}
                         type="button"
                         onClick={() => addRessource(res)}
-                        className="flex items-center gap-2 p-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-left transition-colors"
+                        className="flex items-center gap-2 p-2 bg-raised hover:bg-hover rounded-md text-left transition-colors"
                       >
                         <div
                           className="w-3 h-3 rounded-full shrink-0"
                           style={{ backgroundColor: res.farbe }}
                         />
                         <div className="min-w-0">
-                          <div className="text-white text-sm truncate">{res.name}</div>
-                          <div className="text-xs text-gray-500">{res.typ_display}</div>
+                          <div className="text-fg text-sm truncate">{res.name}</div>
+                          <div className="text-xs text-fg-subtle">{res.typ_display}</div>
                         </div>
-                        <Plus className="w-4 h-4 text-gray-400 ml-auto" />
+                        <Plus className="w-4 h-4 text-fg-subtle ml-auto" />
                       </button>
                     ))}
                 </div>
@@ -543,14 +543,14 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
         </form>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-800 flex items-center justify-between">
+        <div className="p-4 border-t border-line-subtle flex items-center justify-between">
           <div>
             {isEditing && (
               <button
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="flex items-center gap-2 px-4 py-2 text-red-400 hover:bg-red-900/20 rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 text-bad hover:bg-raised rounded-md disabled:text-fg-disabled"
               >
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Löschen
@@ -562,14 +562,14 @@ export default function EventModal({ event, initialDate, kategorien, onClose, on
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+              className="px-4 py-2 text-fg-muted hover:text-fg hover:bg-raised rounded-md"
             >
               Abbrechen
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md disabled:bg-raised disabled:text-fg-disabled"
             >
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Speichern

@@ -267,11 +267,11 @@ export default function KalenderPage() {
         title={event.titel}
       >
         {!compact && !event.ganztaegig && (
-          <span className="shrink-0 font-semibold tabular-nums text-gray-400">
+          <span className="shrink-0 font-semibold tabular-nums text-fg-muted">
             {format(parseISO(event.start), 'HH:mm')}
           </span>
         )}
-        <span className={`truncate text-gray-100 font-medium ${abgesagt ? 'line-through' : ''}`}>
+        <span className={`truncate text-fg font-medium ${abgesagt ? 'line-through' : ''}`}>
           {event.titel}
         </span>
       </div>
@@ -302,30 +302,30 @@ export default function KalenderPage() {
       />
 
       {/* Steuerleiste: Datums-Navigation links, Filter + Ansicht rechts */}
-      <div className="flex flex-col gap-3 rounded-xl border border-gray-800 bg-gray-900 px-3 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border border-gray-800 bg-gray-950/40">
+          <div className="flex items-center rounded-md bg-surface">
             <button
               onClick={navigatePrev}
-              className="rounded-l-lg p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+              className="rounded-l-md p-2 text-fg-muted transition-colors hover:bg-raised hover:text-fg"
               aria-label="Zurück"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             <button
               onClick={navigateNext}
-              className="rounded-r-lg border-l border-gray-800 p-2 text-gray-400 transition-colors hover:bg-gray-800 hover:text-white"
+              className="rounded-r-md border-l border-line-subtle p-2 text-fg-muted transition-colors hover:bg-raised hover:text-fg"
               aria-label="Weiter"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-          <h2 className="font-display text-lg font-semibold tracking-tight text-white sm:text-xl">
+          <h2 className="font-display text-lg font-semibold tracking-tight text-fg sm:text-xl">
             {getHeaderTitle()}
           </h2>
           <button
             onClick={goToToday}
-            className="rounded-lg px-2.5 py-1 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+            className="rounded-md px-2.5 py-1 text-sm font-medium text-accent-fg transition-colors hover:bg-raised"
           >
             Heute
           </button>
@@ -336,41 +336,41 @@ export default function KalenderPage() {
           <div className="relative">
             <button
               onClick={() => setShowFilter(!showFilter)}
-              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 selectedKategorie
-                  ? 'border-accent/40 bg-accent/15 text-accent'
-                  : 'border-gray-700 bg-gray-800/60 text-gray-300 hover:bg-gray-800 hover:text-white'
+                  ? 'bg-raised text-fg'
+                  : 'bg-surface text-fg-muted hover:bg-raised hover:text-fg'
               }`}
             >
-              <Filter className="h-4 w-4" />
+              <Filter className={`h-4 w-4 ${selectedKategorie ? 'text-accent-fg' : ''}`} />
               <span className="hidden sm:inline">
                 {aktiveKategorie ? aktiveKategorie.name : 'Alle Kategorien'}
               </span>
             </button>
 
             {showFilter && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-lg border border-gray-700 bg-gray-800 shadow-xl">
+              <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-lg border border-line bg-overlay shadow-overlay">
                 <div className="p-1.5">
                   <button
                     onClick={() => { setSelectedKategorie(null); setShowFilter(false); }}
                     className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                      !selectedKategorie ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'
+                      !selectedKategorie ? 'bg-raised text-fg' : 'text-fg-muted hover:bg-raised'
                     }`}
                   >
                     Alle Kategorien
-                    {!selectedKategorie && <Check className="h-4 w-4 text-accent" />}
+                    {!selectedKategorie && <Check className="h-4 w-4 text-accent-fg" />}
                   </button>
                   {kategorien.map(kat => (
                     <button
                       key={kat.id}
                       onClick={() => { setSelectedKategorie(kat.id); setShowFilter(false); }}
                       className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                        selectedKategorie === kat.id ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'
+                        selectedKategorie === kat.id ? 'bg-raised text-fg' : 'text-fg-muted hover:bg-raised'
                       }`}
                     >
                       <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: kat.farbe }} />
                       <span className="truncate">{kat.name}</span>
-                      {selectedKategorie === kat.id && <Check className="ml-auto h-4 w-4 text-accent" />}
+                      {selectedKategorie === kat.id && <Check className="ml-auto h-4 w-4 text-accent-fg" />}
                     </button>
                   ))}
                 </div>
@@ -379,7 +379,7 @@ export default function KalenderPage() {
           </div>
 
           {/* Ansicht-Umschalter */}
-          <div className="inline-flex rounded-lg border border-gray-700 bg-gray-800/60 p-0.5">
+          <div className="inline-flex rounded-md bg-surface p-0.5">
             {VIEWS.map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -388,8 +388,8 @@ export default function KalenderPage() {
                 title={label}
                 className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
                   viewMode === key
-                    ? 'bg-accent text-white shadow-sm'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-raised text-fg'
+                    : 'text-fg-muted hover:text-fg'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -403,24 +403,24 @@ export default function KalenderPage() {
       {/* Kalender Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-gray-500" />
+          <Loader2 className="h-10 w-10 animate-spin text-fg-subtle" />
         </div>
       ) : error ? (
-        <div className="rounded-xl border border-red-800 bg-red-900/20 p-8 text-center">
-          <p className="text-red-400">{error}</p>
+        <div className="rounded-lg bg-surface p-8 text-center">
+          <p className="text-bad">{error}</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-900">
+        <div className="overflow-hidden rounded-lg bg-surface">
           {/* Monatsansicht */}
           {viewMode === 'month' && (
             <div>
               {/* Wochentage Header */}
-              <div className="grid grid-cols-7 border-b border-gray-800 bg-gray-950/40">
+              <div className="grid grid-cols-7 border-b border-line-subtle">
                 {WOCHENTAGE.map((tag, i) => (
                   <div
                     key={tag}
                     className={`py-2.5 text-center text-xs font-semibold uppercase tracking-wider ${
-                      i >= 5 ? 'text-gray-500' : 'text-gray-400'
+                      i >= 5 ? 'text-fg-subtle' : 'text-fg-muted'
                     }`}
                   >
                     {tag}
@@ -442,19 +442,19 @@ export default function KalenderPage() {
                       onClick={() => handleCreateEvent(day)}
                       onDrop={(e) => handleDrop(e, day)}
                       onDragOver={handleDragOver}
-                      className={`group min-h-[104px] border-b border-r border-gray-800 p-1.5 transition-colors last:border-r-0 [&:nth-child(7n)]:border-r-0 ${
-                        isCurrentMonth ? (isWeekend ? 'bg-gray-900/60' : 'bg-gray-900') : 'bg-gray-950/60'
-                      } cursor-pointer hover:bg-gray-800/40`}
+                      className={`group min-h-[104px] border-b border-r border-line-subtle p-1.5 transition-colors last:border-r-0 [&:nth-child(7n)]:border-r-0 ${
+                        isCurrentMonth ? 'bg-surface' : 'bg-canvas'
+                      } cursor-pointer hover:bg-raised`}
                     >
                       <div className="mb-1 flex items-center justify-between">
                         <span className={`flex h-6 w-6 items-center justify-center text-sm font-semibold ${
                           isCurrentDay
                             ? 'rounded-full bg-accent text-white'
-                            : isCurrentMonth ? 'text-gray-200' : 'text-gray-600'
+                            : isCurrentMonth ? (isWeekend ? 'text-fg-muted' : 'text-fg') : 'text-fg-disabled'
                         }`}>
                           {format(day, 'd')}
                         </span>
-                        <Plus className="h-3.5 w-3.5 text-gray-600 opacity-0 transition-opacity group-hover:opacity-100" />
+                        <Plus className="h-3.5 w-3.5 text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
 
                       <div className="space-y-1">
@@ -462,7 +462,7 @@ export default function KalenderPage() {
                           <EventChip key={event.id} event={event} compact />
                         ))}
                         {dayEvents.length > 3 && (
-                          <div className="px-1 text-[11px] font-medium text-gray-500">
+                          <div className="px-1 text-[11px] font-medium text-fg-subtle">
                             +{dayEvents.length - 3} weitere
                           </div>
                         )}
@@ -478,19 +478,19 @@ export default function KalenderPage() {
           {viewMode === 'week' && (
             <div>
               {/* Header mit Tagen */}
-              <div className="grid grid-cols-8 border-b border-gray-800 bg-gray-950/40">
+              <div className="grid grid-cols-8 border-b border-line-subtle">
                 <div className="py-3" />
                 {getWeekDays().map(day => (
                   <div
                     key={day.toISOString()}
-                    className={`border-l border-gray-800 py-2.5 text-center ${
-                      isToday(day) ? 'bg-accent/10' : ''
+                    className={`border-l border-line-subtle py-2.5 text-center ${
+                      isToday(day) ? 'bg-raised' : ''
                     }`}
                   >
-                    <div className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
                       {format(day, 'EEE', { locale: de })}
                     </div>
-                    <div className={`mt-0.5 text-lg font-semibold ${isToday(day) ? 'text-accent' : 'text-white'}`}>
+                    <div className={`mt-0.5 text-lg font-semibold ${isToday(day) ? 'text-accent-fg' : 'text-fg'}`}>
                       {format(day, 'd')}
                     </div>
                   </div>
@@ -500,8 +500,8 @@ export default function KalenderPage() {
               {/* Stunden Grid */}
               <div className="max-h-[600px] overflow-y-auto">
                 {STUNDEN.map(stunde => (
-                  <div key={stunde} className="grid grid-cols-8 border-b border-gray-800 last:border-b-0">
-                    <div className="py-2 pr-3 text-right text-[11px] font-medium tabular-nums text-gray-500">
+                  <div key={stunde} className="grid grid-cols-8 border-b border-line-subtle last:border-b-0">
+                    <div className="py-2 pr-3 text-right text-[11px] font-medium tabular-nums text-fg-subtle">
                       {stunde.toString().padStart(2, '0')}:00
                     </div>
                     {getWeekDays().map(day => {
@@ -517,8 +517,8 @@ export default function KalenderPage() {
                           onClick={() => handleCreateEvent(cellDate)}
                           onDrop={(e) => handleDrop(e, cellDate)}
                           onDragOver={handleDragOver}
-                          className={`min-h-[50px] cursor-pointer space-y-1 border-l border-gray-800 p-1 transition-colors hover:bg-gray-800/30 ${
-                            isToday(day) ? 'bg-accent/[0.04]' : ''
+                          className={`min-h-[50px] cursor-pointer space-y-1 border-l border-line-subtle p-1 transition-colors hover:bg-raised ${
+                            isToday(day) ? 'bg-raised' : ''
                           }`}
                         >
                           {cellEvents.map(event => (
@@ -549,12 +549,12 @@ export default function KalenderPage() {
                     onClick={() => handleCreateEvent(cellDate)}
                     onDrop={(e) => handleDrop(e, cellDate)}
                     onDragOver={handleDragOver}
-                    className="flex cursor-pointer border-b border-gray-800 transition-colors last:border-b-0 hover:bg-gray-800/30"
+                    className="flex cursor-pointer border-b border-line-subtle transition-colors last:border-b-0 hover:bg-raised"
                   >
-                    <div className="w-16 shrink-0 py-3 pr-3 text-right text-xs font-medium tabular-nums text-gray-500">
+                    <div className="w-16 shrink-0 py-3 pr-3 text-right text-xs font-medium tabular-nums text-fg-subtle">
                       {stunde.toString().padStart(2, '0')}:00
                     </div>
-                    <div className="min-h-[60px] flex-1 space-y-1 border-l border-gray-800 p-2">
+                    <div className="min-h-[60px] flex-1 space-y-1 border-l border-line-subtle p-2">
                       {hourEvents.map(event => (
                         <EventChip key={event.id} event={event} />
                       ))}
@@ -567,7 +567,7 @@ export default function KalenderPage() {
 
           {/* Listenansicht */}
           {viewMode === 'list' && (
-            <div className="divide-y divide-gray-800">
+            <div className="divide-y divide-line-subtle">
               {events.length === 0 ? (
                 <EmptyState
                   icon={CalendarX2}
@@ -582,15 +582,15 @@ export default function KalenderPage() {
                     <div
                       key={event.id}
                       onClick={() => handleEditEvent(event)}
-                      className="flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-gray-800/50"
+                      className="flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-raised"
                     >
                       <div
                         className="h-12 w-1 shrink-0 rounded-full"
                         style={{ backgroundColor: event.kategorie_farbe || '#6B7280' }}
                       />
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-medium text-white">{event.titel}</h3>
-                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-400">
+                        <h3 className="font-medium text-fg">{event.titel}</h3>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-fg-muted">
                           <span className="flex items-center gap-1.5">
                             <Clock className="h-4 w-4 shrink-0" />
                             {format(parseISO(event.start), 'EEE, d. MMM HH:mm', { locale: de })}
