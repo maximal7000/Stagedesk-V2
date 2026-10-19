@@ -1,10 +1,10 @@
 /**
  * PDF-Vollbild fürs Monitor-Modul.
  * Rendert PDF-Seiten per pdf.js auf Canvas — mit Seiten-Steuerung:
- *  - modus 'durchschalten': Seiten automatisch weiterschalten (intervall)
- *  - modus 'statisch':      eine feste Seite
- *  - modus 'seiten':        nur bestimmte Seiten (seiten="1,3,5-7")
- *  - proAnsicht 1 oder 2:   eine oder zwei Seiten nebeneinander
+ *  - mode 'cycle':      Seiten automatisch weiterschalten (interval)
+ *  - mode 'static':     eine feste Seite
+ *  - mode 'selection':  nur bestimmte Seiten (pages="1,3,5-7")
+ *  - perScreen 1 oder 2: eine oder zwei Seiten nebeneinander
  */
 import { useEffect, useRef, useState } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -13,7 +13,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
 // "1,3,5-7" -> [1,3,5,6,7], geklammert auf 1..max, dedupe, Reihenfolge erhalten
-function parseSeiten(str, max) {
+function parsePages(str, max) {
   const out = [];
   const seen = new Set();
   (str || '').split(',').forEach(part => {
@@ -35,8 +35,8 @@ function parseSeiten(str, max) {
 }
 
 export default function PdfFullscreen({
-  url, modus = 'durchschalten', intervall = 10,
-  proAnsicht = 1, seiten = '', statischeSeite = 1,
+  url, mode = 'cycle', interval = 10,
+  perScreen = 1, pages = '', staticPage = 1,
 }) {
   const [pdf, setPdf] = useState(null);
   const [views, setViews] = useState([]);   // [[1],[2],...] oder [[1,2],[3,4],...]
@@ -60,33 +60,33 @@ export default function PdfFullscreen({
   useEffect(() => {
     if (!pdf) return;
     const n = pdf.numPages;
-    const per = Math.min(Math.max(1, proAnsicht || 1), 3);
+    const per = Math.min(Math.max(1, perScreen || 1), 3);
 
-    if (modus === 'statisch') {
-      const start = Math.min(Math.max(1, statischeSeite || 1), n);
+    if (mode === 'static') {
+      const start = Math.min(Math.max(1, staticPage || 1), n);
       const grp = [];
       for (let p = start; p < start + per && p <= n; p++) grp.push(p);
       setViews([grp]); setViewIdx(0);
       return;
     }
-    const parsed = parseSeiten(seiten, n);
-    const pages = (parsed.length && (modus === 'seiten' || modus === 'durchschalten'))
+    const parsed = parsePages(pages, n);
+    const shown = (parsed.length && (mode === 'selection' || mode === 'cycle'))
       ? parsed
       : Array.from({ length: n }, (_, i) => i + 1);
     const grouped = [];
-    for (let i = 0; i < pages.length; i += per) grouped.push(pages.slice(i, i + per));
+    for (let i = 0; i < shown.length; i += per) grouped.push(shown.slice(i, i + per));
     setViews(grouped); setViewIdx(0);
-  }, [pdf, modus, seiten, proAnsicht, statischeSeite]);
+  }, [pdf, mode, pages, perScreen, staticPage]);
 
   // Automatisch weiterschalten
   useEffect(() => {
-    if (modus === 'statisch' || views.length <= 1) return;
+    if (mode === 'static' || views.length <= 1) return;
     const t = setInterval(
       () => setViewIdx(i => (i + 1) % views.length),
-      Math.max(2, intervall || 10) * 1000
+      Math.max(2, interval || 10) * 1000
     );
     return () => clearInterval(t);
-  }, [views, intervall, modus]);
+  }, [views, interval, mode]);
 
   // Resize -> neu rendern
   useEffect(() => {
@@ -97,16 +97,16 @@ export default function PdfFullscreen({
 
   // Aktuelle Ansicht rendern
   useEffect(() => {
-    const pages = views[viewIdx];
+    const current = views[viewIdx];
     const container = containerRef.current;
-    if (!pdf || !pages || !container) return;
+    if (!pdf || !current || !container) return;
     let cancelled = false;
     const dpr = window.devicePixelRatio || 1;
-    const gaps = (pages.length - 1) * 16;
+    const gaps = (current.length - 1) * 16;
     const availH = container.clientHeight;
-    const availW = (container.clientWidth - gaps) / pages.length;
+    const availW = (container.clientWidth - gaps) / current.length;
 
-    pages.forEach((pageNum, i) => {
+    current.forEach((pageNum, i) => {
       pdf.getPage(pageNum).then(page => {
         if (cancelled) return;
         const base = page.getViewport({ scale: 1 });
@@ -122,13 +122,13 @@ export default function PdfFullscreen({
       }).catch(() => {});
     });
     return () => { cancelled = true; };
-  }, [pdf, views, viewIdx, tick, proAnsicht]);
+  }, [pdf, views, viewIdx, tick, perScreen]);
 
   if (!url) return null;
-  const pages = views[viewIdx] || [];
+  const currentPages = views[viewIdx] || [];
   return (
     <div ref={containerRef} className="w-full h-full flex items-center justify-center gap-4">
-      {pages.map((p, i) => (
+      {currentPages.map((p, i) => (
         <canvas key={`${viewIdx}-${i}`} ref={el => (canvasRefs.current[i] = el)}
                 className="shadow-2xl rounded-sm bg-white" />
       ))}
