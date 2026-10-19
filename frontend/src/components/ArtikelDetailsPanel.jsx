@@ -80,9 +80,9 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
   };
 
   return (
-    <div className="bg-gray-900/60 p-3 space-y-3">
+    <div className="bg-canvas p-3 space-y-3">
       {artikel.beschreibung && (
-        <div className="text-sm border-b border-gray-800 pb-2">
+        <div className="text-sm border-b border-line-subtle pb-2">
           <Markdown>{artikel.beschreibung}</Markdown>
         </div>
       )}
@@ -95,8 +95,8 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
           { v: 'quittung',   l: 'Quittung',   icon: Receipt },
         ].map(({ v, l, icon: Icon }) => (
           <button key={v} onClick={() => setTab(v)}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded ${
-              tab === v ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-sm border-b-2 ${
+              tab === v ? 'bg-raised text-fg border-accent' : 'border-transparent text-fg-muted hover:text-fg'
             }`}>
             <Icon className="w-3 h-3" /> {l}
           </button>
@@ -106,19 +106,19 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
       {tab === 'kommentare' && (
         <div className="space-y-2">
           {kommentare.length === 0 ? (
-            <p className="text-xs text-gray-500">Noch keine Kommentare.</p>
+            <p className="text-xs text-fg-subtle">Noch keine Kommentare.</p>
           ) : (
             <ul className="space-y-1.5">
               {kommentare.map((k) => (
-                <li key={k.id} className="flex items-start gap-2 text-sm bg-gray-800/50 rounded px-2 py-1.5">
+                <li key={k.id} className="flex items-start gap-2 text-sm bg-surface rounded-md px-2 py-1.5">
                   <div className="flex-1">
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-fg-subtle">
                       {k.user_username} · {new Date(k.erstellt_am).toLocaleString('de-DE')}
                     </div>
-                    <div className="text-gray-200 whitespace-pre-wrap">{k.text}</div>
+                    <div className="text-fg whitespace-pre-wrap">{k.text}</div>
                   </div>
                   <button onClick={() => removeKomm(k.id)}
-                    className="text-gray-500 hover:text-red-400" title="Löschen">
+                    className="text-fg-subtle hover:text-bad rounded-sm" title="Löschen" aria-label="Kommentar löschen">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </li>
@@ -130,9 +130,9 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
               onChange={(e) => setNewKommentar(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addKomm()}
               placeholder="Kommentar schreiben…"
-              className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm" />
+              className="flex-1 px-2 py-1 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none" />
             <button onClick={addKomm} disabled={!newKommentar.trim()}
-              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded">
+              className="px-3 py-1 bg-accent hover:bg-accent-hover disabled:bg-raised disabled:text-fg-disabled disabled:pointer-events-none text-white text-sm rounded-md">
               Senden
             </button>
           </div>
@@ -142,19 +142,19 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
       {tab === 'verlauf' && (
         <div>
           {verlauf.length === 0 ? (
-            <p className="text-xs text-gray-500">Noch keine Änderungen protokolliert.</p>
+            <p className="text-xs text-fg-subtle">Noch keine Änderungen protokolliert.</p>
           ) : (
             <ul className="space-y-1 text-xs">
               {verlauf.map((e) => (
                 <li key={e.id} className="flex gap-2 items-start">
-                  <span className="text-gray-500 shrink-0 tabular-nums">
+                  <span className="text-fg-subtle shrink-0 tabular-nums">
                     {new Date(e.timestamp).toLocaleString('de-DE', {
                       day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
                     })}
                   </span>
-                  <span className="text-gray-400 shrink-0">{AKTION_LABEL[e.aktion] || e.aktion}</span>
-                  <span className="text-white">{e.entity_name}</span>
-                  <span className="text-gray-500 ml-auto">{e.user_username}</span>
+                  <span className="text-fg-muted shrink-0">{AKTION_LABEL[e.aktion] || e.aktion}</span>
+                  <span className="text-fg">{e.entity_name}</span>
+                  <span className="text-fg-subtle ml-auto">{e.user_username}</span>
                 </li>
               ))}
             </ul>
@@ -167,29 +167,29 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
           {artikel.quittung_url ? (
             <div className="flex items-center gap-2">
               <a href={MEDIA_BASE + artikel.quittung_url} target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm">
+                className="inline-flex items-center gap-1 text-info hover:text-fg text-sm">
                 <ExternalLink className="w-3 h-3" /> Quittung öffnen
               </a>
               {canEdit && (
                 <button onClick={removeQuittung}
-                  className="text-gray-500 hover:text-red-400 text-sm inline-flex items-center gap-1">
+                  className="text-fg-subtle hover:text-bad text-sm inline-flex items-center gap-1">
                   <Trash2 className="w-3.5 h-3.5" /> Entfernen
                 </button>
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500">Keine eigene Quittung hochgeladen.</p>
+            <p className="text-xs text-fg-subtle">Keine eigene Quittung hochgeladen.</p>
           )}
 
           {/* Sammel-Quittungen */}
           {(artikel.sammelquittungen || []).length > 0 && (
-            <div className="pt-2 border-t border-gray-800">
-              <p className="text-[11px] text-gray-500 mb-1">Geteilte Quittungen:</p>
+            <div className="pt-2 border-t border-line-subtle">
+              <p className="text-[11px] text-fg-subtle mb-1">Geteilte Quittungen:</p>
               <ul className="space-y-1">
                 {artikel.sammelquittungen.map(q => (
                   <li key={q.id}>
                     <a href={MEDIA_BASE + q.datei_url} target="_blank" rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm">
+                      className="inline-flex items-center gap-1 text-info hover:text-fg text-sm">
                       <ExternalLink className="w-3 h-3" /> {q.name}
                     </a>
                   </li>
@@ -200,14 +200,14 @@ export default function ArtikelDetailsPanel({ haushaltId, artikel, canEdit, onRe
 
           {canEdit && (
             <div className="flex items-center gap-2 flex-wrap">
-              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded cursor-pointer">
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-raised hover:bg-hover text-fg text-sm rounded-md cursor-pointer">
                 {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                 Foto aufnehmen
                 <input type="file" className="hidden"
                   accept="image/*" capture="environment"
                   onChange={(e) => uploadQuittung(e.target.files?.[0])} />
               </label>
-              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded cursor-pointer">
+              <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-raised hover:bg-hover text-fg text-sm rounded-md cursor-pointer">
                 <Upload className="w-4 h-4" />
                 {artikel.quittung_url ? 'Ersetzen' : 'Hochladen'}
                 <input type="file" className="hidden"
