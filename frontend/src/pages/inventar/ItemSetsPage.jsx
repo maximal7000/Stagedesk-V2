@@ -452,7 +452,7 @@ export default function ItemSetsPage() {
                     className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
                   />
                   {itemSearch && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-raised border border-line rounded-md shadow-overlay max-h-48 overflow-y-auto z-10">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-overlay border border-line rounded-md shadow-overlay max-h-48 overflow-y-auto z-10">
                       {filteredItems.slice(0, 10).map(item => (
                         <button
                           key={item.id}
@@ -484,7 +484,7 @@ export default function ItemSetsPage() {
                         value={si.anzahl}
                         onChange={(e) => updateItemAnzahl(si.item_id, e.target.value)}
                         min="1"
-                        className="w-16 px-2 py-1 bg-hover border border-line rounded-md text-fg focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-center tabular-nums"
+                        className="w-16 px-2 py-1 bg-raised border border-line rounded-md text-fg focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none text-center tabular-nums"
                       />
                       <span className="text-fg-muted">×</span>
                       <span className="flex-1 font-medium text-fg">{si.item_name}</span>

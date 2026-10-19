@@ -737,7 +737,7 @@ export default function AusleihePage() {
               <h3 className="font-medium text-fg">Enthaltene Artikel (<span className="tabular-nums">{detailListe.positionen?.length || 0}</span>)</h3>
               {detailListe.modus === 'individuell' && (detailListe.positionen?.length || 0) > 0 && (
                 <select value={groupBy} onChange={e => { setGroupBy(e.target.value); setExpandedGroups({}); }}
-                  className="text-xs bg-raised border border-line rounded-md px-2 py-1 text-fg-muted hover:border-line-strong focus:border-accent focus:outline-none">
+                  className="text-xs bg-raised border border-line rounded-md px-2 py-1 text-fg-muted hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none">
                   <option value="none">Keine Gruppierung</option>
                   <option value="borrower">Nach Person</option>
                   <option value="location">Nach Ort</option>

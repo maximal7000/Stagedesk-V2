@@ -35,7 +35,7 @@ const STATUS_LABELS = {
 // Status → StatusBadge-Ton (semantische Zuordnung, kollisionsfrei zu defekt=danger)
 const STATUS_TONES = { verfuegbar: 'positive', ausgeliehen: 'info', reserviert: 'warning', defekt: 'danger' };
 const AUSLEIHE_STATUS_TONES = { offen: 'neutral', aktiv: 'info', teilrueckgabe: 'warning', abgeschlossen: 'positive', abgebrochen: 'danger' };
-const STATUS_COLORS_CHART = { verfuegbar: '#5fca8b', ausgeliehen: '#6fa8dc', reserviert: '#e5b14a', defekt: '#ef5d5d' };
+const STATUS_COLORS_CHART = { verfuegbar: 'var(--sd-ok)', ausgeliehen: 'var(--sd-info)', reserviert: 'var(--sd-warn)', defekt: 'var(--sd-bad)' };
 
 function SectionHeader({ title, count, defaultOpen = true, children }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -257,7 +257,7 @@ export default function InventarPage() {
 
   const monatsDaten = (erweitert?.ausleihen_pro_monat ?? []).map(m => ({ name: m.monat, anzahl: m.anzahl }));
   const statusDaten = Object.entries(erweitert?.items_nach_status ?? {}).map(([s, v]) => ({
-    name: STATUS_LABELS[s] || s, value: v, color: STATUS_COLORS_CHART[s] || '#8a847b',
+    name: STATUS_LABELS[s] || s, value: v, color: STATUS_COLORS_CHART[s] || 'var(--sd-fg-subtle)',
   }));
 
   // ═══ Render ═══
@@ -612,11 +612,11 @@ export default function InventarPage() {
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={monatsDaten}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#24221f" />
-                          <XAxis dataKey="name" tick={{ fill: '#8a847b', fontSize: 11 }} axisLine={{ stroke: '#24221f' }} />
-                          <YAxis tick={{ fill: '#8a847b', fontSize: 11 }} axisLine={{ stroke: '#24221f' }} allowDecimals={false} />
-                          <Tooltip contentStyle={{ backgroundColor: '#211f1c', border: '1px solid #35322e', borderRadius: '6px', color: '#f2efe9', fontSize: '12px' }} />
-                          <Bar dataKey="anzahl" fill="#da1f3d" radius={[3, 3, 0, 0]} name="Ausleihen" />
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--sd-line-subtle)" />
+                          <XAxis dataKey="name" tick={{ fill: 'var(--sd-fg-subtle)', fontSize: 11 }} axisLine={{ stroke: 'var(--sd-line-subtle)' }} />
+                          <YAxis tick={{ fill: 'var(--sd-fg-subtle)', fontSize: 11 }} axisLine={{ stroke: 'var(--sd-line-subtle)' }} allowDecimals={false} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--sd-overlay)', border: '1px solid var(--sd-line)', borderRadius: '6px', color: 'var(--sd-fg)', fontSize: '12px' }} />
+                          <Bar dataKey="anzahl" fill="var(--color-accent)" radius={[3, 3, 0, 0]} name="Ausleihen" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -628,11 +628,11 @@ export default function InventarPage() {
                     <div className="h-56">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
-                          <Pie data={statusDaten} cx="50%" cy="50%" innerRadius={40} outerRadius={75} dataKey="value" stroke="#211f1c" strokeWidth={2}>
+                          <Pie data={statusDaten} cx="50%" cy="50%" innerRadius={40} outerRadius={75} dataKey="value" stroke="var(--sd-overlay)" strokeWidth={2}>
                             {statusDaten.map((e, i) => <Cell key={i} fill={e.color} />)}
                           </Pie>
-                          <Tooltip contentStyle={{ backgroundColor: '#211f1c', border: '1px solid #35322e', borderRadius: '6px', color: '#f2efe9', fontSize: '12px' }} />
-                          <Legend wrapperStyle={{ fontSize: '11px', color: '#8a847b' }} />
+                          <Tooltip contentStyle={{ backgroundColor: 'var(--sd-overlay)', border: '1px solid var(--sd-line)', borderRadius: '6px', color: 'var(--sd-fg)', fontSize: '12px' }} />
+                          <Legend wrapperStyle={{ fontSize: '11px', color: 'var(--sd-fg-subtle)' }} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>

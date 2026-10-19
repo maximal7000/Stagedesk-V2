@@ -17,10 +17,10 @@ import apiClient from '../../lib/api';
 import { PageHeader, StatTile } from '../../components/ui';
 
 const STATUS_COLORS = {
-  verfuegbar: '#22C55E',
-  ausgeliehen: '#3B82F6',
-  reserviert: '#EAB308',
-  defekt: '#EF4444',
+  verfuegbar: 'var(--sd-ok)',
+  ausgeliehen: 'var(--sd-info)',
+  reserviert: 'var(--sd-warn)',
+  defekt: 'var(--sd-bad)',
 };
 
 const STATUS_LABELS = {
@@ -85,7 +85,7 @@ export default function AusleiheDashboardPage() {
   const statusDaten = Object.entries(statusRaw).map(([status, anzahl]) => ({
     name: STATUS_LABELS[status] || status,
     value: anzahl,
-    color: STATUS_COLORS[status] || '#6B7280',
+    color: STATUS_COLORS[status] || 'var(--sd-fg-subtle)',
   }));
 
   const topItems = erweitert?.top_items ?? [];
@@ -119,33 +119,33 @@ export default function AusleiheDashboardPage() {
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={monatsDaten}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#24221f" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--sd-line-subtle)" />
                   <XAxis
                     dataKey="name"
-                    tick={{ fill: '#8a847b', fontSize: 12 }}
-                    axisLine={{ stroke: '#24221f' }}
-                    tickLine={{ stroke: '#24221f' }}
+                    tick={{ fill: 'var(--sd-fg-subtle)', fontSize: 12 }}
+                    axisLine={{ stroke: 'var(--sd-line-subtle)' }}
+                    tickLine={{ stroke: 'var(--sd-line-subtle)' }}
                   />
                   <YAxis
-                    tick={{ fill: '#8a847b', fontSize: 12 }}
-                    axisLine={{ stroke: '#24221f' }}
-                    tickLine={{ stroke: '#24221f' }}
+                    tick={{ fill: 'var(--sd-fg-subtle)', fontSize: 12 }}
+                    axisLine={{ stroke: 'var(--sd-line-subtle)' }}
+                    tickLine={{ stroke: 'var(--sd-line-subtle)' }}
                     allowDecimals={false}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#211f1c',
-                      border: '1px solid #35322e',
+                      backgroundColor: 'var(--sd-overlay)',
+                      border: '1px solid var(--sd-line)',
                       borderRadius: '8px',
-                      color: '#f2efe9',
+                      color: 'var(--sd-fg)',
                     }}
-                    labelStyle={{ color: '#8a847b' }}
+                    labelStyle={{ color: 'var(--sd-fg-subtle)' }}
                   />
                   <Bar
                     dataKey="anzahl"
-                    fill="#da1f3d"
+                    fill="var(--color-accent)"
                     radius={[4, 4, 0, 0]}
-                    stroke="#24221f"
+                    stroke="var(--sd-line-subtle)"
                     name="Ausleihen"
                   />
                 </BarChart>
@@ -175,7 +175,7 @@ export default function AusleiheDashboardPage() {
                     innerRadius={50}
                     outerRadius={90}
                     dataKey="value"
-                    stroke="#24221f"
+                    stroke="var(--sd-line-subtle)"
                     strokeWidth={2}
                     label={({ name, value }) => `${name}: ${value}`}
                   >
@@ -185,14 +185,14 @@ export default function AusleiheDashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#211f1c',
-                      border: '1px solid #35322e',
+                      backgroundColor: 'var(--sd-overlay)',
+                      border: '1px solid var(--sd-line)',
                       borderRadius: '8px',
-                      color: '#f2efe9',
+                      color: 'var(--sd-fg)',
                     }}
                   />
                   <Legend
-                    wrapperStyle={{ color: '#8a847b', fontSize: '13px' }}
+                    wrapperStyle={{ color: 'var(--sd-fg-subtle)', fontSize: '13px' }}
                   />
                 </PieChart>
               </ResponsiveContainer>
