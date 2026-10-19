@@ -7,23 +7,21 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import {
   Award, Trophy, ChevronDown, ChevronRight, CheckCircle2,
   AlertTriangle, Circle, Users, Settings, Download, BarChart3,
-  Medal, Clock, TrendingUp, Search, Loader2, ArrowLeft, Shield, MapPin,
+  Medal, Clock, TrendingUp, Search, Loader2, ArrowLeft, MapPin, Infinity,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import { useUser } from '../../contexts/UserContext';
-import { Button, EmptyState } from '../../components/ui';
+import { Button, EmptyState, PageHeader, StatTile, StatusBadge as UiBadge } from '../../components/ui';
 import KompetenzAdminTab from './KompetenzAdminTab';
 import SkillGapTab from './SkillGapTab';
 import KompetenzHistorieGraph from './KompetenzHistorieGraph';
 
 // ─── Utilities ────────────────────────────────────────────────────
 
-const KATEGORIE_FARBEN = {
-  gray: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
-  yellow: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-  blue: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
-  purple: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
-  green: 'text-green-400 bg-green-500/10 border-green-500/30',
+// Farbstrich links am Kategorie-Kopf (Kategorie-Farbe aus dem Katalog)
+const KATEGORIE_STRICH = {
+  gray: 'bg-gray-500', yellow: 'bg-amber-500', blue: 'bg-blue-500',
+  purple: 'bg-purple-500', green: 'bg-green-500',
 };
 
 function ukStatus(uk) {
@@ -41,8 +39,8 @@ function StatusBadge({ uk }) {
   const s = ukStatus(uk);
   const cfg = {
     aktiv: { icon: CheckCircle2, cls: 'text-green-400', label: 'Aktiv' },
-    unbegrenzt: { icon: CheckCircle2, cls: 'text-green-400', label: 'Aktiv · ∞ unbegrenzt' },
-    warnung: { icon: Clock, cls: 'text-yellow-400', label: `Läuft in ${uk.tage_bis_ablauf}d ab` },
+    unbegrenzt: { icon: CheckCircle2, cls: 'text-green-400', label: 'Aktiv · läuft nicht ab' },
+    warnung: { icon: Clock, cls: 'text-amber-400', label: `Läuft in ${uk.tage_bis_ablauf} Tagen ab` },
     abgelaufen: { icon: AlertTriangle, cls: 'text-red-400', label: 'Abgelaufen' },
     fehlt: { icon: Circle, cls: 'text-gray-500', label: 'Nicht vorhanden' },
   }[s];
@@ -59,11 +57,11 @@ function ProgressBar({ percent, color = 'blue' }) {
   const colors = {
     blue: 'bg-blue-500',
     green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
+    yellow: 'bg-amber-500',
     purple: 'bg-purple-500',
   };
   return (
-    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
       <div className={`h-full ${colors[color] || colors.blue} transition-all`}
            style={{ width: `${Math.min(100, percent)}%` }} />
     </div>
@@ -112,21 +110,23 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
         const stats = katStats[kat];
         const isOpen = open[kat] !== false;
         return (
-          <div key={kat} className={`bg-gray-900 border rounded-lg overflow-hidden ${KATEGORIE_FARBEN[farbe] || KATEGORIE_FARBEN.blue}`}>
+          <div key={kat} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <button
               onClick={() => toggle(kat)}
               aria-expanded={isOpen}
               className="w-full flex items-center justify-between p-4 hover:bg-gray-800/40 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset"
             >
               <div className="flex items-center gap-3 min-w-0">
-                {isOpen ? <ChevronDown className="w-5 h-5 shrink-0" /> : <ChevronRight className="w-5 h-5 shrink-0" />}
+                <span className={`w-1 self-stretch rounded-full ${KATEGORIE_STRICH[farbe] || KATEGORIE_STRICH.blue}`} aria-hidden="true" />
+                {isOpen ? <ChevronDown className="w-4 h-4 shrink-0 text-gray-500" /> : <ChevronRight className="w-4 h-4 shrink-0 text-gray-500" />}
                 <div className="text-left min-w-0">
-                  <div className="font-semibold text-white truncate">{kat}</div>
-                  <div className="text-xs text-gray-400 tabular-nums">{stats.aktiv} / {stats.gesamt} aktiv ({stats.prozent.toFixed(0)}%)</div>
+                  <div className="font-display text-lg font-semibold tracking-tight text-white truncate leading-tight">{kat}</div>
+                  <div className="text-xs text-gray-400 tabular-nums">{stats.aktiv} von {stats.gesamt} aktiv</div>
                 </div>
               </div>
-              <div className="w-28 hidden sm:block shrink-0">
-                <ProgressBar percent={stats.prozent} color={farbe} />
+              <div className="hidden sm:flex items-center gap-3 shrink-0">
+                <span className="text-sm font-semibold tabular-nums text-gray-300 w-10 text-right">{stats.prozent.toFixed(0)}%</span>
+                <div className="w-28"><ProgressBar percent={stats.prozent} color={farbe} /></div>
               </div>
             </button>
             {isOpen && (
@@ -134,7 +134,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                 {Object.entries(gruppen).map(([gruppe, items]) => (
                   <div key={gruppe}>
                     {gruppe !== '_' && (
-                      <div className="text-xs font-semibold text-gray-300 uppercase tracking-wide mt-3 mb-2 pl-2">
+                      <div className="text-[11px] font-semibold text-gray-500 uppercase tracking-[0.12em] mt-3 mb-1.5 pl-2.5">
                         {gruppe}
                       </div>
                     )}
@@ -143,7 +143,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                         const hatCustomStufen = uk.custom_ablauf_stufen && uk.custom_ablauf_stufen.length > 0;
                         return (
                           <div key={uk.kompetenz_id}
-                               className="rounded-lg bg-gray-800/40 hover:bg-gray-800/80 transition-colors">
+                               className="rounded-lg hover:bg-gray-800/60 transition-colors">
                             <div className="flex items-center justify-between gap-3 p-2.5">
                               <div className="flex items-center gap-3 min-w-0 flex-1">
                                 {showToggle ? (
@@ -165,9 +165,8 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                   <div className="flex items-center gap-2">
                                     <div className="text-sm text-white truncate">{uk.kompetenz_name}</div>
                                     {hatCustomStufen && (
-                                      <span title="Individuelle Ablauf-Stufen aktiv"
-                                            className="inline-flex items-center px-1.5 py-0 bg-yellow-500/10 text-yellow-400 rounded text-[10px] font-medium shrink-0">
-                                        Individuell
+                                      <span title="Individuelle Ablauf-Stufen aktiv" className="shrink-0">
+                                        <UiBadge tone="warning" label="Individuell" />
                                       </span>
                                     )}
                                   </div>
@@ -181,7 +180,7 @@ function KompetenzAccordion({ kompetenzen, kategorien, isAdmin, onToggle, onSave
                                     title="Individuelle Ablauf-Stufen"
                                     aria-label="Individuelle Ablauf-Stufen bearbeiten"
                                     className={`p-1.5 rounded-lg hover:bg-gray-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-                                      hatCustomStufen ? 'text-yellow-400' : 'text-gray-500 hover:text-white'
+                                      hatCustomStufen ? 'text-amber-400' : 'text-gray-500 hover:text-white'
                                     }`}>
                                     <Clock className="w-3.5 h-3.5" />
                                   </button>
@@ -235,24 +234,24 @@ function StufenEditor({ uk, onSave, onClose }) {
     <div className="px-3 pb-3 pt-2 border-t border-gray-700/40 text-xs">
       <div className="text-gray-400 mb-2">
         Effektiv: <span className="text-gray-300 tabular-nums">
-          {effektiv.length && effektiv.every(n => n === 0) ? '∞ unbegrenzt' : (effektiv.join(', ') || 'Keine Angabe')}
+          {effektiv.length && effektiv.every(n => n === 0) ? 'läuft nicht ab' : (effektiv.length ? `${effektiv.join(', ')} Tage` : 'Keine Angabe')}
         </span>
-        {hatCustom && <span className="ml-2 text-yellow-400">(individuell)</span>}
+        {hatCustom && <span className="ml-2 text-amber-400">(individuell)</span>}
       </div>
       <div className="flex flex-wrap gap-2 items-center">
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="z.B. 30, 60, 90, 180 (0 = unbegrenzt)"
+          placeholder="Tage, z.B. 30, 60, 90, 180 (0 = läuft nicht ab)"
           className="flex-1 min-w-[12rem] bg-gray-900 border border-gray-700 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
         <Button type="button" variant="primary" size="sm" disabled={saving} onClick={() => save(parse())}>
           Speichern
         </Button>
         <button type="button" disabled={saving || istUnbegrenzt} onClick={() => save([0])}
-                title="Nie ablaufend"
-                className="inline-flex items-center px-2.5 py-1.5 bg-green-700 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950">
-          ∞ Unbegrenzt
+                title="Läuft nie ab"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30 rounded-lg hover:bg-emerald-500/25 disabled:opacity-50 disabled:pointer-events-none text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <Infinity className="w-3.5 h-3.5" /> Unbegrenzt
         </button>
         {hatCustom && (
           <Button type="button" variant="secondary" size="sm" disabled={saving} onClick={() => save([])}
@@ -265,7 +264,7 @@ function StufenEditor({ uk, onSave, onClose }) {
         </Button>
       </div>
       <p className="text-gray-500 mt-2">
-        Leer lassen für den Standard aus Kompetenz oder globaler Einstellung. <code>0</code> oder <code>∞ Unbegrenzt</code> heißt: läuft nie ab. Nach dem Speichern wird bei aktiver Kompetenz das nächste Ablaufdatum neu berechnet.
+        Leer lassen für den Standard aus Kompetenz oder globaler Einstellung. <code>0</code> oder „Unbegrenzt" heißt: läuft nie ab. Nach dem Speichern wird bei aktiver Kompetenz das nächste Ablaufdatum neu berechnet.
       </p>
     </div>
   );
@@ -275,37 +274,41 @@ function StufenEditor({ uk, onSave, onClose }) {
 
 function Scoreboard({ data, currentKid }) {
   if (!data.length) {
-    return <div className="text-gray-500 text-center py-14">Noch keine Einträge im Scoreboard.</div>;
+    return (
+      <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <EmptyState icon={Trophy} title="Noch keine Punkte vergeben"
+          description="Sobald Kompetenzen bestätigt werden, erscheint hier die Rangliste." />
+      </div>
+    );
   }
   return (
-    <div className="space-y-2">
+    <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
       {data.map((entry) => {
         const isMe = entry.user_keycloak_id === currentKid;
         let medal = null;
-        if (entry.rang === 1) medal = <Medal className="w-5 h-5 text-yellow-400" />;
+        if (entry.rang === 1) medal = <Medal className="w-5 h-5 text-amber-400" />;
         else if (entry.rang === 2) medal = <Medal className="w-5 h-5 text-gray-300" />;
         else if (entry.rang === 3) medal = <Medal className="w-5 h-5 text-orange-400" />;
         return (
           <div key={entry.user_keycloak_id}
-               className={`flex items-center gap-4 p-4 rounded-lg border ${
-                 isMe ? 'bg-accent/10 border-accent/40' : 'bg-gray-900 border-gray-800'
-               }`}>
-            <div className="w-10 text-center font-bold text-lg text-gray-400 tabular-nums">
-              {medal || `#${entry.rang}`}
+               className={`relative flex items-center gap-4 px-4 py-3 ${isMe ? 'bg-accent/[0.06]' : ''}`}>
+            {isMe && <span className="absolute left-0 inset-y-0 w-0.5 bg-accent" aria-hidden="true" />}
+            <div className="w-8 flex justify-center font-display font-semibold text-lg text-gray-500 tabular-nums">
+              {medal || entry.rang}
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-white truncate">
                 {(entry.user_first_name || entry.user_last_name)
                   ? [entry.user_first_name, entry.user_last_name].filter(Boolean).join(' ')
-                  : entry.user_username} {isMe && <span className="text-xs text-accent">(Du)</span>}
+                  : entry.user_username} {isMe && <span className="ml-1 text-xs font-medium text-accent">Du</span>}
               </div>
               <div className="text-xs text-gray-500 tabular-nums">
                 {entry.anzahl_aktiv} / {entry.anzahl_gesamt} Kompetenzen aktiv
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-bold text-white tabular-nums leading-none">{entry.punkte}</div>
-              <div className="text-xs text-gray-500 mt-1">Punkte</div>
+              <div className="text-xl font-bold text-white tabular-nums leading-none">{entry.punkte}</div>
+              <div className="text-[11px] text-gray-500 mt-1">Punkte</div>
             </div>
           </div>
         );
@@ -316,20 +319,6 @@ function Scoreboard({ data, currentKid }) {
 
 // ─── Stats-Cards ────────────────────────────────────────────────
 
-function StatCard({ icon: Icon, label, value, valueCls }) {
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-1.5 text-gray-400 mb-1.5">
-        <Icon className="w-3.5 h-3.5 shrink-0" />
-        <span className="text-xs font-medium truncate">{label}</span>
-      </div>
-      <div className={`text-2xl font-bold tabular-nums leading-none tracking-tight ${valueCls || 'text-white'}`}>
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function StatsCards({ stats }) {
   if (!stats) return null;
   const fortschritt = stats.kategorien?.length
@@ -337,11 +326,11 @@ function StatsCards({ stats }) {
     : 0;
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-      <StatCard icon={CheckCircle2} label="Aktive Kompetenzen"
-                value={`${stats.anzahl_aktiv} / ${stats.anzahl_gesamt}`} />
-      <StatCard icon={Trophy} label="Punkte" value={stats.punkte} valueCls="text-accent" />
-      <StatCard icon={Award} label="Badges" value={stats.badges?.length || 0} valueCls="text-yellow-400" />
-      <StatCard icon={TrendingUp} label="Ø Fortschritt" value={`${fortschritt.toFixed(0)}%`} valueCls="text-green-400" />
+      <StatTile icon={CheckCircle2} label="Aktive Kompetenzen"
+                value={<>{stats.anzahl_aktiv}<span className="text-base font-semibold text-gray-500"> / {stats.anzahl_gesamt}</span></>} />
+      <StatTile icon={Trophy} label="Punkte" value={stats.punkte} />
+      <StatTile icon={Award} label="Badges" value={stats.badges?.length || 0} />
+      <StatTile icon={TrendingUp} label="Ø Fortschritt" value={`${fortschritt.toFixed(0)}%`} tone={fortschritt >= 75 ? 'positive' : 'default'} />
     </div>
   );
 }
@@ -351,11 +340,11 @@ function BadgeList({ badges }) {
   return (
     <div className="mb-6">
       <div className="text-sm font-semibold text-gray-300 mb-2.5 flex items-center gap-2">
-        <Award className="w-4 h-4 text-yellow-400" /> Erreichte Badges
+        <Award className="w-4 h-4 text-amber-400" /> Erreichte Badges
       </div>
       <div className="flex flex-wrap gap-2">
         {badges.map(b => (
-          <span key={b} className="inline-flex items-center gap-1.5 bg-yellow-500/10 border border-yellow-500/30 text-yellow-300 px-3 py-1 rounded-full text-sm">
+          <span key={b} className="inline-flex items-center gap-1.5 bg-amber-500/10 ring-1 ring-inset ring-amber-500/25 text-amber-200 px-2.5 py-1 rounded-md text-sm">
             <Award className="w-3.5 h-3.5" /> {b}
           </span>
         ))}
@@ -392,6 +381,12 @@ export default function KompetenzenPage() {
 
   // Admin ohne userId braucht seine persönliche Liste nicht zu laden
   const skipOwnList = kann_view_all_initial && !viewingOther;
+
+  // Anzeigename des betrachteten Mitglieds (aus dem Scoreboard, falls vorhanden)
+  const viewedEntry = viewingOther ? scoreboard.find(e => e.user_keycloak_id === userId) : null;
+  const viewedName = viewedEntry
+    ? ([viewedEntry.user_first_name, viewedEntry.user_last_name].filter(Boolean).join(' ') || viewedEntry.user_username)
+    : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -506,10 +501,16 @@ export default function KompetenzenPage() {
   return (
     <div className="max-w-6xl mx-auto">
       {viewingOther && (
-        <Button as={Link} to="/kompetenzen" variant="ghost" size="sm" icon={ArrowLeft} className="mb-4 !px-0">
-          {kann_view_all_initial ? 'Zurück zur User-Liste' : 'Zurück zu meinen Kompetenzen'}
+        <Button as={Link} to="/kompetenzen" variant="ghost" size="sm" icon={ArrowLeft} className="mb-3 -ml-2.5">
+          {kann_view_all_initial ? 'Alle Mitglieder' : 'Meine Kompetenzen'}
         </Button>
       )}
+
+      <PageHeader
+        eyebrow="Kompetenzen"
+        title={viewingOther ? (viewedName || 'Mitglied') : (skipOwnList ? 'Team-Übersicht' : 'Meine Kompetenzen')}
+        meta={stats ? <span className="tabular-nums">{stats.anzahl_aktiv} von {stats.anzahl_gesamt} aktiv · {stats.punkte} Punkte</span> : undefined}
+      />
 
       {/* Tabs */}
       <div className="flex items-center gap-1 mb-6 border-b border-gray-800 overflow-x-auto">
@@ -529,7 +530,7 @@ export default function KompetenzenPage() {
         )}
         {kann_view_all && (
           <TabButton active={activeTab === 'users'} onClick={() => setActiveTab('users')} icon={Users}>
-            User
+            Mitglieder
           </TabButton>
         )}
         {kann_view_all && (
@@ -650,14 +651,14 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
 
   return (
     <div>
-      <div className="flex gap-2 mb-4">
-        <div className="relative flex-1">
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Nach Name oder E-Mail suchen"
+            placeholder="Name oder E-Mail"
             className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-800 rounded-lg text-white placeholder-gray-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           />
         </div>
@@ -670,10 +671,12 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
         )}
       </div>
       {filtered.length === 0 ? (
-        <EmptyState icon={Search} title="Keine User gefunden"
-          description="Andere Suche oder Bereich probieren." />
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <EmptyState icon={Search} title="Niemand gefunden"
+            description="Prüfe die Schreibweise oder wähle einen anderen Bereich." />
+        </div>
       ) : (
-        <div className="space-y-2">
+        <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
           {filtered.map(u => {
             const s = scoreByKid[u.keycloak_id];
             const istAdmin = u.is_admin || (u.keycloak_roles || []).includes('admin');
@@ -682,35 +685,33 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                 key={u.keycloak_id || u.id}
                 onClick={() => onSelectUser(u.keycloak_id)}
                 disabled={!u.keycloak_id}
-                className="w-full flex items-center gap-3 p-3 bg-gray-900 border border-gray-800 rounded-lg hover:bg-gray-800 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="group w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-800/50 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
               >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold shrink-0 ${
-                  istAdmin ? 'bg-purple-600' : 'bg-accent'
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center font-semibold text-sm shrink-0 ${
+                  istAdmin ? 'bg-gray-700 text-gray-200' : 'bg-accent/15 text-accent ring-1 ring-inset ring-accent/30'
                 }`}>
                   {(u.first_name || u.username)?.[0]?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-medium truncate">
+                    <span className="text-white font-medium truncate group-hover:text-accent transition-colors">
                       {u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : (u.username || 'Unbekannter Nutzer')}
                     </span>
                     {istAdmin && (
-                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded text-[10px]">
-                        <Shield className="w-3 h-3" /> Admin
-                      </span>
+                      <UiBadge tone="neutral" label="Admin" />
                     )}
                   </div>
                   {(u.bereiche?.length > 0 || u.permission_groups?.length > 0) && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
                       {u.bereiche?.map(b => (
                         <span key={`b${b.id}`}
-                              className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 text-blue-300 rounded-full text-[10px]">
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-sky-500/10 ring-1 ring-inset ring-sky-500/25 text-sky-300 rounded-md text-[10px] font-medium">
                           <MapPin className="w-2.5 h-2.5" /> {b.name}
                         </span>
                       ))}
                       {u.permission_groups?.map(g => (
                         <span key={`g${g.id}`}
-                              className="inline-flex items-center px-2 py-0.5 bg-gray-800 border border-gray-700 text-gray-400 rounded-full text-[10px]">
+                              className="inline-flex items-center px-1.5 py-0.5 bg-gray-800 ring-1 ring-inset ring-gray-700 text-gray-400 rounded-md text-[10px] font-medium">
                           {g.name}
                         </span>
                       ))}
@@ -723,7 +724,7 @@ function UsersList({ onSelectUser, scoreboard = [] }) {
                     <div className="text-[10px] text-gray-500 tabular-nums mt-1">{s.anzahl_aktiv}/{s.anzahl_gesamt} aktiv</div>
                   </div>
                 ) : (
-                  <div className="text-[10px] text-gray-600 shrink-0">Keine Daten</div>
+                  <div className="text-xs text-gray-600 shrink-0">–</div>
                 )}
               </button>
             );

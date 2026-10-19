@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, X, Save, Loader2, Clock, Zap } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Save, Loader2, Clock, Zap, Infinity } from 'lucide-react';
 import apiClient from '../../lib/api';
 import { Button } from '../../components/ui';
 
@@ -87,13 +87,16 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
       {/* Kategorien */}
       <Section
         title="Kategorien"
+        count={kategorien.length}
+        addLabel="Kategorie"
         onAdd={() => setEditing({ type: 'kategorie', data: { name: '', icon: '', farbe: 'blue', sortierung: 0 } })}
       >
-        <div className="grid gap-2">
+        <div className="grid gap-0.5">
           {kategorien.map(k => (
             <Row key={k.id}
                  title={k.name}
-                 subtitle={k.farbe || 'Keine Farbe'}
+                 subtitle={FARBE_LABEL[k.farbe] || k.farbe || 'Keine Farbe'}
+                 swatch={FARBE_SWATCH[k.farbe]}
                  onEdit={() => setEditing({ type: 'kategorie', data: { ...k } })}
                  onDelete={() => deleteItem('kategorien', k.id)}
             />
@@ -104,9 +107,11 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
       {/* Gruppen */}
       <Section
         title="Gruppen"
+        count={gruppen.length}
+        addLabel="Gruppe"
         onAdd={() => setEditing({ type: 'gruppe', data: { name: '', kategorie_id: kategorien[0]?.id, sortierung: 0 } })}
       >
-        <div className="grid gap-2">
+        <div className="grid gap-0.5">
           {gruppen.map(g => {
             const kat = kategorien.find(k => k.id === g.kategorie_id);
             return (
@@ -123,7 +128,9 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
 
       {/* Kompetenzen */}
       <Section
-        title={`Kompetenzen (${gefiltert.length})`}
+        title="Kompetenzen"
+        count={gefiltert.length}
+        addLabel="Kompetenz"
         onAdd={() => setEditing({
           type: 'kompetenz',
           data: { name: '', kategorie_id: kategorien[0]?.id, gruppe_id: null, punkte: 1,
@@ -137,7 +144,7 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
           </select>
         }
       >
-        <div className="grid gap-1">
+        <div className="grid gap-0.5">
           {gefiltert.map(k => (
             <Row key={k.id}
                  title={k.name}
@@ -163,25 +170,33 @@ export default function KompetenzAdminTab({ kategorien, onReload }) {
   );
 }
 
-function Section({ title, onAdd, children, extra }) {
+// Kategorie-Farben (Katalogdaten) als kleine Farbmarke
+const FARBE_SWATCH = {
+  blue: 'bg-blue-500', yellow: 'bg-amber-500', purple: 'bg-purple-500', gray: 'bg-gray-500', green: 'bg-green-500',
+};
+const FARBE_LABEL = { blue: 'Blau', yellow: 'Gelb', purple: 'Lila', gray: 'Grau', green: 'Grün' };
+
+function Section({ title, count, onAdd, addLabel = 'Neu', children, extra }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-      <div className="flex items-center gap-3 mb-3.5">
-        <h3 className="font-semibold text-white">{title}</h3>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div className="flex items-center gap-3 mb-3.5 flex-wrap">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-none">{title}</h3>
+        {count !== undefined && <span className="text-sm tabular-nums text-gray-500">{count}</span>}
         <div className="flex-1" />
         {extra}
-        <Button variant="primary" size="sm" icon={Plus} onClick={onAdd}>Neu</Button>
+        <Button variant="secondary" size="sm" icon={Plus} onClick={onAdd}>{addLabel}</Button>
       </div>
       {children}
     </div>
   );
 }
 
-function Row({ title, subtitle, onEdit, onDelete, dim }) {
+function Row({ title, subtitle, swatch, onEdit, onDelete, dim }) {
   return (
-    <div className={`flex items-center gap-3 p-2.5 bg-gray-800/60 rounded-lg ${dim ? 'opacity-50' : ''}`}>
+    <div className={`group flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-gray-800/60 transition-colors ${dim ? 'opacity-50' : ''}`}>
+      {swatch && <span className={`w-2.5 h-2.5 rounded-sm shrink-0 ${swatch}`} aria-hidden="true" />}
       <div className="flex-1 min-w-0">
-        <div className="text-sm text-white truncate">{title}</div>
+        <div className="text-sm text-white truncate">{title}{dim && <span className="ml-2 text-xs text-gray-500">inaktiv</span>}</div>
         <div className="text-xs text-gray-500 truncate tabular-nums">{subtitle}</div>
       </div>
       <Button variant="ghost" size="sm" icon={Pencil} onClick={onEdit} title="Bearbeiten" aria-label={`${title} bearbeiten`} />
@@ -196,11 +211,11 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
   const filteredGruppen = gruppen.filter(g => g.kategorie_id === data.kategorie_id);
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-      <div role="dialog" aria-modal="true" className="bg-gray-900 border border-gray-800 rounded-lg max-w-lg w-full p-6">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div role="dialog" aria-modal="true" className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-lg w-full p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">
-            {data.id ? 'Bearbeiten' : 'Neu'}: {TYPE_LABELS[type] || type}
+          <h3 className="font-display text-xl font-semibold tracking-tight text-white">
+            {TYPE_LABELS[type] || type} {data.id ? 'bearbeiten' : 'anlegen'}
           </h3>
           <Button variant="ghost" size="sm" icon={X} onClick={() => setEditing(null)}
                   title="Schließen" aria-label="Schließen" />
@@ -255,7 +270,7 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
                        onChange={(e) => updateField('punkte', Number(e.target.value))}
                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent" />
               </Field>
-              <Field label="Ablauf-Stufen in Tagen (leer = globaler Standard, 0 = unbegrenzt)">
+              <Field label="Ablaufstufen in Tagen (leer = Standard, 0 = läuft nicht ab)">
                 <div className="flex gap-2">
                   <input
                     value={(data.ablauf_stufen || []).join(', ')}
@@ -265,9 +280,9 @@ function EditModal({ editing, setEditing, kategorien, gruppen, onSave }) {
                     className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   />
                   <button type="button" onClick={() => updateField('ablauf_stufen', [0])}
-                          className="px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                          title="Nie ablaufend">
-                    ∞ Unbegrenzt
+                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30 rounded-lg hover:bg-emerald-500/25 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          title="Läuft nie ab">
+                    <Infinity className="w-4 h-4" /> Unbegrenzt
                   </button>
                 </div>
                 {(data.ablauf_stufen || []).length > 0 && (data.ablauf_stufen || []).every(n => n === 0) && (
@@ -359,23 +374,23 @@ function StandardStufenSection({ settings, onSaved }) {
     }
   };
 
-  const fmt = (arr) => (arr?.length && arr.every(n => n === 0)) ? '∞ unbegrenzt' : (arr?.join(', ') || '');
+  const fmt = (arr) => (arr?.length && arr.every(n => n === 0)) ? 'läuft nicht ab' : (arr?.join(', ') || '');
   const systemDefault = fmt(settings?.system_default);
   const effektiv = fmt(settings?.effektiv);
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-blue-400" />
-        <h3 className="font-semibold text-white">Standard Ablauf-Stufen</h3>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div className="flex items-center gap-2 mb-1.5">
+        <Clock className="w-4 h-4 text-gray-400" />
+        <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Standard-Ablaufstufen</h3>
       </div>
-      <p className="text-xs text-gray-500 mb-3">
-        Globaler Default für Kompetenzen ohne eigene Stufen. System-Fallback: <span className="text-gray-400 tabular-nums">{systemDefault}</span>.
-        Aktuell effektiv: <span className="text-gray-300 tabular-nums">{effektiv}</span>.
+      <p className="text-sm text-gray-400 mb-4">
+        Gilt für Kompetenzen ohne eigene Stufen. Aktuell: <span className="text-white font-medium tabular-nums">{effektiv || '–'}</span>
+        <span className="text-gray-500"> · System-Standard {systemDefault}</span>
       </p>
-      <div className="flex gap-2 items-end">
-        <div className="flex-1">
-          <label className="block text-xs text-gray-400 mb-1">Tage (kommagetrennt, leer = System-Default, 0 = unbegrenzt)</label>
+      <div className="flex gap-2 items-end flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <label className="block text-xs text-gray-400 mb-1">Tage, kommagetrennt (leer = System-Standard, 0 = läuft nicht ab)</label>
           <input
             value={stufen}
             onChange={(e) => setStufen(e.target.value)}
@@ -384,9 +399,9 @@ function StandardStufenSection({ settings, onSaved }) {
           />
         </div>
         <button onClick={() => setStufen('0')} type="button"
-                className="px-3 py-2 bg-green-700 text-white rounded-lg hover:bg-green-600 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950"
-                title="Nie ablaufend">
-          ∞
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-300 ring-1 ring-inset ring-emerald-500/30 rounded-lg hover:bg-emerald-500/25 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title="Läuft nie ab" aria-label="Unbegrenzt setzen">
+          <Infinity className="w-4 h-4" />
         </button>
         <Button variant="primary" icon={Save} disabled={saving} onClick={saveDefault}>Speichern</Button>
       </div>
@@ -395,7 +410,7 @@ function StandardStufenSection({ settings, onSaved }) {
           Auf Kompetenzen ohne eigene Stufen anwenden
         </Button>
         <Button variant="danger" size="sm" icon={Zap} disabled={saving} onClick={() => applyToAll(true)}>
-          Auf alle anwenden (überschreibt)
+          Auf alle anwenden und überschreiben
         </Button>
       </div>
     </div>

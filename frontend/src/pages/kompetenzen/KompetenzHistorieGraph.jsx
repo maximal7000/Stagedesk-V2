@@ -3,8 +3,13 @@
  */
 import { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, TrendingUp, History } from 'lucide-react';
+import { EmptyState, StatusBadge } from '../../components/ui';
 import apiClient from '../../lib/api';
+
+const AKTION_TONE = {
+  erworben: 'positive', bestaetigt: 'info', entzogen: 'danger', abgelaufen: 'warning',
+};
 
 const AKTION_LABELS = {
   erworben: 'Erworben',
@@ -60,42 +65,41 @@ export default function KompetenzHistorieGraph({ userId }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-        <h3 className="font-semibold text-white mb-4">Kompetenz-Entwicklung</h3>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-white mb-4">Aktive Kompetenzen im Verlauf</h3>
         {chartData.length === 0 ? (
-          <div className="text-gray-500 text-center py-14">Noch keine Historie erfasst.</div>
+          <EmptyState icon={TrendingUp} title="Noch kein Verlauf"
+            description="Sobald Kompetenzen bestätigt oder entzogen werden, entsteht hier die Kurve." />
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-              <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-              <YAxis stroke="#9ca3af" fontSize={12} />
+              <CartesianGrid stroke="#1f2937" vertical={false} />
+              <XAxis dataKey="date" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={{ stroke: '#374151' }}
+                tickFormatter={(d) => new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })} />
+              <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} width={32} />
               <Tooltip
-                contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: 6 }}
+                contentStyle={{ background: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 12 }}
                 labelStyle={{ color: '#f3f4f6' }}
+                labelFormatter={(d) => new Date(d).toLocaleDateString('de-DE')}
               />
-              <Legend />
-              <Line type="monotone" dataKey="gesamt" name="Aktive Kompetenzen" stroke="#3b82f6" strokeWidth={2} />
+              <Legend wrapperStyle={{ fontSize: 12, color: '#9ca3af' }} />
+              <Line type="stepAfter" dataKey="gesamt" name="Aktive Kompetenzen" stroke="#da1f3d" strokeWidth={2}
+                dot={{ r: 2.5, fill: '#da1f3d', strokeWidth: 0 }} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         )}
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-lg p-4">
-        <h3 className="font-semibold text-white mb-3">Letzte Aktivitäten</h3>
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-white mb-3">Letzte Änderungen</h3>
         {historie.length === 0 ? (
-          <div className="text-gray-500 text-sm text-center py-8">Noch keine Aktivitäten erfasst.</div>
+          <EmptyState icon={History} title="Noch keine Änderungen" />
         ) : (
-          <div className="space-y-1 max-h-96 overflow-auto">
+          <div className="max-h-96 overflow-auto divide-y divide-gray-800/70">
             {historie.slice(0, 50).map(h => (
-              <div key={h.id} className="flex items-center gap-3 py-2 border-b border-gray-800/50 text-sm">
-                <span className={`px-2 py-0.5 text-xs font-medium rounded shrink-0 ${
-                  h.aktion === 'erworben' ? 'bg-green-500/20 text-green-400' :
-                  h.aktion === 'bestaetigt' ? 'bg-blue-500/20 text-blue-400' :
-                  h.aktion === 'entzogen' ? 'bg-red-500/20 text-red-400' :
-                  'bg-yellow-500/20 text-yellow-400'
-                }`}>
-                  {AKTION_LABELS[h.aktion] || h.aktion}
+              <div key={h.id} className="flex items-center gap-3 py-2 text-sm">
+                <span className="w-24 shrink-0">
+                  <StatusBadge tone={AKTION_TONE[h.aktion] || 'neutral'} label={AKTION_LABELS[h.aktion] || h.aktion} />
                 </span>
                 <span className="text-white flex-1 truncate">{h.kompetenz_name}</span>
                 <span className="text-xs text-gray-500 tabular-nums shrink-0">
