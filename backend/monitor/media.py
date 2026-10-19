@@ -117,7 +117,7 @@ def render_file(media_file):
             message = 'Datei konnte nicht gelesen werden. Bitte eine gültige Datei hochladen.'
         # Alte Seiten bleiben; page_count gehört zu ihnen und wird nicht angetastet.
         MediaFile.objects.filter(pk=media_file.pk).update(status='failed', error=message)
-    push.notify_changed_on_commit()
+        push.notify_changed_on_commit()
 
 
 def _render_in_thread(media_file_id):

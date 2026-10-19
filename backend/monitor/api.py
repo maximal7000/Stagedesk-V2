@@ -585,7 +585,9 @@ def list_webuntis_links(request):
 @monitor_router.post("/webuntis-links", response=WebUntisLinkSchema, auth=keycloak_auth)
 def create_webuntis_link(request, payload: WebUntisLinkCreateSchema):
     _require_perm(request, 'monitor.setup')
-    return WebUntisLink.objects.create(**payload.dict())
+    link = WebUntisLink.objects.create(**payload.dict())
+    push.notify_changed_on_commit()
+    return link
 
 
 @monitor_router.put("/webuntis-links/{id}", response=WebUntisLinkSchema, auth=keycloak_auth)
@@ -595,6 +597,7 @@ def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
     for key, value in payload.dict().items():
         setattr(link, key, value)
     link.save()
+    push.notify_changed_on_commit()
     return link
 
 
@@ -602,6 +605,7 @@ def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
 def delete_webuntis_link(request, id: int):
     _require_perm(request, 'monitor.setup')
     get_object_or_404(WebUntisLink, id=id).delete()
+    push.notify_changed_on_commit()
     return {"success": True}
 
 

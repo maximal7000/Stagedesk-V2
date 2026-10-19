@@ -89,6 +89,23 @@ class RenderFileTest(MediaTestBase):
         self.assertEqual(f.status, 'failed')
         self.assertTrue(f.error)
 
+    def test_render_notifies_exactly_once_on_success(self):
+        f = self.make('pdf', make_pdf([(100, 100)]), 'pdf')
+        with mock.patch('monitor.push.notify_changed') as notify, \
+                self.captureOnCommitCallbacks(execute=True):
+            media.render_file(f)
+        self.assertEqual(notify.call_count, 1)
+
+    def test_render_notifies_exactly_once_on_failure(self):
+        f = self.make('pdf', b'kein pdf', 'pdf')
+        with mock.patch('monitor.push.notify_changed') as notify, \
+                self.assertLogs('monitor.media', 'WARNING'), \
+                self.captureOnCommitCallbacks(execute=True):
+            media.render_file(f)
+        f.refresh_from_db()
+        self.assertEqual(f.status, 'failed')
+        self.assertEqual(notify.call_count, 1)
+
     def test_failed_rerender_keeps_old_pages_and_files(self):
         f = self.make('pdf', make_pdf([(100, 100)] * 3), 'pdf')
         media.render_file(f)

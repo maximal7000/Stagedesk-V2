@@ -138,7 +138,9 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
 def check_webuntis(request):
     """Quelle neu erkennen (Spec §4.3). Nur Ja/Nein pro Weg und die Quelle, keine Daten."""
     _require_perm(request, 'monitor.setup')
-    return webuntis.check()
+    result = webuntis.check()
+    push.notify_changed_on_commit()
+    return result
 
 
 # ═══ Vorschau ═════════════════════════════════════════════════════
