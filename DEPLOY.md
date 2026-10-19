@@ -112,8 +112,21 @@ Nach dem ersten Deploy mit frischer DB:
 2. `/admin/monitor` → Profile neu anlegen.
 3. Bildschirme neu anlegen (Name + Slug).
 4. Power-Zeitplan / Ferienmodus / Ausnahmen setzen.
-5. Monitor-URL: `https://stagedesk.t410.de/monitor?bildschirm=<slug>`.
-6. Raspberry-Pi-Power-Script pollt `https://stagedesk.t410.de/api/monitor/bildschirm/power?slug=<slug>`.
+5. Monitor-URL: `https://stagedesk.t410.de/monitor?screen=<slug>` (alt: `?bildschirm=`, funktioniert weiter).
+6. Raspberry-Pi-Power-Script pollt `https://stagedesk.t410.de/api/monitor/screen/power?slug=<slug>`.
+
+---
+
+## Monitor Schritt 0 (englische Umbenennung)
+
+Migrationen: `monitor` 0035 bis 0038, `users` 0015. Alte Pi-Displays laden sich über den Übergangsschlüssel `neu_laden_zeit` innerhalb von ca. 2 Minuten selbst neu. `/bildschirm/power`, `/onair` und `/notfall` bleiben als Aliase bestehen.
+
+1. **Backup:** Backup-Tag setzen, Tarball und DB-Dump nach `~/stagedesk-backups/` (`pg_dump`, siehe oben).
+2. **`.env`:** In `/opt/stagedesk/backend/.env` die Variablen `NAHSH_HAFAS_AID` und `SWHL_STORYBLOK_TOKEN` eintragen (Werte nie committen).
+3. **Probelauf:** Produktions-Dump in eine Test-DB einspielen, `python manage.py migrate` ausführen, Stichprobe: eine Ansicht, ein Bildschirm, eine Klausur, eine Version.
+4. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`.
+5. **Prüfen:** `/api/monitor/display?screen=glocke` und `?screen=mensa` laden, ATEM On-Air einmal ein- und ausschalten.
+6. **Rollback (Reihenfolge):** `python manage.py migrate monitor 0034`, `python manage.py migrate users 0014`, danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
 
 ---
 
