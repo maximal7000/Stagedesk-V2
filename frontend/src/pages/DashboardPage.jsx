@@ -41,9 +41,9 @@ export default function DashboardPage() {
       />
 
       {widgets === null ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : widgets.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           <EmptyState icon={LayoutDashboard} title="Dein Dashboard ist leer"
             description="Füge Widgets hinzu, um hier Kennzahlen und Aktivitäten auf einen Blick zu sehen."
             action={<Button variant="primary" icon={Settings} onClick={() => setShowSettings(true)}>Widgets hinzufügen</Button>} />
