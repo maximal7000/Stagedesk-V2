@@ -7,8 +7,9 @@ Vorwärts:
 - `layout` -> `kind` (Tabelle §3.6), `style='auto'`, `on_air_behavior` aus den On-Air-Schaltern
 - `pdf_fullscreen`/`image_fullscreen`: `media_items` aus `active_pdf`/`active_image` (nur nicht gelöschte Dateien)
 - On-Air-Ansichten: Text, Uhr, Blinken -> MonitorSettings, danach Soft Delete
-- On-Air- und Notfall-Status der Ansichten -> MonitorSettings
-- Freitext -> aktive Ankündigung; Seitenrotation (ab 2 Seiten) -> neue Ansicht "<Name> (Wechsel)"
+- On-Air- und Notfall-Status der Ansichten -> MonitorSettings (pk=1, wie MonitorSettings.load())
+- Freitext -> aktive Ankündigung; Seitenrotation (ab 2 Seiten) -> neue Ansicht "<Name> (Wechsel)",
+  auf die Standard-, Override- und Zeitplan-Verweise der Bildschirme umgehängt werden
 - `Screen.holiday_mode` -> `power_mode='manual_off'`
 - Schnappschüsse (DisplayViewVersion.data) mit derselben Abbildung
 
@@ -80,11 +81,14 @@ def map_view_kind(old):
 
 
 def map_on_air_behavior(old):
-    """on_air_split hat Vorrang (so hat die alte Anzeige beide Schalter ausgewertet)."""
+    """on_air_split hat Vorrang, dann on_air_fullscreen. Sonst zeigte die alte Anzeige On-Air,
+    solange show_on_air an war (fehlt der Schlüssel, gilt der alte Standard True)."""
     if old.get('on_air_split'):
         return 'split'
     if old.get('on_air_fullscreen'):
         return 'fullscreen'
+    if old.get('show_on_air', True):
+        return 'split'
     return 'none'
 
 
@@ -122,7 +126,7 @@ def translate_snapshot_b(data, reverse=False, media_kinds=None):
             out['media_items'] = [file_id] if isinstance(file_id, int) else []
             if layout == 'pdf_fullscreen' and 'pdf_interval' in data:
                 out['media_seconds'] = data['pdf_interval']
-    if 'on_air_fullscreen' in data or 'on_air_split' in data:
+    if {'on_air_fullscreen', 'on_air_split', 'show_on_air'} & set(data):
         out['on_air_behavior'] = map_on_air_behavior(data)
     return out
 
@@ -144,15 +148,16 @@ def _snapshot_backward(data, media_kinds):
     if 'on_air_behavior' in data:
         out['on_air_fullscreen'] = data['on_air_behavior'] == 'fullscreen'
         out['on_air_split'] = data['on_air_behavior'] == 'split'
+        out['show_on_air'] = data['on_air_behavior'] != 'none'
     return out
 
 
 # ─── Datenmigration vorwärts ─────────────────────────────────────────
 
 def _load_settings(apps):
-    Settings = apps.get_model('monitor', 'MonitorSettings')
-    settings = Settings.objects.order_by('pk').first()
-    return settings or Settings.objects.create(pk=1)
+    """Wie MonitorSettings.load(): der Datensatz mit pk=1."""
+    settings, _ = apps.get_model('monitor', 'MonitorSettings').objects.get_or_create(pk=1)
+    return settings
 
 
 def _unique_slug(View, base):
@@ -229,6 +234,22 @@ def _soft_delete_on_air_views(View, Screen, views, now):
         Screen.objects.filter(default_view_id__in=on_air_ids).update(default_view_id=default.pk)
 
 
+def _repoint_screens(Screen, target):
+    """Standard-, Override- und Zeitplan-Verweise der Bildschirme umhängen ({alte_id: neue_id})."""
+    for old_id, new_id in target.items():
+        Screen.objects.filter(default_view_id=old_id).update(default_view_id=new_id)
+        Screen.objects.filter(override_view_id=old_id).update(override_view_id=new_id)
+    for screen in Screen.objects.all():
+        schedule = screen.schedule
+        if not isinstance(schedule, list):
+            continue
+        changed = [dict(e, view_id=target[e['view_id']])
+                   if isinstance(e, dict) and e.get('view_id') in target else e for e in schedule]
+        if changed != schedule:
+            screen.schedule = changed
+            screen.save(update_fields=['schedule'])
+
+
 def forward(apps, schema_editor):
     View = apps.get_model('monitor', 'DisplayView')
     Screen = apps.get_model('monitor', 'Screen')
@@ -245,7 +266,8 @@ def forward(apps, schema_editor):
     for view in views:
         old = {'layout': view.layout, 'show_webuntis': view.show_webuntis,
                'split_left': view.split_left, 'split_right': view.split_right,
-               'on_air_fullscreen': view.on_air_fullscreen, 'on_air_split': view.on_air_split}
+               'on_air_fullscreen': view.on_air_fullscreen, 'on_air_split': view.on_air_split,
+               'show_on_air': view.show_on_air}
         view.kind = map_view_kind(old)
         view.style = 'auto'
         view.on_air_behavior = map_on_air_behavior(old)
@@ -269,7 +291,7 @@ def forward(apps, schema_editor):
         if (view.show_page_rotation and view.layout != 'on_air' and isinstance(pages, list)
                 and len(pages) >= 2):
             rotation = _create_rotation_view(View, view)
-            Screen.objects.filter(default_view_id=view.pk).update(default_view_id=rotation.pk)
+            _repoint_screens(Screen, {view.pk: rotation.pk})
 
     _soft_delete_on_air_views(View, Screen, views, now)
 
@@ -296,20 +318,10 @@ def _repoint_rotation_references(apps, rotation_views):
         items = rotation.rotation_items if isinstance(rotation.rotation_items, list) else []
         ids = [i.get('view_id') for i in items if isinstance(i, dict)]
         target[rotation.pk] = next((i for i in ids if i in existing), None)
+    _repoint_screens(Screen, target)
     for old_id, new_id in target.items():
-        Screen.objects.filter(default_view_id=old_id).update(default_view_id=new_id)
-        Screen.objects.filter(override_view_id=old_id).update(override_view_id=new_id)
         if new_id is not None:
             Assignment.objects.filter(view_id=old_id).update(view_id=new_id)
-    for screen in Screen.objects.all():
-        schedule = screen.schedule
-        if not isinstance(schedule, list):
-            continue
-        changed = [dict(e, view_id=target[e['view_id']])
-                   if isinstance(e, dict) and e.get('view_id') in target else e for e in schedule]
-        if changed != schedule:
-            screen.schedule = changed
-            screen.save(update_fields=['schedule'])
 
 
 def backward(apps, schema_editor):
@@ -331,6 +343,7 @@ def backward(apps, schema_editor):
         view.layout = data['layout']
         view.on_air_fullscreen = data['on_air_fullscreen']
         view.on_air_split = data['on_air_split']
+        view.show_on_air = data['show_on_air']
         for fk in ('active_pdf_id', 'active_image_id'):
             if data.get(fk) in media_kinds:
                 setattr(view, fk, data[fk])

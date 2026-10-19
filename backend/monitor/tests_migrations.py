@@ -377,13 +377,16 @@ class DisplayAdminDataMigrationTest(MigrationTestCase):
         _make_view(View, 'img', layout='image_fullscreen', active_image=img)
         _make_view(View, 'split-wu', layout='split', split_left='clock', split_right='webuntis')
         _make_view(View, 'split', layout='split', split_left='clock', split_right='exam')
+        _make_view(View, 'noair', layout='standard', show_on_air=False)
         _make_view(View, 'onair', layout='on_air', on_air_text='AUFNAHME', on_air_blink=True, show_clock=False)
         _make_view(View, 'ft', layout='standard', show_free_text=True, free_text_title='Aula',
                    free_text_content='Bitte leise sein.')
         rot = _make_view(View, 'v', name='V', layout='standard', show_page_rotation=True,
                          page_rotation_pages=['main', 'events'], page_rotation_interval=30)
         self.rot_id = rot.pk
-        Screen.objects.create(name='Halle', slug='halle', default_view=rot)
+        Screen.objects.create(name='Halle', slug='halle', default_view=rot, override_view=rot,
+                              schedule=[{'view_id': rot.pk, 'days': [0], 'from': '07:00', 'until': '08:00'},
+                                        {'view_id': 999, 'days': [1], 'from': '07:00', 'until': '08:00'}])
         Screen.objects.create(name='Ferien', slug='ferien', holiday_mode=True)
         Screen.objects.create(name='Fest', slug='fest', holiday_mode=True, power_mode='manual_on')
         apps.get_model('monitor', 'DisplayViewVersion').objects.create(
@@ -409,8 +412,9 @@ class DisplayAdminDataMigrationTest(MigrationTestCase):
         self.assertIsNone(self._view('std').deleted_at)
 
     def test_on_air_behavior_mapping(self):
-        self.assertEqual([self._view(s).on_air_behavior for s in ('tt', 'dep', 'std')],
-                         ['fullscreen', 'split', 'none'])
+        # std: show_on_air (Standard True) ohne weitere Schalter -> split (Ruling R4)
+        self.assertEqual([self._view(s).on_air_behavior for s in ('tt', 'dep', 'std', 'noair')],
+                         ['fullscreen', 'split', 'split', 'none'])
 
     def test_emergency_state_moved(self):
         s = self._settings()
@@ -430,7 +434,8 @@ class DisplayAdminDataMigrationTest(MigrationTestCase):
         self.assertEqual((rotation.kind, rotation.is_default, rotation.deleted_at), ('rotation', False, None))
         self.assertEqual(rotation.rotation_items, [{'view_id': self.rot_id, 'seconds': 30}])
         screen = self.apps.get_model('monitor', 'Screen').objects.get(slug='halle')
-        self.assertEqual(screen.default_view_id, rotation.pk)
+        self.assertEqual((screen.default_view_id, screen.override_view_id), (rotation.pk, rotation.pk))
+        self.assertEqual([e['view_id'] for e in screen.schedule], [rotation.pk, 999])
         self.assertEqual(View.objects.filter(kind='rotation').count(), 1)
 
     def test_holiday_mode_becomes_manual_off(self):
@@ -471,7 +476,11 @@ class DisplayAdminDataMigrationTest(MigrationTestCase):
         self.assertEqual(View.objects.get(slug='img').active_image_id, self.img_id)
         self.assertFalse(View.objects.filter(kind='rotation').exists())
         self.assertFalse(View.objects.filter(name='V (Wechsel)').exists())
-        self.assertEqual(apps.get_model('monitor', 'Screen').objects.get(slug='halle').default_view_id, self.rot_id)
+        halle = apps.get_model('monitor', 'Screen').objects.get(slug='halle')
+        self.assertEqual((halle.default_view_id, halle.override_view_id), (self.rot_id, self.rot_id))
+        self.assertEqual([e['view_id'] for e in halle.schedule], [self.rot_id, 999])
+        noair = View.objects.get(slug='noair')
+        self.assertEqual((noair.show_on_air, noair.on_air_fullscreen, noair.on_air_split), (False, False, False))
         std = View.objects.get(slug='dep')
         self.assertEqual((std.is_on_air, std.emergency_active, std.emergency_text, std.on_air_split),
                          (True, True, 'Feueralarm', True))
@@ -562,7 +571,33 @@ class DisplayAdminTranslateFunctionsTest(TestCase):
         self.assertEqual((back['layout'], back['active_pdf_id'], back['pdf_interval'], back['on_air_fullscreen']),
                          ('pdf_fullscreen', 7, 12, True))
 
+    def test_snapshot_on_air_behavior(self):
+        self.assertEqual(self.m.translate_snapshot_b({'show_on_air': True}), {'on_air_behavior': 'split'})
+        self.assertEqual(self.m.translate_snapshot_b({'show_on_air': False}), {'on_air_behavior': 'none'})
+        self.assertEqual(self.m.translate_snapshot_b({'on_air_fullscreen': False}), {'on_air_behavior': 'split'})
+        back = self.m.translate_snapshot_b({'kind': 'info', 'on_air_behavior': 'none'}, reverse=True)
+        self.assertEqual((back['show_on_air'], back['on_air_fullscreen'], back['on_air_split']),
+                         (False, False, False))
+
     def test_snapshot_tolerates_bad_data(self):
         self.assertIsNone(self.m.translate_snapshot_b(None))
         self.assertEqual(self.m.translate_snapshot_b({}), {})
         self.assertEqual(self.m.translate_snapshot_b({'unbekannt': 1}), {'unbekannt': 1})
+
+
+class DisplayAdminSettingsRowMigrationTest(MigrationTestCase):
+    """Ruling R6: der globale Zustand landet in MonitorSettings pk=1, wie MonitorSettings.load()."""
+    migrate_from = DISPLAY_DATA_FROM
+    migrate_to = DISPLAY_DATA_TO
+
+    def setUpBeforeMigration(self, apps):
+        apps.get_model('monitor', 'MonitorSettings').objects.create(pk=5, webuntis_school='alt')
+        _make_view(apps.get_model('monitor', 'DisplayView'), 'v', layout='standard',
+                   emergency_active=True, emergency_text='Alarm', is_on_air=True)
+
+    def test_state_written_to_pk_1(self):
+        Settings = self.apps.get_model('monitor', 'MonitorSettings')
+        s = Settings.objects.get(pk=1)
+        self.assertEqual((s.emergency_active, s.emergency_text, s.on_air_active), (True, 'Alarm', True))
+        other = Settings.objects.get(pk=5)
+        self.assertEqual((other.emergency_active, other.on_air_active), (False, False))
