@@ -18,11 +18,11 @@ import { PageHeader, Button, StatusBadge, EmptyState } from '../../components/ui
 // ─── Status-Farben ────────────────────────────────────────────────
 
 const STATUS_COLORS = {
-  anwesend: { bg: 'bg-emerald-500/15', text: 'text-emerald-300', dot: 'bg-emerald-500' },
-  teilweise: { bg: 'bg-sky-500/15', text: 'text-sky-300', dot: 'bg-sky-500' },
-  abwesend: { bg: 'bg-red-500/15', text: 'text-red-300', dot: 'bg-red-500' },
-  krank: { bg: 'bg-amber-500/15', text: 'text-amber-300', dot: 'bg-amber-500' },
-  ausstehend: { bg: 'bg-gray-500/20', text: 'text-gray-400', dot: 'bg-gray-500' },
+  anwesend: { bg: 'bg-raised', text: 'text-ok', dot: 'bg-ok' },
+  teilweise: { bg: 'bg-raised', text: 'text-info', dot: 'bg-info' },
+  abwesend: { bg: 'bg-raised', text: 'text-bad', dot: 'bg-bad' },
+  krank: { bg: 'bg-raised', text: 'text-warn', dot: 'bg-warn' },
+  ausstehend: { bg: 'bg-raised', text: 'text-fg-subtle', dot: 'bg-fg-subtle' },
 };
 
 const STATUS_LABELS = {
@@ -34,7 +34,7 @@ const STATUS_LABELS = {
 };
 
 // Anwesenheits-Status → StatusBadge-Ton (Farbbedeutung bleibt erhalten:
-// anwesend=grün, teilweise=blau, abwesend=rot, krank=gelb, ausstehend=grau)
+// anwesend=ok, teilweise=info, abwesend=bad, krank=warn, ausstehend=fg-subtle)
 const STATUS_TONE = {
   anwesend: 'positive',
   teilweise: 'info',
@@ -50,11 +50,11 @@ function SectionHeader({ title, count, defaultOpen = true, children }) {
   return (
     <div>
       <button onClick={() => setOpen(!open)} aria-expanded={open}
-        className="group flex items-center gap-2 w-full py-2 text-left rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
-        <ChevronRight className={`w-4 h-4 text-gray-500 transition-transform ${open ? 'rotate-90' : ''}`} />
-        <span className="font-semibold text-gray-300 group-hover:text-white text-sm">{title}</span>
-        <span className="text-xs text-gray-500 tabular-nums">{count}</span>
-        <span className="flex-1 h-px bg-gray-800 ml-2" aria-hidden="true" />
+        className="group flex items-center gap-2 w-full py-2 text-left rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
+        <ChevronRight className={`w-4 h-4 text-fg-subtle transition-transform ${open ? 'rotate-90' : ''}`} />
+        <span className="font-semibold text-fg-muted group-hover:text-fg text-sm">{title}</span>
+        <span className="text-xs text-fg-subtle tabular-nums">{count}</span>
+        <span className="flex-1 h-px bg-line-subtle ml-2" aria-hidden="true" />
       </button>
       {open && <div className="space-y-2 pt-1 pb-4">{children}</div>}
     </div>
@@ -66,14 +66,14 @@ function ProgressBar({ statistik }) {
   const { anwesend, teilweise = 0, abwesend, krank, ausstehend, gesamt } = statistik;
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden flex">
-        {anwesend > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(anwesend / gesamt) * 100}%` }} />}
-        {teilweise > 0 && <div className="bg-sky-500 h-full" style={{ width: `${(teilweise / gesamt) * 100}%` }} />}
-        {abwesend > 0 && <div className="bg-red-500 h-full" style={{ width: `${(abwesend / gesamt) * 100}%` }} />}
-        {krank > 0 && <div className="bg-amber-500 h-full" style={{ width: `${(krank / gesamt) * 100}%` }} />}
-        {ausstehend > 0 && <div className="bg-gray-600 h-full" style={{ width: `${(ausstehend / gesamt) * 100}%` }} />}
+      <div className="flex-1 h-1.5 bg-raised rounded-sm overflow-hidden flex">
+        {anwesend > 0 && <div className="bg-ok h-full" style={{ width: `${(anwesend / gesamt) * 100}%` }} />}
+        {teilweise > 0 && <div className="bg-info h-full" style={{ width: `${(teilweise / gesamt) * 100}%` }} />}
+        {abwesend > 0 && <div className="bg-bad h-full" style={{ width: `${(abwesend / gesamt) * 100}%` }} />}
+        {krank > 0 && <div className="bg-warn h-full" style={{ width: `${(krank / gesamt) * 100}%` }} />}
+        {ausstehend > 0 && <div className="bg-fg-subtle h-full" style={{ width: `${(ausstehend / gesamt) * 100}%` }} />}
       </div>
-      <span className="text-xs font-medium text-gray-300 whitespace-nowrap tabular-nums w-9 text-right">{statistik.quote}%</span>
+      <span className="text-xs font-medium text-fg-muted whitespace-nowrap tabular-nums w-9 text-right">{statistik.quote}%</span>
     </div>
   );
 }
@@ -81,7 +81,7 @@ function ProgressBar({ statistik }) {
 function StatusSelect({ value, onChange, compact = false }) {
   return (
     <select value={value} onChange={e => onChange(e.target.value)}
-      className={`${compact ? 'text-xs px-1.5 py-1' : 'text-sm px-2 py-1.5'} rounded-lg border border-gray-700 bg-gray-800 font-medium cursor-pointer focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent ${STATUS_COLORS[value]?.text || 'text-gray-400'}`}>
+      className={`${compact ? 'text-xs px-1.5 py-1' : 'text-sm px-2 py-1.5'} rounded-md border border-line bg-raised hover:border-line-strong font-medium cursor-pointer focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent ${STATUS_COLORS[value]?.text || 'text-fg-muted'}`}>
       {Object.entries(STATUS_LABELS).map(([k, v]) => (
         <option key={k} value={k}>{compact ? v.charAt(0) : v}</option>
       ))}
@@ -412,7 +412,7 @@ export default function AnwesenheitPage() {
   if (loading && !listId) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-10 h-10 text-accent animate-spin" />
+        <Loader2 className="w-10 h-10 text-accent-fg animate-spin" />
       </div>
     );
   }
@@ -427,7 +427,7 @@ export default function AnwesenheitPage() {
         <div className="space-y-6">
           <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => navigate('/anwesenheit')}>Zurück</Button>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="w-8 h-8 text-accent animate-spin" />
+            <Loader2 className="w-8 h-8 text-accent-fg animate-spin" />
           </div>
         </div>
       );
@@ -445,8 +445,8 @@ export default function AnwesenheitPage() {
           <Button variant="ghost" size="sm" icon={ArrowLeft} aria-label="Zurück" title="Zurück" className="mt-1"
             onClick={() => navigate('/anwesenheit')} />
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">{detailListe.titel}</h1>
-            <div className="flex items-center gap-3 text-sm text-gray-400 mt-2 flex-wrap">
+            <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-fg truncate">{detailListe.titel}</h1>
+            <div className="flex items-center gap-3 text-sm text-fg-muted mt-2 flex-wrap">
               {detailListe.ort && <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {detailListe.ort}</span>}
               <StatusBadge tone={isAktiv ? 'positive' : 'neutral'} dot={isAktiv} label={isAktiv ? 'Aktiv' : 'Abgeschlossen'} />
             </div>
@@ -469,17 +469,17 @@ export default function AnwesenheitPage() {
 
         {/* Beschreibung */}
         {detailListe.beschreibung && (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-            <p className="text-gray-400 text-sm">{detailListe.beschreibung}</p>
+          <div>
+            <p className="text-fg-muted text-sm">{detailListe.beschreibung}</p>
           </div>
         )}
 
         {/* Statistik-Leiste: wraps auf engen Bildschirmen, Quote rechts wenn Platz */}
         {teilnehmer.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <div className="bg-surface rounded-lg p-4">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm tabular-nums">
-              <span className="text-gray-300 font-medium whitespace-nowrap inline-flex items-center gap-1.5">
-                <Users className="w-4 h-4 text-gray-500" />{detailListe.statistik.gesamt} Teilnehmer
+              <span className="text-fg-muted font-medium whitespace-nowrap inline-flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-fg-subtle" />{detailListe.statistik.gesamt} Teilnehmer
               </span>
               {Object.entries(STATUS_COLORS).map(([key, colors]) => (
                 <span key={key} className={`flex items-center gap-1.5 whitespace-nowrap ${colors.text}`}>
@@ -488,8 +488,8 @@ export default function AnwesenheitPage() {
                 </span>
               ))}
               <span className="whitespace-nowrap sm:ml-auto">
-                <span className="text-white text-base font-bold">{detailListe.statistik.quote}%</span>
-                <span className="text-gray-400"> Anwesenheit</span>
+                <span className="text-fg text-base font-bold">{detailListe.statistik.quote}%</span>
+                <span className="text-fg-muted"> Anwesenheit</span>
               </span>
             </div>
             <div className="mt-2">
@@ -500,21 +500,21 @@ export default function AnwesenheitPage() {
 
         {/* Termine-Tabs */}
         {hatTermine && (
-          <div className="flex gap-1 overflow-x-auto border-b border-gray-800">
+          <div className="flex gap-1 overflow-x-auto border-b border-line-subtle">
             <button onClick={() => setActiveTerminId(null)}
               className={`shrink-0 px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors ${
-                activeTerminId === null ? 'border-accent text-white' : 'border-transparent text-gray-400 hover:text-white'
+                activeTerminId === null ? 'border-accent text-fg' : 'border-transparent text-fg-muted hover:text-fg'
               }`}>
               Gesamt
             </button>
             {termine.map(t => (
               <button key={t.id} onClick={() => setActiveTerminId(t.id)}
                 className={`shrink-0 px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors flex items-center gap-1.5 ${
-                  activeTerminId === t.id ? 'border-accent text-white' : t.ist_vergangen ? 'border-transparent text-gray-500 hover:text-gray-300' : 'border-transparent text-gray-400 hover:text-white'
+                  activeTerminId === t.id ? 'border-accent text-fg' : t.ist_vergangen ? 'border-transparent text-fg-subtle hover:text-fg-muted' : 'border-transparent text-fg-muted hover:text-fg'
                 }`}>
                 <Calendar className="w-3.5 h-3.5 opacity-70" />
                 {t.titel || new Date(t.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                {t.beginn && <span className="text-xs text-gray-500 tabular-nums">{t.beginn.slice(0, 5)}</span>}
+                {t.beginn && <span className="text-xs text-fg-subtle tabular-nums">{t.beginn.slice(0, 5)}</span>}
               </button>
             ))}
           </div>
@@ -554,11 +554,11 @@ export default function AnwesenheitPage() {
           });
 
           return (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+            <div className="bg-surface rounded-lg overflow-hidden">
               {/* Header + Filter */}
-              <div className="p-4 border-b border-gray-800 space-y-3">
+              <div className="p-4 border-b border-line-subtle space-y-3">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Teilnehmer <span className="text-sm font-sans font-normal tabular-nums text-gray-500">{teilnehmer.length}</span></h3>
+                  <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Teilnehmer <span className="text-sm font-sans font-normal tabular-nums text-fg-subtle">{teilnehmer.length}</span></h3>
                   {isAktiv && hasPermission('anwesenheit.edit') && teilnehmer.length > 0 && (
                     <div className="flex gap-1 flex-wrap justify-end">
                       {Object.entries(STATUS_LABELS).filter(([k]) => k !== 'ausstehend').map(([key, label]) => (
@@ -580,7 +580,7 @@ export default function AnwesenheitPage() {
                           } catch (err) { handleApiError(err, 'Bulk-Update fehlgeschlagen'); }
                         }}
                           title={`${selectedTeilnehmer.size > 0 ? 'Ausgewählte' : 'Alle angezeigten'} als ${label} markieren`}
-                          className={`px-2 py-1 text-xs font-medium rounded-md tabular-nums ring-1 ring-inset ring-white/5 ${STATUS_COLORS[key].bg} ${STATUS_COLORS[key].text} hover:brightness-125 transition`}>
+                          className={`px-2 py-1 text-xs font-medium rounded-md tabular-nums ${STATUS_COLORS[key].bg} ${STATUS_COLORS[key].text} hover:bg-hover transition-colors`}>
                           {selectedTeilnehmer.size > 0 ? `${selectedTeilnehmer.size}×` : 'Alle'} {label}
                         </button>
                       ))}
@@ -592,19 +592,19 @@ export default function AnwesenheitPage() {
                 {teilnehmer.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap">
                     <div className="relative flex-1 min-w-[180px] max-w-xs">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
                       <input type="text" value={teilnehmerSearch} onChange={e => setTeilnehmerSearch(e.target.value)}
-                        placeholder="Name oder E-Mail" aria-label="Teilnehmer suchen" className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                        placeholder="Name oder E-Mail" aria-label="Teilnehmer suchen" className="w-full pl-9 pr-3 py-1.5 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                     </div>
                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} aria-label="Nach Status filtern"
-                      className="px-3 py-1.5 text-sm bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:border-accent">
+                      className="px-3 py-1.5 text-sm bg-raised border border-line rounded-md text-fg hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
                       <option value="">Alle Status</option>
                       {Object.entries(STATUS_LABELS).map(([k, v]) => (
                         <option key={k} value={k}>{v}</option>
                       ))}
                     </select>
                     {(teilnehmerSearch || statusFilter) && (
-                      <span className="text-xs text-gray-500 tabular-nums">{filteredTeilnehmer.length} von {teilnehmer.length}</span>
+                      <span className="text-xs text-fg-subtle tabular-nums">{filteredTeilnehmer.length} von {teilnehmer.length}</span>
                     )}
                   </div>
                 )}
@@ -620,7 +620,7 @@ export default function AnwesenheitPage() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-gray-800 text-xs">
+                      <tr className="border-b border-line-subtle text-xs">
                         {/* Batch-Checkbox */}
                         {isAktiv && hasPermission('anwesenheit.edit') && (
                           <th className="w-10 p-3">
@@ -630,31 +630,31 @@ export default function AnwesenheitPage() {
                                 if (e.target.checked) setSelectedTeilnehmer(new Set(filteredTeilnehmer.map(t => t.id)));
                                 else setSelectedTeilnehmer(new Set());
                               }}
-                              className="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-accent" />
+                              className="w-4 h-4 rounded-sm border-line bg-raised accent-accent" />
                           </th>
                         )}
-                        <th className="text-left p-3 text-gray-400 font-medium sticky left-0 bg-gray-900 z-10">Name</th>
+                        <th className="text-left p-3 text-fg-muted font-medium sticky left-0 bg-surface z-10">Name</th>
                         {hatTermine && activeTerminId === null ? (
                           termine.map(t => {
                             const ts = getTerminStats(t);
                             return (
-                              <th key={t.id} className={`text-center p-3 font-medium min-w-[130px] ${t.ist_vergangen ? 'opacity-50' : 'text-gray-400'}`}>
+                              <th key={t.id} className={`text-center p-3 font-medium min-w-[130px] ${t.ist_vergangen ? 'opacity-50' : 'text-fg-muted'}`}>
                                 <div className="text-xs font-semibold">
                                   {t.titel || new Date(t.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
                                 </div>
                                 {t.beginn && <div className="text-xs opacity-60">{t.beginn.slice(0, 5)}</div>}
                                 <div className="flex justify-center items-center gap-1 mt-1">
-                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" title={`${ts.anwesend} anwesend`} />
-                                  <span className="text-[10px] text-gray-400 tabular-nums">{ts.quote}%</span>
-                                  {t.ist_vergangen && <span className="text-[10px] text-gray-500">· vorbei</span>}
+                                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-ok" title={`${ts.anwesend} anwesend`} />
+                                  <span className="text-[10px] text-fg-muted tabular-nums">{ts.quote}%</span>
+                                  {t.ist_vergangen && <span className="text-[10px] text-fg-subtle">· vorbei</span>}
                                 </div>
                               </th>
                             );
                           })
                         ) : (
-                          <th className="text-center p-3 text-gray-400 font-medium">Status</th>
+                          <th className="text-center p-3 text-fg-muted font-medium">Status</th>
                         )}
-                        <th className="w-20 p-3 text-gray-400 font-medium text-center">Aktion</th>
+                        <th className="w-20 p-3 text-fg-muted font-medium text-center">Aktion</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -663,7 +663,7 @@ export default function AnwesenheitPage() {
                         const isSelf = profile?.keycloak_id === tn.keycloak_id;
                         const canEdit = isAktiv && hasPermission('anwesenheit.edit');
                         return (
-                          <tr key={tn.id} className={`border-b border-gray-800/50 hover:bg-gray-800/30 ${isSelected ? 'bg-accent/[0.06]' : ''} ${isSelf && !isSelected ? 'bg-white/[0.02]' : ''}`}>
+                          <tr key={tn.id} className={`group border-b border-line-subtle hover:bg-raised ${isSelected ? 'bg-raised' : ''}`}>
                             {/* Batch-Checkbox */}
                             {isAktiv && hasPermission('anwesenheit.edit') && (
                               <td className="p-3">
@@ -673,16 +673,16 @@ export default function AnwesenheitPage() {
                                     if (e.target.checked) s.add(tn.id); else s.delete(tn.id);
                                     setSelectedTeilnehmer(s);
                                   }}
-                                  className="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-accent" />
+                                  className="w-4 h-4 rounded-sm border-line bg-raised accent-accent" />
                               </td>
                             )}
-                            <td className="p-3 sticky left-0 bg-gray-900 z-10">
+                            <td className={`p-3 sticky left-0 z-10 group-hover:bg-raised ${isSelected ? 'bg-raised' : 'bg-surface'}`}>
                               <div className="flex items-center gap-1.5">
-                                <span className="font-medium text-white">{tn.name}</span>
+                                <span className="font-medium text-fg">{tn.name}</span>
                                 {isSelf && <StatusBadge tone="accent" label="Du" />}
                               </div>
                               {tn.aufgabe && (
-                                <div className="text-xs text-gray-400 mt-0.5">{tn.aufgabe}</div>
+                                <div className="text-xs text-fg-muted mt-0.5">{tn.aufgabe}</div>
                               )}
                             </td>
                             {hatTermine && activeTerminId === null ? (
@@ -708,15 +708,15 @@ export default function AnwesenheitPage() {
                                           setShowNotesModal(true);
                                         }}
                                           title={hasNote ? ta.notizen : 'Notiz hinzufügen'}
-                                          className={`flex items-center gap-0.5 text-[11px] px-1.5 py-1 rounded-md hover:bg-gray-700 ${
-                                            hasNote ? 'text-amber-300' : 'text-gray-600 hover:text-gray-400'
+                                          className={`flex items-center gap-0.5 text-[11px] px-1.5 py-1 rounded-sm hover:bg-hover ${
+                                            hasNote ? 'text-warn' : 'text-fg-subtle hover:text-fg-muted'
                                           }`}>
                                           <MessageSquare className="w-3 h-3" />
                                           {hasNote && <span>Notiz</span>}
                                         </button>
                                       )}
                                       {!canEdit && !canSelfEdit && hasNote && (
-                                        <span className="text-[10px] text-amber-300 flex items-center gap-0.5" title={ta?.notizen}>
+                                        <span className="text-[10px] text-warn flex items-center gap-0.5" title={ta?.notizen}>
                                           <MessageSquare className="w-3 h-3" />
                                         </span>
                                       )}
@@ -747,13 +747,13 @@ export default function AnwesenheitPage() {
                                           setNoteForm({ status: s, notizen: ta?.notizen || '' });
                                           setShowNotesModal(true);
                                         }}
-                                          className={`p-1.5 rounded-md hover:bg-gray-700 ${hasNote ? 'text-amber-300' : 'text-gray-600 hover:text-gray-400'}`}
+                                          className={`p-1.5 rounded-sm hover:bg-hover ${hasNote ? 'text-warn' : 'text-fg-subtle hover:text-fg-muted'}`}
                                           title={hasNote ? ta.notizen : 'Notiz hinzufügen'}>
                                           <MessageSquare className="w-3.5 h-3.5" />
                                         </button>
                                       )}
                                       {!canEdit && !canSelfEdit && hasNote && (
-                                        <span className="text-amber-300" title={ta?.notizen}><MessageSquare className="w-3.5 h-3.5" /></span>
+                                        <span className="text-warn" title={ta?.notizen}><MessageSquare className="w-3.5 h-3.5" /></span>
                                       )}
                                     </div>
                                   </td>
@@ -776,7 +776,7 @@ export default function AnwesenheitPage() {
                                     const aufgabe = prompt('Aufgabe zuweisen:', tn.aufgabe || '');
                                     if (aufgabe !== null) handleAufgabeUpdate(tn.id, aufgabe);
                                   }}
-                                    className={`p-1.5 rounded-md hover:bg-gray-700 ${tn.aufgabe ? 'text-gray-200' : 'text-gray-500 hover:text-gray-300'}`}
+                                    className={`p-1.5 rounded-sm hover:bg-hover ${tn.aufgabe ? 'text-fg' : 'text-fg-subtle hover:text-fg-muted'}`}
                                     title={tn.aufgabe ? `Aufgabe: ${tn.aufgabe}` : 'Aufgabe zuweisen'} aria-label="Aufgabe zuweisen">
                                     <ClipboardList className="w-3.5 h-3.5" />
                                   </button>
@@ -784,7 +784,7 @@ export default function AnwesenheitPage() {
                                 {canEdit && (
                                   <button onClick={() => handleRemoveTeilnehmer(tn.id)}
                                     title="Aus Liste entfernen" aria-label={`${tn.name} entfernen`}
-                                    className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md">
+                                    className="p-1.5 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm">
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
                                 )}
@@ -803,12 +803,12 @@ export default function AnwesenheitPage() {
 
         {/* Floating Batch-Bar */}
         {selectedTeilnehmer.size > 0 && isAktiv && hasPermission('anwesenheit.edit') && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 border border-gray-700 rounded-xl px-4 py-2.5 shadow-2xl shadow-black/60 z-40 flex items-center gap-3 max-w-[calc(100vw-2rem)] overflow-x-auto">
-            <span className="text-white font-medium text-sm tabular-nums">{selectedTeilnehmer.size} ausgewählt</span>
-            <button onClick={() => setSelectedTeilnehmer(new Set())} aria-label="Auswahl aufheben" className="text-gray-400 hover:text-white">
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-overlay border border-line rounded-lg px-4 py-2.5 shadow-overlay z-40 flex items-center gap-3 max-w-[calc(100vw-2rem)] overflow-x-auto">
+            <span className="text-fg font-medium text-sm tabular-nums">{selectedTeilnehmer.size} ausgewählt</span>
+            <button onClick={() => setSelectedTeilnehmer(new Set())} aria-label="Auswahl aufheben" className="text-fg-muted hover:text-fg">
               <X className="w-4 h-4" />
             </button>
-            <div className="h-5 w-px bg-gray-600" />
+            <div className="h-5 w-px bg-line" />
             {Object.entries(STATUS_LABELS).filter(([k]) => k !== 'ausstehend').map(([key, label]) => (
               <button key={key} onClick={async () => {
                 try {
@@ -822,7 +822,7 @@ export default function AnwesenheitPage() {
                   toast.success(`${selectedTeilnehmer.size}× als "${label}" markiert`);
                 } catch (err) { handleApiError(err, 'Batch-Update fehlgeschlagen'); }
               }}
-                className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md ring-1 ring-inset ring-white/5 ${STATUS_COLORS[key].bg} ${STATUS_COLORS[key].text} hover:brightness-125 transition`}>
+                className={`shrink-0 px-3 py-1.5 text-xs font-medium rounded-md ${STATUS_COLORS[key].bg} ${STATUS_COLORS[key].text} hover:bg-hover transition-colors`}>
                 {label}
               </button>
             ))}
@@ -831,14 +831,14 @@ export default function AnwesenheitPage() {
 
         {/* Aktionen */}
         {isAktiv && hasPermission('anwesenheit.edit') && (
-          <div className="flex items-center gap-2 pt-2 border-t border-gray-800">
+          <div className="flex items-center gap-2 pt-2 border-t border-line-subtle">
             <Button variant="primary" icon={CheckCircle} onClick={handleAbschliessen}>Liste abschließen</Button>
             <Button variant="secondary" icon={Copy}
               onClick={() => { setKlonForm({ titel: '', termine_uebernehmen: true }); setShowKlonModal(true); }}>
               Klonen
             </Button>
             {hasPermission('anwesenheit.delete') && (
-              <Button variant="ghost" icon={Trash2} className="!text-gray-400 hover:!text-red-400 hover:!bg-red-500/10 ml-auto"
+              <Button variant="ghost" icon={Trash2} className="!text-fg-muted hover:!text-bad hover:!bg-raised ml-auto"
                 onClick={() => handleDelete(listId)}>
                 Liste löschen
               </Button>
@@ -848,32 +848,32 @@ export default function AnwesenheitPage() {
 
         {/* ─── Erstellen/Bearbeiten Modal ──────────────────── */}
         {showCreateModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">Neue Anwesenheitsliste</h2>
-                <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neue Anwesenheitsliste</h2>
+                <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Titel <span className="text-accent">*</span></label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1.5">Titel <span className="text-accent-fg">*</span></label>
                   <input type="text" value={createForm.titel} onChange={e => setCreateForm({ ...createForm, titel: e.target.value })}
-                    placeholder="z.B. Probe Montag, Workshop 2026…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                    placeholder="z.B. Probe Montag, Workshop 2026…" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Beschreibung</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1.5">Beschreibung</label>
                   <textarea value={createForm.beschreibung} onChange={e => setCreateForm({ ...createForm, beschreibung: e.target.value })}
-                    rows={2} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none" />
+                    rows={2} className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Ort</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1.5">Ort</label>
                   <input type="text" value={createForm.ort} onChange={e => setCreateForm({ ...createForm, ort: e.target.value })}
-                    placeholder="z.B. Aula, Studio A…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                    placeholder="z.B. Aula, Studio A…" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                 </div>
               </div>
-              <div className="flex gap-2 mt-6">
-                <Button variant="ghost" className="flex-1" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
-                <Button variant="primary" className="flex-1" onClick={handleCreate} disabled={saving || !createForm.titel}>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-line-subtle">
+                <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
+                <Button variant="primary" onClick={handleCreate} disabled={saving || !createForm.titel}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Erstellen
                 </Button>
@@ -884,42 +884,42 @@ export default function AnwesenheitPage() {
 
         {/* ─── Termine Modal ──────────────────────────────── */}
         {showTermineModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-              <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">Termine verwalten</h2>
-                <button onClick={() => setShowTermineModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 pb-4 border-b border-line-subtle">
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Termine verwalten</h2>
+                <button onClick={() => setShowTermineModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-3">
                 {termineForm.map((t, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-gray-800/50 border border-gray-800 rounded-lg">
+                  <div key={i} className="flex items-start gap-3 pb-3 border-b border-line-subtle">
                     <div className="flex-1 grid grid-cols-2 gap-2">
                       <input type="text" value={t.titel} onChange={e => { const f = [...termineForm]; f[i].titel = e.target.value; setTermineForm(f); }}
-                        placeholder="Titel (optional)" className="col-span-2 px-2 py-1.5 text-sm bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-accent" />
+                        placeholder="Titel (optional)" className="col-span-2 px-2 py-1.5 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                       <input type="date" value={t.datum} onChange={e => { const f = [...termineForm]; f[i].datum = e.target.value; setTermineForm(f); }}
-                        className="px-2 py-1.5 text-sm bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-accent" />
+                        className="px-2 py-1.5 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                       <div className="flex gap-1">
                         <input type="time" value={t.beginn} onChange={e => { const f = [...termineForm]; f[i].beginn = e.target.value; setTermineForm(f); }}
-                          placeholder="Beginn" className="flex-1 px-2 py-1.5 text-sm bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-accent" />
+                          placeholder="Beginn" className="flex-1 px-2 py-1.5 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                         <input type="time" value={t.ende} onChange={e => { const f = [...termineForm]; f[i].ende = e.target.value; setTermineForm(f); }}
-                          placeholder="Ende" className="flex-1 px-2 py-1.5 text-sm bg-gray-900 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:border-accent" />
+                          placeholder="Ende" className="flex-1 px-2 py-1.5 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                       </div>
                     </div>
                     <button onClick={() => setTermineForm(termineForm.filter((_, j) => j !== i))}
                       title="Termin entfernen" aria-label="Termin entfernen"
-                      className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md mt-1">
+                      className="p-1.5 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm mt-1">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
                 <button onClick={() => setTermineForm([...termineForm, { id: null, titel: '', datum: '', beginn: '', ende: '', notizen: '' }])}
-                  className="flex items-center justify-center gap-2 w-full p-3 text-sm font-medium text-gray-300 hover:text-white hover:bg-gray-800/60 hover:border-gray-500 rounded-lg border border-dashed border-gray-700 transition-colors">
+                  className="flex items-center justify-center gap-2 w-full p-3 text-sm font-medium text-fg-muted hover:text-fg hover:bg-raised hover:border-line-strong rounded-md border border-dashed border-line transition-colors">
                   <Plus className="w-4 h-4" /> Termin hinzufügen
                 </button>
               </div>
-              <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
-                <Button variant="ghost" className="flex-1" onClick={() => setShowTermineModal(false)}>Abbrechen</Button>
-                <Button variant="primary" className="flex-1" onClick={handleSaveTermine} disabled={saving}>
+              <div className="flex justify-end gap-2 p-6 pt-4 border-t border-line-subtle">
+                <Button variant="ghost" onClick={() => setShowTermineModal(false)}>Abbrechen</Button>
+                <Button variant="primary" onClick={handleSaveTermine} disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   Speichern
                 </Button>
@@ -930,20 +930,20 @@ export default function AnwesenheitPage() {
 
         {/* ─── Teilnehmer Modal ──────────────────────────── */}
         {showTeilnehmerModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-              <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">Teilnehmer hinzufügen</h2>
-                <button onClick={() => setShowTeilnehmerModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between p-6 pb-4 border-b border-line-subtle">
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Teilnehmer hinzufügen</h2>
+                <button onClick={() => setShowTeilnehmerModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="px-6 pt-4">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
                   <input type="text" value={benutzerSearch} onChange={e => setBenutzerSearch(e.target.value)}
-                    placeholder="Name oder E-Mail" aria-label="Benutzer suchen" className="w-full pl-9 pr-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                    placeholder="Name oder E-Mail" aria-label="Benutzer suchen" className="w-full pl-9 pr-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                 </div>
                 {selectedBenutzer.length > 0 && (
-                  <div className="mt-2 text-sm text-gray-300 tabular-nums"><span className="text-white font-semibold">{selectedBenutzer.length}</span> ausgewählt</div>
+                  <div className="mt-2 text-sm text-fg-muted tabular-nums"><span className="text-fg font-semibold">{selectedBenutzer.length}</span> ausgewählt</div>
                 )}
               </div>
               <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0">
@@ -967,17 +967,17 @@ export default function AnwesenheitPage() {
                               : [...prev, b]
                             );
                           }}
-                            className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-3 transition-colors ${
-                              isSelected ? 'bg-accent/10 ring-1 ring-inset ring-accent/40' : 'hover:bg-gray-800'
+                            className={`w-full text-left px-3 py-2.5 rounded-md flex items-center gap-3 transition-colors ${
+                              isSelected ? 'bg-raised' : 'hover:bg-raised'
                             }`}>
-                            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                              isSelected ? 'bg-accent border-accent' : 'border-gray-600'
+                            <div className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center flex-shrink-0 ${
+                              isSelected ? 'bg-accent border-accent' : 'border-line-strong'
                             }`}>
                               {isSelected && <Check className="w-3 h-3 text-white" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <span className="text-white font-medium">{b.name}</span>
-                              {b.email && <span className="text-gray-500 text-xs ml-2">{b.email}</span>}
+                              <span className="text-fg font-medium">{b.name}</span>
+                              {b.email && <span className="text-fg-subtle text-xs ml-2">{b.email}</span>}
                             </div>
                           </button>
                         </li>
@@ -985,9 +985,9 @@ export default function AnwesenheitPage() {
                     })}
                 </ul>
               </div>
-              <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
-                <Button variant="ghost" className="flex-1" onClick={() => setShowTeilnehmerModal(false)}>Abbrechen</Button>
-                <Button variant="primary" className="flex-1 tabular-nums" onClick={handleAddTeilnehmer} disabled={selectedBenutzer.length === 0 || saving}>
+              <div className="flex justify-end gap-2 p-6 pt-4 border-t border-line-subtle">
+                <Button variant="ghost" onClick={() => setShowTeilnehmerModal(false)}>Abbrechen</Button>
+                <Button variant="primary" className="tabular-nums" onClick={handleAddTeilnehmer} disabled={selectedBenutzer.length === 0 || saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
                   Hinzufügen ({selectedBenutzer.length})
                 </Button>
@@ -998,38 +998,38 @@ export default function AnwesenheitPage() {
 
         {/* ─── Klon Modal ────────────────────────────────── */}
         {showKlonModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">Liste klonen</h2>
-                <button onClick={() => setShowKlonModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Liste klonen</h2>
+                <button onClick={() => setShowKlonModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Neuer Titel</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1.5">Neuer Titel</label>
                   <input type="text" value={klonForm.titel} onChange={e => setKlonForm({ ...klonForm, titel: e.target.value })}
-                    placeholder={`${detailListe.titel} (Kopie)`} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                    placeholder={`${detailListe.titel} (Kopie)`} className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                 </div>
                 {termine.length > 0 && (
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input type="checkbox" checked={klonForm.termine_uebernehmen}
                       onChange={e => setKlonForm({ ...klonForm, termine_uebernehmen: e.target.checked })}
-                      className="w-4 h-4 rounded border-gray-600 bg-gray-800 accent-accent" />
-                    <span className="text-sm text-gray-300 tabular-nums">Termine übernehmen ({termine.length} Termine)</span>
+                      className="w-4 h-4 rounded-sm border-line bg-raised accent-accent" />
+                    <span className="text-sm text-fg-muted tabular-nums">Termine übernehmen ({termine.length} Termine)</span>
                   </label>
                 )}
-                <div className="p-3 bg-gray-800/50 rounded-lg text-xs text-gray-400 space-y-1">
-                  <p className="font-medium text-gray-300">Übernommen werden</p>
-                  <ul className="list-disc pl-4 space-y-0.5 marker:text-gray-600">
+                <div className="p-3 bg-raised rounded-md text-xs text-fg-muted space-y-1">
+                  <p className="font-medium text-fg">Übernommen werden</p>
+                  <ul className="list-disc pl-4 space-y-0.5 marker:text-fg-subtle">
                     <li>Titel, Beschreibung, Ort</li>
                     <li>{teilnehmer.length} Teilnehmer, Status zurück auf „Ausstehend"</li>
                     {klonForm.termine_uebernehmen && termine.length > 0 && <li>{termine.length} Termine</li>}
                   </ul>
                 </div>
               </div>
-              <div className="flex gap-2 mt-6">
-                <Button variant="ghost" className="flex-1" onClick={() => setShowKlonModal(false)}>Abbrechen</Button>
-                <Button variant="primary" className="flex-1" onClick={handleKlonen} disabled={saving}>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-line-subtle">
+                <Button variant="ghost" onClick={() => setShowKlonModal(false)}>Abbrechen</Button>
+                <Button variant="primary" onClick={handleKlonen} disabled={saving}>
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Copy className="w-4 h-4" />}
                   Klonen
                 </Button>
@@ -1040,27 +1040,27 @@ export default function AnwesenheitPage() {
 
         {/* ─── Export Modal ──────────────────────────────── */}
         {showExportModal && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-sm p-6">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-sm p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">Export</h2>
-                <button onClick={() => setShowExportModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Export</h2>
+                <button onClick={() => setShowExportModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-3">
                 <button onClick={() => handleExport('csv')}
-                  className="w-full flex items-center gap-3 text-left p-3.5 rounded-lg border border-gray-700 hover:border-gray-500 hover:bg-gray-800/60 transition-colors">
-                  <FileSpreadsheet className="w-5 h-5 text-gray-400 shrink-0" />
+                  className="w-full flex items-center gap-3 text-left p-3.5 rounded-md bg-raised hover:bg-hover transition-colors">
+                  <FileSpreadsheet className="w-5 h-5 text-fg-subtle shrink-0" />
                   <div>
-                    <div className="font-medium text-white">CSV</div>
-                    <div className="text-sm text-gray-400">Zum Öffnen in Excel oder Numbers</div>
+                    <div className="font-medium text-fg">CSV</div>
+                    <div className="text-sm text-fg-muted">Zum Öffnen in Excel oder Numbers</div>
                   </div>
                 </button>
                 <button onClick={() => handleExport('json')}
-                  className="w-full flex items-center gap-3 text-left p-3.5 rounded-lg border border-gray-700 hover:border-gray-500 hover:bg-gray-800/60 transition-colors">
-                  <FileJson className="w-5 h-5 text-gray-400 shrink-0" />
+                  className="w-full flex items-center gap-3 text-left p-3.5 rounded-md bg-raised hover:bg-hover transition-colors">
+                  <FileJson className="w-5 h-5 text-fg-subtle shrink-0" />
                   <div>
-                    <div className="font-medium text-white">JSON</div>
-                    <div className="text-sm text-gray-400">Alle Daten, z.B. für Auswertungen</div>
+                    <div className="font-medium text-fg">JSON</div>
+                    <div className="text-sm text-fg-muted">Alle Daten, z.B. für Auswertungen</div>
                   </div>
                 </button>
               </div>
@@ -1070,64 +1070,64 @@ export default function AnwesenheitPage() {
 
         {/* ─── Statistik Modal ──────────────────────────── */}
         {showStatsModal && stats && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">Statistik</h2>
-                <button onClick={() => setShowStatsModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Statistik</h2>
+                <button onClick={() => setShowStatsModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
 
               {/* Gesamt */}
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-6">
                 {[
-                  { label: 'Gesamt', value: stats.gesamt.gesamt, color: 'text-white' },
-                  { label: 'Anwesend', value: stats.gesamt.anwesend, color: 'text-emerald-300' },
-                  { label: 'Teilweise', value: stats.gesamt.teilweise, color: 'text-sky-300' },
-                  { label: 'Abwesend', value: stats.gesamt.abwesend, color: 'text-red-400' },
-                  { label: 'Krank', value: stats.gesamt.krank, color: 'text-amber-300' },
-                  { label: 'Ausstehend', value: stats.gesamt.ausstehend, color: 'text-gray-400' },
+                  { label: 'Gesamt', value: stats.gesamt.gesamt, color: 'text-fg' },
+                  { label: 'Anwesend', value: stats.gesamt.anwesend, color: 'text-ok' },
+                  { label: 'Teilweise', value: stats.gesamt.teilweise, color: 'text-info' },
+                  { label: 'Abwesend', value: stats.gesamt.abwesend, color: 'text-bad' },
+                  { label: 'Krank', value: stats.gesamt.krank, color: 'text-warn' },
+                  { label: 'Ausstehend', value: stats.gesamt.ausstehend, color: 'text-fg-subtle' },
                 ].map(s => (
-                  <div key={s.label} className="bg-gray-800/50 border border-gray-800 rounded-lg p-3 text-center">
+                  <div key={s.label} className="bg-raised rounded-lg p-3 text-center">
                     <div className={`text-2xl font-bold tabular-nums leading-none ${s.color}`}>{s.value}</div>
-                    <div className="text-xs text-gray-400 mt-1.5">{s.label}</div>
+                    <div className="text-xs text-fg-muted mt-1.5">{s.label}</div>
                   </div>
                 ))}
               </div>
 
               <div className="flex items-baseline justify-center gap-2 mb-6 tabular-nums">
-                <span className="font-display text-4xl font-bold text-white leading-none">{stats.gesamt.quote}%</span>
-                <span className="text-sm text-gray-400">Anwesenheitsquote</span>
+                <span className="font-display text-4xl font-bold text-fg leading-none">{stats.gesamt.quote}%</span>
+                <span className="text-sm text-fg-muted">Anwesenheitsquote</span>
               </div>
 
               {/* Pro Termin */}
               {stats.termine.length > 0 && (
                 <>
-                  <h3 className="text-sm font-medium text-gray-300 mb-3">Pro Termin</h3>
-                  <div className="space-y-2">
+                  <h3 className="text-sm font-medium text-fg-muted mb-3">Pro Termin</h3>
+                  <div className="divide-y divide-line-subtle">
                     {stats.termine.map(t => {
                       const total = (t.anwesend || 0) + (t.teilweise || 0) + (t.abwesend || 0) + (t.krank || 0) + (t.ausstehend || 0);
                       return (
-                        <div key={t.termin_id} className="p-3 bg-gray-800/50 border border-gray-800 rounded-lg space-y-2">
+                        <div key={t.termin_id} className="py-3 space-y-2">
                           <div className="flex items-center gap-3">
                             <div className="flex-1 min-w-0">
-                              <span className="text-white text-sm">{t.titel}</span>
-                              <span className="text-gray-500 text-xs ml-2">{new Date(t.datum).toLocaleDateString('de-DE')}</span>
+                              <span className="text-fg text-sm">{t.titel}</span>
+                              <span className="text-fg-subtle text-xs ml-2">{new Date(t.datum).toLocaleDateString('de-DE')}</span>
                             </div>
                             <div className="flex items-center gap-3 text-xs tabular-nums">
-                              <span className="flex items-center gap-1 text-emerald-300"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{t.anwesend}</span>
-                              {(t.teilweise || 0) > 0 && <span className="flex items-center gap-1 text-sky-300"><span className="w-1.5 h-1.5 rounded-full bg-sky-500" />{t.teilweise}</span>}
-                              <span className="flex items-center gap-1 text-red-300"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{t.abwesend}</span>
-                              <span className="flex items-center gap-1 text-amber-300"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />{t.krank}</span>
+                              <span className="flex items-center gap-1 text-ok"><span className="w-1.5 h-1.5 rounded-full bg-ok" />{t.anwesend}</span>
+                              {(t.teilweise || 0) > 0 && <span className="flex items-center gap-1 text-info"><span className="w-1.5 h-1.5 rounded-full bg-info" />{t.teilweise}</span>}
+                              <span className="flex items-center gap-1 text-bad"><span className="w-1.5 h-1.5 rounded-full bg-bad" />{t.abwesend}</span>
+                              <span className="flex items-center gap-1 text-warn"><span className="w-1.5 h-1.5 rounded-full bg-warn" />{t.krank}</span>
                             </div>
-                            <span className="text-white text-sm font-semibold w-12 text-right tabular-nums">{t.quote}%</span>
+                            <span className="text-fg text-sm font-semibold w-12 text-right tabular-nums">{t.quote}%</span>
                           </div>
                           {total > 0 && (
-                            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden flex">
-                              {t.anwesend > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(t.anwesend / total) * 100}%` }} />}
-                              {(t.teilweise || 0) > 0 && <div className="bg-sky-500 h-full" style={{ width: `${(t.teilweise / total) * 100}%` }} />}
-                              {t.abwesend > 0 && <div className="bg-red-500 h-full" style={{ width: `${(t.abwesend / total) * 100}%` }} />}
-                              {t.krank > 0 && <div className="bg-amber-500 h-full" style={{ width: `${(t.krank / total) * 100}%` }} />}
-                              {t.ausstehend > 0 && <div className="bg-gray-600 h-full" style={{ width: `${(t.ausstehend / total) * 100}%` }} />}
+                            <div className="h-1.5 bg-raised rounded-sm overflow-hidden flex">
+                              {t.anwesend > 0 && <div className="bg-ok h-full" style={{ width: `${(t.anwesend / total) * 100}%` }} />}
+                              {(t.teilweise || 0) > 0 && <div className="bg-info h-full" style={{ width: `${(t.teilweise / total) * 100}%` }} />}
+                              {t.abwesend > 0 && <div className="bg-bad h-full" style={{ width: `${(t.abwesend / total) * 100}%` }} />}
+                              {t.krank > 0 && <div className="bg-warn h-full" style={{ width: `${(t.krank / total) * 100}%` }} />}
+                              {t.ausstehend > 0 && <div className="bg-fg-subtle h-full" style={{ width: `${(t.ausstehend / total) * 100}%` }} />}
                             </div>
                           )}
                         </div>
@@ -1142,34 +1142,34 @@ export default function AnwesenheitPage() {
 
         {/* ─── Notizen Modal ──────────────────────────────── */}
         {showNotesModal && editingNote && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-md p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-display text-xl font-semibold tracking-tight text-white">
+                <h2 className="font-display text-xl font-semibold tracking-tight text-fg">
                   Status und Notiz
-                  <span className="block text-sm font-sans font-normal text-gray-400 mt-0.5">{editingNote.name}</span>
+                  <span className="block text-sm font-sans font-normal text-fg-muted mt-0.5">{editingNote.name}</span>
                 </h2>
-                <button onClick={() => setShowNotesModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+                <button onClick={() => setShowNotesModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Status</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1.5">Status</label>
                   <select value={noteForm.status} onChange={e => setNoteForm({ ...noteForm, status: e.target.value })}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
                     {Object.entries(STATUS_LABELS).map(([k, v]) => (
                       <option key={k} value={k}>{v}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1.5">Notizen</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1.5">Notizen</label>
                   <textarea value={noteForm.notizen} onChange={e => setNoteForm({ ...noteForm, notizen: e.target.value })}
                     placeholder="z.B. kommt 20 Minuten später" rows={3}
-                    className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none" />
+                    className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none" />
                 </div>
               </div>
-              <div className="flex gap-2 mt-6">
-                <Button variant="ghost" className="flex-1" onClick={() => setShowNotesModal(false)}>Abbrechen</Button>
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-line-subtle">
+                <Button variant="ghost" onClick={() => setShowNotesModal(false)}>Abbrechen</Button>
                 <button onClick={async () => {
                   try {
                     if (editingNote.isSelf && editingNote.terminId && !hasPermission('anwesenheit.edit')) {
@@ -1198,7 +1198,7 @@ export default function AnwesenheitPage() {
                     toast.success('Gespeichert');
                   } catch (err) { handleApiError(err, 'Speichern fehlgeschlagen'); }
                 }}
-                  className="flex items-center justify-center gap-2 flex-1 px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-lg shadow-sm transition-colors">
+                  className="flex items-center justify-center gap-2 px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors">
                   <Check className="w-4 h-4" /> Speichern
                 </button>
               </div>
@@ -1251,15 +1251,15 @@ export default function AnwesenheitPage() {
       {/* Suche */}
       {listen.length > 0 && (
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" />
           <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Titel oder Ort" aria-label="Listen suchen" className="w-full pl-9 pr-3 py-2 text-sm bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+            placeholder="Titel oder Ort" aria-label="Listen suchen" className="w-full pl-9 pr-3 py-2 text-sm bg-raised border border-line rounded-md text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
       )}
 
       {/* Listen */}
       {filteredListen.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           {searchQuery ? (
             <EmptyState icon={Search} title="Keine passenden Listen"
               description={`Nichts gefunden für „${searchQuery}".`}
@@ -1279,8 +1279,8 @@ export default function AnwesenheitPage() {
         <div className="space-y-2">
           {listenOhneTermine.length > 0 && (
             <SectionHeader title="Listen ohne Termine" count={listenOhneTermine.length} defaultOpen={true}>
-              <div className="mb-1 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-sm text-amber-200 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+              <div className="mb-1 p-3 bg-raised rounded-lg text-sm text-fg-muted flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-warn" />
                 Ohne Termine lässt sich keine Anwesenheit pro Tag erfassen. In der Liste über „Termine" anlegen.
               </div>
               {listenOhneTermine.map(l => (
@@ -1318,32 +1318,32 @@ export default function AnwesenheitPage() {
 
       {/* Create Modal (auch in Übersicht) */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-lg p-6">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-display text-xl font-semibold tracking-tight text-white">Neue Anwesenheitsliste</h2>
-              <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"><X className="w-5 h-5" /></button>
+              <h2 className="font-display text-xl font-semibold tracking-tight text-fg">Neue Anwesenheitsliste</h2>
+              <button onClick={() => setShowCreateModal(false)} aria-label="Schließen" className="p-1.5 -mr-1.5 text-fg-muted hover:text-fg hover:bg-raised rounded-sm"><X className="w-5 h-5" /></button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Titel <span className="text-accent">*</span></label>
+                <label className="block text-sm font-medium text-fg-muted mb-1.5">Titel <span className="text-accent-fg">*</span></label>
                 <input type="text" value={createForm.titel} onChange={e => setCreateForm({ ...createForm, titel: e.target.value })}
-                  placeholder="z.B. Probe Montag, Workshop 2026…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                  placeholder="z.B. Probe Montag, Workshop 2026…" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Beschreibung</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1.5">Beschreibung</label>
                 <textarea value={createForm.beschreibung} onChange={e => setCreateForm({ ...createForm, beschreibung: e.target.value })}
-                  rows={2} className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none" />
+                  rows={2} className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent resize-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1.5">Ort</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1.5">Ort</label>
                 <input type="text" value={createForm.ort} onChange={e => setCreateForm({ ...createForm, ort: e.target.value })}
-                  placeholder="z.B. Aula, Studio A…" className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+                  placeholder="z.B. Aula, Studio A…" className="w-full px-3 py-2 bg-raised border border-line rounded-md text-fg text-sm placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               </div>
             </div>
-            <div className="flex gap-2 mt-6">
-              <Button variant="ghost" className="flex-1" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
-              <Button variant="primary" className="flex-1" onClick={handleCreate} disabled={saving || !createForm.titel}>
+            <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-line-subtle">
+              <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Abbrechen</Button>
+              <Button variant="primary" onClick={handleCreate} disabled={saving || !createForm.titel}>
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 Erstellen
               </Button>
@@ -1361,21 +1361,21 @@ function ListCard({ liste, onOpen, onDelete, canDelete }) {
   const stat = liste.statistik;
   return (
     <button onClick={onOpen}
-      className="w-full text-left bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-600 transition-colors group">
+      className="w-full text-left bg-surface rounded-lg p-4 hover:bg-raised transition-colors group">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-semibold text-white group-hover:text-accent transition-colors truncate">{liste.titel}</span>
+            <span className="font-semibold text-fg group-hover:text-accent-fg transition-colors truncate">{liste.titel}</span>
             {liste.status !== 'aktiv' && <StatusBadge tone="neutral" label="Abgeschlossen" />}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 tabular-nums mb-2.5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-subtle tabular-nums mb-2.5">
             {liste.ort && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{liste.ort}</span>}
             <span className="flex items-center gap-1"><Users className="w-3 h-3" />{liste.anzahl_teilnehmer}</span>
             <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{liste.anzahl_termine} {liste.anzahl_termine === 1 ? 'Termin' : 'Termine'}</span>
             {liste.naechster_termin && (
-              <span className="flex items-center gap-1 text-gray-200 font-medium">
-                <Clock className="w-3 h-3 text-accent" />
+              <span className="flex items-center gap-1 text-fg font-medium">
+                <Clock className="w-3 h-3 text-accent-fg" />
                 {new Date(liste.naechster_termin.datum).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                 {liste.naechster_termin.beginn && ` ${liste.naechster_termin.beginn.slice(0, 5)}`}
               </span>
@@ -1386,11 +1386,11 @@ function ListCard({ liste, onOpen, onDelete, canDelete }) {
             <div className="space-y-1.5">
               <ProgressBar statistik={stat} />
               <div className="flex items-center gap-3 text-[11px] tabular-nums">
-                {stat.anwesend > 0 && <span className="flex items-center gap-1 text-emerald-300" title="Anwesend"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />{stat.anwesend}</span>}
-                {(stat.teilweise || 0) > 0 && <span className="flex items-center gap-1 text-sky-300" title="Teilweise"><span className="w-1.5 h-1.5 rounded-full bg-sky-500" />{stat.teilweise}</span>}
-                {stat.abwesend > 0 && <span className="flex items-center gap-1 text-red-300" title="Abwesend"><span className="w-1.5 h-1.5 rounded-full bg-red-500" />{stat.abwesend}</span>}
-                {stat.krank > 0 && <span className="flex items-center gap-1 text-amber-300" title="Krank"><span className="w-1.5 h-1.5 rounded-full bg-amber-500" />{stat.krank}</span>}
-                {stat.ausstehend > 0 && <span className="flex items-center gap-1 text-gray-500"><span className="w-1.5 h-1.5 rounded-full bg-gray-600" />{stat.ausstehend}</span>}
+                {stat.anwesend > 0 && <span className="flex items-center gap-1 text-ok" title="Anwesend"><span className="w-1.5 h-1.5 rounded-full bg-ok" />{stat.anwesend}</span>}
+                {(stat.teilweise || 0) > 0 && <span className="flex items-center gap-1 text-info" title="Teilweise"><span className="w-1.5 h-1.5 rounded-full bg-info" />{stat.teilweise}</span>}
+                {stat.abwesend > 0 && <span className="flex items-center gap-1 text-bad" title="Abwesend"><span className="w-1.5 h-1.5 rounded-full bg-bad" />{stat.abwesend}</span>}
+                {stat.krank > 0 && <span className="flex items-center gap-1 text-warn" title="Krank"><span className="w-1.5 h-1.5 rounded-full bg-warn" />{stat.krank}</span>}
+                {stat.ausstehend > 0 && <span className="flex items-center gap-1 text-fg-subtle"><span className="w-1.5 h-1.5 rounded-full bg-fg-subtle" />{stat.ausstehend}</span>}
               </div>
             </div>
           )}
@@ -1400,11 +1400,11 @@ function ListCard({ liste, onOpen, onDelete, canDelete }) {
           {canDelete && (
             <span onClick={e => { e.stopPropagation(); onDelete(); }}
               title="Liste löschen" aria-label="Liste löschen"
-              className="p-1.5 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              className="p-1.5 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
               <Trash2 className="w-4 h-4" />
             </span>
           )}
-          <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+          <ChevronRight className="w-5 h-5 text-fg-subtle group-hover:text-fg-muted transition-colors" />
         </div>
       </div>
     </button>
