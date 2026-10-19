@@ -13,9 +13,9 @@ function Toggle({ checked, onChange, disabled, label }) {
     <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
       role="switch" aria-checked={checked} aria-label={label}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        checked ? 'bg-accent' : 'bg-hover'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-      <span className={`inline-block h-3.5 w-3.5 bg-white rounded-full transition-transform ${
+        disabled ? 'bg-line cursor-not-allowed' : checked ? 'bg-accent' : 'bg-hover'
+      }`}>
+      <span className={`inline-block h-3.5 w-3.5 ${disabled ? 'bg-fg-disabled' : 'bg-white'} rounded-full transition-transform ${
         checked ? 'translate-x-5' : 'translate-x-1'
       }`} />
     </button>

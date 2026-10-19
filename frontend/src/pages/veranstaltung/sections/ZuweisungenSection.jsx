@@ -236,7 +236,7 @@ export default function ZuweisungenSection({ data, refetch, canEdit, eventId, be
               </div>
               {canEdit && (
                 <button type="button" onClick={() => removeZuweisung(z.user_keycloak_id)} aria-label={`${name} entfernen`}
-                  className="text-fg-subtle hover:text-bad opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                  className="text-fg-subtle hover:text-bad opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity ml-2">
                   <X className="w-4 h-4" />
                 </button>
               )}

@@ -146,7 +146,7 @@ export default function MeldungSection({ data, refetch, eventId, currentUserId, 
                     className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg placeholder:text-fg-subtle text-sm" />
                 </div>
                 <button type="button" onClick={handleAbmelden}
-                  className="px-3 py-2 bg-bad hover:opacity-90 text-white rounded-md text-sm">
+                  className="px-3 py-2 bg-bad hover:brightness-110 text-white rounded-md text-sm">
                   Bestätigen
                 </button>
               </div>

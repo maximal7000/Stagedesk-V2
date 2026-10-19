@@ -86,7 +86,7 @@ export default function QuickInfoCard({ data, isAdmin }) {
                     || z.user_username || z.user_keycloak_id?.slice(0, 8) || '?';
                   return (
                     <div key={z.id} className="w-7 h-7 bg-accent rounded-full flex items-center justify-center ring-2 ring-surface" title={name}>
-                      <span className="text-fg text-xs font-medium">{name[0].toUpperCase()}</span>
+                      <span className="text-white text-xs font-medium">{name[0].toUpperCase()}</span>
                     </div>
                   );
                 })}
