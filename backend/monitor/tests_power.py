@@ -278,3 +278,40 @@ class SettingsPermissionSplitTest(SimpleTestCase):
         self.assertEqual(self.required(weather_api_key='k'), 'monitor.setup')
         self.assertEqual(self.required(weather_api_key='k', on_air_text='LIVE'), 'monitor.setup')
         self.assertEqual(self.required(), 'monitor.setup')
+
+
+class FreshImportTest(SimpleTestCase):
+    """api_setup muss sich in einem frischen Prozess als erstes Modul importieren lassen."""
+
+    def test_api_setup_imports_standalone(self):
+        import subprocess
+        import sys
+        from pathlib import Path
+        code = 'import django; django.setup(); import monitor.api_setup'
+        env = {**__import__('os').environ, 'DJANGO_SETTINGS_MODULE': 'core.settings'}
+        result = subprocess.run([sys.executable, '-c', code], cwd=Path(__file__).resolve().parent.parent,
+                                env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class ScreenUpdatePermissionSplitTest(SimpleTestCase):
+    """PUT /screens/{id}: Power-Felder brauchen power, alles andere setup (Spec §3.5)."""
+
+    def required(self, **fields):
+        payload = api.ScreenUpdateSchema(**fields)
+        with mock.patch.object(api, '_require_perm') as guard, \
+                mock.patch.object(api, 'get_object_or_404', side_effect=_Denied):
+            with self.assertRaises(_Denied):
+                api.update_screen(object(), 1, payload)
+        return [c.args[1] for c in guard.call_args_list]
+
+    def test_power_only_needs_power(self):
+        self.assertEqual(self.required(power_mode='manual_off', power_schedule=[], power_exceptions=[],
+                                       off_during_holidays=False, off_until=None), ['monitor.power'])
+
+    def test_setup_only_needs_setup(self):
+        self.assertEqual(self.required(name='Halle', schedule=[]), ['monitor.setup'])
+        self.assertEqual(self.required(), ['monitor.setup'])
+
+    def test_mixed_needs_both(self):
+        self.assertEqual(self.required(name='Halle', power_mode='auto'), ['monitor.setup', 'monitor.power'])

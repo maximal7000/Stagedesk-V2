@@ -9,7 +9,7 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
-from .api import _require_perm
+from .permissions import _require_perm
 from .consumers import push_power_to_all
 from .models import EmergencyTemplate, HolidayPeriod, Screen
 from .power import next_on_time

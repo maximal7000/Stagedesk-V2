@@ -65,7 +65,8 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('restore_view_version', 1), ('regenerate_token', None),
                 ('create_webuntis_link', None), ('update_webuntis_link', 1, None),
                 ('delete_webuntis_link', 1), ('search_transit_stops',),
-                ('create_screen', None), ('update_screen', 1, None), ('delete_screen', 1),
+                ('create_screen', None), ('update_screen', 1, api.ScreenUpdateSchema(name='Halle')),
+                ('delete_screen', 1),
                 ('reload_screen', 1),
             ],
             'monitor.exams': [
@@ -82,6 +83,8 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
             'monitor.power': [
                 ('list_holidays',), ('create_holiday', None), ('update_holiday', 1, None),
                 ('delete_holiday', 1), ('power_off_today', None), ('undo_power_off_today', None),
+                # gemischte Payloads: tests_power.ScreenUpdatePermissionSplitTest
+                ('update_screen', 1, api.ScreenUpdateSchema(power_mode='auto', off_until=None)),
             ],
             'monitor.emergency': [
                 ('list_emergency_templates',), ('create_emergency_template', None),

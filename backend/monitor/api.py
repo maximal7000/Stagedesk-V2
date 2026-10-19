@@ -13,28 +13,12 @@ from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 
 from core.auth import keycloak_auth
-from users.api import is_admin
-from users.models import UserProfile
 from ninja.errors import HttpError
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
     validate_rotation_items,
 )
-
-
-def _require_perm(request, code: str):
-    """Admin oder Permission. Wirft 403 wenn nichts davon passt."""
-    if is_admin(request):
-        return
-    kid = request.auth.get('sub', '') if request.auth else ''
-    if kid:
-        try:
-            if UserProfile.objects.get(keycloak_id=kid).has_permission(code, False):
-                return
-        except UserProfile.DoesNotExist:
-            pass
-    raise HttpError(403, "Keine Berechtigung")
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -63,8 +47,12 @@ from .schemas import (
 )
 from . import oepnv
 from .consumers import push_power_to_all
+from .permissions import _require_perm
+from .api_setup import setup_router
 
 monitor_router = Router(tags=["Monitor"])
+# Ferien, Notfall-Vorlagen, "bis Tagesende aus"
+monitor_router.add_router("", setup_router)
 
 _HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 
@@ -872,11 +860,18 @@ def create_screen(request, payload: ScreenCreateSchema):
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
+SCREEN_POWER_FIELDS = {'power_mode', 'power_schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
+
+
 @monitor_router.put("/screens/{int:id}", response=ScreenListSchema, auth=keycloak_auth)
 def update_screen(request, id: int, payload: ScreenUpdateSchema):
-    _require_perm(request, 'monitor.setup')
-    screen = get_object_or_404(Screen, id=id)
+    # Power-Felder gehören zum Recht power, alles andere zu setup (Spec §3.5).
     data = payload.dict(exclude_unset=True)
+    if not data or set(data) - SCREEN_POWER_FIELDS:
+        _require_perm(request, 'monitor.setup')
+    if set(data) & SCREEN_POWER_FIELDS:
+        _require_perm(request, 'monitor.power')
+    screen = get_object_or_404(Screen, id=id)
     if 'default_view_id' in data:
         val = data.pop('default_view_id')
         screen.default_view_id = val if val else None
@@ -884,9 +879,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         val = data.pop('override_view_id')
         screen.override_view_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
-    power_keys = {'schedule', 'power_schedule', 'power_exceptions', 'power_mode',
-                  'off_until', 'off_during_holidays'}
-    power_changed = bool(power_keys & set(data.keys()))
+    power_changed = bool(SCREEN_POWER_FIELDS & set(data.keys()))
     for key, value in data.items():
         setattr(screen, key, value)
     screen.save()
@@ -1117,10 +1110,3 @@ def legacy_get_screen_power(request, slug: str):
 @monitor_router.post("/bildschirm/cec-status")
 def legacy_report_cec_status(request, slug: str, status: str):
     return report_cec_status(request, slug, status)
-
-
-# ═══ Einrichtung: Ferien, Notfall-Vorlagen, "bis Tagesende aus" ══
-# Am Ende importiert, weil api_setup _require_perm aus diesem Modul nutzt.
-from .api_setup import setup_router  # noqa: E402
-
-monitor_router.add_router("", setup_router)
