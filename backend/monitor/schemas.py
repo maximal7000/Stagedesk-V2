@@ -340,6 +340,12 @@ class OnAirSchema(Schema):
     on_air: bool
 
 
+class LegacyEmergencySchema(Schema):
+    """Altes ATEM-Format von POST /notfall."""
+    aktiv: bool
+    text: str = ''
+
+
 class EmergencySchema(Schema):
     active: bool
     text: str = ''

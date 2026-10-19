@@ -52,7 +52,7 @@ from .schemas import (
     DisplayViewSchema, DisplayViewUpdateSchema,
     DisplayViewListSchema, DisplayViewCreateSchema,
     AnnouncementSchema, AnnouncementCreateSchema,
-    MediaFileSchema, OnAirSchema, EmergencySchema, DisplayViewVersionSchema,
+    MediaFileSchema, OnAirSchema, EmergencySchema, LegacyEmergencySchema, DisplayViewVersionSchema,
     ScreenListSchema, ScreenCreateSchema, ScreenUpdateSchema,
     ExamSchema, ExamCreateSchema, ExamUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
@@ -246,18 +246,28 @@ def _fetch_disruptions(view):
 
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
+def _legacy_reload_key(now) -> str:
+    """ISO-Zeit auf die Minute abgerundet. Schon geladene Pis mit altem JS
+    laden sich neu, sobald sich dieser Wert ändert (Spec 6.3)."""
+    return now.replace(second=0, microsecond=0).isoformat()
+
+
 @monitor_router.get("/display")
-def get_display_data(request, profil: str = None, bildschirm: str = None):
-    """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display"""
+def get_display_data(request, view: str = None, screen: str = None,
+                     profil: str = None, bildschirm: str = None):
+    """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display.
+    Die alten Query-Namen `profil` und `bildschirm` gelten weiter (Kiosk-URLs)."""
+    screen_slug = screen or bildschirm
+    view_slug = view or profil
     screen = None
-    if bildschirm:
+    if screen_slug:
         try:
-            screen = Screen.objects.get(slug=bildschirm)
+            screen = Screen.objects.get(slug=screen_slug)
             view = screen.get_active_view()
         except Screen.DoesNotExist:
-            view = DisplayView.get(slug=profil)
+            view = DisplayView.get(slug=view_slug)
     else:
-        view = DisplayView.get(slug=profil)
+        view = DisplayView.get(slug=view_slug)
     now = timezone.now()
 
     # Aktive Klausur (pro Bildschirm)
@@ -365,6 +375,8 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
         'exam': exam,
         'reload_requested_at': (screen.reload_requested_at.isoformat()
                                 if (screen and screen.reload_requested_at) else None),
+        # TODO(step-b): remove legacy reload key
+        'neu_laden_zeit': _legacy_reload_key(now),
     }
 
 
@@ -401,7 +413,7 @@ def get_clock_data(request):
 
 # ═══ ON AIR Endpunkt (Token-Auth) ════════════════════════════════
 
-@monitor_router.post("/onair", response={200: dict, 401: dict, 403: dict})
+@monitor_router.post("/on-air", response={200: dict, 401: dict, 403: dict})
 def toggle_on_air(request, payload: OnAirSchema):
     """ON AIR Status ändern — betrifft ALLE Profile"""
     # Erst per Token prüfen
@@ -436,7 +448,7 @@ def toggle_on_air(request, payload: OnAirSchema):
 
 # ═══ Notfall Endpunkt (Token-Auth) ═══════════════════════════════
 
-@monitor_router.post("/notfall", response={200: dict, 401: dict, 403: dict})
+@monitor_router.post("/emergency", response={200: dict, 401: dict, 403: dict})
 def toggle_emergency(request, payload: EmergencySchema):
     """Notfall-Meldung aktivieren/deaktivieren — betrifft ALLE Profile"""
     token = request.headers.get('X-Monitor-Token', '')
@@ -469,13 +481,13 @@ def toggle_emergency(request, payload: EmergencySchema):
 
 # ═══ Admin: Profile ══════════════════════════════════════════════
 
-@monitor_router.get("/profile", response=list[DisplayViewListSchema], auth=keycloak_auth)
+@monitor_router.get("/views", response=list[DisplayViewListSchema], auth=keycloak_auth)
 def list_views(request):
     _require_perm(request, 'monitor.view')
     return DisplayView.objects.filter(deleted_at__isnull=True).order_by('sort_order', 'name')
 
 
-@monitor_router.post("/profile", auth=keycloak_auth)
+@monitor_router.post("/views", auth=keycloak_auth)
 def create_view(request, payload: DisplayViewCreateSchema):
     _require_perm(request, 'monitor.edit')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
@@ -509,7 +521,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
         return {'id': view.id, 'name': view.name, 'slug': view.slug}
 
 
-@monitor_router.delete("/profile/{id}", auth=keycloak_auth)
+@monitor_router.delete("/views/{id}", auth=keycloak_auth)
 def delete_view(request, id: int):
     _require_perm(request, 'monitor.edit')
     view = get_object_or_404(DisplayView, id=id)
@@ -523,18 +535,18 @@ def delete_view(request, id: int):
 # ═══ Admin: Config ════════════════════════════════════════════════
 
 @monitor_router.get("/config", response=DisplayViewSchema, auth=keycloak_auth)
-def get_view(request, profil_id: int = None):
+def get_view(request, view_id: int = None):
     _require_perm(request, 'monitor.view')
-    if profil_id:
-        return get_object_or_404(DisplayView, id=profil_id)
+    if view_id:
+        return get_object_or_404(DisplayView, id=view_id)
     return DisplayView.get()
 
 
-@monitor_router.get("/stoerungen", auth=keycloak_auth)
-def list_disruptions(request, profil_id: int = None):
+@monitor_router.get("/disruptions", auth=keycloak_auth)
+def list_disruptions(request, view_id: int = None):
     """Admin: alle aktuellen Störungen (aller Quellen) mit hidden-Flag zum Ausblenden."""
     _require_perm(request, 'monitor.view')
-    view = get_object_or_404(DisplayView, id=profil_id) if profil_id else DisplayView.get()
+    view = get_object_or_404(DisplayView, id=view_id) if view_id else DisplayView.get()
     hidden = set(view.transit_disruption_hidden or [])
     out = []
     for s in _fetch_disruptions(view):
@@ -565,10 +577,10 @@ def _snapshot_view(view):
 
 
 @monitor_router.put("/config", response=DisplayViewSchema, auth=keycloak_auth)
-def update_view(request, payload: DisplayViewUpdateSchema, profil_id: int = None):
+def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
     _require_perm(request, 'monitor.edit')
-    if profil_id:
-        view = get_object_or_404(DisplayView, id=profil_id)
+    if view_id:
+        view = get_object_or_404(DisplayView, id=view_id)
     else:
         view = DisplayView.get()
 
@@ -593,11 +605,11 @@ def update_view(request, payload: DisplayViewUpdateSchema, profil_id: int = None
     return view
 
 
-@monitor_router.get("/config/versionen", response=list[DisplayViewVersionSchema], auth=keycloak_auth)
-def list_view_versions(request, profil_id: int):
+@monitor_router.get("/config/versions", response=list[DisplayViewVersionSchema], auth=keycloak_auth)
+def list_view_versions(request, view_id: int):
     _require_perm(request, 'monitor.view')
     from .models import DisplayViewVersion
-    return list(DisplayViewVersion.objects.filter(view_id=profil_id)[:15])
+    return list(DisplayViewVersion.objects.filter(view_id=view_id)[:15])
 
 
 @monitor_router.post("/config/restore", response=DisplayViewSchema, auth=keycloak_auth)
@@ -619,10 +631,10 @@ def restore_view_version(request, version_id: int):
 
 
 @monitor_router.post("/config/regenerate-token", auth=keycloak_auth)
-def regenerate_token(request, profil_id: int = None):
+def regenerate_token(request, view_id: int = None):
     _require_perm(request, 'monitor.edit')
-    if profil_id:
-        view = get_object_or_404(DisplayView, id=profil_id)
+    if view_id:
+        view = get_object_or_404(DisplayView, id=view_id)
     else:
         view = DisplayView.get()
     view.api_token = uuid.uuid4().hex
@@ -632,22 +644,22 @@ def regenerate_token(request, profil_id: int = None):
 
 # ═══ Admin: Dateien (Upload/Manage) ══════════════════════════════
 
-@monitor_router.get("/dateien", response=list[MediaFileSchema], auth=keycloak_auth)
-def list_files(request, typ: str = None):
+@monitor_router.get("/files", response=list[MediaFileSchema], auth=keycloak_auth)
+def list_files(request, kind: str = None):
     _require_perm(request, 'monitor.view')
     qs = MediaFile.objects.filter(deleted_at__isnull=True)
-    if typ:
-        qs = qs.filter(kind=typ)
+    if kind:
+        qs = qs.filter(kind=kind)
     return qs
 
 
-@monitor_router.post("/dateien", auth=keycloak_auth)
-def upload_file(request, datei: UploadedFile = File(...), name: str = Form(""), typ: str = Form("image")):
+@monitor_router.post("/files", auth=keycloak_auth)
+def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), kind: str = Form("image")):
     _require_perm(request, 'monitor.edit')
     obj = MediaFile.objects.create(
-        name=name or datei.name,
-        file=datei,
-        kind=typ,
+        name=name or file.name,
+        file=file,
+        kind=kind,
     )
     return {
         'id': obj.id, 'name': obj.name, 'kind': obj.kind,
@@ -655,7 +667,7 @@ def upload_file(request, datei: UploadedFile = File(...), name: str = Form(""), 
     }
 
 
-@monitor_router.delete("/dateien/{id}", auth=keycloak_auth)
+@monitor_router.delete("/files/{id}", auth=keycloak_auth)
 def delete_file(request, id: int):
     _require_perm(request, 'monitor.edit')
     d = get_object_or_404(MediaFile, id=id)
@@ -667,7 +679,7 @@ def delete_file(request, id: int):
 
 # ═══ Admin: Papierkorb (Soft-Delete) ═════════════════════════════
 
-@monitor_router.get("/papierkorb", auth=keycloak_auth)
+@monitor_router.get("/trash", auth=keycloak_auth)
 def get_trash(request):
     _require_perm(request, 'monitor.view')
     views = [
@@ -681,14 +693,14 @@ def get_trash(request):
     return {'views': views, 'media': media}
 
 
-@monitor_router.post("/papierkorb/wiederherstellen", auth=keycloak_auth)
-def restore_trash(request, art: str, id: int):
+@monitor_router.post("/trash/restore", auth=keycloak_auth)
+def restore_trash(request, kind: str, id: int):
     _require_perm(request, 'monitor.edit')
-    if art == 'ansicht':
+    if kind == 'view':
         obj = get_object_or_404(DisplayView, id=id)
         obj.deleted_at = None
         obj.save(update_fields=['deleted_at', 'updated_at'])
-    elif art == 'medium':
+    elif kind == 'media':
         obj = get_object_or_404(MediaFile, id=id)
         obj.deleted_at = None
         obj.save(update_fields=['deleted_at'])
@@ -697,13 +709,13 @@ def restore_trash(request, art: str, id: int):
     return {"success": True}
 
 
-@monitor_router.delete("/papierkorb/endgueltig", auth=keycloak_auth)
-def purge_trash(request, art: str, id: int):
+@monitor_router.delete("/trash/purge", auth=keycloak_auth)
+def purge_trash(request, kind: str, id: int):
     _require_perm(request, 'monitor.edit')
-    if art == 'ansicht':
+    if kind == 'view':
         obj = get_object_or_404(DisplayView, id=id, deleted_at__isnull=False)
         obj.delete()
-    elif art == 'medium':
+    elif kind == 'media':
         obj = get_object_or_404(MediaFile, id=id, deleted_at__isnull=False)
         if obj.file:
             obj.file.delete(save=False)
@@ -715,19 +727,19 @@ def purge_trash(request, art: str, id: int):
 
 # ═══ Admin: Ankündigungen ═════════════════════════════════════════
 
-@monitor_router.get("/ankuendigungen", response=list[AnnouncementSchema], auth=keycloak_auth)
+@monitor_router.get("/announcements", response=list[AnnouncementSchema], auth=keycloak_auth)
 def list_announcements(request):
     _require_perm(request, 'monitor.view')
     return Announcement.objects.all()
 
 
-@monitor_router.post("/ankuendigungen", response=AnnouncementSchema, auth=keycloak_auth)
+@monitor_router.post("/announcements", response=AnnouncementSchema, auth=keycloak_auth)
 def create_announcement(request, payload: AnnouncementCreateSchema):
     _require_perm(request, 'monitor.edit')
     return Announcement.objects.create(**payload.dict())
 
 
-@monitor_router.put("/ankuendigungen/{id}", response=AnnouncementSchema, auth=keycloak_auth)
+@monitor_router.put("/announcements/{id}", response=AnnouncementSchema, auth=keycloak_auth)
 def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
     _require_perm(request, 'monitor.edit')
     a = get_object_or_404(Announcement, id=id)
@@ -737,7 +749,7 @@ def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
     return a
 
 
-@monitor_router.delete("/ankuendigungen/{id}", auth=keycloak_auth)
+@monitor_router.delete("/announcements/{id}", auth=keycloak_auth)
 def delete_announcement(request, id: int):
     _require_perm(request, 'monitor.edit')
     a = get_object_or_404(Announcement, id=id)
@@ -778,7 +790,7 @@ def delete_webuntis_link(request, id: int):
 
 # ═══ Admin: ÖPNV Stationssuche ═══════════════════════════════════
 
-@monitor_router.get("/oepnv/suche", auth=keycloak_auth)
+@monitor_router.get("/transit/search", auth=keycloak_auth)
 def search_transit_stops(request, q: str = "", results: int = 10,
                          use_db: bool = True, use_nahsh: bool = True):
     """Stationen für ÖPNV-Abfahrtsmonitor suchen"""
@@ -791,27 +803,27 @@ def search_transit_stops(request, q: str = "", results: int = 10,
 
 # ═══ Bildschirm: Power-Status (öffentlich, kein Auth) ═════════════
 
-@monitor_router.get("/bildschirm/power")
+@monitor_router.get("/screen/power")
 def get_screen_power(request, slug: str):
     """Öffentlicher Endpunkt: Soll der Bildschirm gerade an sein?
-    Wird vom Raspberry Pi per Cronjob gepollt. Die Antwortschlüssel bleiben
-    für die Pi-Skripte unverändert."""
+    Wird vom Raspberry Pi per Cronjob gepollt. Die Antwortschlüssel folgen
+    den neuen Feldnamen."""
     try:
         screen = Screen.objects.get(slug=slug)
         return {
             'slug': screen.slug,
             'power': screen.get_power_state(),
-            'power_zeitplan': screen.power_schedule,
-            'ferien_modus': screen.holiday_mode,
-            'power_ausnahmen': screen.power_exceptions,
+            'power_schedule': screen.power_schedule,
+            'holiday_mode': screen.holiday_mode,
+            'power_exceptions': screen.power_exceptions,
             'cec_status': screen.cec_status,
-            'cec_status_zeit': screen.cec_status_at,
+            'cec_status_at': screen.cec_status_at,
         }
     except Screen.DoesNotExist:
         return {'slug': slug, 'power': True, 'error': 'Bildschirm nicht gefunden'}
 
 
-@monitor_router.post("/bildschirm/cec-status")
+@monitor_router.post("/screen/cec-status")
 def report_cec_status(request, slug: str, status: str):
     """Öffentlicher Endpunkt: Pi meldet den tatsächlichen CEC-Status zurück.
     status: 'on', 'standby', 'unknown'"""
@@ -827,13 +839,13 @@ def report_cec_status(request, slug: str, status: str):
 
 # ═══ Admin: Bildschirme ═══════════════════════════════════════════
 
-@monitor_router.get("/bildschirme", response=list[ScreenListSchema], auth=keycloak_auth)
+@monitor_router.get("/screens", response=list[ScreenListSchema], auth=keycloak_auth)
 def list_screens(request):
     _require_perm(request, 'monitor.view')
     return Screen.objects.all()
 
 
-@monitor_router.post("/bildschirme", auth=keycloak_auth)
+@monitor_router.post("/screens", auth=keycloak_auth)
 def create_screen(request, payload: ScreenCreateSchema):
     _require_perm(request, 'monitor.edit')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
@@ -850,7 +862,7 @@ def create_screen(request, payload: ScreenCreateSchema):
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
-@monitor_router.put("/bildschirme/{id}", response=ScreenListSchema, auth=keycloak_auth)
+@monitor_router.put("/screens/{id}", response=ScreenListSchema, auth=keycloak_auth)
 def update_screen(request, id: int, payload: ScreenUpdateSchema):
     _require_perm(request, 'monitor.edit')
     screen = get_object_or_404(Screen, id=id)
@@ -873,7 +885,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
     return screen
 
 
-@monitor_router.delete("/bildschirme/{id}", auth=keycloak_auth)
+@monitor_router.delete("/screens/{id}", auth=keycloak_auth)
 def delete_screen(request, id: int):
     _require_perm(request, 'monitor.edit')
     screen = get_object_or_404(Screen, id=id)
@@ -881,7 +893,7 @@ def delete_screen(request, id: int):
     return {"success": True}
 
 
-@monitor_router.post("/bildschirme/{id}/reload", auth=keycloak_auth)
+@monitor_router.post("/screens/{id}/reload", auth=keycloak_auth)
 def reload_screen(request, id: int):
     """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt reload_requested_at)."""
     _require_perm(request, 'monitor.edit')
@@ -893,13 +905,13 @@ def reload_screen(request, id: int):
 
 # ═══ Klausuren ════════════════════════════════════════════════════
 
-@monitor_router.get("/klausuren", response=list[ExamSchema], auth=keycloak_auth)
+@monitor_router.get("/exams", response=list[ExamSchema], auth=keycloak_auth)
 def list_exams(request):
     _require_perm(request, 'monitor.view')
     return list(Exam.objects.prefetch_related('screens').all())
 
 
-@monitor_router.post("/klausuren", response=ExamSchema, auth=keycloak_auth)
+@monitor_router.post("/exams", response=ExamSchema, auth=keycloak_auth)
 def create_exam(request, payload: ExamCreateSchema):
     _require_perm(request, 'monitor.edit')
     data = payload.dict()
@@ -911,7 +923,7 @@ def create_exam(request, payload: ExamCreateSchema):
     return exam
 
 
-@monitor_router.put("/klausuren/{id}", response=ExamSchema, auth=keycloak_auth)
+@monitor_router.put("/exams/{id}", response=ExamSchema, auth=keycloak_auth)
 def update_exam(request, id: int, payload: ExamUpdateSchema):
     _require_perm(request, 'monitor.edit')
     exam = get_object_or_404(Exam, id=id)
@@ -926,7 +938,7 @@ def update_exam(request, id: int, payload: ExamUpdateSchema):
     return exam
 
 
-@monitor_router.delete("/klausuren/{id}", auth=keycloak_auth)
+@monitor_router.delete("/exams/{id}", auth=keycloak_auth)
 def delete_exam(request, id: int):
     _require_perm(request, 'monitor.edit')
     exam = get_object_or_404(Exam, id=id)
@@ -983,7 +995,7 @@ def delete_event(request, id: int):
     return {"success": True}
 
 
-@monitor_router.post("/events/{id}/aktivieren", response=DisplayEventSchema, auth=keycloak_auth)
+@monitor_router.post("/events/{id}/activate", response=DisplayEventSchema, auth=keycloak_auth)
 def activate_event(request, id: int):
     _require_perm(request, 'monitor.edit')
     event = get_object_or_404(DisplayEvent, id=id)
@@ -993,7 +1005,7 @@ def activate_event(request, id: int):
     return event
 
 
-@monitor_router.post("/events/{id}/deaktivieren", response=DisplayEventSchema, auth=keycloak_auth)
+@monitor_router.post("/events/{id}/deactivate", response=DisplayEventSchema, auth=keycloak_auth)
 def deactivate_event(request, id: int):
     _require_perm(request, 'monitor.edit')
     event = get_object_or_404(DisplayEvent, id=id)
@@ -1005,19 +1017,19 @@ def deactivate_event(request, id: int):
 
 # ═══ Admin: Klausur-Vorlagen ═════════════════════════════════════
 
-@monitor_router.get("/klausur-vorlagen", response=list[ExamTemplateSchema], auth=keycloak_auth)
+@monitor_router.get("/exam-templates", response=list[ExamTemplateSchema], auth=keycloak_auth)
 def list_exam_templates(request):
     _require_perm(request, 'monitor.view')
     return ExamTemplate.objects.all()
 
 
-@monitor_router.post("/klausur-vorlagen", response=ExamTemplateSchema, auth=keycloak_auth)
+@monitor_router.post("/exam-templates", response=ExamTemplateSchema, auth=keycloak_auth)
 def create_exam_template(request, payload: ExamTemplateCreateSchema):
     _require_perm(request, 'monitor.edit')
     return ExamTemplate.objects.create(**payload.dict())
 
 
-@monitor_router.put("/klausur-vorlagen/{id}", response=ExamTemplateSchema, auth=keycloak_auth)
+@monitor_router.put("/exam-templates/{id}", response=ExamTemplateSchema, auth=keycloak_auth)
 def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
     _require_perm(request, 'monitor.edit')
     template = get_object_or_404(ExamTemplate, id=id)
@@ -1027,7 +1039,7 @@ def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
     return template
 
 
-@monitor_router.delete("/klausur-vorlagen/{id}", auth=keycloak_auth)
+@monitor_router.delete("/exam-templates/{id}", auth=keycloak_auth)
 def delete_exam_template(request, id: int):
     _require_perm(request, 'monitor.edit')
     get_object_or_404(ExamTemplate, id=id).delete()
@@ -1036,13 +1048,13 @@ def delete_exam_template(request, id: int):
 
 # ═══ Admin: Globale Einstellungen (Wetter/WebUntis-Zugang) ═══════
 
-@monitor_router.get("/global-settings", response=MonitorSettingsSchema, auth=keycloak_auth)
+@monitor_router.get("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def get_settings(request):
     _require_perm(request, 'monitor.view')
     return MonitorSettings.load()
 
 
-@monitor_router.put("/global-settings", response=MonitorSettingsSchema, auth=keycloak_auth)
+@monitor_router.put("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def update_settings(request, payload: MonitorSettingsUpdateSchema):
     _require_perm(request, 'monitor.edit')
     settings = MonitorSettings.load()
@@ -1050,3 +1062,39 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
         setattr(settings, key, value)
     settings.save()
     return settings
+
+
+# ═══ Legacy aliases (ATEM, Pi scripts) ═══════════════════════════
+# Nur für Aufrufer außerhalb dieses Repos. Die Aliase rufen die neuen
+# Funktionen auf, damit Token- und Keycloak-Prüfung identisch bleiben.
+
+@monitor_router.post("/onair", response={200: dict, 401: dict, 403: dict})
+def legacy_toggle_on_air(request, payload: OnAirSchema):
+    return toggle_on_air(request, payload)
+
+
+@monitor_router.post("/notfall", response={200: dict, 401: dict, 403: dict})
+def legacy_toggle_emergency(request, payload: LegacyEmergencySchema):
+    return toggle_emergency(request, EmergencySchema(active=payload.aktiv, text=payload.text))
+
+
+@monitor_router.get("/bildschirm/power")
+def legacy_get_screen_power(request, slug: str):
+    """Alte Antwortform für Pi-Skripte, die vor der Umbenennung installiert wurden."""
+    result = get_screen_power(request, slug)
+    if 'power_schedule' not in result:
+        return result  # Fehlerantwort: unverändert
+    return {
+        'slug': result['slug'],
+        'power': result['power'],
+        'power_zeitplan': result['power_schedule'],
+        'ferien_modus': result['holiday_mode'],
+        'power_ausnahmen': result['power_exceptions'],
+        'cec_status': result['cec_status'],
+        'cec_status_zeit': result['cec_status_at'],
+    }
+
+
+@monitor_router.post("/bildschirm/cec-status")
+def legacy_report_cec_status(request, slug: str, status: str):
+    return report_cec_status(request, slug, status)
