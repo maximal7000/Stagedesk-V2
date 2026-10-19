@@ -1,5 +1,5 @@
 /**
- * Monitor-Konfiguration — Admin-Seite (Multi-Profil)
+ * Monitor-Konfiguration: Admin-Seite (Multi-Profil)
  * Features: Profil-Management, Zeitplan-Editor, Layout-Modi, ON AIR Anpassung
  */
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
@@ -54,23 +54,24 @@ function contrastRatio(a, b) {
 const AreaContext = createContext(null);
 
 // ─── Section — collapsible; oder `plain` (immer offen, kein Aufklappen) ───
-function Section({ id, area, plain, title, description, icon: Icon, iconColor, open, onToggle, badge, statusDot, children }) {
+// Icon-Kachel einheitlich neutral; ein übergebenes `iconColor` wird ignoriert.
+function Section({ id, area, plain, title, description, icon: Icon, open, onToggle, badge, statusDot, children }) {
   const activeArea = useContext(AreaContext);
   if (area && activeArea && area !== activeArea) return null;
   const isOpen = plain ? true : open;
   const HeaderTag = plain ? 'div' : 'button';
   return (
     <div id={`section-${id}`} className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden scroll-mt-32">
-      <HeaderTag {...(plain ? {} : { onClick: () => onToggle(id) })}
-        className={`w-full px-5 py-4 flex items-center justify-between ${plain ? '' : 'hover:bg-gray-800/40 transition-colors group'}`}>
-        <div className="flex items-center gap-3">
-          <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${iconColor || 'bg-gray-800'}`}>
-            <Icon className="w-4.5 h-4.5 text-white" />
+      <HeaderTag {...(plain ? {} : { onClick: () => onToggle(id), 'aria-expanded': !!open })}
+        className={`w-full px-5 py-4 flex items-center justify-between gap-3 ${plain ? '' : 'hover:bg-gray-800/40 transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent'}`}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-gray-800 ring-1 ring-inset ring-gray-700/70">
+            <Icon className="w-4 h-4 text-gray-300" />
           </div>
-          <div className="text-left">
-            <h3 className="font-semibold text-white flex items-center gap-2 text-sm">
+          <div className="text-left min-w-0">
+            <h3 className="font-display font-semibold tracking-tight text-white flex items-center gap-2 text-[1.05rem] leading-tight">
               {title}
-              {badge != null && <span className="px-1.5 py-0.5 text-[10px] bg-gray-700 text-gray-300 rounded-full font-normal">{badge}</span>}
+              {badge != null && <span className="px-1.5 py-0.5 text-[11px] font-sans bg-gray-800 text-gray-400 ring-1 ring-inset ring-gray-700 rounded-md font-medium tabular-nums">{badge}</span>}
               {statusDot && <span className={`w-2 h-2 rounded-full ${statusDot}`} />}
             </h3>
             {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
@@ -86,8 +87,8 @@ function Section({ id, area, plain, title, description, icon: Icon, iconColor, o
 // ─── Toggle Switch ──────────────────────────────────────────────
 function Toggle({ checked, onChange, disabled }) {
   return (
-    <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
-      className={`relative w-10 h-5.5 rounded-full transition-colors disabled:opacity-50 ${checked ? 'bg-accent' : 'bg-gray-700'}`}>
+    <button type="button" role="switch" aria-checked={!!checked} onClick={() => !disabled && onChange(!checked)} disabled={disabled}
+      className={`relative w-10 h-5.5 rounded-full transition-colors disabled:opacity-50 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${checked ? 'bg-accent' : 'bg-gray-700'}`}>
       <span className={`absolute top-0.5 w-4.5 h-4.5 rounded-full bg-white shadow transition-transform ${checked ? 'left-5' : 'left-0.5'}`} />
     </button>
   );
@@ -434,10 +435,12 @@ export default function MonitorAdminPage() {
   if (!canView) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Zugriff verweigert</h2>
-          <p className="text-gray-400">Du benötigst die Berechtigung &quot;Monitor anzeigen&quot; für diesen Bereich.</p>
+        <div className="bg-gray-900 border border-gray-800 rounded-xl px-6 py-14 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-gray-800/60 border border-gray-700/60 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-6 h-6 text-gray-400" />
+          </div>
+          <h2 className="text-base font-semibold text-white">Kein Zugriff</h2>
+          <p className="text-sm text-gray-400 mt-1.5">Für diesen Bereich brauchst du die Berechtigung „Monitor anzeigen“.</p>
         </div>
       </div>
     );
@@ -829,7 +832,7 @@ export default function MonitorAdminPage() {
         delete imported.notfall_aktiv;
         delete imported.id;
         setMonitorConfig(prev => ({ ...prev, ...imported }));
-        toast.success('Konfiguration importiert — Speichern nicht vergessen!');
+        toast.success('Konfiguration importiert. Zum Übernehmen speichern.');
       } catch { toast.error('Ungültige JSON-Datei'); }
     };
     reader.readAsText(file);
@@ -914,7 +917,7 @@ export default function MonitorAdminPage() {
   const renderAnkuendigungForm = (data, setData, onSave, onCancel, saveLabel) => (
     <div className="p-4 border border-gray-700 rounded-xl bg-gray-800/30 space-y-3">
       <input type="text" value={data.titel} onChange={e => setData({ ...data, titel: e.target.value })}
-        placeholder="Titel *" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+        placeholder="Titel *" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
       <textarea value={data.text} onChange={e => setData({ ...data, text: e.target.value })}
         placeholder="Text (optional)" rows={2} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm resize-none" />
       <div className="flex items-center gap-1.5 flex-wrap">
@@ -929,18 +932,18 @@ export default function MonitorAdminPage() {
           <label className="block text-xs text-gray-400 mb-1">Anzeigen ab (optional)</label>
           <input type="datetime-local" value={data.aktiv_von ? data.aktiv_von.slice(0, 16) : ''}
             onChange={e => setData({ ...data, aktiv_von: e.target.value ? new Date(e.target.value).toISOString() : null })}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Ablauf / bis (optional)</label>
           <input type="datetime-local" value={data.aktiv_bis ? data.aktiv_bis.slice(0, 16) : ''}
             onChange={e => setData({ ...data, aktiv_bis: e.target.value ? new Date(e.target.value).toISOString() : null })}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
       </div>
       <div className="flex items-center gap-3 flex-wrap">
         <select value={data.prioritaet} onChange={e => setData({ ...data, prioritaet: e.target.value })}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+          className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
           <option value="normal">Normal</option>
           <option value="wichtig">Wichtig</option>
           <option value="dringend">Dringend</option>
@@ -954,7 +957,7 @@ export default function MonitorAdminPage() {
         <div className="flex-1" />
         <button onClick={onCancel} className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
         <button onClick={onSave} disabled={!data.titel}
-          className="px-4 py-1.5 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white text-sm rounded-lg">{saveLabel}</button>
+          className="px-4 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-medium text-sm rounded-lg">{saveLabel}</button>
       </div>
     </div>
   );
@@ -962,7 +965,7 @@ export default function MonitorAdminPage() {
   const UploadButton = ({ typ, label }) => (
     <button onClick={() => { setUploadTyp(typ); setTimeout(() => fileInputRef.current?.click(), 50); }}
       disabled={uploading || !canEdit}
-      className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm rounded-lg">
+      className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm rounded-lg">
       {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />} {label}
     </button>
   );
@@ -1006,26 +1009,26 @@ export default function MonitorAdminPage() {
   );
   const renderWidgetSettings = (key) => {
     const c = monitorConfig; if (!c) return null;
-    const inp = 'w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 disabled:opacity-50';
+    const inp = 'w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-50';
     switch (key) {
-      case 'zeige_ticker': return settingsCard(<Type className="w-4 h-4 text-blue-400" />, 'Ticker', <>
+      case 'zeige_ticker': return settingsCard(<Type className="w-4 h-4 text-gray-400" />, 'Ticker', <>
         <input type="text" value={c.ticker_text} onChange={e => updateConfig('ticker_text', e.target.value)} disabled={!canEdit} placeholder="Text der durchläuft..." className={inp} />
         <div><label className="block text-xs text-gray-500 mb-1">Geschwindigkeit: {c.ticker_geschwindigkeit} px/s</label>
-          <input type="range" min={10} max={200} value={c.ticker_geschwindigkeit} onChange={e => updateConfig('ticker_geschwindigkeit', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-blue-500" /></div>
+          <input type="range" min={10} max={200} value={c.ticker_geschwindigkeit} onChange={e => updateConfig('ticker_geschwindigkeit', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>
       </>);
-      case 'zeige_wetter': return settingsCard(<CloudSun className="w-4 h-4 text-yellow-400" />, 'Wetter', <>
+      case 'zeige_wetter': return settingsCard(<CloudSun className="w-4 h-4 text-gray-400" />, 'Wetter', <>
         <div><label className="block text-xs text-gray-500 mb-1">Stadt</label>
           <input type="text" value={c.wetter_stadt} onChange={e => updateConfig('wetter_stadt', e.target.value)} disabled={!canEdit} placeholder="z.B. Lübeck" className={inp} /></div>
         <p className="text-[11px] text-gray-500">API-Key wird einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
       </>);
-      case 'zeige_webuntis': return settingsCard(<Calendar className="w-4 h-4 text-purple-400" />, 'WebUntis iFrame', <>
+      case 'zeige_webuntis': return settingsCard(<Calendar className="w-4 h-4 text-gray-400" />, 'WebUntis iFrame', <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (2 Tage)</label>
             <select value={c.webuntis_link_id || ''} disabled={!canEdit} onChange={e => updateConfig('webuntis_link_id', e.target.value ? parseInt(e.target.value) : null)} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
-              <option value="">— eigener Link unten —</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
+              <option value="">Eigener Link (unten)</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
           <div><label className="block text-xs text-gray-500 mb-1">Gespeicherter Link (1 Tag)</label>
             <select value={c.webuntis_link_1tag_id || ''} disabled={!canEdit} onChange={e => updateConfig('webuntis_link_1tag_id', e.target.value ? parseInt(e.target.value) : null)} className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm disabled:opacity-50">
-              <option value="">— eigener Link unten —</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
+              <option value="">Eigener Link (unten)</option>{webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}</select></div>
         </div>
         <p className="text-[11px] text-gray-500">Gespeicherte Links (Bibliothek unter „Inhalte") haben Vorrang. Sonst eigene Links:</p>
         <div><label className="block text-xs text-gray-500 mb-1">Eigener Link (2 Tage)</label>
@@ -1034,19 +1037,19 @@ export default function MonitorAdminPage() {
           <input type="url" value={c.webuntis_url_1tag || ''} onChange={e => updateConfig('webuntis_url_1tag', e.target.value)} disabled={!canEdit} placeholder="leer = 2-Tage-Link" className={inp} /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Zoom: {c.webuntis_zoom}%</label>
-            <input type="range" min={50} max={150} value={c.webuntis_zoom} onChange={e => updateConfig('webuntis_zoom', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-purple-500" /></div>
+            <input type="range" min={50} max={150} value={c.webuntis_zoom} onChange={e => updateConfig('webuntis_zoom', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>
           <div className="flex items-end">
             <button onClick={() => canEdit && updateConfig('webuntis_dark_mode', !c.webuntis_dark_mode)} disabled={!canEdit}
-              className={`px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${c.webuntis_dark_mode ? 'bg-blue-600/20 border-blue-500/40 text-blue-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}><Moon className="w-4 h-4 inline mr-1" /> Dark-Mode</button></div>
+              className={`px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${c.webuntis_dark_mode ? 'bg-accent/10 border-accent/50 text-white' : 'bg-gray-800 border-gray-700 text-gray-400'}`}><Moon className="w-4 h-4 inline mr-1" /> Dark-Mode</button></div>
         </div>
       </>);
-      case 'zeige_qr_code': return settingsCard(<QrCode className="w-4 h-4 text-emerald-400" />, 'QR-Code', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      case 'zeige_qr_code': return settingsCard(<QrCode className="w-4 h-4 text-gray-400" />, 'QR-Code', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><label className="block text-xs text-gray-500 mb-1">URL</label>
           <input type="url" value={c.qr_code_url} onChange={e => updateConfig('qr_code_url', e.target.value)} disabled={!canEdit} placeholder="https://..." className={inp} /></div>
         <div><label className="block text-xs text-gray-500 mb-1">Beschriftung</label>
           <input type="text" value={c.qr_code_label} onChange={e => updateConfig('qr_code_label', e.target.value)} disabled={!canEdit} placeholder="z.B. Event-Anmeldung" className={inp} /></div>
       </div>);
-      case 'zeige_kamera': return settingsCard(<Activity className="w-4 h-4 text-cyan-400" />, 'Kamera-Stream', <>
+      case 'zeige_kamera': return settingsCard(<Activity className="w-4 h-4 text-gray-400" />, 'Kamera-Stream', <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className="block text-xs text-gray-500 mb-1">Titel</label>
             <input type="text" value={c.kamera_titel || ''} onChange={e => updateConfig('kamera_titel', e.target.value)} disabled={!canEdit} placeholder="z.B. Saal" className={inp} /></div>
@@ -1057,33 +1060,33 @@ export default function MonitorAdminPage() {
         <div><label className="block text-xs text-gray-500 mb-1">Stream-URL</label>
           <input type="url" value={c.kamera_url || ''} onChange={e => updateConfig('kamera_url', e.target.value)} disabled={!canEdit} placeholder="http://kamera.lan/stream.mjpg" className={inp} /></div>
       </>);
-      case 'zeige_freitext': return settingsCard(<AlignLeft className="w-4 h-4 text-teal-400" />, 'Freier Textblock', <>
+      case 'zeige_freitext': return settingsCard(<AlignLeft className="w-4 h-4 text-gray-400" />, 'Freier Textblock', <>
         <input type="text" value={c.freitext_titel} onChange={e => updateConfig('freitext_titel', e.target.value)} disabled={!canEdit} placeholder="Titel" className={inp} />
         <textarea value={c.freitext_inhalt} onChange={e => updateConfig('freitext_inhalt', e.target.value)} disabled={!canEdit} placeholder="Inhalt..." rows={3} className={`${inp} resize-none`} />
       </>);
-      case 'zeige_raumplan': return settingsCard(<LayoutGrid className="w-4 h-4 text-indigo-400" />, 'Raumplan (WebUntis API)', <>
+      case 'zeige_raumplan': return settingsCard(<LayoutGrid className="w-4 h-4 text-gray-400" />, 'Raumplan (WebUntis API)', <>
         <div><label className="block text-xs text-gray-500 mb-1">Raum-Kürzel (pro Ansicht)</label>
           <input type="text" value={c.raumplan_raum} onChange={e => updateConfig('raumplan_raum', e.target.value)} disabled={!canEdit} placeholder="z.B. Aul" className={inp} /></div>
         <p className="text-[11px] text-gray-500">Server, Schule und Login werden einmal global unter „Einstellungen → Globale Zugänge" hinterlegt.</p>
       </>);
-      case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-amber-400" />, 'Eigener Countdown', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      case 'zeige_eigener_countdown': return settingsCard(<Timer className="w-4 h-4 text-gray-400" />, 'Eigener Countdown', <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div><label className="block text-xs text-gray-500 mb-1">Event-Name</label>
           <input type="text" value={c.eigener_countdown_name} onChange={e => updateConfig('eigener_countdown_name', e.target.value)} disabled={!canEdit} placeholder="z.B. Schulkonzert" className={inp} /></div>
         <div><label className="block text-xs text-gray-500 mb-1">Datum &amp; Uhrzeit</label>
           <input type="datetime-local" value={c.eigener_countdown_datum ? c.eigener_countdown_datum.slice(0, 16) : ''} onChange={e => updateConfig('eigener_countdown_datum', e.target.value ? e.target.value + ':00Z' : null)} disabled={!canEdit} className={inp} /></div>
       </div>);
-      case 'zeige_bildschirmschoner': return settingsCard(<MonitorOff className="w-4 h-4 text-cyan-400" />, 'Bildschirmschoner',
+      case 'zeige_bildschirmschoner': return settingsCard(<MonitorOff className="w-4 h-4 text-gray-400" />, 'Bildschirmschoner',
         <div><label className="block text-xs text-gray-500 mb-1">Timeout: {c.bildschirmschoner_timeout} Minuten</label>
-          <input type="range" min={1} max={60} value={c.bildschirmschoner_timeout} onChange={e => updateConfig('bildschirmschoner_timeout', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-cyan-500" /></div>);
-      case 'zeige_seitenrotation': return settingsCard(<RotateCw className="w-4 h-4 text-pink-400" />, 'Seitenrotation', <>
+          <input type="range" min={1} max={60} value={c.bildschirmschoner_timeout} onChange={e => updateConfig('bildschirmschoner_timeout', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>);
+      case 'zeige_seitenrotation': return settingsCard(<RotateCw className="w-4 h-4 text-gray-400" />, 'Seitenrotation', <>
         <div><label className="block text-xs text-gray-500 mb-1">Intervall: {c.seitenrotation_intervall} Sekunden</label>
-          <input type="range" min={5} max={120} value={c.seitenrotation_intervall} onChange={e => updateConfig('seitenrotation_intervall', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-pink-500" /></div>
+          <input type="range" min={5} max={120} value={c.seitenrotation_intervall} onChange={e => updateConfig('seitenrotation_intervall', parseInt(e.target.value))} disabled={!canEdit} className="w-full accent-accent" /></div>
         <div><label className="block text-xs text-gray-500 mb-2">Seiten zum Rotieren</label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[{ id: 'main', label: 'Hauptansicht' }, { id: 'veranstaltungen', label: 'Veranstaltungen' }, { id: 'ankuendigungen', label: 'Ankündigungen' }, { id: 'raumplan', label: 'Raumplan' }, { id: 'wetter', label: 'Wetter' }, { id: 'slideshow', label: 'Slideshow' }, { id: 'pdf', label: 'PDF' }, { id: 'freitext', label: 'Freier Text' }].map(page => {
               const selected = (c.seitenrotation_seiten || []).includes(page.id);
               return (<button key={page.id} onClick={() => { if (!canEdit) return; const s = c.seitenrotation_seiten || []; updateConfig('seitenrotation_seiten', selected ? s.filter(x => x !== page.id) : [...s, page.id]); }} disabled={!canEdit}
-                className={`p-2 rounded-lg text-xs border transition-colors disabled:opacity-50 ${selected ? 'bg-pink-600/20 border-pink-500/40 text-pink-300' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>{page.label}</button>);
+                className={`p-2 rounded-lg text-xs border transition-colors disabled:opacity-50 ${selected ? 'bg-accent/10 border-accent/50 text-white' : 'bg-gray-800 border-gray-700 text-gray-400'}`}>{page.label}</button>);
             })}
           </div></div>
       </>);
@@ -1105,11 +1108,9 @@ export default function MonitorAdminPage() {
     <div className="max-w-[1800px] mx-auto flex gap-5">
       {/* ═══ Seitenleiste (Desktop) ═══ */}
       <aside className="hidden md:flex flex-col gap-1 w-52 shrink-0 sticky top-4 self-start">
-        <div className="flex items-center gap-2 px-2 py-3 mb-1">
-          <div className="w-9 h-9 bg-purple-600/20 rounded-xl flex items-center justify-center">
-            <Monitor className="w-5 h-5 text-purple-400" />
-          </div>
-          <span className="text-sm font-bold text-white">Monitor</span>
+        <div className="px-3 pt-2 pb-3 mb-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-500">Admin</p>
+          <p className="font-display text-xl font-bold tracking-tight text-white leading-tight">Monitor</p>
         </div>
         {areaNav.map(a => {
           const Ico = a.icon;
@@ -1117,10 +1118,10 @@ export default function MonitorAdminPage() {
           return (
             <button key={a.id} onClick={() => setActiveArea(a.id)}
               className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                active ? 'bg-purple-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+                active ? 'bg-gray-800 text-white shadow-[inset_2px_0_0_0_var(--color-accent)]' : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
               }`}>
               <Ico className="w-4 h-4 shrink-0" /> {a.label}
-              {a.id === 'events' && events.some(e => e.aktiv) && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse" />}
+              {a.id === 'events' && events.some(e => e.aktiv) && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
             </button>
           );
         })}
@@ -1132,19 +1133,16 @@ export default function MonitorAdminPage() {
       <div className="sticky top-0 z-30 -mx-4 lg:-mx-8 px-4 lg:px-8 py-3 bg-gray-950/95 backdrop-blur-sm border-b border-gray-800/50">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-600/20 rounded-xl flex items-center justify-center">
-              <Monitor className="w-5 h-5 text-purple-400" />
-            </div>
             <div>
-              <p className="text-[10px] uppercase tracking-wide text-gray-500 md:hidden">Monitor</p>
-              <h1 className="text-lg font-bold text-white capitalize">{areaNav.find(a => a.id === activeArea)?.label}</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-400 mb-1">Monitor</p>
+              <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white">{areaNav.find(a => a.id === activeArea)?.label}</h1>
               {activeArea === 'ansichten' && hasChanges ? (
-                <p className="text-xs text-amber-400 flex items-center gap-1">
+                <p className="text-xs text-amber-400 flex items-center gap-1 mt-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                   Ungespeicherte Änderungen
                 </p>
               ) : activeArea === 'ansichten' && savedAt && Date.now() - savedAt < 4000 ? (
-                <p className="text-xs text-green-400 flex items-center gap-1">
+                <p className="text-xs text-emerald-400 flex items-center gap-1 mt-1.5">
                   <Check className="w-3 h-3" /> Gespeichert
                 </p>
               ) : null}
@@ -1154,14 +1152,14 @@ export default function MonitorAdminPage() {
             {/* Speichern nur im Bereich „Ansichten" (speichert die Profil-Konfiguration) */}
             {activeArea === 'ansichten' && canEdit && (
               <button onClick={handleSaveMonitorConfig} disabled={monitorSaving || !monitorConfig || !hasChanges}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium transition-all ${
+                className={`flex items-center gap-2 px-3.5 py-2 text-sm rounded-lg font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-950 ${
                   hasChanges
-                    ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20'
+                    ? 'bg-accent hover:bg-accent-hover text-white shadow-sm'
                     : 'bg-gray-800 text-gray-500'
-                } disabled:opacity-50`}>
+                } disabled:opacity-60`}>
                 {monitorSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 Speichern
-                {hasChanges && <kbd className="hidden md:inline text-[10px] bg-green-700/50 px-1.5 py-0.5 rounded">Ctrl+S</kbd>}
+                {hasChanges && <kbd className="hidden md:inline text-[10px] font-sans bg-black/20 px-1.5 py-0.5 rounded">Strg+S</kbd>}
               </button>
             )}
           </div>
@@ -1175,10 +1173,10 @@ export default function MonitorAdminPage() {
             return (
               <button key={a.id} onClick={() => setActiveArea(a.id)}
                 className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                  active ? 'bg-purple-600 text-white' : 'bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-800'
+                  active ? 'bg-gray-800 text-white ring-1 ring-inset ring-accent/50' : 'bg-gray-800/60 text-gray-400 hover:text-white hover:bg-gray-800'
                 }`}>
                 <Ico className="w-4 h-4" /> {a.label}
-                {a.id === 'events' && events.some(e => e.aktiv) && <span className="w-1.5 h-1.5 rounded-full bg-violet-300 animate-pulse" />}
+                {a.id === 'events' && events.some(e => e.aktiv) && <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />}
               </button>
             );
           })}
@@ -1200,7 +1198,7 @@ export default function MonitorAdminPage() {
             <button key={bs.id} onClick={() => setActiveBildschirmId(activeBildschirmId === bs.id ? null : bs.id)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                 bs.id === activeBildschirmId
-                  ? 'bg-indigo-600/20 border border-indigo-500/40 text-indigo-300'
+                  ? 'bg-accent/10 border border-accent/50 text-white'
                   : 'bg-gray-800/60 border border-gray-700/60 text-gray-400 hover:text-white hover:border-gray-600'
               }`}>
               <Monitor className="w-3.5 h-3.5" />
@@ -1223,14 +1221,14 @@ export default function MonitorAdminPage() {
               <label className="block text-xs text-gray-400 mb-1">Name</label>
               <input type="text" value={newBildschirmName} onChange={e => setNewBildschirmName(e.target.value)}
                 placeholder="z.B. Eingang, Lehrerzimmer" autoFocus
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm"
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent"
                 onKeyDown={e => e.key === 'Enter' && handleCreateBildschirm()} />
             </div>
             <div className="flex items-center gap-2 justify-end">
               <button onClick={() => { setShowNewBildschirm(false); setNewBildschirmName(''); }}
                 className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
               <button onClick={handleCreateBildschirm} disabled={!newBildschirmName.trim()}
-                className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm rounded-lg">Erstellen</button>
+                className="px-4 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm rounded-lg">Erstellen</button>
             </div>
           </div>
         )}
@@ -1241,7 +1239,7 @@ export default function MonitorAdminPage() {
           if (!bs) return null;
           const bsZeitplan = bs.zeitplan || [];
           return (
-            <div className="p-4 border border-indigo-500/20 rounded-xl bg-gray-800/20 space-y-4">
+            <div className="p-4 border border-gray-700 rounded-xl bg-gray-800/20 space-y-4">
               {/* Name & Slug */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1311,7 +1309,7 @@ export default function MonitorAdminPage() {
                         const updated = [...bsZeitplan, { profil_id: profiles[0]?.id || null, tage: [0,1,2,3,4], von: '08:00', bis: '16:00' }];
                         updateBildschirmLocal(bs.id, 'zeitplan', updated);
                       }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 text-sm rounded-lg">
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg">
                         <Plus className="w-3.5 h-3.5" /> Zeitfenster
                       </button>
                     </div>
@@ -1320,7 +1318,7 @@ export default function MonitorAdminPage() {
 
                 {bsZeitplan.length === 0 ? (
                   <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-center">
-                    <p className="text-gray-500 text-sm">Kein Zeitplan — es wird immer die Standard-Ansicht angezeigt.</p>
+                    <p className="text-gray-500 text-sm">Kein Zeitplan. Es läuft immer die Standard-Ansicht.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -1366,7 +1364,7 @@ export default function MonitorAdminPage() {
                                 updateBildschirmLocal(bs.id, 'zeitplan', updated);
                               }}
                               className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50" />
-                            <span className="text-gray-500">—</span>
+                            <span className="text-gray-500">–</span>
                             <input type="time" value={entry.bis || '16:00'} disabled={!canEdit}
                               onChange={e => {
                                 const updated = [...bsZeitplan];
@@ -1402,7 +1400,7 @@ export default function MonitorAdminPage() {
                 {/* CEC-Status vom Pi */}
                 {bs.cec_status && (
                   <div className="mt-3 flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
                       bs.cec_status === 'on' ? 'bg-green-900/40 text-green-400 border border-green-700/40' :
                       bs.cec_status === 'standby' ? 'bg-yellow-900/40 text-yellow-400 border border-yellow-700/40' :
                       'bg-gray-800 text-gray-400 border border-gray-700/40'
@@ -1424,7 +1422,7 @@ export default function MonitorAdminPage() {
                 <div className="mt-3 p-3 bg-gray-800/30 rounded-lg border border-gray-700/40">
                   <p className="text-[10px] text-gray-400 font-medium mb-1">API-Endpoint für den Raspberry Pi:</p>
                   <div className="flex gap-2 items-center">
-                    <code className="text-[10px] text-indigo-300 bg-gray-800 px-2 py-1 rounded font-mono flex-1 truncate">
+                    <code className="text-[10px] text-gray-300 bg-gray-800 px-2 py-1 rounded font-mono flex-1 truncate">
                       GET /api/monitor/bildschirm/power?slug={bs.slug}
                     </code>
                     <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/api/monitor/bildschirm/power?slug=${bs.slug}`); toast.success('URL kopiert'); }}
@@ -1446,7 +1444,7 @@ export default function MonitorAdminPage() {
                 )}
                 {canEdit && (
                   <button onClick={() => handleSaveBildschirm(bs)}
-                    className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
+                    className="flex items-center gap-2 px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
                     <Save className="w-3.5 h-3.5" /> Speichern
                   </button>
                 )}
@@ -1469,7 +1467,7 @@ export default function MonitorAdminPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-blue-600/30">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-gray-800 ring-1 ring-inset ring-gray-700/70">
               <AlignLeft className="w-4 h-4 text-white" />
             </div>
             <div>
@@ -1477,7 +1475,7 @@ export default function MonitorAdminPage() {
               <p className="text-xs text-gray-500">Zeitfenster mit Hinweisbildschirm für ausgewählte Bildschirme</p>
             </div>
             {klausuren.length > 0 && (
-              <span className="px-1.5 py-0.5 text-[10px] bg-gray-700 text-gray-300 rounded-full">{klausuren.length}</span>
+              <span className="px-1.5 py-0.5 text-[10px] bg-gray-700 text-gray-300 rounded-md">{klausuren.length}</span>
             )}
           </div>
           {canEdit && (
@@ -1501,7 +1499,7 @@ export default function MonitorAdminPage() {
                 </button>
               )}
               <button onClick={() => { setKlausurTemplate(null); setShowNewKlausur(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg">
                 <Plus className="w-3.5 h-3.5" /> Neue Klausur
               </button>
             </div>
@@ -1561,7 +1559,7 @@ export default function MonitorAdminPage() {
 
       {!monitorConfig ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+          <Loader2 className="w-8 h-8 text-gray-500 animate-spin" />
         </div>
       ) : (
         <>
@@ -1597,7 +1595,7 @@ export default function MonitorAdminPage() {
                     onChange={e => setRenameValue(e.target.value)}
                     onBlur={commitRename}
                     onKeyDown={e => { if (e.key === 'Enter') commitRename(); else if (e.key === 'Escape') setRenamingId(null); }}
-                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 border border-purple-500/60 text-white w-40" />
+                    className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-900 border border-accent/60 text-white w-40" />
                 ) : (
                   <button key={p.id} onClick={() => switchProfile(p.id)} onDoubleClick={() => startRename(p)}
                     draggable={canEdit}
@@ -1607,12 +1605,12 @@ export default function MonitorAdminPage() {
                     title={canEdit ? 'Doppelklick zum Umbenennen · ziehen zum Sortieren' : undefined}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
                       p.id === activeProfileId
-                        ? 'bg-purple-600/20 border border-purple-500/40 text-purple-300'
+                        ? 'bg-accent/10 border border-accent/50 text-white'
                         : 'bg-gray-800/60 border border-gray-700/60 text-gray-400 hover:text-white hover:border-gray-600'
                     }`}>
                     {p.layout_modus === 'stundenplan' ? <LayoutGrid className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
                     {p.name}
-                    {p.ist_standard && <span className="px-1.5 py-0.5 text-[9px] bg-blue-600/20 text-blue-400 rounded-full">Standard</span>}
+                    {p.ist_standard && <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-gray-700/50 text-gray-300 ring-1 ring-inset ring-gray-600/40 rounded-md">Standard</span>}
                     {p.ist_on_air && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
                     {p.zeitplan?.length > 0 && <CalendarClock className="w-3 h-3 text-green-400" />}
                   </button>
@@ -1653,12 +1651,12 @@ export default function MonitorAdminPage() {
                     <label className="block text-xs text-gray-400 mb-1">Name</label>
                     <input type="text" value={newProfileName} onChange={e => setNewProfileName(e.target.value)}
                       placeholder="z.B. Vertretungsplan" autoFocus
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                   </div>
                   <div>
                     <label className="block text-xs text-gray-400 mb-1">Layout</label>
                     <select value={newProfileLayout} onChange={e => setNewProfileLayout(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
                       {LAYOUT_MODI.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
                     </select>
                   </div>
@@ -1666,7 +1664,7 @@ export default function MonitorAdminPage() {
                 <div>
                   <label className="block text-xs text-gray-400 mb-1">Einstellungen kopieren von</label>
                   <select value={cloneFromId || ''} onChange={e => setCloneFromId(e.target.value ? parseInt(e.target.value) : null)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
                     <option value="">Leer starten</option>
                     {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
@@ -1675,7 +1673,7 @@ export default function MonitorAdminPage() {
                   <button onClick={() => { setShowNewProfile(false); setNewProfileName(''); }}
                     className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
                   <button onClick={handleCreateProfile} disabled={!newProfileName.trim()}
-                    className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm rounded-lg">Erstellen</button>
+                    className="px-4 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm rounded-lg">Erstellen</button>
                 </div>
               </div>
             )}
@@ -1686,7 +1684,7 @@ export default function MonitorAdminPage() {
             <div className="lg:hidden bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
               <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-800">
                 <span className="text-xs text-gray-400 flex items-center gap-2">
-                  <Activity className="w-3 h-3" /> Live-Vorschau — {activeProfile?.name}
+                  <Activity className="w-3 h-3" /> Live-Vorschau · {activeProfile?.name}
                 </span>
                 <div className="flex items-center gap-2">
                   <a href={`/monitor?profil=${monitorConfig.slug}`} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white">
@@ -1717,11 +1715,11 @@ export default function MonitorAdminPage() {
           {canEdit && (
             <div className="flex flex-wrap items-center gap-2">
               <button onClick={() => { setKlausurTemplate(null); setShowNewKlausur(true); setActiveArea('inhalte'); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-sm rounded-lg">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg">
                 <Plus className="w-3.5 h-3.5" /> Klausur
               </button>
               <button onClick={() => setActiveArea('events')}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-sm rounded-lg">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg">
                 <Radio className="w-3.5 h-3.5" /> Events
               </button>
               <button onClick={() => setActiveArea('inhalte')}
@@ -1733,7 +1731,7 @@ export default function MonitorAdminPage() {
           {/* ═══ Bildschirm-Cockpit — was läuft gerade wo ═══ */}
           <div>
             <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Monitor className="w-4 h-4 text-indigo-400" /> Bildschirme ({bildschirme.length})</h3>
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2"><Monitor className="w-4 h-4 text-gray-400" /> Bildschirme ({bildschirme.length})</h3>
               <div className="flex items-center gap-2">
                 {canEdit && bildschirme.length > 1 && (
                   <>
@@ -1753,7 +1751,7 @@ export default function MonitorAdminPage() {
             {bildschirme.length === 0 ? (
               <div className="p-8 text-center text-gray-500 border border-gray-800 rounded-xl">
                 <Monitor className="w-10 h-10 mx-auto mb-2 opacity-20" />
-                <p className="text-sm">Noch keine Bildschirme — unter „Bildschirme" anlegen.</p>
+                <p className="text-sm">Noch keine Bildschirme. Unter „Bildschirme“ anlegen.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -1817,12 +1815,12 @@ export default function MonitorAdminPage() {
           {/* Events-Schnellzugriff */}
           {events.length > 0 && (
             <div>
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-2"><Radio className="w-4 h-4 text-violet-400" /> Events</h3>
+              <h3 className="text-sm font-semibold text-white flex items-center gap-2 mb-2"><Radio className="w-4 h-4 text-gray-400" /> Events</h3>
               <div className="flex flex-wrap gap-2">
                 {events.map(ev => (
                   <button key={ev.id} onClick={() => canEdit && toggleEventActive(ev)} disabled={!canEdit}
                     className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
-                      ev.aktiv ? 'bg-violet-600 text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
+                      ev.aktiv ? 'bg-accent text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'}`}>
                     <span className="w-2 h-2 rounded-full" style={{ background: ev.aktiv ? '#fff' : ev.farbe }} />
                     {ev.name}{ev.aktiv && ' · aktiv'}
                   </button>
@@ -1858,7 +1856,7 @@ export default function MonitorAdminPage() {
                   <AlertTriangle className={`w-6 h-6 ${monitorConfig.notfall_aktiv ? 'text-red-400 animate-pulse' : 'text-gray-600'}`} />
                   <div>
                     <h3 className="font-bold text-white text-sm">Notfall-Meldung</h3>
-                    <p className="text-[11px] text-gray-500">{monitorConfig.notfall_aktiv ? 'AKTIV — Alle Monitore' : 'Deaktiviert'}</p>
+                    <p className="text-[11px] text-gray-500">{monitorConfig.notfall_aktiv ? 'Aktiv auf allen Monitoren' : 'Deaktiviert'}</p>
                   </div>
                 </div>
                 <button onClick={handleToggleNotfall} disabled={!canNotfall}
@@ -1914,9 +1912,9 @@ export default function MonitorAdminPage() {
               const lm = monitorConfig.layout_modus;
               const hasUntis = monitorConfig.webuntis_link_id || monitorConfig.webuntis_url;
               if (lm === 'abfahrten' && !(monitorConfig.oepnv_stationen || []).length)
-                warns.push('Abfahrtsmonitor ohne Stationen — unter „ÖPNV Abfahrten" mindestens eine Station eintragen.');
+                warns.push('Abfahrtsmonitor ohne Stationen: unter „ÖPNV Abfahrten“ mindestens eine Station eintragen.');
               if (lm === 'stundenplan' && !hasUntis)
-                warns.push('Stundenplan-Vollbild ohne WebUntis-Link — die Anzeige bleibt sonst leer.');
+                warns.push('Stundenplan-Vollbild ohne WebUntis-Link: die Anzeige bleibt sonst leer.');
               if (lm === 'bild_vollbild' && !monitorConfig.aktives_bild_id)
                 warns.push('Bild-Vollbild ohne ausgewähltes Bild.');
               if (lm === 'pdf_vollbild' && !monitorConfig.aktive_pdf_id)
@@ -1936,8 +1934,8 @@ export default function MonitorAdminPage() {
             })()}
 
             {monitorConfig.layout_modus === 'baukasten' && (
-              <div className="p-3 bg-cyan-900/10 border border-cyan-500/20 rounded-lg">
-                <p className="text-xs text-cyan-300">
+              <div className="p-3 bg-gray-800/40 border border-gray-700 rounded-lg">
+                <p className="text-xs text-gray-300">
                   <LayoutGrid className="w-3.5 h-3.5 inline mr-1" />
                   Widget-Baukasten: Widgets per Drag &amp; Drop frei platzieren und skalieren. Der Editor erscheint unten als eigene Section.
                 </p>
@@ -1945,8 +1943,8 @@ export default function MonitorAdminPage() {
             )}
 
             {monitorConfig.layout_modus === 'stundenplan' && (
-              <div className="p-3 bg-purple-900/10 border border-purple-500/20 rounded-lg">
-                <p className="text-xs text-purple-300">
+              <div className="p-3 bg-gray-800/40 border border-gray-700 rounded-lg">
+                <p className="text-xs text-gray-300">
                   <Sparkles className="w-3.5 h-3.5 inline mr-1" />
                   Stundenplan-Vollbild: WebUntis-iFrame so groß wie möglich, mit optionalem Raumplan als Sidebar, Uhr und ON AIR.
                 </p>
@@ -1961,8 +1959,8 @@ export default function MonitorAdminPage() {
               </div>
             )}
             {monitorConfig.layout_modus === 'abfahrten' && (
-              <div className="p-3 bg-blue-900/10 border border-blue-500/20 rounded-lg">
-                <p className="text-xs text-blue-300">
+              <div className="p-3 bg-sky-500/[0.06] border border-sky-500/20 rounded-lg">
+                <p className="text-xs text-sky-200">
                   <Activity className="w-3.5 h-3.5 inline mr-1" />
                   Abfahrtsmonitor: Zeigt Bus- und Bahnabfahrten in Echtzeit. Stationen und Filter unter &quot;ÖPNV Abfahrten&quot; konfigurieren.
                 </p>
@@ -1982,8 +1980,8 @@ export default function MonitorAdminPage() {
               const prozent = monitorConfig.split_links_prozent || 50;
               const hatWebuntis = links === 'webuntis' || rechts === 'webuntis';
               return (
-                <div className="p-3 bg-teal-900/10 border border-teal-500/20 rounded-lg space-y-4">
-                  <p className="text-xs text-teal-300">
+                <div className="p-3 bg-gray-800/40 border border-gray-700 rounded-lg space-y-4">
+                  <p className="text-xs text-gray-300">
                     <LayoutGrid className="w-3.5 h-3.5 inline mr-1" />
                     Splitscreen: zwei frei wählbare Inhalte nebeneinander.
                   </p>
@@ -2011,11 +2009,11 @@ export default function MonitorAdminPage() {
                     </label>
                     <input type="range" min={20} max={80} step={5} value={prozent}
                       onChange={e => updateConfig('split_links_prozent', parseInt(e.target.value))}
-                      disabled={!canEdit} className="w-full accent-teal-500" />
+                      disabled={!canEdit} className="w-full accent-accent" />
                   </div>
 
                   {hatWebuntis && (
-                    <div className="space-y-2 pt-2 border-t border-teal-500/10">
+                    <div className="space-y-2 pt-2 border-t border-gray-700">
                       <div>
                         <label className="block text-xs text-gray-400 mb-1">WebUntis-Link (1 Tag, für Split)</label>
                         <input type="url" value={monitorConfig.webuntis_url_1tag || ''}
@@ -2069,7 +2067,7 @@ export default function MonitorAdminPage() {
                             </div>
                           ))}
                         </div>
-                      ) : <p className="text-gray-500 text-xs">Noch keine PDFs — oben hochladen.</p>}
+                      ) : <p className="text-gray-500 text-xs">Noch keine PDFs. Oben hochladen.</p>}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2113,7 +2111,7 @@ export default function MonitorAdminPage() {
                         <label className="block text-xs text-gray-400 mb-1">
                           Seiten-Auswahl{monitorConfig.pdf_modus === 'durchschalten' ? ' (optional)' : ''}
                         </label>
-                        <input type="text" placeholder="z.B. 1,3,5-7 — leer = alle" value={monitorConfig.pdf_seiten || ''}
+                        <input type="text" placeholder="z.B. 1,3,5-7 (leer = alle)" value={monitorConfig.pdf_seiten || ''}
                           onChange={e => updateConfig('pdf_seiten', e.target.value)} disabled={!canEdit}
                           className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm" />
                       </div>
@@ -2137,7 +2135,7 @@ export default function MonitorAdminPage() {
                           </div>
                         ))}
                       </div>
-                    ) : <p className="text-gray-500 text-xs">Noch keine Bilder — oben hochladen.</p>}
+                    ) : <p className="text-gray-500 text-xs">Noch keine Bilder. Oben hochladen.</p>}
                     <div className="mt-3">
                       <label className="block text-xs text-gray-400 mb-1.5 font-medium">Skalierung</label>
                       <div className="grid grid-cols-3 gap-2">
@@ -2196,10 +2194,10 @@ export default function MonitorAdminPage() {
 
             {/* Monitor-URL */}
             <div className="flex items-center gap-3 p-3 bg-gray-800/40 rounded-lg border border-gray-800">
-              <Monitor className="w-5 h-5 text-blue-400 flex-shrink-0" />
+              <Monitor className="w-5 h-5 text-gray-400 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] uppercase tracking-wider text-gray-500">Monitor-URL für diese Ansicht</p>
-                <code className="text-blue-400 text-sm">{window.location.origin}/monitor?profil={monitorConfig.slug}</code>
+                <code className="text-gray-200 text-sm font-mono">{window.location.origin}/monitor?profil={monitorConfig.slug}</code>
               </div>
               <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/monitor?profil=${monitorConfig.slug}`); toast.success('URL kopiert'); }}
                 className="p-1.5 text-gray-500 hover:text-white rounded-lg hover:bg-gray-700"><Copy className="w-3.5 h-3.5" /></button>
@@ -2214,7 +2212,7 @@ export default function MonitorAdminPage() {
                 </div>
                 {canEdit && (
                   <button onClick={addZeitplanEntry}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-400 text-sm rounded-lg">
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm rounded-lg">
                     <Plus className="w-3.5 h-3.5" /> Zeitfenster
                   </button>
                 )}
@@ -2222,7 +2220,7 @@ export default function MonitorAdminPage() {
 
               {(monitorConfig.zeitplan || []).length === 0 ? (
                 <div className="p-4 bg-gray-800/30 rounded-lg border border-gray-700/40 text-center">
-                  <p className="text-gray-500 text-sm">Kein Zeitplan — Ansicht wird nur per URL oder als Standard angezeigt.</p>
+                  <p className="text-gray-500 text-sm">Kein Zeitplan. Die Ansicht erscheint nur per URL oder als Standard.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -2251,7 +2249,7 @@ export default function MonitorAdminPage() {
                             onChange={e => updateZeitplanEntry(idx, 'von', e.target.value)}
                             disabled={!canEdit}
                             className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm disabled:opacity-50" />
-                          <span className="text-gray-500">—</span>
+                          <span className="text-gray-500">–</span>
                           <input type="time" value={entry.bis || '16:00'}
                             onChange={e => updateZeitplanEntry(idx, 'bis', e.target.value)}
                             disabled={!canEdit}
@@ -2448,8 +2446,8 @@ export default function MonitorAdminPage() {
 
           {/* ═══ Widgets ═══ */}
           <Section id="widgets" area={['standard', 'split', 'stundenplan'].includes(monitorConfig.layout_modus) ? 'ansichten' : 'nicht-relevant'} title="Widgets & Bereiche" description={`${activeWidgets} von ${widgetKeys.length} aktiv`}
-            icon={Zap} iconColor="bg-blue-600/30" open={openSections.widgets} onToggle={toggleSection}
-            statusDot={activeWidgets > 0 ? 'bg-blue-400' : 'bg-gray-600'}>
+            icon={Zap} iconColor="bg-sky-600/30" open={openSections.widgets} onToggle={toggleSection}
+            statusDot={activeWidgets > 0 ? 'bg-emerald-400' : 'bg-gray-600'}>
 
             {/* Categorized Widget Grid */}
             {cats.map(cat => (
@@ -2464,12 +2462,12 @@ export default function MonitorAdminPage() {
                         disabled={!canEdit}
                         className={`p-2.5 rounded-lg text-sm text-left border transition-all flex items-center gap-2.5 disabled:opacity-50 ${
                           active
-                            ? 'bg-blue-600/15 border-blue-500/30 text-blue-300 shadow-sm shadow-blue-500/5'
+                            ? 'bg-accent/10 border-accent/40 text-white'
                             : 'bg-gray-800/60 border-gray-700/60 text-gray-500 hover:border-gray-600 hover:text-gray-400'
                         }`}>
-                        <WIcon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-blue-400' : ''}`} />
+                        <WIcon className={`w-4 h-4 flex-shrink-0 ${active ? 'text-accent' : ''}`} />
                         <span className="flex-1">{w.label}</span>
-                        {active && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                        {active && <span className="w-1.5 h-1.5 rounded-full bg-accent" />}
                       </button>
                     );
                   })}
@@ -2502,7 +2500,7 @@ export default function MonitorAdminPage() {
                     disabled={!canEdit}
                     className={`px-4 py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 flex items-center gap-2 ${
                       monitorConfig.theme_preset === t.v
-                        ? 'border-purple-500 text-purple-400 bg-purple-900/20'
+                        ? 'border-accent text-white bg-accent/10'
                         : 'border-gray-700 text-gray-400 hover:border-gray-600'
                     }`}>
                     {t.color !== 'gray' && <span className="w-3 h-3 rounded-full" style={{ background: t.color }} />}
@@ -2545,7 +2543,7 @@ export default function MonitorAdminPage() {
               return (
                 <p className={`text-xs flex items-center gap-1.5 ${ok ? 'text-green-400' : mid ? 'text-amber-300' : 'text-red-400'}`}>
                   {ok ? <Check className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                  Kontrast {cr.toFixed(1)}:1 — {ok ? 'gut lesbar' : mid ? 'nur für große Schrift ausreichend' : 'zu gering, Text schwer lesbar'}
+                  Kontrast {cr.toFixed(1)}:1 · {ok ? 'gut lesbar' : mid ? 'nur für große Schrift ausreichend' : 'zu gering, Text schwer lesbar'}
                 </p>
               );
             })()}
@@ -2560,7 +2558,7 @@ export default function MonitorAdminPage() {
             {canEdit && (
               <div onDragOver={e => { e.preventDefault(); }}
                 onDrop={e => { e.preventDefault(); uploadDroppedFiles(Array.from(e.dataTransfer.files || [])); }}
-                className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-500 hover:border-pink-500/50 hover:text-gray-400 transition-colors">
+                className="border-2 border-dashed border-gray-700 rounded-xl p-6 text-center text-gray-500 hover:border-gray-500 hover:text-gray-300 transition-colors">
                 {uploading ? (
                   <span className="flex items-center justify-center gap-2 text-sm"><Loader2 className="w-4 h-4 animate-spin" /> Lädt hoch …</span>
                 ) : (
@@ -2579,7 +2577,7 @@ export default function MonitorAdminPage() {
             {/* Logos */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Image className="w-4 h-4 text-purple-400" /> Logos ({logos.length})</h4>
+                <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Image className="w-4 h-4 text-gray-400" /> Logos ({logos.length})</h4>
                 {canEdit && <UploadButton typ="logo" label="Logo hochladen" />}
               </div>
               {logos.length > 0 && (
@@ -2589,11 +2587,11 @@ export default function MonitorAdminPage() {
                       onClick={() => canEdit && updateConfig('aktives_logo_id', monitorConfig.aktives_logo_id === logo.id ? null : logo.id)}
                       className={`relative rounded-xl p-3 border-2 cursor-pointer transition-all ${
                         monitorConfig.aktives_logo_id === logo.id
-                          ? 'border-purple-500 bg-purple-900/20' : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                          ? 'border-accent bg-accent/10' : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
                       }`}>
                       <img src={`${MEDIA_BASE}${logo.datei_url}`} alt={logo.name} className="w-full h-16 object-contain" />
                       {monitorConfig.aktives_logo_id === logo.id && (
-                        <div className="absolute top-1 right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
+                        <div className="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
                       )}
                       <p className="text-xs text-gray-400 mt-2 truncate">{logo.name}</p>
                       {canEdit && (
@@ -2618,7 +2616,7 @@ export default function MonitorAdminPage() {
               <>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-semibold text-white flex items-center gap-2"><ImageIcon className="w-4 h-4 text-teal-400" /> Hintergrundbilder ({hintergruende.length})</h4>
+                    <h4 className="text-sm font-semibold text-white flex items-center gap-2"><ImageIcon className="w-4 h-4 text-gray-400" /> Hintergrundbilder ({hintergruende.length})</h4>
                     {canEdit && <UploadButton typ="hintergrund" label="Bild hochladen" />}
                   </div>
                   {hintergruende.length > 0 ? (
@@ -2627,11 +2625,11 @@ export default function MonitorAdminPage() {
                         <div key={bg.id}
                           onClick={() => canEdit && updateConfig('aktives_hintergrundbild_id', monitorConfig.aktives_hintergrundbild_id === bg.id ? null : bg.id)}
                           className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all ${
-                            monitorConfig.aktives_hintergrundbild_id === bg.id ? 'border-purple-500' : 'border-gray-700 hover:border-gray-600'
+                            monitorConfig.aktives_hintergrundbild_id === bg.id ? 'border-accent' : 'border-gray-700 hover:border-gray-600'
                           }`}>
                           <img src={`${MEDIA_BASE}${bg.datei_url}`} alt={bg.name} className="w-full h-20 object-cover" />
                           {monitorConfig.aktives_hintergrundbild_id === bg.id && (
-                            <div className="absolute top-1 right-1 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
+                            <div className="absolute top-1 right-1 w-5 h-5 bg-accent rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
                           )}
                           {canEdit && (
                             <button onClick={(e) => { e.stopPropagation(); handleDeleteDatei(bg.id); }}
@@ -2659,12 +2657,12 @@ export default function MonitorAdminPage() {
                         <div key={pdf.id}
                           onClick={() => canEdit && updateConfig('aktive_pdf_id', monitorConfig.aktive_pdf_id === pdf.id ? null : pdf.id)}
                           className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-all ${
-                            monitorConfig.aktive_pdf_id === pdf.id ? 'border-purple-500 bg-purple-900/20' : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
+                            monitorConfig.aktive_pdf_id === pdf.id ? 'border-accent bg-accent/10' : 'border-gray-700 hover:border-gray-600 bg-gray-800/50'
                           }`}>
                           <div className="flex items-center gap-3">
                             <FileText className="w-5 h-5 text-orange-400" />
                             <span className="text-white text-sm">{pdf.name}</span>
-                            {monitorConfig.aktive_pdf_id === pdf.id && <span className="px-2 py-0.5 text-xs bg-purple-500/20 text-purple-400 rounded">Aktiv</span>}
+                            {monitorConfig.aktive_pdf_id === pdf.id && <span className="px-2 py-0.5 text-xs bg-accent/15 text-accent ring-1 ring-inset ring-accent/25 rounded-md font-semibold">Aktiv</span>}
                           </div>
                           {canEdit && (
                             <button onClick={(e) => { e.stopPropagation(); handleDeleteDatei(pdf.id); }}
@@ -2682,7 +2680,7 @@ export default function MonitorAdminPage() {
             {monitorConfig.zeige_slideshow && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Image className="w-4 h-4 text-blue-400" /> Slideshow-Bilder ({bilder.length})</h4>
+                  <h4 className="text-sm font-semibold text-white flex items-center gap-2"><Image className="w-4 h-4 text-gray-400" /> Slideshow-Bilder ({bilder.length})</h4>
                   {canEdit && <UploadButton typ="bild" label="Bild hochladen" />}
                 </div>
                 {bilder.length > 0 ? (
@@ -2703,7 +2701,7 @@ export default function MonitorAdminPage() {
                   <label className="block text-xs text-gray-500 mb-1">Intervall: {monitorConfig.slideshow_intervall}s</label>
                   <input type="range" min={3} max={60} value={monitorConfig.slideshow_intervall}
                     onChange={e => updateConfig('slideshow_intervall', parseInt(e.target.value))}
-                    disabled={!canEdit} className="w-full accent-blue-500" />
+                    disabled={!canEdit} className="w-full accent-accent" />
                 </div>
               </div>
             )}
@@ -2716,7 +2714,7 @@ export default function MonitorAdminPage() {
 
             {canEdit && (
               <button onClick={() => { setEditingAnkuendigung(null); setNewAnkuendigung({ titel: '', text: '', prioritaet: 'normal', ist_aktiv: true }); }}
-                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
+                className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
                 <Plus className="w-4 h-4" /> Neue Ankündigung
               </button>
             )}
@@ -2766,7 +2764,7 @@ export default function MonitorAdminPage() {
           <Section id="events" area="events" plain title="Events" description="Sondermodi: aktivieren → Bildschirme zeigen andere Ansichten, danach zurück"
             icon={Radio} iconColor="bg-violet-600/30" open={openSections.events} onToggle={toggleSection}
             badge={events.length}
-            statusDot={events.some(e => e.aktiv) ? 'bg-violet-400 animate-pulse' : null}>
+            statusDot={events.some(e => e.aktiv) ? 'bg-accent animate-pulse' : null}>
             <EventManager events={events} bildschirme={bildschirme} profiles={profiles} canEdit={canEdit}
               onSave={saveEvent} onDelete={deleteEvent} onToggleActive={toggleEventActive} />
           </Section>
@@ -2782,7 +2780,7 @@ export default function MonitorAdminPage() {
           {/* ═══ ÖPNV Abfahrten (nur bei Abfahrtsmonitor-Layout) ═══ */}
           {monitorConfig.layout_modus === 'abfahrten' && (
           <Section id="oepnv" area="ansichten" title="ÖPNV Abfahrten" description="Stationen und Filter für den Abfahrtsmonitor"
-            icon={Activity} iconColor="bg-blue-600/30" open={openSections.oepnv} onToggle={toggleSection}
+            icon={Activity} iconColor="bg-sky-600/30" open={openSections.oepnv} onToggle={toggleSection}
             badge={monitorConfig.oepnv_stationen?.length || 0}>
 
             {/* API-Auswahl */}
@@ -2853,7 +2851,7 @@ export default function MonitorAdminPage() {
                             {s.quelle && (
                               <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
                                 s.quelle === 'db+nahsh' ? 'bg-green-500/20 text-green-400' :
-                                s.quelle === 'nahsh' ? 'bg-blue-500/20 text-blue-400' :
+                                s.quelle === 'nahsh' ? 'bg-sky-500/20 text-sky-400' :
                                 'bg-gray-500/20 text-gray-400'
                               }`}>
                                 {s.quelle === 'db+nahsh' ? 'DB + NAH.SH' : s.quelle === 'nahsh' ? 'NAH.SH' : 'DB'}
@@ -2887,7 +2885,7 @@ export default function MonitorAdminPage() {
                           {station.quelle && (
                             <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${
                               station.quelle === 'db+nahsh' ? 'bg-green-500/20 text-green-400' :
-                              station.quelle === 'nahsh' ? 'bg-blue-500/20 text-blue-400' :
+                              station.quelle === 'nahsh' ? 'bg-sky-500/20 text-sky-400' :
                               'bg-gray-500/20 text-gray-400'
                             }`}>
                               {station.quelle === 'db+nahsh' ? 'DB + NAH.SH' : station.quelle === 'nahsh' ? 'NAH.SH' : 'DB'}
@@ -2923,7 +2921,7 @@ export default function MonitorAdminPage() {
                                 updateConfig('oepnv_stationen', stationen);
                               }}
                               disabled={!canEdit}
-                              className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                              className="w-3 h-3 rounded bg-gray-900 border-gray-600 accent-accent focus:ring-0 disabled:opacity-50" />
                             <span className="text-[10px] text-white/70">{p.label}</span>
                           </label>
                         ))}
@@ -3018,7 +3016,7 @@ export default function MonitorAdminPage() {
                               updateConfig('oepnv_stationen', stationen);
                             }}
                             disabled={!canEdit}
-                            className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                            className="w-3 h-3 rounded bg-gray-900 border-gray-600 accent-accent focus:ring-0 disabled:opacity-50" />
                           <span className="text-[10px] text-white/70">Bus/Zug trennen</span>
                         </label>
                         <label className="flex items-center gap-1.5 cursor-pointer">
@@ -3030,7 +3028,7 @@ export default function MonitorAdminPage() {
                               updateConfig('oepnv_stationen', stationen);
                             }}
                             disabled={!canEdit}
-                            className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                            className="w-3 h-3 rounded bg-gray-900 border-gray-600 accent-accent focus:ring-0 disabled:opacity-50" />
                           <span className="text-[10px] text-white/70">Kompaktmodus</span>
                         </label>
                       </div>
@@ -3131,7 +3129,7 @@ export default function MonitorAdminPage() {
                                       updateConfig('oepnv_stationen', stationen);
                                     }}
                                     disabled={!canEdit}
-                                    className="w-3 h-3 rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-0 disabled:opacity-50" />
+                                    className="w-3 h-3 rounded bg-gray-900 border-gray-600 accent-accent focus:ring-0 disabled:opacity-50" />
                                   <span className="text-[10px] text-white/70">{p.label}</span>
                                 </label>
                               ))}
@@ -3147,7 +3145,7 @@ export default function MonitorAdminPage() {
                           <label className="block text-[10px] text-gray-500 mb-1">Linienfilter (Komma/Enter = trennen, leer = alle)</label>
                           <div className="flex flex-wrap gap-1 items-center bg-gray-900 border border-gray-700 rounded px-2 py-1 min-h-[30px]">
                             {(station.filter_linien || []).map((linie, li) => (
-                              <span key={li} className="inline-flex items-center gap-1 bg-blue-500/20 text-blue-300 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                              <span key={li} className="inline-flex items-center gap-1 bg-sky-500/20 text-sky-300 text-[10px] px-1.5 py-0.5 rounded font-medium">
                                 {linie}
                                 <button type="button" onClick={() => {
                                   const stationen = [...monitorConfig.oepnv_stationen];
@@ -3332,7 +3330,7 @@ export default function MonitorAdminPage() {
                 <label className="flex items-center gap-2 cursor-pointer mb-1.5">
                   <input type="checkbox" checked={monitorConfig.oepnv_stoerung_bahn !== false} disabled={!canEdit}
                     onChange={e => updateConfig('oepnv_stoerung_bahn', e.target.checked)}
-                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 text-blue-500" />
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 accent-accent" />
                   <span className="text-sm text-white">Zug-Störungen (NAH.SH / DB Regio)</span>
                 </label>
                 {monitorConfig.oepnv_stoerung_bahn !== false && (
@@ -3340,12 +3338,12 @@ export default function MonitorAdminPage() {
                     <label className="block text-[11px] text-gray-500 mb-1">Linienfilter (leer = alle erkannten Linien)</label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {(monitorConfig.oepnv_stoerung_bahn_linien || []).map((l, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded-full text-xs font-medium">
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-sky-500/15 text-sky-300 ring-1 ring-inset ring-sky-500/25 rounded-md text-xs font-medium">
                           {l}{canEdit && <button onClick={() => updateConfig('oepnv_stoerung_bahn_linien', (monitorConfig.oepnv_stoerung_bahn_linien || []).filter((_, j) => j !== i))} className="ml-0.5 hover:text-white">&times;</button>}
                         </span>
                       ))}
                     </div>
-                    <input type="text" placeholder="z.B. RE8 — Enter zum Hinzufügen" disabled={!canEdit}
+                    <input type="text" placeholder="z.B. RE8, mit Enter hinzufügen" disabled={!canEdit}
                       className="w-full sm:w-72 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-600 disabled:opacity-50"
                       onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { const v = e.target.value.trim(); const cur = monitorConfig.oepnv_stoerung_bahn_linien || []; if (!cur.includes(v)) updateConfig('oepnv_stoerung_bahn_linien', [...cur, v]); e.target.value = ''; } }} />
                   </div>
@@ -3357,7 +3355,7 @@ export default function MonitorAdminPage() {
                 <label className="flex items-center gap-2 cursor-pointer mb-1.5">
                   <input type="checkbox" checked={monitorConfig.oepnv_stoerung_bus !== false} disabled={!canEdit}
                     onChange={e => updateConfig('oepnv_stoerung_bus', e.target.checked)}
-                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 text-purple-500" />
+                    className="w-4 h-4 rounded bg-gray-800 border-gray-600 accent-accent" />
                   <span className="text-sm text-white">Bus-Störungen (Stadtverkehr Lübeck)</span>
                 </label>
                 {monitorConfig.oepnv_stoerung_bus !== false && (
@@ -3365,12 +3363,12 @@ export default function MonitorAdminPage() {
                     <label className="block text-[11px] text-gray-500 mb-1">Linienfilter (leer = alle; „alle Linien"-Meldungen immer)</label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {(monitorConfig.oepnv_stoerung_bus_linien || []).map((l, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full text-xs font-medium">
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-700/50 text-gray-200 ring-1 ring-inset ring-gray-600/40 rounded-md text-xs font-medium">
                           {l}{canEdit && <button onClick={() => updateConfig('oepnv_stoerung_bus_linien', (monitorConfig.oepnv_stoerung_bus_linien || []).filter((_, j) => j !== i))} className="ml-0.5 hover:text-white">&times;</button>}
                         </span>
                       ))}
                     </div>
-                    <input type="text" placeholder="z.B. 1, 3, 16 — Enter zum Hinzufügen" disabled={!canEdit}
+                    <input type="text" placeholder="z.B. 1, 3, 16, mit Enter hinzufügen" disabled={!canEdit}
                       className="w-full sm:w-72 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm placeholder-gray-600 disabled:opacity-50"
                       onKeyDown={e => { if (e.key === 'Enter' && e.target.value.trim()) { const v = e.target.value.trim(); const cur = monitorConfig.oepnv_stoerung_bus_linien || []; if (!cur.includes(v)) updateConfig('oepnv_stoerung_bus_linien', [...cur, v]); e.target.value = ''; } }} />
                   </div>
@@ -3414,7 +3412,7 @@ export default function MonitorAdminPage() {
                   <span className="text-sm font-medium text-red-400">Streik-Modus</span>
                 </label>
                 {monitorConfig.oepnv_streik_aktiv && (
-                  <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-full font-medium">AKTIV</span>
+                  <span className="text-[10px] px-2 py-0.5 bg-red-500/20 text-red-400 rounded-md font-medium">AKTIV</span>
                 )}
               </div>
 
@@ -3425,7 +3423,7 @@ export default function MonitorAdminPage() {
                     <label className="block text-xs text-gray-400 mb-1">Banner-Text (optional)</label>
                     <input type="text" value={monitorConfig.oepnv_streik_text || ''} disabled={!canEdit}
                       onChange={e => updateConfig('oepnv_streik_text', e.target.value)}
-                      placeholder="z.B. Streik bei DB Regio — einige Verbindungen entfallen"
+                      placeholder="z.B. Streik bei DB Regio, einige Verbindungen entfallen"
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-600 disabled:opacity-50" />
                   </div>
 
@@ -3434,7 +3432,7 @@ export default function MonitorAdminPage() {
                     <label className="block text-xs text-gray-400 mb-1">Linien ausblenden</label>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {(monitorConfig.oepnv_streik_linien || []).map((linie, i) => (
-                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-300 rounded-full text-xs font-medium">
+                        <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-500/20 text-red-300 rounded-md text-xs font-medium">
                           {linie}
                           {canEdit && (
                             <button onClick={() => {
@@ -3484,12 +3482,12 @@ export default function MonitorAdminPage() {
                               const updated = active ? current.filter(t => t !== typ.key) : [...current, typ.key];
                               updateConfig('oepnv_streik_typen', updated);
                             }}
-                            className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-all disabled:opacity-50 ${
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition-all disabled:opacity-50 ${
                               active
                                 ? 'bg-red-500/30 border-red-500/50 text-red-300'
                                 : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
                             }`}>
-                            {active && <span className="mr-1">✕</span>}{typ.label}
+                            {active && <X className="w-3 h-3 -ml-0.5" />}{typ.label}
                           </button>
                         );
                       })}
@@ -3553,7 +3551,7 @@ export default function MonitorAdminPage() {
                               <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${s.typ === 'bauarbeiten' ? 'bg-amber-500/20 text-amber-300' : 'bg-red-500/20 text-red-300'}`}>{s.typ === 'bauarbeiten' ? 'Baumaßnahme' : 'Störung'}</span>
                               <span className="text-[10px] text-gray-500 uppercase">{s.quelle}</span>
                               {(s.linien || []).slice(0, 8).map((l, i) => <span key={i} className="text-[10px] px-1.5 py-0.5 bg-white/10 text-white/70 rounded font-medium">{l}</span>)}
-                              {s.hat_bild && <span className="text-[10px] text-gray-500" title="mit Bild">🖼 Bild</span>}
+                              {s.hat_bild && <span className="inline-flex items-center gap-1 text-[10px] text-gray-500" title="mit Bild"><ImageIcon className="w-3 h-3" /> Bild</span>}
                             </div>
                             <div className={`text-sm font-medium ${hidden ? 'text-gray-500 line-through' : 'text-white'}`}>{s.titel}</div>
                             {s.text && <div className="text-xs text-gray-400 mt-0.5 leading-snug" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{s.text}</div>}
@@ -3577,7 +3575,7 @@ export default function MonitorAdminPage() {
           )}
 
           {/* ═══ API & Token ═══ */}
-          <Section id="globalsettings" area="einstellungen" plain title="Globale Zugänge" description="Einmal eintragen — gilt für alle Ansichten (Wetter-Key, Raumplan-Login)"
+          <Section id="globalsettings" area="einstellungen" plain title="Globale Zugänge" description="Einmal eintragen, gilt für alle Ansichten (Wetter-Key, Raumplan-Login)"
             icon={Key} iconColor="bg-emerald-600/30" open badge={null}>
             {globalSettings ? (
               <>
@@ -3614,7 +3612,7 @@ export default function MonitorAdminPage() {
                   </div>
                 </div>
                 {canEdit && (
-                  <button onClick={saveGlobalSettings} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg">
+                  <button onClick={saveGlobalSettings} className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-lg">
                     <Save className="w-4 h-4" /> Speichern
                   </button>
                 )}
@@ -3630,7 +3628,7 @@ export default function MonitorAdminPage() {
               <div className="space-y-3">
                 {papierkorb.ansichten.map(a => (
                   <div key={`a${a.id}`} className="flex items-center gap-3 bg-gray-800/40 rounded-lg px-3 py-2 text-sm">
-                    <LayoutGrid className="w-4 h-4 text-purple-400 shrink-0" />
+                    <LayoutGrid className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="text-white truncate flex-1">{a.name}</span>
                     <span className="text-gray-500 text-xs shrink-0">Ansicht</span>
                     {canEdit && <>
@@ -3641,7 +3639,7 @@ export default function MonitorAdminPage() {
                 ))}
                 {papierkorb.medien.map(m => (
                   <div key={`m${m.id}`} className="flex items-center gap-3 bg-gray-800/40 rounded-lg px-3 py-2 text-sm">
-                    <Image className="w-4 h-4 text-pink-400 shrink-0" />
+                    <Image className="w-4 h-4 text-gray-400 shrink-0" />
                     <span className="text-white truncate flex-1">{m.name}</span>
                     <span className="text-gray-500 text-xs shrink-0">{m.typ}</span>
                     {canEdit && <>
@@ -3679,7 +3677,7 @@ export default function MonitorAdminPage() {
               <div className="font-mono text-gray-500 space-y-1.5">
                 <p><span className="text-green-400">POST</span> /api/monitor/onair <span className="text-gray-600">{'{"on_air": true}'}</span></p>
                 <p><span className="text-amber-400">POST</span> /api/monitor/notfall <span className="text-gray-600">{'{"aktiv": true, "text": "..."}'}</span></p>
-                <p className="border-t border-gray-700/40 pt-1.5"><span className="text-blue-400">Header:</span> X-Monitor-Token: {'<token>'}</p>
+                <p className="border-t border-gray-700/40 pt-1.5"><span className="text-sky-400">Header:</span> X-Monitor-Token: {'<token>'}</p>
               </div>
             </div>
           </Section>
@@ -3694,7 +3692,7 @@ export default function MonitorAdminPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-3 py-2 bg-gray-800/50 border-b border-gray-800">
               <span className="text-xs text-gray-400 flex items-center gap-2 truncate">
-                <Activity className="w-3 h-3 shrink-0" /> Vorschau — {activeProfile?.name}
+                <Activity className="w-3 h-3 shrink-0" /> Vorschau · {activeProfile?.name}
               </span>
               <div className="flex items-center gap-2 shrink-0">
                 <a href={`/monitor?profil=${monitorConfig.slug}`} target="_blank" rel="noopener noreferrer" className="text-gray-500 hover:text-white" title="Groß öffnen">
@@ -3733,7 +3731,7 @@ function ZeitplanTimeline({ zeitplan, profiles }) {
   const toMin = (t) => { const [h, m] = (t || '00:00').split(':').map(Number); return h * 60 + (m || 0); };
   const palette = ['#7c3aed', '#2563eb', '#16a34a', '#d97706', '#dc2626', '#0891b2', '#db2777', '#4f46e5'];
   const colorFor = (id) => palette[(id || 0) % palette.length];
-  const nameFor = (id) => profiles.find(p => p.id === id)?.name || '—';
+  const nameFor = (id) => profiles.find(p => p.id === id)?.name || '–';
   return (
     <div className="mb-3 p-2 bg-gray-800/30 rounded-lg border border-gray-700/40">
       <div className="grid grid-cols-7 gap-1">
@@ -3826,7 +3824,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
         </div>
         {modus !== 'auto' && (
           <p className="text-[11px] text-amber-400">
-            Manueller Modus aktiv — Zeitplan und Ferienmodus haben keinen Effekt.
+            Manueller Modus aktiv. Zeitplan und Ferienmodus greifen nicht.
           </p>
         )}
       </div>
@@ -3835,7 +3833,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
       <div className={`flex items-center justify-between p-3 bg-gray-800/30 rounded-lg border border-gray-700/40 ${modus !== 'auto' ? 'opacity-50' : ''}`}>
         <div>
           <div className="text-sm font-medium text-white">Ferienmodus</div>
-          <p className="text-[11px] text-gray-500">Bildschirm bleibt aus — außer zu eingestellten Sonderzeiten unten.</p>
+          <p className="text-[11px] text-gray-500">Bildschirm bleibt aus, außer zu den Sonderzeiten unten.</p>
         </div>
         <Toggle checked={!!bs.ferien_modus} disabled={!canEdit || modus !== 'auto'}
           onChange={(v) => update('ferien_modus', v)} />
@@ -3853,15 +3851,15 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
           {canEdit && (
             <div className="flex gap-1.5">
               <button onClick={() => addPlanEntry('woche')}
-                className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/30 text-blue-300 text-xs rounded">
+                className="px-2.5 py-1 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded">
                 + Mo–Fr
               </button>
               <button onClick={() => addPlanEntry('wochenende')}
-                className="px-2.5 py-1 bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 text-xs rounded">
+                className="px-2.5 py-1 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded">
                 + Sa–So
               </button>
               <button onClick={() => addPlanEntry('alle')}
-                className="px-2.5 py-1 bg-green-600/20 hover:bg-green-600/30 border border-green-500/30 text-green-300 text-xs rounded">
+                className="px-2.5 py-1 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded">
                 + Alle Tage
               </button>
             </div>
@@ -3870,7 +3868,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
 
         {plan.length === 0 ? (
           <div className="p-3 bg-gray-800/20 rounded-lg border border-gray-700/30 text-center text-xs text-gray-500">
-            Kein Zeitplan — Bildschirm ist {bs.ferien_modus ? 'aus (Ferienmodus)' : 'immer an'}.
+            Kein Zeitplan. Bildschirm ist {bs.ferien_modus ? 'aus (Ferienmodus)' : 'immer an'}.
           </div>
         ) : (
           <div className="space-y-2">
@@ -3883,7 +3881,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
                         onClick={() => toggleTag(idx, tagIdx)}
                         className={`w-7 h-7 rounded text-[11px] font-bold transition-colors disabled:opacity-50 ${
                           (entry.tage || []).includes(tagIdx)
-                            ? (tagIdx >= 5 ? 'bg-purple-600/30 border border-purple-500/40 text-purple-200' : 'bg-blue-600/30 border border-blue-500/40 text-blue-200')
+                            ? (tagIdx >= 5 ? 'bg-gray-600/40 border border-gray-500/50 text-gray-100' : 'bg-accent/20 border border-accent/40 text-white')
                             : 'bg-gray-800 border border-gray-700 text-gray-500'
                         }`}>
                         {tag}
@@ -3894,7 +3892,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
                     <input type="time" value={entry.von || ''} disabled={!canEdit}
                       onChange={e => setPlanEntry(idx, { von: e.target.value })}
                       className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
-                    <span className="text-gray-500 text-xs">—</span>
+                    <span className="text-gray-500 text-xs">–</span>
                     <input type="time" value={entry.bis || ''} disabled={!canEdit}
                       onChange={e => setPlanEntry(idx, { bis: e.target.value })}
                       className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
@@ -3921,7 +3919,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
           </div>
           {canEdit && (
             <button onClick={addAusnahme}
-              className="flex items-center gap-1 px-2.5 py-1 bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/30 text-amber-300 text-xs rounded">
+              className="flex items-center gap-1 px-2.5 py-1 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded">
               <Plus className="w-3 h-3" /> Sonderzeit
             </button>
           )}
@@ -3947,7 +3945,7 @@ function PowerZeitplanEditor({ bs, canEdit, update }) {
                     <input type="time" value={a.von || ''} disabled={!canEdit}
                       onChange={e => setAusnahme(idx, { von: e.target.value })}
                       className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
-                    <span className="text-gray-500 text-xs">—</span>
+                    <span className="text-gray-500 text-xs">–</span>
                     <input type="time" value={a.bis || ''} disabled={!canEdit}
                       onChange={e => setAusnahme(idx, { bis: e.target.value })}
                       className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-xs disabled:opacity-50" />
@@ -3979,7 +3977,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
   const [draft, setDraft] = useState(null); // {id?, name, farbe, beschreibung, aktiv_von, aktiv_bis, zuweisungen:[...]}
   const [previewId, setPreviewId] = useState(null); // Event-Karte mit aufgeklappter Vorschau
   const profileSlug = (id) => profiles.find(p => p.id === id)?.slug;
-  const profileName = (id) => profiles.find(p => p.id === id)?.name || '—';
+  const profileName = (id) => profiles.find(p => p.id === id)?.name || '–';
   const toLocal = (iso) => iso ? iso.slice(0, 16) : '';
   const toIso = (local) => local ? new Date(local).toISOString() : null;
   const fmt = (iso) => { try { return new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch { return ''; } };
@@ -3995,7 +3993,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
   const timeBadge = (ev) => {
     if (!ev.aktiv_von || !ev.aktiv_bis) return null;
     const von = new Date(ev.aktiv_von).getTime(), bis = new Date(ev.aktiv_bis).getTime();
-    if (now < von) return { text: `startet in ${humanDur(von - now)}`, cls: 'bg-blue-500/20 text-blue-300' };
+    if (now < von) return { text: `startet in ${humanDur(von - now)}`, cls: 'bg-sky-500/20 text-sky-300' };
     if (now < bis) return { text: `endet in ${humanDur(bis - now)}`, cls: 'bg-amber-500/20 text-amber-300' };
     return { text: 'abgelaufen', cls: 'bg-gray-700 text-gray-400' };
   };
@@ -4032,19 +4030,19 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
       </p>
       {canEdit && !draft && (
         <button onClick={() => start(null)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm rounded-lg">
+          className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
           <Plus className="w-4 h-4" /> Neues Event
         </button>
       )}
 
       {draft && (
-        <div className="p-4 bg-gray-800/40 rounded-xl border border-violet-500/30 space-y-3">
+        <div className="p-4 bg-gray-800/40 rounded-xl border border-gray-700 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="col-span-2">
               <label className="block text-xs text-gray-400 mb-1">Name</label>
               <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
                 placeholder="z.B. Tag der offenen Tür" autoFocus
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">Farbe</label>
@@ -4058,12 +4056,12 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
             <div>
               <label className="block text-xs text-gray-400 mb-1">Automatisch aktiv ab (optional)</label>
               <input type="datetime-local" value={toLocal(draft.aktiv_von)} onChange={e => setDraft({ ...draft, aktiv_von: toIso(e.target.value) })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
             </div>
             <div>
               <label className="block text-xs text-gray-400 mb-1">bis (optional)</label>
               <input type="datetime-local" value={toLocal(draft.aktiv_bis)} onChange={e => setDraft({ ...draft, aktiv_bis: toIso(e.target.value) })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
             </div>
             <div className="col-span-2 flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] text-gray-500">Schnell:</span>
@@ -4091,7 +4089,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
                       <span className="text-sm text-gray-300 w-40 shrink-0 truncate">{bs.name}</span>
                       <select value={pid} onChange={e => setProfil(bs.id, e.target.value ? parseInt(e.target.value) : null)}
                         className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
-                        <option value="">— unverändert —</option>
+                        <option value="">Unverändert</option>
                         {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </select>
                       {slug && (
@@ -4106,7 +4104,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={save} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg">
+            <button onClick={save} className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-lg">
               <Save className="w-4 h-4" /> Speichern
             </button>
             <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">Abbrechen</button>
@@ -4117,16 +4115,16 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
       <div className="space-y-2">
         {events.map(ev => (
           <div key={ev.id} className={`p-3 rounded-xl border ${
-            ev.aktiv ? 'bg-violet-900/20 border-violet-500/40' : 'bg-gray-800/20 border-gray-700/40'}`}>
+            ev.aktiv ? 'bg-accent/[0.06] border-accent/40' : 'bg-gray-800/20 border-gray-700/40'}`}>
             <div className="flex items-center gap-3">
               <span className="w-3 h-3 rounded-full shrink-0" style={{ background: ev.farbe }} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-white text-sm">{ev.name}</span>
-                  {ev.aktiv && <span className="px-2 py-0.5 text-[10px] bg-violet-500/30 text-violet-200 rounded-full">aktiv</span>}
-                  {(() => { const b = timeBadge(ev); return b ? <span className={`px-2 py-0.5 text-[10px] rounded-full ${b.cls}`}>{b.text}</span> : null; })()}
+                  {ev.aktiv && <span className="px-2 py-0.5 text-[10px] bg-accent/15 text-accent ring-1 ring-inset ring-accent/30 rounded-md font-semibold">aktiv</span>}
+                  {(() => { const b = timeBadge(ev); return b ? <span className={`px-2 py-0.5 text-[10px] rounded-md ${b.cls}`}>{b.text}</span> : null; })()}
                   {collisionIds.has(ev.id) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-red-500/20 text-red-300 rounded-full" title="Überlappt zeitlich mit einem anderen Event auf demselben Bildschirm">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-red-500/20 text-red-300 rounded-md" title="Überlappt zeitlich mit einem anderen Event auf demselben Bildschirm">
                       <AlertTriangle className="w-3 h-3" /> Überschneidung
                     </span>
                   )}
@@ -4145,7 +4143,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
                   <>
                     <button onClick={() => onToggleActive(ev)}
                       className={`px-3 py-1.5 text-xs rounded-lg font-medium ${
-                        ev.aktiv ? 'bg-violet-600 hover:bg-violet-700 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
+                        ev.aktiv ? 'bg-accent hover:bg-accent-hover text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-200'}`}>
                       {ev.aktiv ? 'Deaktivieren' : 'Aktivieren'}
                     </button>
                     <button onClick={() => start(ev)} className="p-2 text-gray-400 hover:text-accent hover:bg-gray-800 rounded-lg"><Edit className="w-4 h-4" /></button>
@@ -4176,7 +4174,7 @@ function EventManager({ events, bildschirme, profiles, canEdit, onSave, onDelete
         {events.length === 0 && !draft && (
           <div className="p-8 text-center text-gray-500 border border-gray-800 rounded-xl">
             <Radio className="w-10 h-10 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">Noch keine Events — z.B. „Tag der offenen Tür" anlegen und bei Bedarf aktivieren.</p>
+            <p className="text-sm">Noch keine Events. Lege z.B. „Tag der offenen Tür“ an und aktiviere es bei Bedarf.</p>
           </div>
         )}
       </div>
@@ -4195,7 +4193,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-gray-500">Vorlage:</span>
-        {vorlagen.length === 0 && <span className="text-[11px] text-gray-600">— noch keine —</span>}
+        {vorlagen.length === 0 && <span className="text-[11px] text-gray-600">noch keine</span>}
         {vorlagen.map(v => (
           <button key={v.id} onClick={() => onApply(v)}
             className="px-2.5 py-1 rounded-lg text-xs bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700">
@@ -4210,7 +4208,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
       {manage && (
         <div className="p-3 bg-gray-800/40 rounded-xl border border-gray-700 space-y-3">
           {!draft && (
-            <button onClick={() => setDraft(newDraft())} className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-600/20 border border-blue-500/30 text-blue-300 text-xs rounded-lg">
+            <button onClick={() => setDraft(newDraft())} className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded-lg">
               <Plus className="w-3.5 h-3.5" /> Neue Vorlage
             </button>
           )}
@@ -4240,7 +4238,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
                     <label className="block text-[11px] text-gray-500 mb-0.5">Stundenplan-Link</label>
                     <select value={draft.webuntis_link_id || ''} onChange={e => setDraft({ ...draft, webuntis_link_id: e.target.value ? parseInt(e.target.value) : null })}
                       className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-white text-sm">
-                      <option value="">— Link der Ansicht —</option>
+                      <option value="">Link der Ansicht</option>
                       {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                     </select>
                   </div>
@@ -4261,7 +4259,7 @@ function KlausurVorlagenBar({ vorlagen, webuntisLinks, onApply, onSave, onDelete
                       style={{ background: c }} />
                   ))}
                 </div>
-                <button onClick={save} className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg flex items-center gap-1"><Save className="w-3.5 h-3.5" /> Speichern</button>
+                <button onClick={save} className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white font-medium text-xs rounded-lg flex items-center gap-1"><Save className="w-3.5 h-3.5" /> Speichern</button>
                 <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 text-white text-xs rounded-lg">Abbrechen</button>
               </div>
             </div>
@@ -4294,23 +4292,23 @@ function WebUntisLinkManager({ links, canEdit, onSave, onDelete }) {
     <div className="space-y-3">
       {canEdit && !draft && (
         <button onClick={() => start(null)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
+          className="flex items-center gap-2 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
           <Plus className="w-4 h-4" /> Neuer Link
         </button>
       )}
       {draft && (
         <div className="p-4 bg-gray-800/40 rounded-xl border border-gray-700 space-y-3">
           <input type="text" value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })}
-            placeholder="Name (z.B. Klasse 10a — 1 Tag)"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            placeholder="Name (z.B. Klasse 10a, 1 Tag)"
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
           <input type="url" value={draft.url} onChange={e => setDraft({ ...draft, url: e.target.value })}
             placeholder="https://neilo.webuntis.com/..."
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
           <input type="text" value={draft.notiz || ''} onChange={e => setDraft({ ...draft, notiz: e.target.value })}
             placeholder="Notiz (optional)"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
           <div className="flex items-center gap-2">
-            <button onClick={save} className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg">
+            <button onClick={save} className="flex items-center gap-1.5 px-3 py-1.5 bg-accent hover:bg-accent-hover text-white font-medium text-sm rounded-lg">
               <Save className="w-4 h-4" /> Speichern
             </button>
             <button onClick={() => setDraft(null)} className="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg">Abbrechen</button>
@@ -4336,7 +4334,7 @@ function WebUntisLinkManager({ links, canEdit, onSave, onDelete }) {
         {links.length === 0 && !draft && (
           <div className="p-8 text-center text-gray-500">
             <Calendar className="w-10 h-10 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">Noch keine Links — hier einmal anlegen und in Ansicht/Klausur auswählen.</p>
+            <p className="text-sm">Noch keine Links. Hier einmal anlegen, dann in Ansicht oder Klausur auswählen.</p>
           </div>
         )}
       </div>
@@ -4384,12 +4382,12 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
   };
 
   return (
-    <div className="p-4 border border-blue-500/30 rounded-xl bg-blue-900/10 space-y-3">
+    <div className="p-4 border border-sky-500/30 rounded-xl bg-sky-900/10 space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1">Titel</label>
           <input type="text" value={titel} onChange={e => setTitel(e.target.value)} autoFocus
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Farbe</label>
@@ -4409,19 +4407,19 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
       <div>
         <label className="block text-xs text-gray-400 mb-1">Hinweistext (optional)</label>
         <textarea value={text} onChange={e => setText(e.target.value)} rows={3}
-          placeholder="z.B. Bitte Ruhe — Klausur läuft bis 10:30"
-          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+          placeholder="z.B. Bitte Ruhe, Klausur bis 10:30"
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1">Von</label>
           <input type="datetime-local" value={von} onChange={e => setVon(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
         <div>
           <label className="block text-xs text-gray-400 mb-1">Bis</label>
           <input type="datetime-local" value={bis} onChange={e => setBis(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm" />
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         </div>
       </div>
       {/* Zeit-Schnellbuttons */}
@@ -4436,14 +4434,14 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
       <div>
         <label className="block text-xs text-gray-400 mb-2">Auf welchen Bildschirmen?</label>
         {bildschirme.length === 0 ? (
-          <p className="text-xs text-gray-500 italic">Keine Bildschirme angelegt — zuerst Bildschirme erstellen.</p>
+          <p className="text-xs text-gray-500 italic">Keine Bildschirme angelegt. Zuerst Bildschirme erstellen.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {bildschirme.map(bs => (
               <button key={bs.id} type="button" onClick={() => toggleBs(bs.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
                   bildschirmIds.includes(bs.id)
-                    ? 'bg-blue-600/30 border-blue-500/40 text-blue-200'
+                    ? 'bg-accent/20 border-accent/40 text-white'
                     : 'bg-gray-800 border-gray-700 text-gray-400 hover:text-white'
                 }`}>
                 {bs.name}
@@ -4452,11 +4450,11 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
           </div>
         )}
       </div>
-      <div className="pt-2 border-t border-blue-500/20 space-y-3">
+      <div className="pt-2 border-t border-sky-500/20 space-y-3">
         <div>
           <label className="block text-xs text-gray-400 mb-1">Anzeige während der Klausur</label>
           <select value={anzeigeModus} onChange={e => setAnzeigeModus(e.target.value)}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm">
+            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent">
             <option value="vollbild">Vollbild (Klausur-Hinweis)</option>
             <option value="split">Splitscreen (Klausur + Stundenplan)</option>
             <option value="standard">Kein Zwang (Ansicht-Layout)</option>
@@ -4468,7 +4466,7 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
               <label className="block text-xs text-gray-400 mb-1">Stundenplan-Link (WebUntis)</label>
               <select value={webuntisLinkId || ''} onChange={e => setWebuntisLinkId(e.target.value ? parseInt(e.target.value) : null)}
                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-white text-sm">
-                <option value="">— Link der Ansicht nutzen —</option>
+                <option value="">Link der Ansicht nutzen</option>
                 {webuntisLinks.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
@@ -4483,12 +4481,12 @@ function KlausurForm({ initial, bildschirme, webuntisLinks = [], onSave, onCance
             <div>
               <label className="block text-xs text-gray-500 mb-1">Breite Klausur: {splitProzent}%</label>
               <input type="range" min={20} max={80} step={5} value={splitProzent}
-                onChange={e => setSplitProzent(parseInt(e.target.value))} className="w-full accent-blue-500" />
+                onChange={e => setSplitProzent(parseInt(e.target.value))} className="w-full accent-accent" />
             </div>
           </div>
         )}
       </div>
-      <div className="flex items-center justify-end gap-2 pt-2 border-t border-blue-500/20">
+      <div className="flex items-center justify-end gap-2 pt-2 border-t border-sky-500/20">
         <button onClick={onCancel} className="px-3 py-1.5 text-gray-400 hover:text-white text-sm">Abbrechen</button>
         <button onClick={submit} disabled={!titel.trim() || bildschirmIds.length === 0}
           className="px-4 py-1.5 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-sm rounded-lg flex items-center gap-2">
@@ -4522,14 +4520,14 @@ function KlausurCard({ klausur, bildschirme, webuntisLinks = [], canEdit, onSave
 
   return (
     <div className={`flex items-center gap-3 p-3 rounded-lg border ${
-      isLive ? 'bg-blue-900/20 border-blue-500/40' : isPast ? 'bg-gray-800/20 border-gray-700/40 opacity-60' : 'bg-gray-800/30 border-gray-700/40'
+      isLive ? 'bg-sky-900/20 border-sky-500/40' : isPast ? 'bg-gray-800/20 border-gray-700/40 opacity-60' : 'bg-gray-800/30 border-gray-700/40'
     }`}>
       <div className="w-2 h-10 rounded-full shrink-0" style={{ background: klausur.farbe }} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-white truncate">{klausur.titel}</span>
-          {isLive && <span className="px-1.5 py-0.5 text-[9px] bg-red-600/30 text-red-300 border border-red-500/30 rounded-full animate-pulse">LIVE</span>}
-          {isPast && <span className="px-1.5 py-0.5 text-[9px] bg-gray-700 text-gray-400 rounded-full">Vergangen</span>}
+          {isLive && <span className="px-1.5 py-0.5 text-[9px] bg-red-600/30 text-red-300 border border-red-500/30 rounded-md animate-pulse">LIVE</span>}
+          {isPast && <span className="px-1.5 py-0.5 text-[9px] bg-gray-700 text-gray-400 rounded-md">Vergangen</span>}
         </div>
         <div className="text-xs text-gray-400 mt-0.5">
           {von.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
