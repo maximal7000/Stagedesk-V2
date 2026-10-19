@@ -1,5 +1,5 @@
 """
-Monitor API, zweiter Router: Ferien, Notfall-Vorlagen, "bis Tagesende aus", WebUntis-Test.
+Monitor API, zweiter Router: Ferien, Notfall-Vorlagen, "bis Tagesende aus", WebUntis-Test, Vorschau.
 
 Wird in api.py per monitor_router.add_router("", setup_router) eingebunden.
 """
@@ -9,14 +9,14 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
-from . import webuntis
+from . import display, webuntis
 from .permissions import _require_perm
 from .consumers import push_power_to_all
-from .models import EmergencyTemplate, HolidayPeriod, Screen
+from .models import DisplayView, EmergencyTemplate, HolidayPeriod, Screen
 from .power import next_on_time
 from .schemas import (
     EmergencyTemplateCreateSchema, EmergencyTemplateSchema,
-    HolidayPeriodCreateSchema, HolidayPeriodSchema, ScreenSelectionSchema,
+    HolidayPeriodCreateSchema, HolidayPeriodSchema, ScreenSelectionSchema, ViewPreviewSchema,
 )
 
 setup_router = Router()
@@ -134,3 +134,17 @@ def check_webuntis(request):
     """Quelle neu erkennen (Spec §4.3). Nur Ja/Nein pro Weg und die Quelle, keine Daten."""
     _require_perm(request, 'monitor.setup')
     return webuntis.check()
+
+
+# ═══ Vorschau ═════════════════════════════════════════════════════
+
+@setup_router.post("/views/preview", auth=keycloak_auth)
+def create_view_preview(request, payload: ViewPreviewSchema):
+    """Entwurf ablegen (nichts wird gespeichert) → Token für GET /display?preview= (Spec §4.5)."""
+    _require_perm(request, 'monitor.setup')
+    draft = payload.view.dict(exclude_unset=True)
+    if draft.get('id') and not DisplayView.objects.filter(id=draft['id'], deleted_at__isnull=True).exists():
+        raise HttpError(404, "Die Ansicht existiert nicht mehr. Bitte die Seite neu laden.")
+    if payload.screen_id and not Screen.objects.filter(id=payload.screen_id).exists():
+        raise HttpError(404, "Der Bildschirm existiert nicht mehr. Bitte einen anderen wählen.")
+    return {'token': display.store_preview(draft, payload.screen_id)}

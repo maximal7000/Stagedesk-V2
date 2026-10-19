@@ -187,6 +187,16 @@ class DisplayViewUpdateSchema(Schema):
     page_seconds: Optional[int] = None
 
 
+class DisplayViewDraftSchema(DisplayViewUpdateSchema):
+    """Entwurf für die Vorschau: Felder wie beim Speichern, `id` = gespeicherte Ansicht als Basis."""
+    id: Optional[int] = None
+
+
+class ViewPreviewSchema(Schema):
+    view: DisplayViewDraftSchema
+    screen_id: Optional[int] = None
+
+
 class DisplayViewCreateSchema(Schema):
     """Neues Profil erstellen"""
     name: str

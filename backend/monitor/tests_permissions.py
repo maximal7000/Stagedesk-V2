@@ -67,7 +67,7 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('delete_webuntis_link', 1), ('search_transit_stops',),
                 ('create_screen', None), ('update_screen', 1, api.ScreenUpdateSchema(name='Halle')),
                 ('delete_screen', 1),
-                ('reload_screen', 1),
+                ('reload_screen', 1), ('create_view_preview', None),
             ],
             'monitor.exams': [
                 ('create_exam', None), ('update_exam', 1, None), ('delete_exam', 1),
