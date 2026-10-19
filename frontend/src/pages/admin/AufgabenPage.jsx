@@ -124,24 +124,26 @@ export default function AufgabenPage() {
         meta={<span className="tabular-nums">{aufgaben.length} {aufgaben.length === 1 ? 'Aufgabe' : 'Aufgaben'}</span>}
         actions={
           <Button as="a" href="/aufgaben-monitor" target="_blank" rel="noreferrer" variant="secondary" icon={ExternalLink}>
-            Monitor-Vollbild öffnen
+            Monitor-Ansicht
           </Button>
         }
       />
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-2">
-        <input type="text" placeholder="Neue Aufgabe…" value={neuerTitel}
+        <input type="text" placeholder="Neue Aufgabe, mit Enter anlegen" value={neuerTitel}
           onChange={(e) => setNeuerTitel(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addAufgabe()}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500" />
+          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         <Button variant="primary" icon={Plus} disabled={!neuerTitel.trim()} onClick={addAufgabe}>Hinzufügen</Button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
       ) : aufgaben.length === 0 ? (
-        <EmptyState icon={ListChecks} title="Keine Aufgaben"
-          description="Lege oben deine erste Aufgabe an." />
+        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+          <EmptyState icon={ListChecks} title="Keine Aufgaben"
+            description="Aufgaben, die du oben anlegst, erscheinen auch auf dem Aufgaben-Monitor." />
+        </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={aufgaben.map(a => a.id)} strategy={verticalListSortingStrategy}>
@@ -188,7 +190,7 @@ function SortableAufgabe({
   return (
     <li ref={setNodeRef} style={style}
       className={`bg-gray-900 border rounded-xl p-4 ${
-        done ? 'border-green-800/40 opacity-70' : 'border-gray-800 hover:border-gray-700'
+        done ? 'border-gray-800 opacity-60' : 'border-gray-800 hover:border-gray-600'
       } ${isDragging ? 'ring-2 ring-accent' : ''}`}>
       <div className="flex items-start gap-3 flex-wrap">
         <button {...attributes} {...listeners}
@@ -201,7 +203,7 @@ function SortableAufgabe({
           aria-label={done ? 'Wieder öffnen' : 'Als erledigt markieren'}
           className="shrink-0 mt-0.5">
           {done
-            ? <CheckCircle2 className="w-6 h-6 text-green-500" />
+            ? <CheckCircle2 className="w-6 h-6 text-emerald-400" />
             : <Circle className="w-6 h-6 text-gray-500 hover:text-white" />}
         </button>
         <div className="flex-1 min-w-[200px]">
@@ -212,7 +214,7 @@ function SortableAufgabe({
           <div className="flex flex-wrap gap-1 mt-2">
             {a.zugewiesene.map(z => (
               <span key={z.id}
-                className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 rounded text-xs">
+                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-gray-800 text-gray-200 ring-1 ring-inset ring-gray-700 rounded-md text-xs">
                 {z.name}
                 <button onClick={() => toggleAssign(a, z.id)} className="hover:text-white" aria-label={`${z.name} entfernen`}>
                   <X className="w-3 h-3" />
@@ -220,15 +222,15 @@ function SortableAufgabe({
               </span>
             ))}
             <button onClick={() => setEditAssignId(editAssignId === a.id ? null : a.id)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded text-xs">
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-gray-400 hover:text-white hover:bg-gray-800 border border-dashed border-gray-700 rounded-md text-xs transition-colors">
               <Plus className="w-3 h-3" /> Zuweisen
             </button>
           </div>
           {editAssignId === a.id && (
             <div className="mt-2 p-2 bg-gray-800/60 border border-gray-700 rounded-lg space-y-1 max-h-48 overflow-y-auto">
-              <input type="text" placeholder="Suchen…" value={search}
+              <input type="text" placeholder="Name suchen" value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-white text-sm mb-1" />
+                className="w-full bg-gray-900 border border-gray-700 rounded-md px-2 py-1 text-white text-sm mb-1 focus:outline-none focus:border-accent" />
               {users
                 .filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase())
                   || (u.username || '').toLowerCase().includes(search.toLowerCase()))
@@ -239,7 +241,7 @@ function SortableAufgabe({
                       className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700/60 cursor-pointer">
                       <input type="checkbox" checked={on}
                         onChange={() => toggleAssign(a, u.id)}
-                        className="rounded border-gray-600 bg-gray-700 text-accent" />
+                        className="rounded border-gray-600 bg-gray-700 accent-accent" />
                       <span className="text-sm text-white">{u.name}</span>
                     </label>
                   );
@@ -253,7 +255,7 @@ function SortableAufgabe({
             <div className="mt-3 space-y-1">
               {subtasks.length > 0 && (
                 <div className="text-[11px] text-gray-500 mb-1 tabular-nums">
-                  Unteraufgaben: {subDone}/{subtasks.length}
+                  Unteraufgaben {subDone}/{subtasks.length}
                 </div>
               )}
               {subtasks.map((s) => (
@@ -261,7 +263,7 @@ function SortableAufgabe({
                   <button onClick={() => toggleSubtask(a.id, s)}
                     className="text-gray-500 hover:text-white">
                     {s.erledigt
-                      ? <CheckSquare className="w-4 h-4 text-green-500" />
+                      ? <CheckSquare className="w-4 h-4 text-emerald-400" />
                       : <Square className="w-4 h-4" />}
                   </button>
                   <span className={`text-sm flex-1 ${s.erledigt ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
@@ -288,7 +290,7 @@ function SortableAufgabe({
           )}
         </div>
         <Button variant="ghost" size="sm" icon={Trash2} title="Löschen" aria-label={`Aufgabe „${a.titel}" löschen`}
-          className="text-gray-500 hover:text-red-400" onClick={() => remove(a)} />
+          className="!text-gray-500 hover:!text-red-400" onClick={() => remove(a)} />
       </div>
     </li>
   );

@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import apiClient from '../../lib/api';
+import { PageHeader, Button, StatusBadge } from '../../components/ui';
 
 function formatBytes(b) {
   if (!b) return '0 B';
@@ -67,46 +68,42 @@ export default function SystemAdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold text-white">System</h1>
-        <button onClick={load} disabled={loading}
-          className="ml-auto p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-          title="Aktualisieren">
-          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
-        </button>
-        <Link to="/admin/audit"
-          className="inline-flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
-          <LinkIcon className="w-4 h-4" /> Audit-Log
-        </Link>
-      </div>
+      <PageHeader eyebrow="Admin" title="Systemzustand"
+        actions={
+          <>
+            <Button variant="ghost" onClick={load} disabled={loading} title="Aktualisieren" aria-label="Aktualisieren"
+              icon={loading ? Loader2 : RefreshCw} className={loading ? '[&>svg]:animate-spin' : ''} />
+            <Button as={Link} to="/admin/audit" variant="secondary" icon={LinkIcon}>Audit-Log</Button>
+          </>
+        } />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Background-Jobs */}
         <section className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Activity className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-semibold text-white">Background-Jobs</h2>
-            <span className="text-xs text-gray-500 ml-auto">letzte Runs pro Job</span>
+            <Activity className="w-4 h-4 text-gray-400" />
+            <h2 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Hintergrund-Jobs</h2>
+            <span className="text-xs text-gray-500 ml-auto">letzter Lauf je Job</span>
           </div>
           {latestJobs.length === 0 ? (
             <p className="text-sm text-gray-500">
-              Noch keine Job-Runs erfasst. Commands mit{' '}
-              <code className="text-gray-400">track_job(...)</code> wrappen.
+              Noch keine Läufe erfasst. Management-Commands dafür in{' '}
+              <code className="text-gray-400 font-mono">track_job(...)</code> einpacken.
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-gray-800 -mx-1">
               {latestJobs.map((j) => (
-                <li key={j.name} className="bg-gray-800/40 rounded-lg p-3">
+                <li key={j.name} className="px-1 py-2.5">
                   <div className="flex items-start gap-2">
                     {j.status === 'erfolg'
-                      ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" />
-                      : <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />}
+                      ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" aria-label="Erfolgreich" />
+                      : <XCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" aria-label="Fehlgeschlagen" />}
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-mono text-sm text-white">{j.name}</span>
                         <span className="text-xs text-gray-500">{formatRelative(j.timestamp)}</span>
                         {j.duration_ms != null && (
-                          <span className="text-xs text-gray-500">· {j.duration_ms} ms</span>
+                          <span className="text-xs text-gray-500 tabular-nums">· {j.duration_ms} ms</span>
                         )}
                       </div>
                       {j.message && <p className="text-xs text-gray-400 mt-0.5">{j.message}</p>}
@@ -121,8 +118,8 @@ export default function SystemAdminPage() {
         {/* Backups */}
         <section className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <Archive className="w-5 h-5 text-green-400" />
-            <h2 className="text-lg font-semibold text-white">DB-Backups</h2>
+            <Archive className="w-4 h-4 text-gray-400" />
+            <h2 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Datenbank-Backups</h2>
           </div>
           {['daily', 'weekly'].map((k) => {
             const list = backups[k] || [];
@@ -130,13 +127,13 @@ export default function SystemAdminPage() {
             return (
               <div key={k} className="mb-4 last:mb-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs uppercase tracking-wider text-gray-500">{k}</span>
-                  <span className="text-xs text-gray-500">{list.length} Dateien</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-gray-500">{k === 'daily' ? 'Täglich' : 'Wöchentlich'}</span>
+                  <span className="text-xs text-gray-500 tabular-nums">{list.length} Dateien</span>
                 </div>
                 {newest ? (
-                  <div className="bg-gray-800/40 rounded-lg p-3">
+                  <div className="bg-gray-800/40 border border-gray-800 rounded-lg p-3">
                     <div className="text-sm text-white font-mono truncate">{newest.name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
+                    <div className="text-xs text-gray-500 mt-0.5 tabular-nums">
                       {formatDate(newest.mtime)} · {formatBytes(newest.size)} ·{' '}
                       <span className="text-gray-400">{formatRelative(newest.mtime)}</span>
                     </div>
@@ -152,8 +149,8 @@ export default function SystemAdminPage() {
         {/* Login-Historie */}
         <section className="bg-gray-900 border border-gray-800 rounded-xl p-5 xl:col-span-2">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-semibold text-white">Aktive Sitzungen</h2>
+            <Users className="w-4 h-4 text-gray-400" />
+            <h2 className="font-display text-lg font-semibold tracking-tight text-white leading-none">Sitzungen</h2>
             <span className="text-xs text-gray-500 ml-auto">letzte 50</span>
           </div>
           {sessions.length === 0 ? (
@@ -162,11 +159,11 @@ export default function SystemAdminPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-800 text-left text-xs text-gray-500 uppercase tracking-wider">
-                    <th className="p-2">User</th>
+                  <tr className="border-b border-gray-800 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-[0.08em]">
+                    <th className="p-2">Benutzer</th>
                     <th className="p-2">Gerät</th>
                     <th className="p-2">IP</th>
-                    <th className="p-2">Aktiv</th>
+                    <th className="p-2">Status</th>
                     <th className="p-2">Letzte Aktivität</th>
                   </tr>
                 </thead>
@@ -181,8 +178,8 @@ export default function SystemAdminPage() {
                       <td className="p-2 text-gray-400 font-mono text-xs">{s.ip_address || '–'}</td>
                       <td className="p-2">
                         {s.is_current
-                          ? <span className="text-green-400 text-xs">● aktiv</span>
-                          : <span className="text-gray-500 text-xs">○ beendet</span>}
+                          ? <StatusBadge tone="positive" dot label="Aktiv" />
+                          : <StatusBadge tone="neutral" label="Beendet" />}
                       </td>
                       <td className="p-2 text-gray-400 text-xs whitespace-nowrap">
                         {formatRelative(s.last_activity)}
