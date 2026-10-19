@@ -203,3 +203,7 @@ DISCORD_GUILD_ID = os.getenv('DISCORD_GUILD_ID', '')
 DISCORD_CATEGORY_ID = os.getenv('DISCORD_CATEGORY_ID', '')
 # Optionaler Info-Channel für Sammel-Ankündigungen ("Neue Veranstaltung")
 DISCORD_INFO_CHANNEL_ID = os.getenv('DISCORD_INFO_CHANNEL_ID', '')
+
+# ÖPNV-Monitor: öffentliche Client-Kennungen NAH.SH HAFAS / Stadtwerke Lübeck (Storyblok)
+NAHSH_HAFAS_AID = os.getenv('NAHSH_HAFAS_AID', '')
+SWHL_STORYBLOK_TOKEN = os.getenv('SWHL_STORYBLOK_TOKEN', '')

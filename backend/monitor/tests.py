@@ -1,11 +1,14 @@
+import json
 from datetime import timedelta
+from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from ninja.errors import HttpError
 
 from .models import MonitorConfig, Bildschirm, MonitorEvent, EventBildschirm
 from .api import _validate_config_data, _validate_klausur_data
+from . import oepnv
 
 
 class ActiveProfilPriorityTest(TestCase):
@@ -97,3 +100,31 @@ class SoftDeleteTest(TestCase):
             name='Z', slug='z', geloescht_am=timezone.now(),
             zeitplan=[{'profil_id': 999, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}])
         self.assertNotEqual(MonitorConfig.get().slug, 'z')
+
+
+class TransitCredentialsTest(TestCase):
+    """ÖPNV-Zugangsdaten kommen aus den Settings (.env), nicht aus dem Code."""
+
+    @override_settings(NAHSH_HAFAS_AID='')
+    def test_nahsh_without_aid_returns_none_and_logs(self):
+        with self.assertLogs('monitor.oepnv', level='WARNING') as log, \
+             mock.patch('urllib.request.urlopen') as urlopen:
+            self.assertIsNone(oepnv._nahsh_rpc('StationBoard', {}))
+        urlopen.assert_not_called()
+        self.assertIn('NAHSH_HAFAS_AID', log.output[0])
+
+    @override_settings(SWHL_STORYBLOK_TOKEN='')
+    def test_swl_without_token_returns_empty_list(self):
+        with self.assertLogs('monitor.oepnv', level='WARNING'), \
+             mock.patch('urllib.request.urlopen') as urlopen:
+            self.assertEqual(oepnv.fetch_stoerungen_swl(), [])
+        urlopen.assert_not_called()
+
+    @override_settings(NAHSH_HAFAS_AID='test-aid')
+    def test_nahsh_uses_aid_from_settings(self):
+        # _nahsh_rpc nutzt _post_opener.open (Redirect-Handler), nicht urlopen
+        with mock.patch.object(oepnv._post_opener, 'open') as opener_open:
+            opener_open.return_value.__enter__.return_value.read.return_value = b'{"svcResL":[{"res":{}}]}'
+            oepnv._nahsh_rpc('StationBoard', {})
+        body = json.loads(opener_open.call_args[0][0].data)
+        self.assertEqual(body['auth'], {'type': 'AID', 'aid': 'test-aid'})

@@ -4,6 +4,7 @@ Dual-API: DB REST (v6.db.transport.rest) + NAH.SH HAFAS (mgate.exe)
 """
 import os
 import json
+import logging
 import re
 import html as _html
 import urllib.request
@@ -11,6 +12,10 @@ import urllib.parse
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+
+from django.conf import settings
+
+logger = logging.getLogger('monitor.oepnv')
 
 # Explizite Zeitzone — Server kann in UTC laufen, Abfahrten sind aber CET/CEST
 TIMEZONE = ZoneInfo("Europe/Berlin")
@@ -97,7 +102,7 @@ def _db_cat_product(cat, line):
 
 # NAH.SH HAFAS mgate.exe (Schleswig-Holstein + Hamburg)
 NAHSH_MGATE_URL = "https://nah.sh.hafas.de/bin/mgate.exe"
-NAHSH_AUTH = {"type": "AID", "aid": "r0Ot9FLFNAFxijLW"}
+# AID kommt zur Laufzeit aus settings.NAHSH_HAFAS_AID (.env)
 NAHSH_CLIENT = {"type": "IPH", "id": "NAHSH", "v": "3000700", "name": "NAHSHPROD"}
 NAHSH_VER = "1.30"
 
@@ -133,11 +138,15 @@ _post_opener = urllib.request.build_opener(_PostRedirectHandler)
 
 
 def _nahsh_rpc(method, req_data):
-    """NAH.SH HAFAS mgate.exe JSON-RPC Request"""
+    """NAH.SH HAFAS mgate.exe JSON-RPC Request. Ohne konfigurierte AID: None (keine Daten)."""
+    aid = getattr(settings, "NAHSH_HAFAS_AID", "")
+    if not aid:
+        logger.warning("NAHSH_HAFAS_AID ist nicht gesetzt, NAH.SH-Abfragen werden übersprungen.")
+        return None
     payload = json.dumps({
         "ver": NAHSH_VER,
         "lang": "de",
-        "auth": NAHSH_AUTH,
+        "auth": {"type": "AID", "aid": aid},
         "client": NAHSH_CLIENT,
         "svcReqL": [{
             "meth": method,
@@ -234,7 +243,7 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
                 "loc": {"name": f"{query}?", "type": "S"},
                 "maxLoc": results,
             },
-        })
+        }) or {}
         matches = res.get("match", {}).get("locL", [])
         out = []
         for loc in matches:
@@ -884,7 +893,7 @@ def _fetch_departures_nahsh(station_id, dauer, max_results, stopovers=False):
     # Hinweis: getPasslist wird von NAH.SH HAFAS nicht unterstützt
     # Stopovers sind bei StationBoard nicht verfügbar — Via-Infos nur über DB REST API
 
-    res = _nahsh_rpc("StationBoard", req_data)
+    res = _nahsh_rpc("StationBoard", req_data) or {}
 
     # Common-Daten (Linien, Produkte, Orte etc.)
     common = res.get("common", {})
@@ -1083,7 +1092,7 @@ def _product_icon(product):
 # Bahn: NAH.SH HAFAS (HimSearch, deckt RE/RB inkl. DB Regio ab)
 # Bus:  Stadtverkehr/Stadtwerke Lübeck (Storyblok-CMS, öffentlicher Read-Token)
 
-SWL_STORYBLOK_TOKEN = "UDFTUVH6rpOAv9hnKKsl4gtt"  # öffentlicher CDN-Read-Token (aus swhl.de)
+# Token kommt zur Laufzeit aus settings.SWHL_STORYBLOK_TOKEN (.env)
 SWL_STORYBLOK_BASE = "https://api.storyblok.com/v2/cdn"
 
 _LINE_RE = re.compile(r'\b(RE|RB|X|SH|ME|AKN|ERB|NBE|S)\s?-?\s?(\d{1,3})\b')
@@ -1153,7 +1162,7 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
     """Zug-Störungen/Baumaßnahmen aus NAH.SH HAFAS (HimSearch), gefiltert auf Linien."""
     wanted = {_normalize_line(x) for x in (linien_filter or []) if x}
     try:
-        res = _nahsh_rpc('HimSearch', {'maxNum': max_num})
+        res = _nahsh_rpc('HimSearch', {'maxNum': max_num}) or {}
     except Exception:
         return []
     out, seen = [], set()
@@ -1190,7 +1199,12 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
 
 
 def _swl_get(path):
-    url = f"{SWL_STORYBLOK_BASE}/{path}{'&' if '?' in path else '?'}token={SWL_STORYBLOK_TOKEN}&version=published"
+    """Storyblok-GET. Ohne konfigurierten Token: None (keine Daten)."""
+    token = getattr(settings, "SWHL_STORYBLOK_TOKEN", "")
+    if not token:
+        logger.warning("SWHL_STORYBLOK_TOKEN ist nicht gesetzt, Bus-Störungen werden übersprungen.")
+        return None
+    url = f"{SWL_STORYBLOK_BASE}/{path}{'&' if '?' in path else '?'}token={token}&version=published"
     req = urllib.request.Request(url, headers={'User-Agent': 'Stagedesk-Monitor/1.0'})
     with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT + 3) as resp:
         return json.loads(resp.read())
@@ -1217,6 +1231,8 @@ def fetch_stoerungen_swl(linien_filter=None):
         data = _swl_get('stories?starts_with=' + urllib.parse.quote('mobil/stoerungsmeldungen/')
                         + '&per_page=100&resolve_relations=TickerMessage.linien')
     except Exception:
+        return []
+    if not data:
         return []
     rels = {r.get('uuid'): r for r in data.get('rels', []) or []}
     now = datetime.now(ZoneInfo("Europe/Berlin"))
