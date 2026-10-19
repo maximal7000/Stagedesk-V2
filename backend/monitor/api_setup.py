@@ -9,7 +9,7 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
-from . import display, webuntis
+from . import display, push, webuntis
 from .permissions import _require_perm
 from .consumers import push_power_to_all
 from .models import DisplayView, EmergencyTemplate, HolidayPeriod, Screen
@@ -40,6 +40,7 @@ def create_holiday(request, payload: HolidayPeriodCreateSchema):
     _require_perm(request, 'monitor.power')
     _validate_holiday(payload)
     holiday = HolidayPeriod.objects.create(**payload.dict())
+    push.notify_changed_on_commit()
     push_power_to_all()
     return holiday
 
@@ -52,6 +53,7 @@ def update_holiday(request, id: int, payload: HolidayPeriodCreateSchema):
     for key, value in payload.dict().items():
         setattr(holiday, key, value)
     holiday.save()
+    push.notify_changed_on_commit()
     push_power_to_all()
     return holiday
 
@@ -60,6 +62,7 @@ def update_holiday(request, id: int, payload: HolidayPeriodCreateSchema):
 def delete_holiday(request, id: int):
     _require_perm(request, 'monitor.power')
     get_object_or_404(HolidayPeriod, id=id).delete()
+    push.notify_changed_on_commit()
     push_power_to_all()
     return {"success": True}
 
@@ -114,6 +117,7 @@ def power_off_today(request, payload: ScreenSelectionSchema):
         screen.off_until = next_on_time(screen, now)
         screen.save(update_fields=['off_until', 'updated_at'])
         result[str(screen.id)] = screen.off_until.isoformat()
+    push.notify_changed_on_commit()
     push_power_to_all()
     return {"off_until": result}
 
@@ -123,6 +127,7 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
     """Rückgängig: off_until wieder leeren."""
     _require_perm(request, 'monitor.power')
     _selected_screens(payload).update(off_until=None, updated_at=timezone.now())
+    push.notify_changed_on_commit()
     push_power_to_all()
     return {"success": True}
 

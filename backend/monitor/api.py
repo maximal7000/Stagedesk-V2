@@ -14,6 +14,7 @@ from django.utils.text import slugify
 
 from core.auth import keycloak_auth
 from ninja.errors import HttpError
+from . import push
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
@@ -190,6 +191,7 @@ def _set_on_air(active: bool):
     settings.on_air_active = active
     settings.on_air_since = timezone.now() if active else None
     settings.save(update_fields=['on_air_active', 'on_air_since'])
+    push.notify_changed_on_commit()
 
 
 def _set_emergency(active: bool, text: str, note: str):
@@ -200,6 +202,7 @@ def _set_emergency(active: bool, text: str, note: str):
     settings.emergency_note = note
     settings.emergency_since = timezone.now() if active else None
     settings.save(update_fields=['emergency_active', 'emergency_text', 'emergency_note', 'emergency_since'])
+    push.notify_changed_on_commit()
     push_power_to_all()
 
 
@@ -284,6 +287,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
         source.kind = payload.kind
         source.api_token = uuid.uuid4().hex
         source.save()
+        push.notify_changed_on_commit()
         return {'id': source.id, 'name': source.name, 'slug': source.slug}
     else:
         view = DisplayView(
@@ -293,6 +297,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
             kind=payload.kind,
         )
         view.save()
+        push.notify_changed_on_commit()
         return {'id': view.id, 'name': view.name, 'slug': view.slug}
 
 
@@ -304,6 +309,7 @@ def delete_view(request, id: int):
         return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
     view.deleted_at = timezone.now()
     view.save(update_fields=['deleted_at', 'updated_at'])
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -376,6 +382,7 @@ def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
     view.transit_cache_at = None
     view.transit_disruption_cache_at = None
     view.save()
+    push.notify_changed_on_commit()
     return view
 
 
@@ -401,6 +408,7 @@ def restore_view_version(request, version_id: int):
         except Exception:
             continue
     view.save()
+    push.notify_changed_on_commit()
     return view
 
 
@@ -476,6 +484,7 @@ def delete_file(request, id: int):
     # Soft-Delete → Papierkorb (Datei bleibt für Wiederherstellung erhalten)
     d.deleted_at = timezone.now()
     d.save(update_fields=['deleted_at'])
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -508,6 +517,7 @@ def restore_trash(request, kind: str, id: int):
         obj.save(update_fields=['deleted_at'])
     else:
         raise HttpError(400, "Unbekannte Art")
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -524,6 +534,7 @@ def purge_trash(request, kind: str, id: int):
         obj.delete()
     else:
         raise HttpError(400, "Unbekannte Art")
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -538,7 +549,9 @@ def list_announcements(request):
 @monitor_router.post("/announcements", response=AnnouncementSchema, auth=keycloak_auth)
 def create_announcement(request, payload: AnnouncementCreateSchema):
     _require_perm(request, 'monitor.exams')
-    return Announcement.objects.create(**payload.dict())
+    announcement = Announcement.objects.create(**payload.dict())
+    push.notify_changed_on_commit()
+    return announcement
 
 
 @monitor_router.put("/announcements/{id}", response=AnnouncementSchema, auth=keycloak_auth)
@@ -548,6 +561,7 @@ def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
     for key, value in payload.dict().items():
         setattr(a, key, value)
     a.save()
+    push.notify_changed_on_commit()
     return a
 
 
@@ -556,6 +570,7 @@ def delete_announcement(request, id: int):
     _require_perm(request, 'monitor.exams')
     a = get_object_or_404(Announcement, id=id)
     a.delete()
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -662,6 +677,7 @@ def create_screen(request, payload: ScreenCreateSchema):
         slug=slug,
         default_view_id=payload.default_view_id,
     )
+    push.notify_changed_on_commit()
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
@@ -688,6 +704,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
     for key, value in data.items():
         setattr(screen, key, value)
     screen.save()
+    push.notify_changed_on_commit()
     if power_changed:
         from .consumers import push_power_to_screen
         push_power_to_screen(screen.slug)
@@ -699,6 +716,7 @@ def delete_screen(request, id: int):
     _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
     screen.delete()
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -709,6 +727,8 @@ def reload_screen(request, id: int):
     screen = get_object_or_404(Screen, id=id)
     screen.reload_requested_at = timezone.now()
     screen.save(update_fields=['reload_requested_at'])
+    slug = screen.slug
+    transaction.on_commit(lambda: push.notify_reload(slug))
     return {"success": True}
 
 
@@ -729,6 +749,7 @@ def create_exam(request, payload: ExamCreateSchema):
     exam = Exam.objects.create(**data)
     if screen_ids:
         exam.screens.set(Screen.objects.filter(id__in=screen_ids))
+    push.notify_changed_on_commit()
     return exam
 
 
@@ -744,6 +765,7 @@ def update_exam(request, id: int, payload: ExamUpdateSchema):
     exam.save()
     if screen_ids is not None:
         exam.screens.set(Screen.objects.filter(id__in=screen_ids))
+    push.notify_changed_on_commit()
     return exam
 
 
@@ -752,6 +774,7 @@ def delete_exam(request, id: int):
     _require_perm(request, 'monitor.exams')
     exam = get_object_or_404(Exam, id=id)
     exam.delete()
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -780,6 +803,7 @@ def create_event(request, payload: DisplayEventCreateSchema):
     assignments = data.pop('assignments', [])
     event = DisplayEvent.objects.create(**data)
     _apply_event_assignments(event, assignments)
+    push.notify_changed_on_commit()
     return event
 
 
@@ -794,6 +818,7 @@ def update_event(request, id: int, payload: DisplayEventUpdateSchema):
     event.save()
     if assignments is not None:
         _apply_event_assignments(event, assignments)
+    push.notify_changed_on_commit()
     return event
 
 
@@ -801,6 +826,7 @@ def update_event(request, id: int, payload: DisplayEventUpdateSchema):
 def delete_event(request, id: int):
     _require_perm(request, 'monitor.exams')
     get_object_or_404(DisplayEvent, id=id).delete()
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -810,6 +836,7 @@ def activate_event(request, id: int):
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = True
     event.save(update_fields=['is_active'])
+    push.notify_changed_on_commit()
     _log_audit(request, 'Event aktiviert', event.name)
     return event
 
@@ -820,6 +847,7 @@ def deactivate_event(request, id: int):
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = False
     event.save(update_fields=['is_active'])
+    push.notify_changed_on_commit()
     _log_audit(request, 'Event deaktiviert', event.name)
     return event
 
@@ -835,7 +863,9 @@ def list_exam_templates(request):
 @monitor_router.post("/exam-templates", response=ExamTemplateSchema, auth=keycloak_auth)
 def create_exam_template(request, payload: ExamTemplateCreateSchema):
     _require_perm(request, 'monitor.exams')
-    return ExamTemplate.objects.create(**payload.dict())
+    template = ExamTemplate.objects.create(**payload.dict())
+    push.notify_changed_on_commit()
+    return template
 
 
 @monitor_router.put("/exam-templates/{id}", response=ExamTemplateSchema, auth=keycloak_auth)
@@ -845,6 +875,7 @@ def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
     for key, value in payload.dict().items():
         setattr(template, key, value)
     template.save()
+    push.notify_changed_on_commit()
     return template
 
 
@@ -852,6 +883,7 @@ def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
 def delete_exam_template(request, id: int):
     _require_perm(request, 'monitor.exams')
     get_object_or_404(ExamTemplate, id=id).delete()
+    push.notify_changed_on_commit()
     return {"success": True}
 
 
@@ -878,6 +910,7 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
     for key, value in data.items():
         setattr(settings, key, value)
     settings.save()
+    push.notify_changed_on_commit()
     return settings
 
 

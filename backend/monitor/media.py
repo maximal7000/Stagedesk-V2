@@ -10,6 +10,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.db import close_old_connections, connection, transaction
 
+from . import push
 from .models import MediaFile, MediaPage
 
 logger = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ def render_file(media_file):
             MediaFile.objects.filter(pk=media_file.pk).update(
                 status='ready', page_count=len(staged), error='')
             transaction.on_commit(lambda: _delete_stored(old_names))
+            push.notify_changed_on_commit()
     except Exception as exc:  # beschädigte Dateien dürfen nicht in 'processing' hängen
         logger.warning('Umwandlung von MediaFile %s fehlgeschlagen: %s', media_file.pk, exc)
         _delete_stored([d['image'] for d in staged])
@@ -115,6 +117,7 @@ def render_file(media_file):
             message = 'Datei konnte nicht gelesen werden. Bitte eine gültige Datei hochladen.'
         # Alte Seiten bleiben; page_count gehört zu ihnen und wird nicht angetastet.
         MediaFile.objects.filter(pk=media_file.pk).update(status='failed', error=message)
+    push.notify_changed_on_commit()
 
 
 def _render_in_thread(media_file_id):

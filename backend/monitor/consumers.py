@@ -187,3 +187,31 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             screen.save(update_fields=["cec_status", "cec_status_at", "updated_at"])
         except Screen.DoesNotExist:
             pass
+
+
+class DisplayConsumer(AsyncWebsocketConsumer):
+    """WebSocket-Endpunkt der Anzeige (öffentlich, nur Hinweise).  URL: /ws/monitor/display/<slug>/
+
+    Sendet nur {"type":"changed"} bzw. {"type":"reload"}; Daten holt die Anzeige per HTTP.
+    Eingehende Nachrichten werden ignoriert."""
+
+    async def connect(self):
+        from . import push
+        slug = self.scope["url_route"]["kwargs"]["slug"]
+        self.groups_joined = [push.group_name(slug), push.ALL_GROUP]
+        for group in self.groups_joined:
+            await self.channel_layer.group_add(group, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        for group in getattr(self, "groups_joined", []):
+            await self.channel_layer.group_discard(group, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        return
+
+    async def display_changed(self, event):
+        await self.send(json.dumps({"type": "changed"}))
+
+    async def display_reload(self, event):
+        await self.send(json.dumps({"type": "reload"}))
