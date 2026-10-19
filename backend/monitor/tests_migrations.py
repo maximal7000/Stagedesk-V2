@@ -49,6 +49,12 @@ class RemoveDroppedFeaturesTest(MigrationTestCase):
         self.bk = Config.objects.create(name='BK', slug='bk', api_token='t-bk', layout_modus='baukasten')
         Config.objects.create(name='RP', slug='rp', api_token='t-rp', raumplan_server='s.webuntis.com',
                               raumplan_schule='kath', raumplan_benutzername='u', raumplan_passwort='p')
+        Config.objects.create(name='RT', slug='rt', api_token='t-rt',
+                              seitenrotation_seiten=['main', 'raumplan', 'wetter'])
+
+    def test_raumplan_removed_from_rotation_pages(self):
+        Config = self.apps.get_model('monitor', 'MonitorConfig')
+        self.assertEqual(Config.objects.get(slug='rt').seitenrotation_seiten, ['main', 'wetter'])
 
     def test_baukasten_becomes_standard(self):
         Config = self.apps.get_model('monitor', 'MonitorConfig')

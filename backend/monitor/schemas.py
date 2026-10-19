@@ -177,10 +177,6 @@ class MonitorConfigUpdateSchema(Schema):
     zeige_wetter: Optional[bool] = None
     wetter_stadt: Optional[str] = None
     wetter_api_key: Optional[str] = None
-    raumplan_server: Optional[str] = None
-    raumplan_schule: Optional[str] = None
-    raumplan_benutzername: Optional[str] = None
-    raumplan_passwort: Optional[str] = None
     zeige_slideshow: Optional[bool] = None
     slideshow_intervall: Optional[int] = None
     zeige_pdf: Optional[bool] = None

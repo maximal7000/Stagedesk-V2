@@ -8,6 +8,13 @@ def forward(apps, schema_editor):
     Config = apps.get_model('monitor', 'MonitorConfig')
     Config.objects.filter(layout_modus='baukasten').update(layout_modus='standard')
 
+    # Seitenrotation: die gestrichene Seite 'raumplan' entfernen
+    for config in Config.objects.all():
+        seiten = config.seitenrotation_seiten
+        if isinstance(seiten, list) and 'raumplan' in seiten:
+            config.seitenrotation_seiten = [x for x in seiten if x != 'raumplan']
+            config.save(update_fields=['seitenrotation_seiten'])
+
     Settings = apps.get_model('monitor', 'MonitorGlobalSettings')
     gs, _ = Settings.objects.get_or_create(pk=1)
     if not gs.raumplan_server:
