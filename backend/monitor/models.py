@@ -34,7 +34,14 @@ class MediaFile(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['kind', 'sort_order', '-created_at']
+        # Feste Reihenfolge der Arten wie vor der Umbenennung (bild, hintergrund, logo, pdf)
+        ordering = [
+            models.Case(
+                models.When(kind='image', then=0), models.When(kind='background', then=1),
+                models.When(kind='logo', then=2), models.When(kind='pdf', then=3),
+                default=4, output_field=models.IntegerField()),
+            'sort_order', '-created_at',
+        ]
         verbose_name = 'Monitor-Datei'
         verbose_name_plural = 'Monitor-Dateien'
 
@@ -650,7 +657,13 @@ class Announcement(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['-priority', '-created_at']
+        # Dringlichkeit: urgent vor important vor normal
+        ordering = [
+            models.Case(
+                models.When(priority='urgent', then=0), models.When(priority='important', then=1),
+                default=2, output_field=models.IntegerField()),
+            '-created_at',
+        ]
         verbose_name = 'Ankündigung'
         verbose_name_plural = 'Ankündigungen'
 

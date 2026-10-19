@@ -173,3 +173,18 @@ class UploadPathTest(TestCase):
         self.assertEqual(monitor_upload_path(MediaFile(kind='image'), 'a.png'), 'monitor/bild/a.png')
         self.assertEqual(monitor_upload_path(MediaFile(kind='background'), 'a.png'), 'monitor/hintergrund/a.png')
         self.assertEqual(monitor_upload_path(MediaFile(kind='pdf'), 'a.pdf'), 'monitor/pdf/a.pdf')
+
+
+class OrderingTest(TestCase):
+
+    def test_announcements_urgent_important_normal(self):
+        from .models import Announcement
+        for p in ('normal', 'urgent', 'important'):
+            Announcement.objects.create(title=p, priority=p)
+        self.assertEqual([a.priority for a in Announcement.objects.all()], ['urgent', 'important', 'normal'])
+
+    def test_media_files_keep_old_kind_order(self):
+        from .models import MediaFile
+        for k in ('pdf', 'logo', 'background', 'image'):
+            MediaFile.objects.create(name=k, file=f'monitor/{k}/x', kind=k)
+        self.assertEqual([m.kind for m in MediaFile.objects.all()], ['image', 'background', 'logo', 'pdf'])
