@@ -9,13 +9,13 @@ import apiClient from '../lib/api';
 
 const KIND_DOT = {
   zuweisung: 'bg-accent',
-  mahnung: 'bg-red-500',
-  erinnerung: 'bg-amber-500',
-  kompetenz: 'bg-sky-500',
-  deadline: 'bg-red-500',
-  konflikt: 'bg-red-500',
-  info: 'bg-gray-500',
-  system: 'bg-gray-500',
+  mahnung: 'bg-bad',
+  erinnerung: 'bg-warn',
+  kompetenz: 'bg-info',
+  deadline: 'bg-bad',
+  konflikt: 'bg-bad',
+  info: 'bg-fg-subtle',
+  system: 'bg-fg-subtle',
 };
 
 function formatTime(iso) {
@@ -87,52 +87,53 @@ export default function NotificationBell() {
   return (
     <div ref={ref} className="relative">
       <button onClick={() => setOpen((v) => !v)}
-        className="relative p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+        className="relative p-2 text-fg-muted hover:text-fg hover:bg-raised rounded-md"
         title="Benachrichtigungen">
         <Bell className="w-5 h-5" />
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-accent text-white text-[10px] font-bold rounded-full ring-2 ring-gray-950 flex items-center justify-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-accent text-white text-[10px] font-bold rounded-full ring-2 ring-surface flex items-center justify-center">
             {unread > 99 ? '99+' : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-gray-900 border border-gray-800 rounded-xl shadow-2xl z-50 max-h-[70vh] flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
-            <h3 className="font-semibold text-white text-sm">Benachrichtigungen</h3>
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-overlay border border-line rounded-lg shadow-overlay z-50 max-h-[70vh] flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-line-subtle">
+            <h3 className="font-semibold text-fg text-sm">Benachrichtigungen</h3>
             {unread > 0 && (
               <button onClick={markAllRead}
-                className="text-xs text-gray-400 hover:text-white inline-flex items-center gap-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+                className="text-xs text-fg-muted hover:text-fg inline-flex items-center gap-1 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                 <Check className="w-3 h-3" /> Alle gelesen
               </button>
             )}
           </div>
           <div className="overflow-y-auto flex-1">
             {loading ? (
-              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-gray-500" /></div>
+              <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-fg-subtle" /></div>
             ) : items.length === 0 ? (
               <div className="flex flex-col items-center text-center py-8 px-6">
-                <Bell className="w-5 h-5 text-gray-600 mb-2" />
-                <p className="text-sm text-gray-400">Keine Benachrichtigungen</p>
+                <Bell className="w-5 h-5 text-fg-subtle mb-2" />
+                <p className="text-sm text-fg-muted">Keine Benachrichtigungen</p>
               </div>
             ) : (
-              <ul className="divide-y divide-gray-800">
+              <ul className="divide-y divide-line-subtle">
                 {items.map((n) => (
                   <li key={n.id}>
                     <button onClick={() => onItemClick(n)}
-                      className={`w-full text-left px-4 py-3 hover:bg-gray-800/60 ${n.is_read ? '' : 'bg-accent/[0.04]'}`}>
+                      className={`w-full text-left px-4 py-3 hover:bg-raised`}>
                       <div className="flex items-start gap-2">
-                        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${KIND_DOT[n.kind] || 'bg-gray-500'}`} />
+                        <span className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${KIND_DOT[n.kind] || 'bg-fg-subtle'}`} />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className={`text-sm truncate ${n.is_read ? 'text-gray-300' : 'text-white font-medium'}`}>
+                            {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" />}
+                            <span className={`text-sm truncate ${n.is_read ? 'text-fg-muted' : 'text-fg font-medium'}`}>
                               {n.title}
                             </span>
-                            {n.link && <ExternalLink className="w-3 h-3 text-gray-500 shrink-0" />}
+                            {n.link && <ExternalLink className="w-3 h-3 text-fg-subtle shrink-0" />}
                           </div>
-                          {n.body && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{n.body}</p>}
-                          <div className="text-[11px] text-gray-500 mt-1 tabular-nums">{formatTime(n.created_at)}</div>
+                          {n.body && <p className="text-xs text-fg-subtle mt-0.5 line-clamp-2">{n.body}</p>}
+                          <div className="text-[11px] text-fg-subtle mt-1 tabular-nums">{formatTime(n.created_at)}</div>
                         </div>
                       </div>
                     </button>
@@ -141,9 +142,9 @@ export default function NotificationBell() {
               </ul>
             )}
           </div>
-          <div className="border-t border-gray-800 px-4 py-2">
+          <div className="border-t border-line-subtle px-4 py-2">
             <button onClick={() => { setOpen(false); navigate('/notifications'); }}
-              className="w-full text-center text-xs font-medium text-gray-300 hover:text-white py-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+              className="w-full text-center text-xs font-medium text-fg-muted hover:text-fg py-1 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
               Alle Benachrichtigungen
             </button>
           </div>

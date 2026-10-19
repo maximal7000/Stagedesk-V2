@@ -15,35 +15,35 @@ export default function Markdown({ children, className = '' }) {
         components={{
           a: ({ node, ...props }) => (
             <a {...props} target="_blank" rel="noopener noreferrer"
-              className="text-blue-400 hover:text-blue-300 underline" />
+              className="text-accent-fg hover:text-fg underline" />
           ),
-          h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-white mt-3 mb-2" {...props} />,
-          h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-white mt-3 mb-2" {...props} />,
-          h3: ({ node, ...props }) => <h3 className="text-base font-semibold text-white mt-2 mb-1" {...props} />,
-          p:  ({ node, ...props }) => <p className="text-gray-300 leading-relaxed mb-2 last:mb-0" {...props} />,
-          ul: ({ node, ...props }) => <ul className="list-disc list-inside text-gray-300 space-y-0.5 mb-2 ml-2" {...props} />,
-          ol: ({ node, ...props }) => <ol className="list-decimal list-inside text-gray-300 space-y-0.5 mb-2 ml-2" {...props} />,
-          li: ({ node, ...props }) => <li className="text-gray-300" {...props} />,
-          strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />,
-          em: ({ node, ...props }) => <em className="italic text-gray-200" {...props} />,
+          h1: ({ node, ...props }) => <h1 className="text-xl font-bold text-fg mt-3 mb-2" {...props} />,
+          h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-fg mt-3 mb-2" {...props} />,
+          h3: ({ node, ...props }) => <h3 className="text-base font-semibold text-fg mt-2 mb-1" {...props} />,
+          p:  ({ node, ...props }) => <p className="text-fg-muted leading-relaxed mb-2 last:mb-0" {...props} />,
+          ul: ({ node, ...props }) => <ul className="list-disc list-inside text-fg-muted space-y-0.5 mb-2 ml-2" {...props} />,
+          ol: ({ node, ...props }) => <ol className="list-decimal list-inside text-fg-muted space-y-0.5 mb-2 ml-2" {...props} />,
+          li: ({ node, ...props }) => <li className="text-fg-muted" {...props} />,
+          strong: ({ node, ...props }) => <strong className="font-semibold text-fg" {...props} />,
+          em: ({ node, ...props }) => <em className="italic text-fg" {...props} />,
           code: ({ node, inline, ...props }) =>
             inline
-              ? <code className="bg-gray-800 px-1 py-0.5 rounded text-blue-300 text-sm font-mono" {...props} />
-              : <code className="block bg-gray-800 px-3 py-2 rounded text-blue-300 text-sm font-mono overflow-x-auto" {...props} />,
-          pre: ({ node, ...props }) => <pre className="bg-gray-800 rounded my-2 overflow-x-auto" {...props} />,
+              ? <code className="bg-raised px-1 py-0.5 rounded-sm text-fg text-sm font-mono" {...props} />
+              : <code className="block bg-raised px-3 py-2 rounded-sm text-fg text-sm font-mono overflow-x-auto" {...props} />,
+          pre: ({ node, ...props }) => <pre className="bg-raised rounded-sm my-2 overflow-x-auto" {...props} />,
           blockquote: ({ node, ...props }) =>
-            <blockquote className="border-l-4 border-gray-700 pl-3 italic text-gray-400 my-2" {...props} />,
-          hr: () => <hr className="border-gray-800 my-3" />,
+            <blockquote className="border-l-4 border-line pl-3 italic text-fg-muted my-2" {...props} />,
+          hr: () => <hr className="border-line-subtle my-3" />,
           table: ({ node, ...props }) => (
             <div className="overflow-x-auto my-2">
-              <table className="w-full text-sm border border-gray-800" {...props} />
+              <table className="w-full text-sm border border-line-subtle" {...props} />
             </div>
           ),
-          th: ({ node, ...props }) => <th className="px-2 py-1 bg-gray-800 text-left text-gray-300 border border-gray-700" {...props} />,
-          td: ({ node, ...props }) => <td className="px-2 py-1 border border-gray-800 text-gray-300" {...props} />,
+          th: ({ node, ...props }) => <th className="px-2 py-1 bg-raised text-left text-fg-muted border border-line" {...props} />,
+          td: ({ node, ...props }) => <td className="px-2 py-1 border border-line-subtle text-fg-muted" {...props} />,
           input: ({ node, ...props }) =>
             props.type === 'checkbox'
-              ? <input {...props} disabled className="mr-1.5 accent-blue-500" />
+              ? <input {...props} disabled className="mr-1.5 accent-accent" />
               : <input {...props} />,
         }}
       >
@@ -59,12 +59,12 @@ export default function Markdown({ children, className = '' }) {
  */
 export function MarkdownHint({ className = '' }) {
   return (
-    <p className={`text-[11px] text-gray-500 mt-1 ${className}`}>
-      Markdown unterstützt: <code className="text-gray-400">**fett**</code>,{' '}
-      <code className="text-gray-400">*kursiv*</code>,{' '}
-      <code className="text-gray-400">- Liste</code>,{' '}
-      <code className="text-gray-400">[Link](url)</code>,{' '}
-      <code className="text-gray-400">- [ ] Aufgabe</code>
+    <p className={`text-[11px] text-fg-subtle mt-1 ${className}`}>
+      Markdown unterstützt: <code className="text-fg-muted">**fett**</code>,{' '}
+      <code className="text-fg-muted">*kursiv*</code>,{' '}
+      <code className="text-fg-muted">- Liste</code>,{' '}
+      <code className="text-fg-muted">[Link](url)</code>,{' '}
+      <code className="text-fg-muted">- [ ] Aufgabe</code>
     </p>
   );
 }

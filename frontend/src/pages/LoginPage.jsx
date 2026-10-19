@@ -45,12 +45,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black flex items-center justify-center p-4">
+    <div className="relative min-h-screen overflow-hidden bg-canvas flex items-center justify-center p-4">
       {/* ── Bühnen-Hintergrund ─────────────────────────────────── */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(30,41,59,0.6),transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(58,50,44,0.5),transparent_70%)] pointer-events-none" />
 
       {/* "Bühnenboden": dezenter Verlauf nach unten */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-canvas via-canvas/80 to-transparent pointer-events-none" />
 
       {/* Spotlights: Konus-Form über radial-gradient + blur */}
       <div className="spotlight spotlight-white" />
@@ -73,20 +73,20 @@ export default function LoginPage() {
       <div className="relative z-10 max-w-md w-full">
         {/* Logo & Schriftzug */}
         <div className="text-center mb-10">
-          <h1 className="font-display text-6xl sm:text-7xl font-bold text-white tracking-tight leading-none">
+          <h1 className="font-display text-6xl sm:text-7xl font-bold text-fg tracking-tight leading-none">
             Stagedesk
           </h1>
-          <p className="mt-3 text-sm text-white/60">Technik-AG am Katharineum zu Lübeck</p>
+          <p className="mt-3 text-sm text-fg-muted">Technik-AG am Katharineum zu Lübeck</p>
         </div>
 
         <LoginBanner />
 
         {/* Anmelde-Karte */}
-        <div className="bg-gray-950 border border-white/10 rounded-xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-6 sm:p-7">
+        <div className="bg-surface rounded-lg shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-6 sm:p-7">
           <button
             onClick={handleLogin}
             disabled={auth.isLoading}
-            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors duration-150 shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-black disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {auth.isLoading ? (
               <>
@@ -102,9 +102,9 @@ export default function LoginPage() {
           </button>
 
           {auth.error && (
-            <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-red-950/60 border border-red-800/60 rounded-lg">
-              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-300">
+            <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-raised rounded-md">
+              <AlertTriangle className="w-4 h-4 text-bad shrink-0 mt-0.5" />
+              <p className="text-sm text-fg">
                 <span className="font-semibold">Anmeldung fehlgeschlagen.</span> {auth.error.message}
               </p>
             </div>
@@ -112,13 +112,13 @@ export default function LoginPage() {
 
           {installPrompt && (
             <button onClick={installApp}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-lg text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black">
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-raised hover:bg-hover text-fg-muted hover:text-fg rounded-md text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
               <Download className="w-4 h-4" /> Als App installieren
             </button>
           )}
         </div>
 
-        <p className="mt-5 text-center text-xs text-white/50">
+        <p className="mt-5 text-center text-xs text-fg-subtle">
           Anmeldung über den Keycloak-Login der Technik-AG
         </p>
       </div>

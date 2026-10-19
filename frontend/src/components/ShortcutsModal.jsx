@@ -5,25 +5,25 @@
 import { X } from 'lucide-react';
 
 const Kbd = ({ children }) => (
-  <kbd className="inline-block px-2 py-0.5 text-xs font-mono bg-gray-800 border border-gray-700 rounded text-gray-200">
+  <kbd className="inline-block px-2 py-0.5 text-xs font-mono bg-raised rounded-sm text-fg">
     {children}
   </kbd>
 );
 
 const Group = ({ title, children }) => (
   <div>
-    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">{title}</h3>
+    <h3 className="text-xs font-semibold text-fg-subtle uppercase tracking-wider mb-2">{title}</h3>
     <div className="space-y-1.5">{children}</div>
   </div>
 );
 
 const Row = ({ keys, desc }) => (
   <div className="flex items-center justify-between gap-4">
-    <span className="text-sm text-gray-300">{desc}</span>
+    <span className="text-sm text-fg-muted">{desc}</span>
     <div className="flex items-center gap-1">
       {keys.map((k, i) => (
         <span key={i} className="flex items-center gap-1">
-          {i > 0 && <span className="text-gray-600 text-xs">dann</span>}
+          {i > 0 && <span className="text-fg-subtle text-xs">dann</span>}
           <Kbd>{k}</Kbd>
         </span>
       ))}
@@ -34,14 +34,14 @@ const Row = ({ keys, desc }) => (
 export default function ShortcutsModal({ open, onClose }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4"
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4"
       onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto"
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-2xl w-full p-6 max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-white">Tastatur-Shortcuts</h2>
+          <h2 className="text-lg font-bold text-fg">Tastatur-Shortcuts</h2>
           <button onClick={onClose}
-            className="p-1 text-gray-400 hover:text-white rounded">
+            className="p-1 text-fg-subtle hover:text-fg rounded-sm">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -75,8 +75,8 @@ export default function ShortcutsModal({ open, onClose }) {
           </Group>
         </div>
 
-        <p className="mt-6 text-xs text-gray-500">
-          Shortcuts wirken nicht, während du in einem Eingabefeld tippst — außer{' '}
+        <p className="mt-6 pt-4 border-t border-line-subtle text-xs text-fg-subtle">
+          Shortcuts wirken nicht, während du in einem Eingabefeld tippst, außer{' '}
           <Kbd>Esc</Kbd>.
         </p>
       </div>

@@ -116,19 +116,19 @@ export default function AutocompleteInput({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         placeholder={placeholder}
-        className="w-full px-3 py-2 pr-9 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 disabled:opacity-60"
+        className="w-full px-3 py-2 pr-9 bg-raised border border-line hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none rounded-md text-fg placeholder:text-fg-subtle disabled:text-fg-disabled"
       />
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle pointer-events-none" />
 
       {open && (filtered.length > 0 || showCreate) && (
-        <ul className="absolute z-20 left-0 right-0 mt-1 py-1 bg-gray-800 border border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+        <ul className="absolute z-20 left-0 right-0 mt-1 py-1 bg-overlay border border-line rounded-lg shadow-overlay max-h-48 overflow-y-auto">
           {filtered.map((opt, i) => (
             <li
               key={getOptionValue(opt)}
               onMouseEnter={() => setHighlight(i)}
               onClick={() => select(opt)}
               className={`px-3 py-2 cursor-pointer text-sm ${
-                highlight === i ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'
+                highlight === i ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover'
               }`}
             >
               {getOptionLabel(opt)}
@@ -138,8 +138,8 @@ export default function AutocompleteInput({
             <li
               onMouseEnter={() => setHighlight(filtered.length)}
               onClick={handleCreate}
-              className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm border-t border-gray-700 ${
-                highlight === filtered.length ? 'bg-blue-600 text-white' : 'text-blue-400 hover:bg-gray-700'
+              className={`flex items-center gap-2 px-3 py-2 cursor-pointer text-sm border-t border-line-subtle ${
+                highlight === filtered.length ? 'bg-accent text-white' : 'text-accent-fg hover:bg-hover'
               }`}
             >
               <Plus className="w-4 h-4" />

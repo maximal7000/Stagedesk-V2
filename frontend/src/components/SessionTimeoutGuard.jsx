@@ -75,25 +75,25 @@ export default function SessionTimeoutGuard() {
   if (!auth.isAuthenticated || !warning) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-sm w-full p-6">
+    <div className="fixed inset-0 z-[60] bg-black/70 flex items-center justify-center p-4">
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-sm w-full p-6">
         <div className="flex items-center gap-3 mb-3">
-          <Clock className="w-6 h-6 text-amber-400" />
-          <h2 className="text-lg font-bold text-white">Bist du noch da?</h2>
+          <Clock className="w-6 h-6 text-warn" />
+          <h2 className="text-lg font-bold text-fg">Bist du noch da?</h2>
         </div>
-        <p className="text-sm text-gray-400 mb-1">
+        <p className="text-sm text-fg-muted mb-1">
           Du wirst aus Sicherheitsgründen wegen Inaktivität abgemeldet.
         </p>
-        <p className="text-3xl font-bold text-amber-400 mb-5 text-center tabular-nums">
+        <p className="text-3xl font-bold text-warn mb-5 text-center tabular-nums">
           {secondsLeft}s
         </p>
         <div className="flex gap-2">
           <button onClick={logoutNow}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">
+            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-raised hover:bg-hover text-fg rounded-md">
             <LogOut className="w-4 h-4" /> Abmelden
           </button>
           <button onClick={stayActive}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg">
+            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md">
             Angemeldet bleiben
           </button>
         </div>
