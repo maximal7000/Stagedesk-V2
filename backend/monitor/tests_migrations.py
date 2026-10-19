@@ -87,3 +87,67 @@ class RemoveDroppedFeaturesKeepsGlobalTest(MigrationTestCase):
         g = self.apps.get_model('monitor', 'MonitorGlobalSettings').objects.get()
         self.assertEqual((g.raumplan_server, g.raumplan_schule, g.raumplan_benutzername, g.raumplan_passwort),
                          ('neu.webuntis.com', 'neu', 'neu', 'neu'))
+
+
+class EnglishNamesMigrationTest(MigrationTestCase):
+    """0036 benennt Models und Felder um; die Daten (inkl. FK und M2M) bleiben erhalten."""
+    migrate_from = ('monitor', '0035_remove_dropped_features')
+    migrate_to = ('monitor', '0036_english_names')
+
+    def setUpBeforeMigration(self, apps):
+        Config = apps.get_model('monitor', 'MonitorConfig')
+        Datei = apps.get_model('monitor', 'MonitorDatei')
+        Bildschirm = apps.get_model('monitor', 'Bildschirm')
+        logo = Datei.objects.create(name='Logo', datei='monitor/logo/a.png', typ='logo', reihenfolge=2)
+        view = Config.objects.create(
+            name='V', slug='v', api_token='t-v', ist_standard=True, layout_modus='abfahrten',
+            titel='Titel', aktives_logo=logo, oepnv_stationen=[{'id': '1', 'wegzeit_minuten': 3}],
+            oepnv_stoerung_ausgeblendet=['abc123'], notfall_aktiv=True, notfall_text='Alarm')
+        screen = Bildschirm.objects.create(
+            name='S', slug='glocke', default_profil=view, power_modus='manuell_an',
+            zeitplan=[{'profil_id': view.pk, 'tage': [0], 'von': '07:00', 'bis': '08:00'}])
+        klausur = apps.get_model('monitor', 'Klausur').objects.create(
+            titel='Mathe', aktiv_von='2026-10-19T08:00Z', aktiv_bis='2026-10-19T10:00Z', split_seite='links')
+        klausur.bildschirme.add(screen)
+        event = apps.get_model('monitor', 'MonitorEvent').objects.create(name='E', aktiv=True)
+        apps.get_model('monitor', 'EventBildschirm').objects.create(event=event, bildschirm=screen, profil=view)
+        apps.get_model('monitor', 'MonitorConfigVersion').objects.create(config=view, daten={'titel': 'Alt'})
+        apps.get_model('monitor', 'MonitorGlobalSettings').objects.update_or_create(
+            pk=1, defaults=dict(raumplan_server='s.webuntis.com', raumplan_schule='kath'))
+
+    def test_view_fields_kept(self):
+        v = self.apps.get_model('monitor', 'DisplayView').objects.get(slug='v')
+        self.assertEqual((v.is_default, v.layout, v.title, v.emergency_active, v.emergency_text),
+                         (True, 'abfahrten', 'Titel', True, 'Alarm'))
+        self.assertEqual(v.transit_stops, [{'id': '1', 'wegzeit_minuten': 3}])
+        self.assertEqual(v.transit_disruption_hidden, ['abc123'])
+        self.assertEqual((v.active_logo.name, v.active_logo.kind, v.active_logo.sort_order), ('Logo', 'logo', 2))
+
+    def test_screen_exam_event_relations_kept(self):
+        Screen = self.apps.get_model('monitor', 'Screen')
+        screen = Screen.objects.get(slug='glocke')
+        self.assertEqual((screen.default_view.slug, screen.power_mode), ('v', 'manuell_an'))
+        self.assertEqual(screen.schedule[0]['tage'], [0])
+        self.assertEqual([e.title for e in screen.exams.all()], ['Mathe'])
+        a = self.apps.get_model('monitor', 'DisplayEventScreen').objects.get()
+        self.assertEqual((a.event.is_active, a.screen.slug, a.view.slug), (True, 'glocke', 'v'))
+
+    def test_version_and_settings_kept(self):
+        version = self.apps.get_model('monitor', 'DisplayViewVersion').objects.get()
+        self.assertEqual((version.view.slug, version.data), ('v', {'titel': 'Alt'}))
+        s = self.apps.get_model('monitor', 'MonitorSettings').objects.get()
+        self.assertEqual((s.webuntis_server, s.webuntis_school), ('s.webuntis.com', 'kath'))
+
+    def test_backward_restores_old_names(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        config = apps.get_model('monitor', 'MonitorConfig').objects.get(slug='v')
+        self.assertEqual((config.titel, config.aktives_logo.datei.name), ('Titel', 'monitor/logo/a.png'))
+        bs = apps.get_model('monitor', 'Bildschirm').objects.get(slug='glocke')
+        self.assertEqual((bs.default_profil.slug, [k.titel for k in bs.klausuren.all()]), ('v', ['Mathe']))
+        if connection.vendor == 'sqlite':
+            # Fremdschlüssel zeigen wieder auf die alten Tabellen
+            with connection.cursor() as cursor:
+                cursor.execute('PRAGMA foreign_key_check')
+                self.assertEqual(cursor.fetchall(), [])

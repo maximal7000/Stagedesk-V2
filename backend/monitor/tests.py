@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import timedelta
 from unittest import mock
@@ -6,100 +7,100 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 from ninja.errors import HttpError
 
-from .models import MonitorConfig, Bildschirm, MonitorEvent, EventBildschirm
-from .api import _validate_config_data, _validate_klausur_data
+from .models import DisplayView, Screen, DisplayEvent, DisplayEventScreen
+from .api import _validate_view_data, _validate_exam_data
 from . import oepnv
 
 
-class ActiveProfilPriorityTest(TestCase):
+class ActiveViewPriorityTest(TestCase):
     """Reihenfolge: Sofort-Override > aktives Event > Zeitplan > Default."""
 
     def setUp(self):
-        self.default = MonitorConfig.objects.create(name='Default', slug='default')
-        self.zeit = MonitorConfig.objects.create(name='Zeit', slug='zeit')
-        self.event = MonitorConfig.objects.create(name='Event', slug='event')
-        self.override = MonitorConfig.objects.create(name='Override', slug='override')
-        self.bs = Bildschirm.objects.create(name='BS', slug='bs', default_profil=self.default)
+        self.default = DisplayView.objects.create(name='Default', slug='default')
+        self.scheduled = DisplayView.objects.create(name='Zeit', slug='zeit')
+        self.event = DisplayView.objects.create(name='Event', slug='event')
+        self.override = DisplayView.objects.create(name='Override', slug='override')
+        self.screen = Screen.objects.create(name='BS', slug='bs', default_view=self.default)
 
-    def _immer_zeitplan(self):
-        self.bs.zeitplan = [{'profil_id': self.zeit.id, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}]
-        self.bs.save()
+    def _always_schedule(self):
+        self.screen.schedule = [{'profil_id': self.scheduled.id, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}]
+        self.screen.save()
 
-    def _aktives_event(self):
-        ev = MonitorEvent.objects.create(name='E', aktiv=True)
-        EventBildschirm.objects.create(event=ev, bildschirm=self.bs, profil=self.event)
+    def _active_event(self):
+        ev = DisplayEvent.objects.create(name='E', is_active=True)
+        DisplayEventScreen.objects.create(event=ev, screen=self.screen, view=self.event)
 
-    def test_default_wenn_nichts_greift(self):
-        self.assertEqual(self.bs.get_active_profil(), self.default)
+    def test_default_when_nothing_applies(self):
+        self.assertEqual(self.screen.get_active_view(), self.default)
 
-    def test_zeitplan_schlaegt_default(self):
-        self._immer_zeitplan()
-        self.assertEqual(self.bs.get_active_profil(), self.zeit)
+    def test_schedule_beats_default(self):
+        self._always_schedule()
+        self.assertEqual(self.screen.get_active_view(), self.scheduled)
 
-    def test_event_schlaegt_zeitplan(self):
-        self._immer_zeitplan()
-        self._aktives_event()
-        self.assertEqual(self.bs.get_active_profil(), self.event)
+    def test_event_beats_schedule(self):
+        self._always_schedule()
+        self._active_event()
+        self.assertEqual(self.screen.get_active_view(), self.event)
 
-    def test_override_schlaegt_alles(self):
-        self._immer_zeitplan()
-        self._aktives_event()
-        self.bs.override_profil = self.override
-        self.bs.save()
-        self.assertEqual(self.bs.get_active_profil(), self.override)
+    def test_override_beats_everything(self):
+        self._always_schedule()
+        self._active_event()
+        self.screen.override_view = self.override
+        self.screen.save()
+        self.assertEqual(self.screen.get_active_view(), self.override)
 
-    def test_abgelaufener_override_ignoriert(self):
-        self.bs.override_profil = self.override
-        self.bs.override_bis = timezone.now() - timedelta(hours=1)
-        self.bs.save()
-        self.assertEqual(self.bs.get_active_profil(), self.default)
+    def test_expired_override_ignored(self):
+        self.screen.override_view = self.override
+        self.screen.override_until = timezone.now() - timedelta(hours=1)
+        self.screen.save()
+        self.assertEqual(self.screen.get_active_view(), self.default)
 
-    def test_override_mit_zukunftsablauf_gilt(self):
-        self.bs.override_profil = self.override
-        self.bs.override_bis = timezone.now() + timedelta(hours=1)
-        self.bs.save()
-        self.assertEqual(self.bs.get_active_profil(), self.override)
+    def test_override_with_future_expiry_applies(self):
+        self.screen.override_view = self.override
+        self.screen.override_until = timezone.now() + timedelta(hours=1)
+        self.screen.save()
+        self.assertEqual(self.screen.get_active_view(), self.override)
 
 
-class ConfigValidationTest(TestCase):
+class ViewValidationTest(TestCase):
 
-    def test_split_prozent_geklemmt(self):
-        self.assertEqual(_validate_config_data({'split_links_prozent': 95})['split_links_prozent'], 80)
-        self.assertEqual(_validate_config_data({'split_links_prozent': 5})['split_links_prozent'], 20)
+    def test_split_percent_clamped(self):
+        self.assertEqual(_validate_view_data({'split_left_percent': 95})['split_left_percent'], 80)
+        self.assertEqual(_validate_view_data({'split_left_percent': 5})['split_left_percent'], 20)
 
-    def test_bild_fokus_geklemmt(self):
-        self.assertEqual(_validate_config_data({'bild_fokus_x': 150})['bild_fokus_x'], 100)
-        self.assertEqual(_validate_config_data({'bild_fokus_y': -10})['bild_fokus_y'], 0)
+    def test_image_focus_clamped(self):
+        self.assertEqual(_validate_view_data({'image_focus_x': 150})['image_focus_x'], 100)
+        self.assertEqual(_validate_view_data({'image_focus_y': -10})['image_focus_y'], 0)
 
-    def test_ungueltige_hexfarbe_verworfen(self):
-        self.assertNotIn('akzent_farbe', _validate_config_data({'akzent_farbe': 'rot'}))
-        self.assertEqual(_validate_config_data({'akzent_farbe': '#aabbcc'})['akzent_farbe'], '#aabbcc')
+    def test_invalid_hex_color_dropped(self):
+        self.assertNotIn('accent_color', _validate_view_data({'accent_color': 'rot'}))
+        self.assertEqual(_validate_view_data({'accent_color': '#aabbcc'})['accent_color'], '#aabbcc')
 
-    def test_zeitplan_von_nach_bis_wirft(self):
+    def test_schedule_from_after_until_raises(self):
         with self.assertRaises(HttpError):
-            _validate_config_data({'zeitplan': [{'von': '16:00', 'bis': '08:00', 'profil_id': 1, 'tage': [0]}]})
+            _validate_view_data({'schedule': [{'von': '16:00', 'bis': '08:00', 'profil_id': 1, 'tage': [0]}]})
 
-    def test_klausur_ende_vor_beginn_wirft(self):
+    def test_exam_end_before_start_raises(self):
         with self.assertRaises(HttpError):
-            _validate_klausur_data({'aktiv_von': '2026-01-02T10:00', 'aktiv_bis': '2026-01-02T09:00'})
+            _validate_exam_data({'active_from': '2026-01-02T10:00', 'active_until': '2026-01-02T09:00'})
 
 
 class SoftDeleteTest(TestCase):
 
-    def test_geloeschte_default_ansicht_wird_nicht_zurueckgegeben(self):
-        default = MonitorConfig.objects.create(name='D', slug='d')
-        bs = Bildschirm.objects.create(name='B', slug='b', default_profil=default)
-        default.geloescht_am = timezone.now()
+    def test_deleted_default_view_not_returned(self):
+        default = DisplayView.objects.create(name='D', slug='d')
+        screen = Screen.objects.create(name='B', slug='b', default_view=default)
+        default.deleted_at = timezone.now()
         default.save()
         # gelöschte Default-Ansicht darf nicht mehr angezeigt werden
-        self.assertIsNone(bs.get_active_profil().geloescht_am)
+        self.assertIsNone(screen.get_active_view().deleted_at)
 
-    def test_get_ueberspringt_geloeschte(self):
-        MonitorConfig.objects.create(name='Std', slug='std', ist_standard=True)
-        MonitorConfig.objects.create(
-            name='Z', slug='z', geloescht_am=timezone.now(),
-            zeitplan=[{'profil_id': 999, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}])
-        self.assertNotEqual(MonitorConfig.get().slug, 'z')
+    def test_get_skips_deleted(self):
+        DisplayView.objects.create(name='Std', slug='std', is_default=True)
+        DisplayView.objects.create(
+            name='Z', slug='z', deleted_at=timezone.now(),
+            schedule=[{'profil_id': 999, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}])
+        self.assertNotEqual(DisplayView.get().slug, 'z')
 
 
 class TransitCredentialsTest(TestCase):
@@ -117,7 +118,7 @@ class TransitCredentialsTest(TestCase):
     def test_swl_without_token_returns_empty_list(self):
         with self.assertLogs('monitor.oepnv', level='WARNING'), \
              mock.patch('urllib.request.urlopen') as urlopen:
-            self.assertEqual(oepnv.fetch_stoerungen_swl(), [])
+            self.assertEqual(oepnv.fetch_disruptions_swl(), [])
         urlopen.assert_not_called()
 
     @override_settings(NAHSH_HAFAS_AID='test-aid')
@@ -128,3 +129,11 @@ class TransitCredentialsTest(TestCase):
             oepnv._nahsh_rpc('StationBoard', {})
         body = json.loads(opener_open.call_args[0][0].data)
         self.assertEqual(body['auth'], {'type': 'AID', 'aid': 'test-aid'})
+
+
+class DisruptionIdTest(TestCase):
+
+    def test_disruption_id_is_stable(self):
+        # Hash-Eingaben bleiben identisch, sonst tauchen ausgeblendete Meldungen wieder auf
+        self.assertEqual(oepnv._disruption_id('manuell', 'Titel', 'Text'),
+                         hashlib.md5('manuell|Titel|Text'.encode()).hexdigest()[:12])

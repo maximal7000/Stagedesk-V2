@@ -226,13 +226,13 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
             if not eva or not name:
                 continue
             # DB Timetables liefert nur Bahnhöfe (Zugverkehr)
-            produkte = ["nationalExpress", "national", "regionalExpress", "regional", "suburban"]
+            products = ["nationalExpress", "national", "regionalExpress", "regional", "suburban"]
             out.append({
                 "id": str(eva),
                 "name": name,
                 "typ": "bahnhof",
                 "quelle": "db",
-                "produkte": produkte,
+                "produkte": products,
             })
         return out[:results]
 
@@ -257,13 +257,13 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
                     sid = lid.split("@L=")[1].split("@")[0]
             if not sid:
                 continue
-            produkte = _nahsh_products_from_bitmask(loc.get("pCls"))
+            products = _nahsh_products_from_bitmask(loc.get("pCls"))
             out.append({
                 "id": sid,
                 "name": loc.get("name", ""),
-                "typ": _station_type(produkte),
+                "typ": _station_type(products),
                 "quelle": "nahsh",
-                "produkte": produkte,
+                "produkte": products,
             })
         return out
 
@@ -299,29 +299,29 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
             if "nahsh" not in existing["quelle"]:
                 existing["quelle"] = "db+nahsh"
 
-    stationen = list(combined.values())[:results]
-    return stationen
+    stops = list(combined.values())[:results]
+    return stops
 
 
-def _station_type(produkte):
+def _station_type(products):
     """Haupttyp der Station bestimmen"""
-    if any(p in produkte for p in ["nationalExpress", "national"]):
+    if any(p in products for p in ["nationalExpress", "national"]):
         return "fernverkehr"
-    if any(p in produkte for p in ["regionalExpress", "regional", "suburban"]):
+    if any(p in products for p in ["regionalExpress", "regional", "suburban"]):
         return "nahverkehr"
-    if any(p in produkte for p in ["subway", "tram"]):
+    if any(p in products for p in ["subway", "tram"]):
         return "stadtverkehr"
-    if any(p in produkte for p in ["bus", "ferry", "taxi"]):
+    if any(p in products for p in ["bus", "ferry", "taxi"]):
         return "bus"
     return "sonstig"
 
 
 # ═══ Abfahrten holen ═════════════════════════════════════════════
 
-def fetch_departures(stationen, dauer=60, max_pro_station=20,
-                     zeige_bus=True, zeige_bahn=True, zeige_fernverkehr=True,
-                     use_db=True, use_nahsh=True, zeige_via=False,
-                     streik_linien=None, streik_typen=None):
+def fetch_departures(stops, duration=60, max_per_stop=20,
+                     show_bus=True, show_rail=True, show_long_distance=True,
+                     use_db=True, use_nahsh=True, show_via=False,
+                     strike_lines=None, strike_types=None):
     """
     Abfahrten für mehrere Stationen parallel holen.
     Versucht DB REST, fällt auf NAH.SH HAFAS zurück.
@@ -332,61 +332,61 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
     def _fetch_single(station):
         station_id = station.get("id", "")
         station_name = station.get("name", "")
-        filter_linien = station.get("filter_linien", [])
-        filter_richtung = station.get("filter_richtung", "")
+        filter_lines = station.get("filter_linien", [])
+        filter_direction = station.get("filter_richtung", "")
         filter_via = station.get("filter_via", "").strip()
-        wegzeit = station.get("wegzeit_minuten", 0)
+        walk_minutes = station.get("wegzeit_minuten", 0)
 
         # Per-Station API-Auswahl: "db", "nahsh", "beide" (default: globale Einstellung)
-        station_api = station.get("api", "")
-        if station_api == "db":
+        station_source = station.get("api", "")
+        if station_source == "db":
             st_use_db, st_use_nahsh = True, False
-        elif station_api == "nahsh":
+        elif station_source == "nahsh":
             st_use_db, st_use_nahsh = False, True
-        elif station_api == "beide":
+        elif station_source == "beide":
             st_use_db, st_use_nahsh = True, True
         else:
             # Fallback auf globale Einstellung
             st_use_db, st_use_nahsh = use_db, use_nahsh
 
         # Per-Station Produktfilter (fallback auf globale Werte)
-        st_bus = station.get("zeige_bus", zeige_bus)
-        st_bahn = station.get("zeige_bahn", zeige_bahn)
-        st_fern = station.get("zeige_fernverkehr", zeige_fernverkehr)
+        st_bus = station.get("zeige_bus", show_bus)
+        st_rail = station.get("zeige_bahn", show_rail)
+        st_long_distance = station.get("zeige_fernverkehr", show_long_distance)
 
         if not station_id:
             return None
 
-        abfahrten_roh = None
-        fehler = None
+        raw_departures = None
+        error = None
 
         # Stopovers laden wenn Via-Filter gesetzt ODER via-Anzeige aktiv
-        need_stopovers = bool(filter_via) or zeige_via
+        need_stopovers = bool(filter_via) or show_via
 
         # ─── Versuch 1: DB REST API ───
         if st_use_db:
             try:
-                abfahrten_roh = _fetch_departures_db(station_id, dauer, max_pro_station * 2, stopovers=need_stopovers)
+                raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
             except Exception as e:
                 print(f"DB Abfahrten Fehler ({station_name}): {e}")
                 # Stopovers können 500er verursachen — Fallback ohne Stopovers
                 if need_stopovers:
                     try:
-                        abfahrten_roh = _fetch_departures_db(station_id, dauer, max_pro_station * 2, stopovers=False)
+                        raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2, stopovers=False)
                         print(f"DB Fallback ohne Stopovers OK ({station_name})")
                     except Exception as e2:
                         print(f"DB Fallback Fehler ({station_name}): {e2}")
 
         # ─── S-Bahn aus meta-EVA dazuholen (opt-in) — große Bahnhöfe trennen S-Bahn ab ───
-        if st_use_db and station.get("zeige_sbahn", False) and abfahrten_roh:
+        if st_use_db and station.get("zeige_sbahn", False) and raw_departures:
             try:
-                sbahn_deps = _fetch_sbahn_meta(station_id, dauer, max_pro_station * 2, stopovers=need_stopovers)
-                existing = {(d["linie"], d["abfahrt"], d["richtung"]) for d in abfahrten_roh}
+                sbahn_deps = _fetch_sbahn_meta(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
+                existing = {(d["linie"], d["abfahrt"], d["richtung"]) for d in raw_departures}
                 for d in sbahn_deps:
                     k = (d["linie"], d["abfahrt"], d["richtung"])
                     if k not in existing:
                         existing.add(k)
-                        abfahrten_roh.append(d)
+                        raw_departures.append(d)
                 # Zeitlich vorsortieren, sonst schneidet der max-Cap (vor dem finalen Sort) die
                 # hinten angehängten S-Bahnen wieder ab.
                 _n = datetime.now(TIMEZONE)
@@ -399,87 +399,87 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
                         return diff + 1440 if diff < -120 else diff
                     except (ValueError, TypeError):
                         return 99999
-                abfahrten_roh.sort(key=_rawmin)
+                raw_departures.sort(key=_rawmin)
             except Exception as e:
                 print(f"S-Bahn-Merge Fehler ({station_name}): {e}")
 
         # ─── Versuch 2: NAH.SH HAFAS (Fallback oder wenn beide aktiv) ───
-        if st_use_nahsh and (abfahrten_roh is None or len(abfahrten_roh) == 0 or station_api == "beide"):
+        if st_use_nahsh and (raw_departures is None or len(raw_departures) == 0 or station_source == "beide"):
             try:
-                nahsh_deps = _fetch_departures_nahsh(station_id, dauer, max_pro_station * 2, stopovers=need_stopovers)
+                nahsh_deps = _fetch_departures_nahsh(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
                 if nahsh_deps is not None:
-                    if abfahrten_roh is None:
-                        abfahrten_roh = nahsh_deps
+                    if raw_departures is None:
+                        raw_departures = nahsh_deps
                     else:
-                        existing_keys = {(d["linie"], d["abfahrt"]) for d in abfahrten_roh}
+                        existing_keys = {(d["linie"], d["abfahrt"]) for d in raw_departures}
                         for dep in nahsh_deps:
                             if (dep["linie"], dep["abfahrt"]) not in existing_keys:
-                                abfahrten_roh.append(dep)
+                                raw_departures.append(dep)
             except Exception as e:
                 print(f"NAH.SH Abfahrten Fehler ({station_name}): {e}")
-                if abfahrten_roh is None:
-                    fehler = str(e)
+                if raw_departures is None:
+                    error = str(e)
 
-        if abfahrten_roh is None:
-            abfahrten_roh = []
+        if raw_departures is None:
+            raw_departures = []
 
         # ─── Zusatz-Station (kombiniert) ───
-        zusatz_id = station.get("zusatz_id", "").strip()
-        zusatz_api = station.get("zusatz_api", "")
-        if zusatz_id:
+        extra_id = station.get("zusatz_id", "").strip()
+        extra_source = station.get("zusatz_api", "")
+        if extra_id:
             try:
-                zusatz_deps = None
-                if zusatz_api in ("db", "beide", ""):
+                extra_deps = None
+                if extra_source in ("db", "beide", ""):
                     try:
-                        zusatz_deps = _fetch_departures_db(zusatz_id, dauer, max_pro_station * 2, stopovers=False)
+                        extra_deps = _fetch_departures_db(extra_id, duration, max_per_stop * 2, stopovers=False)
                     except Exception:
                         pass
                 # NAH.SH: bei explizitem Wunsch, bei „beide", oder wenn DB nichts lieferte
-                if zusatz_api in ("nahsh", "beide") or (zusatz_api == "" and not zusatz_deps):
+                if extra_source in ("nahsh", "beide") or (extra_source == "" and not extra_deps):
                     try:
-                        nahsh_z = _fetch_departures_nahsh(zusatz_id, dauer, max_pro_station * 2, stopovers=False)
+                        nahsh_z = _fetch_departures_nahsh(extra_id, duration, max_per_stop * 2, stopovers=False)
                         if nahsh_z is not None:
-                            if zusatz_deps is None:
-                                zusatz_deps = nahsh_z
+                            if extra_deps is None:
+                                extra_deps = nahsh_z
                             else:
-                                existing_keys = {(d["linie"], d["abfahrt"]) for d in zusatz_deps}
+                                existing_keys = {(d["linie"], d["abfahrt"]) for d in extra_deps}
                                 for dep in nahsh_z:
                                     if (dep["linie"], dep["abfahrt"]) not in existing_keys:
-                                        zusatz_deps.append(dep)
+                                        extra_deps.append(dep)
                     except Exception:
                         pass
-                if zusatz_deps:
+                if extra_deps:
                     # Produktfilter für Zusatz-Station
                     z_bus = station.get("zusatz_zeige_bus", True)
-                    z_bahn = station.get("zusatz_zeige_bahn", True)
-                    z_fern = station.get("zusatz_zeige_fernverkehr", True)
-                    z_sbahn = station.get("zusatz_zeige_sbahn", True)
-                    z_ubahn = station.get("zusatz_zeige_ubahn", True)
+                    z_rail = station.get("zusatz_zeige_bahn", True)
+                    z_long_distance = station.get("zusatz_zeige_fernverkehr", True)
+                    z_suburban = station.get("zusatz_zeige_sbahn", True)
+                    z_subway = station.get("zusatz_zeige_ubahn", True)
                     z_tram = station.get("zusatz_zeige_tram", True)
-                    z_faehre = station.get("zusatz_zeige_faehre", True)
-                    filtered_zusatz = []
-                    for dep in zusatz_deps:
-                        typ = dep.get("typ", "")
-                        if typ in ("bus",) and not z_bus:
+                    z_ferry = station.get("zusatz_zeige_faehre", True)
+                    filtered_extra = []
+                    for dep in extra_deps:
+                        kind = dep.get("typ", "")
+                        if kind in ("bus",) and not z_bus:
                             continue
-                        if typ in ("regional", "regionalExpress") and not z_bahn:
+                        if kind in ("regional", "regionalExpress") and not z_rail:
                             continue
-                        if typ in ("suburban",) and not z_sbahn:
+                        if kind in ("suburban",) and not z_suburban:
                             continue
-                        if typ in ("subway",) and not z_ubahn:
+                        if kind in ("subway",) and not z_subway:
                             continue
-                        if typ in ("tram",) and not z_tram:
+                        if kind in ("tram",) and not z_tram:
                             continue
-                        if typ in ("ferry",) and not z_faehre:
+                        if kind in ("ferry",) and not z_ferry:
                             continue
-                        if typ in ("nationalExpress", "national") and not z_fern:
+                        if kind in ("nationalExpress", "national") and not z_long_distance:
                             continue
-                        filtered_zusatz.append(dep)
-                    existing_keys = {(d["linie"], d["abfahrt"]) for d in abfahrten_roh}
-                    for dep in filtered_zusatz:
+                        filtered_extra.append(dep)
+                    existing_keys = {(d["linie"], d["abfahrt"]) for d in raw_departures}
+                    for dep in filtered_extra:
                         if (dep["linie"], dep["abfahrt"]) not in existing_keys:
-                            abfahrten_roh.append(dep)
-                    print(f"Zusatz-Station {zusatz_id} lieferte {len(filtered_zusatz)} Abfahrten für {station_name}")
+                            raw_departures.append(dep)
+                    print(f"Zusatz-Station {extra_id} lieferte {len(filtered_extra)} Abfahrten für {station_name}")
             except Exception as e:
                 print(f"Zusatz-Station Fehler ({station_name}): {e}")
 
@@ -487,67 +487,67 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
         now = datetime.now(TIMEZONE)
 
         # ─── Filter anwenden ───
-        abfahrten = []
-        for dep in abfahrten_roh:
-            typ = dep.get("typ", "")
-            if typ in ("bus",) and not st_bus:
+        departures = []
+        for dep in raw_departures:
+            kind = dep.get("typ", "")
+            if kind in ("bus",) and not st_bus:
                 continue
-            if typ in ("regional", "regionalExpress") and not st_bahn:
+            if kind in ("regional", "regionalExpress") and not st_rail:
                 continue
-            if typ in ("suburban",) and not station.get("zeige_sbahn", True):
+            if kind in ("suburban",) and not station.get("zeige_sbahn", True):
                 continue
-            if typ in ("subway",) and not station.get("zeige_ubahn", True):
+            if kind in ("subway",) and not station.get("zeige_ubahn", True):
                 continue
-            if typ in ("tram",) and not station.get("zeige_tram", True):
+            if kind in ("tram",) and not station.get("zeige_tram", True):
                 continue
-            if typ in ("ferry",) and not station.get("zeige_faehre", True):
+            if kind in ("ferry",) and not station.get("zeige_faehre", True):
                 continue
-            if typ in ("nationalExpress", "national") and not st_fern:
+            if kind in ("nationalExpress", "national") and not st_long_distance:
                 continue
             # ─── Streik-Filter: Linien und Typen ausblenden ───
-            if streik_linien:
-                linie_lower = dep["linie"].strip().lower()
-                if any(sl.strip().lower() == linie_lower for sl in streik_linien):
+            if strike_lines:
+                line_lower = dep["linie"].strip().lower()
+                if any(sl.strip().lower() == line_lower for sl in strike_lines):
                     continue
                 # Auch Nummer-Match: "Bus 1" matched "1"
-                linie_parts = linie_lower.split()
-                linie_nummer = linie_parts[-1] if linie_parts else linie_lower
-                if any(sl.strip().lower() == linie_nummer for sl in streik_linien):
+                line_parts = line_lower.split()
+                line_number = line_parts[-1] if line_parts else line_lower
+                if any(sl.strip().lower() == line_number for sl in strike_lines):
                     continue
-            if streik_typen:
-                typ_icon = dep.get("typ_icon", "")
+            if strike_types:
+                kind_icon = dep.get("typ_icon", "")
                 # "re" blendet auch "rb" aus, "ice" auch "ic"
-                if typ_icon in streik_typen:
+                if kind_icon in strike_types:
                     continue
-                if 're' in streik_typen and typ_icon == 'rb':
+                if 're' in strike_types and kind_icon == 'rb':
                     continue
-                if 'ice' in streik_typen and typ_icon == 'ic':
+                if 'ice' in strike_types and kind_icon == 'ic':
                     continue
 
-            if filter_linien and len(filter_linien) > 0:
-                linie_lower = dep["linie"].strip().lower()
-                linie_parts = linie_lower.split()
-                linie_nummer = linie_parts[-1] if linie_parts else linie_lower
+            if filter_lines and len(filter_lines) > 0:
+                line_lower = dep["linie"].strip().lower()
+                line_parts = line_lower.split()
+                line_number = line_parts[-1] if line_parts else line_lower
                 if not any(
-                    fl.lower() == linie_lower or fl.lower() == linie_nummer
-                    for fl in filter_linien
+                    fl.lower() == line_lower or fl.lower() == line_number
+                    for fl in filter_lines
                 ):
                     continue
-            if filter_richtung:
-                if filter_richtung.lower() not in dep["richtung"].lower():
+            if filter_direction:
+                if filter_direction.lower() not in dep["richtung"].lower():
                     continue
             if filter_via:
-                halte = dep.get("stopovers", [])
+                via_stops = dep.get("stopovers", [])
                 via_lower = filter_via.lower()
-                if not any(via_lower in h.lower() for h in halte):
+                if not any(via_lower in h.lower() for h in via_stops):
                     continue
 
             # Wegzeit-Filter: Abfahrten die innerhalb der Wegzeit liegen ausfiltern
             # Nutze abfahrt_aktuell (echte Abfahrtszeit) falls vorhanden
-            wegzeit_time = dep.get("abfahrt_aktuell") or dep.get("abfahrt")
-            if wegzeit > 0 and wegzeit_time:
+            walk_ref_time = dep.get("abfahrt_aktuell") or dep.get("abfahrt")
+            if walk_minutes > 0 and walk_ref_time:
                 try:
-                    dep_time = datetime.strptime(wegzeit_time, "%H:%M").replace(
+                    dep_time = datetime.strptime(walk_ref_time, "%H:%M").replace(
                         year=now.year, month=now.month, day=now.day,
                         tzinfo=TIMEZONE
                     )
@@ -556,18 +556,18 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
                     # (Abfahrt kurz nach Mitternacht, jetzt kurz vor Mitternacht)
                     if diff_min < -720:
                         diff_min += 1440
-                    if diff_min < wegzeit:
+                    if diff_min < walk_minutes:
                         continue
                 except (ValueError, TypeError):
                     pass
 
             # Stopovers behalten wenn via-Anzeige aktiv, sonst entfernen
-            if zeige_via:
+            if show_via:
                 cleaned = dict(dep)
             else:
                 cleaned = {k: v for k, v in dep.items() if k != "stopovers"}
-            abfahrten.append(cleaned)
-            if len(abfahrten) >= max_pro_station:
+            departures.append(cleaned)
+            if len(departures) >= max_per_stop:
                 break
 
         # Tagesbewusst sortieren: "00:03" gehört ans Ende, nicht an den Anfang.
@@ -586,21 +586,21 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
             except (ValueError, TypeError):
                 return 99999
 
-        abfahrten.sort(key=_dep_sortmin)
+        departures.sort(key=_dep_sortmin)
 
         entry = {
             "station_name": station_name,
             "station_id": station_id,
-            "abfahrten": abfahrten,
+            "abfahrten": departures,
         }
-        if wegzeit > 0:
-            entry["wegzeit_minuten"] = wegzeit
-        if fehler:
-            entry["fehler"] = fehler
+        if walk_minutes > 0:
+            entry["wegzeit_minuten"] = walk_minutes
+        if error:
+            entry["fehler"] = error
         return entry
 
     # Stationen parallel abfragen
-    valid = [s for s in stationen if s.get("id")]
+    valid = [s for s in stops if s.get("id")]
     if not valid:
         return []
 
@@ -608,17 +608,17 @@ def fetch_departures(stationen, dauer=60, max_pro_station=20,
         result = _fetch_single(valid[0])
         return [result] if result else []
 
-    ergebnis = [None] * len(valid)
+    results = [None] * len(valid)
     with ThreadPoolExecutor(max_workers=min(len(valid), 4)) as pool:
         futures = {pool.submit(_fetch_single, s): i for i, s in enumerate(valid)}
         for fut in as_completed(futures, timeout=REQUEST_TIMEOUT + 2):
             idx = futures[fut]
             try:
-                ergebnis[idx] = fut.result()
+                results[idx] = fut.result()
             except Exception as e:
                 print(f"Station-Fetch Fehler: {e}")
 
-    return [e for e in ergebnis if e is not None]
+    return [e for e in results if e is not None]
 
 
 # ═══ DB REST — Abfahrten ══════════════════════════════════════════
@@ -648,12 +648,12 @@ def _db_meta_evas(eva):
     return evas
 
 
-def _fetch_sbahn_meta(eva, dauer, max_results, stopovers=False):
+def _fetch_sbahn_meta(eva, duration, max_results, stopovers=False):
     """S-Bahn-Abfahrten aus den meta-Geschwister-EVAs einsammeln (nur typ_icon == sbahn)."""
     out = []
     for m_eva in _db_meta_evas(eva):
         try:
-            deps = _fetch_departures_db(m_eva, dauer, max_results, stopovers=stopovers)
+            deps = _fetch_departures_db(m_eva, duration, max_results, stopovers=stopovers)
         except Exception:
             continue
         for d in deps:
@@ -662,7 +662,7 @@ def _fetch_sbahn_meta(eva, dauer, max_results, stopovers=False):
     return out
 
 
-def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
+def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
     """Abfahrten über die DB Timetables API (/plan geplant + /fchg Echtzeit).
     Extrahiert: Verspätung, Gleis(-wechsel), Ausfall, Meldungen (Verspätungsgründe/
     Ersatzverkehr/Umleitung/Qualität), Flügelzug, Ersatzzug, Halt-Änderungen."""
@@ -672,8 +672,8 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
 
     # Echtzeit-Änderungen je Stop-ID
     changes = {}
-    ersetzt_durch = {}   # (cat, nr) des Originals -> Ersatz-Label (z.B. "Bus 114392")
-    ersatz_s = []        # Ersatz-Fahrten (tl t="e" + <ref>) — stehen nur im /fchg, als eigene Abfahrt ergänzen
+    replaced_by = {}   # (cat, nr) des Originals -> Ersatz-Label (z.B. "Bus 114392")
+    replacement_trips = []        # Ersatz-Fahrten (tl t="e" + <ref>) — stehen nur im /fchg, als eigene Abfahrt ergänzen
     try:
         fchg = _db_tt_get(f"/fchg/{station_id}")
         for s in fchg.findall("s"):
@@ -704,16 +704,16 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
                 if r_tl is not None and r_tl.get("n"):
                     orig_key = (r_tl.get("c") or "", r_tl.get("n") or "")
                     repl_label = ((tl.get("c") or "") + " " + (tl.get("n") or "")).strip()
-                    ersetzt_durch[orig_key] = repl_label
-                    ersatz_s.append(s)
+                    replaced_by[orig_key] = repl_label
+                    replacement_trips.append(s)
     except Exception:
         pass
 
-    stunden = 1 + min(3, int(dauer) // 60)
+    hours = 1 + min(3, int(duration) // 60)
     # Auch die vorherige Stunde laden (i=-1): Züge mit früher Plan-Zeit aber
     # Verspätung stehen im Plan der GEPLANTEN Stunde, nicht der aktuellen.
     deps = []
-    for i in range(-1, stunden):
+    for i in range(-1, hours):
         t = now + timedelta(hours=i)
         try:
             plan = _db_tt_get(f"/plan/{station_id}/{t.strftime('%y%m%d')}/{t.strftime('%H')}")
@@ -733,7 +733,7 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
             if not line and tl is not None:
                 line = (cat + (tl.get("n") or "")).strip()
             ppth = [p for p in (dp.get("ppth") or "").split("|") if p]
-            ziel = ppth[-1] if ppth else ""
+            destination = ppth[-1] if ppth else ""
             try:
                 dt_plan = datetime.strptime(pt, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
             except Exception:
@@ -741,94 +741,94 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
             ch = changes.get(s.get("id"), {})
             ct = ch.get("ct")
             cancelled = ch.get("cs") == "c"
-            verspaetung = 0
+            delay = 0
             dt_real = dt_plan
             if ct and len(ct) >= 10:
                 try:
                     dt_real = datetime.strptime(ct, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
-                    verspaetung = int((dt_real - dt_plan).total_seconds() // 60)
+                    delay = int((dt_real - dt_plan).total_seconds() // 60)
                 except Exception:
                     pass
             min_until = (dt_real - now).total_seconds() / 60
-            if min_until < -1 or min_until > dauer:
+            if min_until < -1 or min_until > duration:
                 continue
-            gleis_geplant = dp.get("pp") or ""
-            gleis_aktuell = ch.get("cp") or gleis_geplant
-            produkt = _db_cat_product(cat, line)
+            platform_planned = dp.get("pp") or ""
+            platform_actual = ch.get("cp") or platform_planned
+            product = _db_cat_product(cat, line)
 
             # ─── Meldungen aus Change-Codes ───
             codes = ch.get("codes", [])
             # Grund/Bemerkung NUR aus echten Ursachen (t="d") — Qualitätshinweise
             # (t="q", z.B. „nur 2. Klasse") gehören nicht als Verspätungsgrund auf die Zeile.
-            bemerkungen = []
+            remarks = []
             for c in ch.get("codes_d", []):
                 if c in DB_MSG_IGNORE:
                     continue
                 txt = DB_MSG_TEXT.get(c)
-                if txt and txt not in bemerkungen:
-                    bemerkungen.append(txt)
-            ersatzverkehr = any(c in (29, 78) for c in codes)
-            umleitung = 58 in codes
+                if txt and txt not in remarks:
+                    remarks.append(txt)
+            rail_replacement = any(c in (29, 78) for c in codes)
+            diversion = 58 in codes
 
             # ─── Flügelzug / Ersatzzug ───
-            fluegelzug = bool(dp.get("wings"))
-            ersatzzug = tl_t == "e"
+            wing_train = bool(dp.get("wings"))
+            replacement_train = tl_t == "e"
 
             # ─── Halt-Änderungen (geänderte Route cpth vs ppth) ───
-            zusatz_halte, entfall_halte = [], []
-            endet_frueher, ziel_geplant = False, ""
+            added_stops, dropped_stops = [], []
+            ends_early, planned_destination = False, ""
             cpth = ch.get("cpth")
             if cpth:
-                neu = [p for p in cpth.split("|") if p]
-                setp, setn = set(ppth), set(neu)
-                zusatz_halte = [h for h in neu if h not in setp][:3]
-                entfall_halte = [h for h in ppth if h not in setn][:3]
-                if neu:
-                    orig_ziel = ppth[-1] if ppth else ""
-                    ziel = neu[-1]  # neues Ziel
+                new_route = [p for p in cpth.split("|") if p]
+                setp, setn = set(ppth), set(new_route)
+                added_stops = [h for h in new_route if h not in setp][:3]
+                dropped_stops = [h for h in ppth if h not in setn][:3]
+                if new_route:
+                    orig_destination = ppth[-1] if ppth else ""
+                    destination = new_route[-1]  # neues Ziel
                     # Zug endet früher: neues Ziel liegt in der Original-Route, dahinter fällt was weg
-                    if orig_ziel and ziel != orig_ziel and ziel in ppth:
-                        endet_frueher, ziel_geplant = True, orig_ziel
+                    if orig_destination and destination != orig_destination and destination in ppth:
+                        ends_early, planned_destination = True, orig_destination
 
             result = {
                 "linie": line,
-                "richtung": ziel,
+                "richtung": destination,
                 "abfahrt": dt_plan.strftime("%H:%M"),
                 "abfahrt_aktuell": dt_real.strftime("%H:%M"),
-                "verspaetung": verspaetung,
-                "gleis": str(gleis_aktuell),
-                "typ": produkt,
-                "typ_icon": _product_icon(produkt),
+                "verspaetung": delay,
+                "gleis": str(platform_actual),
+                "typ": product,
+                "typ_icon": _product_icon(product),
                 "ausfall": cancelled,
-                "bemerkungen": bemerkungen[:3],
+                "bemerkungen": remarks[:3],
                 "_sortkey": dt_plan.timestamp(),
             }
-            if gleis_aktuell and gleis_geplant and gleis_aktuell != gleis_geplant:
-                result["gleis_geplant"] = str(gleis_geplant)
-            if ersatzverkehr:
+            if platform_actual and platform_planned and platform_actual != platform_planned:
+                result["gleis_geplant"] = str(platform_planned)
+            if rail_replacement:
                 result["ersatzverkehr"] = True
-            if umleitung:
+            if diversion:
                 result["umleitung"] = True
-            if fluegelzug:
+            if wing_train:
                 result["fluegelzug"] = True
-            if ersatzzug:
+            if replacement_train:
                 result["ersatzzug"] = True
-            if zusatz_halte:
-                result["zusatz_halte"] = zusatz_halte
-            if entfall_halte:
-                result["entfall_halte"] = entfall_halte
-            if endet_frueher:
+            if added_stops:
+                result["zusatz_halte"] = added_stops
+            if dropped_stops:
+                result["entfall_halte"] = dropped_stops
+            if ends_early:
                 result["endet_frueher"] = True
-                result["ziel_geplant"] = ziel_geplant
+                result["ziel_geplant"] = planned_destination
             _ek = (cat, (tl.get("n") if tl is not None else "") or "")
-            if _ek in ersetzt_durch:
-                result["ersetzt_durch"] = ersetzt_durch[_ek]
+            if _ek in replaced_by:
+                result["ersetzt_durch"] = replaced_by[_ek]
             if stopovers:
                 result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
             deps.append(result)
 
     # Ersatz-Fahrten (nur im /fchg vorhanden) als eigene Abfahrten ergänzen
-    for s in ersatz_s:
+    for s in replacement_trips:
         dp = s.find("dp"); tl = s.find("tl"); ref = s.find("ref")
         if dp is None or tl is None:
             continue
@@ -843,22 +843,22 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
         except Exception:
             continue
         min_until = (dt_real - now).total_seconds() / 60
-        if min_until < -1 or min_until > dauer:
+        if min_until < -1 or min_until > duration:
             continue
         ppth = [p for p in (dp.get("ppth") or "").split("|") if p]
         cat = tl.get("c") or "Bus"
         line = (dp.get("fb") or (cat + " " + (tl.get("n") or ""))).strip()
         r_tl = ref.find("tl") if ref is not None else None
-        ersatz_fuer = (f"{r_tl.get('c')} {r_tl.get('n')}".strip()) if r_tl is not None else ""
-        produkt = 'bus' if 'bus' in cat.lower() else _db_cat_product(cat, line)
+        replacement_for = (f"{r_tl.get('c')} {r_tl.get('n')}".strip()) if r_tl is not None else ""
+        product = 'bus' if 'bus' in cat.lower() else _db_cat_product(cat, line)
         res = {
             "linie": line, "richtung": ppth[-1] if ppth else "",
             "abfahrt": dt_plan.strftime("%H:%M"), "abfahrt_aktuell": dt_real.strftime("%H:%M"),
             "verspaetung": int((dt_real - dt_plan).total_seconds() // 60),
             "gleis": str(dp.get("cp") or dp.get("pp") or ""),
-            "typ": produkt, "typ_icon": _product_icon(produkt) if produkt != 'bus' else 'bus',
+            "typ": product, "typ_icon": _product_icon(product) if product != 'bus' else 'bus',
             "ausfall": False, "bemerkungen": [], "ersatzverkehr": True,
-            "ersatz_fuer": ersatz_fuer, "_sortkey": dt_plan.timestamp(),
+            "ersatz_fuer": replacement_for, "_sortkey": dt_plan.timestamp(),
         }
         if stopovers:
             res["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
@@ -878,14 +878,14 @@ def _fetch_departures_db(station_id, dauer, max_results, stopovers=False):
 
 # ═══ NAH.SH HAFAS — Abfahrten ════════════════════════════════════
 
-def _fetch_departures_nahsh(station_id, dauer, max_results, stopovers=False):
+def _fetch_departures_nahsh(station_id, duration, max_results, stopovers=False):
     """Abfahrten über NAH.SH HAFAS mgate.exe holen"""
     now = datetime.now(TIMEZONE)
 
     req_data = {
         "type": "DEP",
         "stbLoc": {"lid": f"A=1@L={station_id}@"},
-        "dur": min(dauer, 1440),  # max 24h
+        "dur": min(duration, 1440),  # max 24h
         "maxJny": min(max_results, 100),
         "date": now.strftime("%Y%m%d"),
         "time": now.strftime("%H%M%S"),
@@ -901,13 +901,13 @@ def _fetch_departures_nahsh(station_id, dauer, max_results, stopovers=False):
     loc_list = common.get("locL", [])
     rem_list = common.get("remL", [])
 
-    abfahrten = []
+    departures = []
     for jny in res.get("jnyL", []):
         parsed = _parse_nahsh_departure(jny, prod_list, loc_list, rem_list, now)
         if parsed:
-            abfahrten.append(parsed)
+            departures.append(parsed)
 
-    return abfahrten
+    return departures
 
 
 def _parse_nahsh_departure(jny, prod_list, loc_list, rem_list, ref_date):
@@ -917,17 +917,17 @@ def _parse_nahsh_departure(jny, prod_list, loc_list, rem_list, ref_date):
 
         # Linie aus prodL
         prod_idx = jny.get("prodX", stb_stop.get("dProdX"))
-        linie = ""
-        produkt = ""
+        line = ""
+        product = ""
         line_color = ""
         if prod_idx is not None and prod_idx < len(prod_list):
             prod = prod_list[prod_idx]
-            linie = prod.get("name", "") or prod.get("addName", "") or ""
+            line = prod.get("name", "") or prod.get("addName", "") or ""
             # Produkt-Klasse
             cls_val = prod.get("cls")
             if cls_val:
                 prods = _nahsh_products_from_bitmask(cls_val)
-                produkt = prods[0] if prods else ""
+                product = prods[0] if prods else ""
             # Linienfarbe aus HAFAS style/icoX
             style = prod.get("style", {}) or {}
             if isinstance(style, dict):
@@ -939,42 +939,42 @@ def _parse_nahsh_departure(jny, prod_list, loc_list, rem_list, ref_date):
                     line_color = fg if fg.startswith("#") else f"#{fg}"
 
         # Richtung
-        richtung = jny.get("dirTxt", "")
-        if not richtung:
+        direction = jny.get("dirTxt", "")
+        if not direction:
             dir_loc_idx = jny.get("dirLocX")
             if dir_loc_idx is not None and dir_loc_idx < len(loc_list):
-                richtung = loc_list[dir_loc_idx].get("name", "")
+                direction = loc_list[dir_loc_idx].get("name", "")
 
         # Zeiten (Format: HHMMSS)
         d_time_s = stb_stop.get("dTimeS", "")  # geplant
         d_time_r = stb_stop.get("dTimeR", "")  # real/aktuell
 
-        abfahrt_geplant = _parse_hafas_time(d_time_s, ref_date)
-        abfahrt_aktuell = _parse_hafas_time(d_time_r, ref_date) or abfahrt_geplant
+        departure_planned = _parse_hafas_time(d_time_s, ref_date)
+        departure_actual = _parse_hafas_time(d_time_r, ref_date) or departure_planned
 
         # Verspätung berechnen (DDHHMMSS oder HHMMSS Format)
-        verspaetung = 0
+        delay = 0
         if d_time_s and d_time_r:
             try:
                 plan_min = _hafas_to_minutes(d_time_s)
                 real_min = _hafas_to_minutes(d_time_r)
-                verspaetung = real_min - plan_min
-                if verspaetung < -120:
-                    verspaetung += 1440  # Tageswechsel
+                delay = real_min - plan_min
+                if delay < -120:
+                    delay += 1440  # Tageswechsel
             except (ValueError, IndexError):
                 pass
 
         # Gleis (R = real/aktuell, S = geplant/Soll)
-        gleis_aktuell = stb_stop.get("dPlatfR") or ""
-        gleis_geplant = stb_stop.get("dPlatfS") or ""
-        gleis = gleis_aktuell or gleis_geplant
-        gleis_geaendert = bool(gleis_aktuell and gleis_geplant and gleis_aktuell != gleis_geplant)
+        platform_actual = stb_stop.get("dPlatfR") or ""
+        platform_planned = stb_stop.get("dPlatfS") or ""
+        platform = platform_actual or platform_planned
+        platform_changed = bool(platform_actual and platform_planned and platform_actual != platform_planned)
 
         # Ausfall
         cancelled = jny.get("isCncl", False) or stb_stop.get("dCncl", False)
 
         # Bemerkungen
-        bemerkungen = []
+        remarks = []
         for rem_ref in (jny.get("remL") or jny.get("msgL") or []):
             rem_idx = rem_ref.get("remX") if isinstance(rem_ref, dict) else None
             if rem_idx is not None and rem_idx < len(rem_list):
@@ -982,27 +982,27 @@ def _parse_nahsh_departure(jny, prod_list, loc_list, rem_list, ref_date):
                 if rem.get("type") in ("W", "I", "A"):  # Warning, Info, Attention
                     text = rem.get("txtS") or rem.get("txtN") or ""
                     if text:
-                        bemerkungen.append(text)
+                        remarks.append(text)
 
-        if not linie and not richtung:
+        if not line and not direction:
             return None
 
         result = {
-            "linie": linie,
-            "richtung": richtung,
-            "abfahrt": abfahrt_geplant,
-            "abfahrt_aktuell": abfahrt_aktuell,
-            "verspaetung": verspaetung,
-            "gleis": str(gleis),
-            "typ": produkt,
-            "typ_icon": _product_icon(produkt),
+            "linie": line,
+            "richtung": direction,
+            "abfahrt": departure_planned,
+            "abfahrt_aktuell": departure_actual,
+            "verspaetung": delay,
+            "gleis": str(platform),
+            "typ": product,
+            "typ_icon": _product_icon(product),
             "ausfall": cancelled,
-            "bemerkungen": bemerkungen[:2],
+            "bemerkungen": remarks[:2],
         }
         if line_color:
             result["linien_farbe"] = line_color
-        if gleis_geaendert:
-            result["gleis_geplant"] = str(gleis_geplant)
+        if platform_changed:
+            result["gleis_geplant"] = str(platform_planned)
 
         # Stopovers aus stopL (Halteliste, wenn getPasslist=True)
         stop_list = jny.get("stopL", [])
@@ -1150,17 +1150,17 @@ def _him_date(d, t):
     return s
 
 
-def _stoerung_id(quelle, titel, text):
+def _disruption_id(source, title, text):
     """Stabile Kurz-ID einer Störung (für Ausblenden). Bleibt gleich solange Inhalt gleich;
     verschwindet die Meldung beim Anbieter, verschwindet die ID → Ausblendung wird auto-bereinigt."""
     import hashlib
-    key = f"{quelle}|{(titel or '').strip()}|{(text or '').strip()[:120]}"
+    key = f"{source}|{(title or '').strip()}|{(text or '').strip()[:120]}"
     return hashlib.md5(key.encode('utf-8')).hexdigest()[:12]
 
 
-def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
+def fetch_disruptions_nahsh(line_filter=None, max_num=200):
     """Zug-Störungen/Baumaßnahmen aus NAH.SH HAFAS (HimSearch), gefiltert auf Linien."""
-    wanted = {_normalize_line(x) for x in (linien_filter or []) if x}
+    wanted = {_normalize_line(x) for x in (line_filter or []) if x}
     try:
         res = _nahsh_rpc('HimSearch', {'maxNum': max_num}) or {}
     except Exception:
@@ -1169,7 +1169,7 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
     for m in res.get('msgL', []) or []:
         head = (m.get('head') or '').strip().rstrip('.')
         raw_text = _him_text(m)
-        text, bild = _clean_html_text(raw_text)
+        text, image = _clean_html_text(raw_text)
         head = _clean_html_text(head)[0] or head
         lines = _extract_lines_from_text(head + ' ' + raw_text)
         norm_lines = {_normalize_line(x) for x in lines}
@@ -1183,16 +1183,16 @@ def fetch_stoerungen_nahsh(linien_filter=None, max_num=200):
             continue
         seen.add(key)
         low = (head + ' ' + text).lower()
-        typ = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
+        kind = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
         out.append({
-            'id': _stoerung_id('bahn', head, text),
-            'quelle': 'bahn', 'typ': typ,
+            'id': _disruption_id('bahn', head, text),
+            'quelle': 'bahn', 'typ': kind,
             'titel': head or 'Störung', 'text': text,
             'linien': sorted(lines),
             'von': _him_date(m.get('sDate'), m.get('sTime')),
             'bis': _him_date(m.get('eDate'), m.get('eTime')),
             'prio': m.get('prio', 0),
-            'all_lines': False, 'bild': bild, 'haltestellen': [], 'vorschlag': '',
+            'all_lines': False, 'bild': image, 'haltestellen': [], 'vorschlag': '',
         })
     out.sort(key=lambda x: -(x.get('prio') or 0))
     return out[:25]
@@ -1224,9 +1224,9 @@ def _swl_fmt(s):
     return d.strftime('%d.%m.%Y %H:%M') if d else ''
 
 
-def fetch_stoerungen_swl(linien_filter=None):
+def fetch_disruptions_swl(line_filter=None):
     """Bus-Störungen von Stadtverkehr/Stadtwerke Lübeck (Storyblok), gefiltert auf Linien."""
-    wanted = {_normalize_line(x) for x in (linien_filter or []) if x}
+    wanted = {_normalize_line(x) for x in (line_filter or []) if x}
     try:
         data = _swl_get('stories?starts_with=' + urllib.parse.quote('mobil/stoerungsmeldungen/')
                         + '&per_page=100&resolve_relations=TickerMessage.linien')
@@ -1241,38 +1241,38 @@ def fetch_stoerungen_swl(linien_filter=None):
         c = st.get('content', {}) or {}
         if c.get('component') != 'TickerMessage':
             continue
-        linien = []
+        lines = []
         for lx in c.get('linien', []) or []:
             r = rels.get(lx) if isinstance(lx, str) else None
             nm = (r or {}).get('name') if r else None
             if nm:
-                linien.append(str(nm))
+                lines.append(str(nm))
         all_lines = bool(c.get('all_lines'))
-        bis_dt = _swl_parse_date(c.get('enddate'))
-        if bis_dt and bis_dt < now:
+        until_dt = _swl_parse_date(c.get('enddate'))
+        if until_dt and until_dt < now:
             continue  # abgelaufen
-        if wanted and not all_lines and not (wanted & {_normalize_line(x) for x in linien}):
+        if wanted and not all_lines and not (wanted & {_normalize_line(x) for x in lines}):
             continue
         title = _clean_html_text(c.get('title'))[0] or (c.get('title') or '').strip()
         text, text_img = _clean_html_text(c.get('maintext'))
         low = (title + ' ' + text).lower()
-        typ = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
+        kind = 'bauarbeiten' if ('bau' in low or 'sperr' in low) else 'stoerung'
         # Bild-Asset (z.B. Umleitungskarte) bevorzugt, sonst aus Text extrahiert
         img = c.get('image')
-        bild = (img.get('filename') if isinstance(img, dict) else img) or text_img or ''
+        image = (img.get('filename') if isinstance(img, dict) else img) or text_img or ''
         # Betroffene Haltestellen / Alternativvorschlag (optional)
         stops = [str(s) for s in (c.get('stops') or []) if s] if isinstance(c.get('stops'), list) else []
         suggestion = (c.get('suggestion') or '').strip() if isinstance(c.get('suggestion'), str) else ''
         out.append({
-            'id': _stoerung_id('bus', title, text),
-            'quelle': 'bus', 'typ': typ,
+            'id': _disruption_id('bus', title, text),
+            'quelle': 'bus', 'typ': kind,
             'titel': title or 'Störung', 'text': text,
-            'linien': (['alle'] if all_lines else linien),
+            'linien': (['alle'] if all_lines else lines),
             'von': _swl_fmt(c.get('startdate')),
             'bis': _swl_fmt(c.get('enddate')),
             'highlighted': bool(c.get('highlighted')),
             'all_lines': all_lines,
-            'bild': bild,
+            'bild': image,
             'haltestellen': stops[:8],
             'vorschlag': suggestion,
         })

@@ -6,481 +6,482 @@ from datetime import datetime
 from ninja import Schema
 
 
-class MonitorDateiSchema(Schema):
+class MediaFileSchema(Schema):
     id: int
     name: str
-    datei_url: str = ''
-    typ: str
-    reihenfolge: int
-    erstellt_am: datetime
+    file_url: str = ''
+    kind: str
+    sort_order: int
+    created_at: datetime
 
     @staticmethod
-    def resolve_datei_url(obj):
-        return obj.datei.url if obj.datei else ''
+    def resolve_file_url(obj):
+        return obj.file.url if obj.file else ''
 
 
 class WebUntisLinkSchema(Schema):
     id: int
     name: str
     url: str
-    notiz: str = ''
-    erstellt_am: datetime
+    note: str = ''
+    created_at: datetime
 
 
 class WebUntisLinkCreateSchema(Schema):
     name: str
     url: str
-    notiz: str = ''
+    note: str = ''
 
 
-class MonitorProfileListSchema(Schema):
+class DisplayViewListSchema(Schema):
     """Kurze Profil-Übersicht für die Liste"""
     id: int
     name: str
     slug: str
-    ist_standard: bool
-    sortierung: int = 0
-    zeitplan: list = []
-    layout_modus: str
-    ist_on_air: bool
-    notfall_aktiv: bool
+    is_default: bool
+    sort_order: int = 0
+    schedule: list = []
+    layout: str
+    is_on_air: bool
+    emergency_active: bool
 
 
-class MonitorConfigSchema(Schema):
+class DisplayViewSchema(Schema):
     """Admin: alle Felder eines Profils"""
     id: int
     name: str
     slug: str
-    ist_standard: bool
-    sortierung: int = 0
-    zeitplan: list = []
-    layout_modus: str
-    titel: str
-    untertitel: str
-    hintergrund_farbe: str
-    akzent_farbe: str
-    zeige_logo: bool
+    is_default: bool
+    sort_order: int = 0
+    schedule: list = []
+    layout: str
+    title: str
+    subtitle: str
+    background_color: str
+    accent_color: str
+    show_logo: bool
     logo_url: str
-    aktives_logo_id: Optional[int] = None
-    zeige_uhr: bool
-    zeige_veranstaltungen: bool
-    zeige_ankuendigungen: bool
-    zeige_onair: bool
-    zeige_countdown: bool
-    notfall_aktiv: bool
-    notfall_text: str
-    zeige_wetter: bool
-    wetter_stadt: str
-    wetter_api_key: str
-    zeige_slideshow: bool
-    slideshow_intervall: int
-    zeige_pdf: bool
-    aktive_pdf_id: Optional[int] = None
-    vollbild_header: bool = False
-    pdf_modus: str = 'durchschalten'
-    pdf_intervall: int = 10
-    pdf_pro_ansicht: int = 1
-    pdf_seiten: str = ''
-    pdf_statische_seite: int = 1
-    aktives_bild_id: Optional[int] = None
-    bild_fit: str = 'contain'
-    bild_fokus_x: int = 50
-    bild_fokus_y: int = 50
-    split_links: str = 'klausur'
-    split_rechts: str = 'webuntis'
-    split_links_prozent: int = 50
+    active_logo_id: Optional[int] = None
+    show_clock: bool
+    show_events: bool
+    show_announcements: bool
+    show_on_air: bool
+    show_countdown: bool
+    emergency_active: bool
+    emergency_text: str
+    show_weather: bool
+    weather_city: str
+    weather_api_key: str
+    show_slideshow: bool
+    slideshow_interval: int
+    show_pdf: bool
+    active_pdf_id: Optional[int] = None
+    fullscreen_header: bool = False
+    pdf_mode: str = 'durchschalten'
+    pdf_interval: int = 10
+    pdf_per_screen: int = 1
+    pdf_pages: str = ''
+    pdf_static_page: int = 1
+    active_image_id: Optional[int] = None
+    image_fit: str = 'contain'
+    image_focus_x: int = 50
+    image_focus_y: int = 50
+    split_left: str = 'klausur'
+    split_right: str = 'webuntis'
+    split_left_percent: int = 50
     theme_preset: str
-    zeige_webuntis: bool
+    show_webuntis: bool
     webuntis_url: str
-    webuntis_url_1tag: str = ''
+    webuntis_url_next_day: str = ''
     webuntis_link_id: Optional[int] = None
-    webuntis_link_1tag_id: Optional[int] = None
+    webuntis_link_next_day_id: Optional[int] = None
     webuntis_zoom: int
     webuntis_dark_mode: bool
-    zeige_hintergrundbild: bool
-    aktives_hintergrundbild_id: Optional[int] = None
-    zeige_qr_code: bool
+    show_background_image: bool
+    active_background_image_id: Optional[int] = None
+    show_qr_code: bool
     qr_code_url: str
     qr_code_label: str
-    zeige_freitext: bool
-    freitext_titel: str
-    freitext_inhalt: str
-    zeige_eigener_countdown: bool
-    eigener_countdown_name: str
-    eigener_countdown_datum: Optional[datetime] = None
-    zeige_seitenrotation: bool
-    seitenrotation_intervall: int
-    seitenrotation_seiten: list = []
-    zeige_oepnv: bool
-    oepnv_stationen: list = []
-    oepnv_dauer: int
-    oepnv_max_abfahrten: int
-    oepnv_zeige_bus: bool
-    oepnv_zeige_bahn: bool
-    oepnv_zeige_fernverkehr: bool
-    oepnv_api_db: bool
-    oepnv_api_nahsh: bool
-    oepnv_zeige_via: bool
-    oepnv_zeige_relativ: bool
-    oepnv_farbcodierung: bool
-    oepnv_highlight_naechste: bool
-    oepnv_auto_scroll: bool
-    oepnv_stoerungsbanner: bool
-    oepnv_schriftgroesse: str
-    oepnv_layout_spalten: int
-    oepnv_streik_aktiv: bool
-    oepnv_streik_text: str
-    oepnv_streik_linien: list = []
-    oepnv_streik_typen: list = []
-    oepnv_stoerung_bahn: bool = True
-    oepnv_stoerung_bus: bool = True
-    oepnv_stoerung_bahn_linien: list = []
-    oepnv_stoerung_bus_linien: list = []
-    oepnv_stoerung_manuell: list = []
-    oepnv_stoerung_ausgeblendet: list = []
-    oepnv_stoerung_position: str = 'unten'
-    ist_on_air: bool
+    show_free_text: bool
+    free_text_title: str
+    free_text_content: str
+    show_custom_countdown: bool
+    custom_countdown_name: str
+    custom_countdown_date: Optional[datetime] = None
+    show_page_rotation: bool
+    page_rotation_interval: int
+    page_rotation_pages: list = []
+    show_transit: bool
+    transit_stops: list = []
+    transit_duration: int
+    transit_max_departures: int
+    transit_show_bus: bool
+    transit_show_rail: bool
+    transit_show_long_distance: bool
+    transit_source_db: bool
+    transit_source_nahsh: bool
+    transit_show_via: bool
+    transit_show_relative: bool
+    transit_color_coding: bool
+    transit_highlight_next: bool
+    transit_auto_scroll: bool
+    transit_disruption_banner: bool
+    transit_font_size: str
+    transit_columns: int
+    transit_strike_active: bool
+    transit_strike_text: str
+    transit_strike_lines: list = []
+    transit_strike_types: list = []
+    transit_disruption_rail: bool = True
+    transit_disruption_bus: bool = True
+    transit_disruption_rail_lines: list = []
+    transit_disruption_bus_lines: list = []
+    transit_disruption_manual: list = []
+    transit_disruption_hidden: list = []
+    transit_disruption_position: str = 'unten'
+    is_on_air: bool
     on_air_text: str
-    on_air_seit: Optional[datetime] = None
-    on_air_groesse: str
+    on_air_since: Optional[datetime] = None
+    on_air_size: str
     on_air_position: str
-    on_air_blinken: bool
-    on_air_farbe: str
-    on_air_vollbild: bool
+    on_air_blink: bool
+    on_air_color: str
+    on_air_fullscreen: bool
     on_air_split: bool = False
-    on_air_split_seite: str = 'rechts'
+    on_air_split_side: str = 'rechts'
     api_token: str
-    refresh_intervall: int
+    refresh_interval: int
 
 
-class MonitorConfigUpdateSchema(Schema):
+class DisplayViewUpdateSchema(Schema):
     name: Optional[str] = None
     slug: Optional[str] = None
-    ist_standard: Optional[bool] = None
-    sortierung: Optional[int] = None
-    zeitplan: Optional[list] = None
-    layout_modus: Optional[str] = None
-    titel: Optional[str] = None
-    untertitel: Optional[str] = None
-    hintergrund_farbe: Optional[str] = None
-    akzent_farbe: Optional[str] = None
-    zeige_logo: Optional[bool] = None
+    is_default: Optional[bool] = None
+    sort_order: Optional[int] = None
+    schedule: Optional[list] = None
+    layout: Optional[str] = None
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    background_color: Optional[str] = None
+    accent_color: Optional[str] = None
+    show_logo: Optional[bool] = None
     logo_url: Optional[str] = None
-    aktives_logo_id: Optional[int] = None
-    zeige_uhr: Optional[bool] = None
-    zeige_veranstaltungen: Optional[bool] = None
-    zeige_ankuendigungen: Optional[bool] = None
-    zeige_onair: Optional[bool] = None
-    zeige_countdown: Optional[bool] = None
-    notfall_aktiv: Optional[bool] = None
-    notfall_text: Optional[str] = None
-    zeige_wetter: Optional[bool] = None
-    wetter_stadt: Optional[str] = None
-    wetter_api_key: Optional[str] = None
-    zeige_slideshow: Optional[bool] = None
-    slideshow_intervall: Optional[int] = None
-    zeige_pdf: Optional[bool] = None
-    aktive_pdf_id: Optional[int] = None
-    vollbild_header: Optional[bool] = None
-    pdf_modus: Optional[str] = None
-    pdf_intervall: Optional[int] = None
-    pdf_pro_ansicht: Optional[int] = None
-    pdf_seiten: Optional[str] = None
-    pdf_statische_seite: Optional[int] = None
-    aktives_bild_id: Optional[int] = None
-    bild_fit: Optional[str] = None
-    bild_fokus_x: Optional[int] = None
-    bild_fokus_y: Optional[int] = None
-    split_links: Optional[str] = None
-    split_rechts: Optional[str] = None
-    split_links_prozent: Optional[int] = None
+    active_logo_id: Optional[int] = None
+    show_clock: Optional[bool] = None
+    show_events: Optional[bool] = None
+    show_announcements: Optional[bool] = None
+    show_on_air: Optional[bool] = None
+    show_countdown: Optional[bool] = None
+    emergency_active: Optional[bool] = None
+    emergency_text: Optional[str] = None
+    show_weather: Optional[bool] = None
+    weather_city: Optional[str] = None
+    weather_api_key: Optional[str] = None
+    show_slideshow: Optional[bool] = None
+    slideshow_interval: Optional[int] = None
+    show_pdf: Optional[bool] = None
+    active_pdf_id: Optional[int] = None
+    fullscreen_header: Optional[bool] = None
+    pdf_mode: Optional[str] = None
+    pdf_interval: Optional[int] = None
+    pdf_per_screen: Optional[int] = None
+    pdf_pages: Optional[str] = None
+    pdf_static_page: Optional[int] = None
+    active_image_id: Optional[int] = None
+    image_fit: Optional[str] = None
+    image_focus_x: Optional[int] = None
+    image_focus_y: Optional[int] = None
+    split_left: Optional[str] = None
+    split_right: Optional[str] = None
+    split_left_percent: Optional[int] = None
     theme_preset: Optional[str] = None
-    zeige_webuntis: Optional[bool] = None
+    show_webuntis: Optional[bool] = None
     webuntis_url: Optional[str] = None
-    webuntis_url_1tag: Optional[str] = None
+    webuntis_url_next_day: Optional[str] = None
     webuntis_link_id: Optional[int] = None
-    webuntis_link_1tag_id: Optional[int] = None
+    webuntis_link_next_day_id: Optional[int] = None
     webuntis_zoom: Optional[int] = None
     webuntis_dark_mode: Optional[bool] = None
-    zeige_hintergrundbild: Optional[bool] = None
-    aktives_hintergrundbild_id: Optional[int] = None
-    zeige_qr_code: Optional[bool] = None
+    show_background_image: Optional[bool] = None
+    active_background_image_id: Optional[int] = None
+    show_qr_code: Optional[bool] = None
     qr_code_url: Optional[str] = None
     qr_code_label: Optional[str] = None
-    zeige_freitext: Optional[bool] = None
-    freitext_titel: Optional[str] = None
-    freitext_inhalt: Optional[str] = None
-    zeige_eigener_countdown: Optional[bool] = None
-    eigener_countdown_name: Optional[str] = None
-    eigener_countdown_datum: Optional[datetime] = None
-    zeige_seitenrotation: Optional[bool] = None
-    seitenrotation_intervall: Optional[int] = None
-    seitenrotation_seiten: Optional[list] = None
-    zeige_oepnv: Optional[bool] = None
-    oepnv_stationen: Optional[list] = None
-    oepnv_dauer: Optional[int] = None
-    oepnv_max_abfahrten: Optional[int] = None
-    oepnv_zeige_bus: Optional[bool] = None
-    oepnv_zeige_bahn: Optional[bool] = None
-    oepnv_zeige_fernverkehr: Optional[bool] = None
-    oepnv_api_db: Optional[bool] = None
-    oepnv_api_nahsh: Optional[bool] = None
-    oepnv_zeige_via: Optional[bool] = None
-    oepnv_zeige_relativ: Optional[bool] = None
-    oepnv_farbcodierung: Optional[bool] = None
-    oepnv_highlight_naechste: Optional[bool] = None
-    oepnv_auto_scroll: Optional[bool] = None
-    oepnv_stoerungsbanner: Optional[bool] = None
-    oepnv_schriftgroesse: Optional[str] = None
-    oepnv_layout_spalten: Optional[int] = None
-    oepnv_streik_aktiv: Optional[bool] = None
-    oepnv_streik_text: Optional[str] = None
-    oepnv_streik_linien: Optional[list] = None
-    oepnv_streik_typen: Optional[list] = None
-    oepnv_stoerung_bahn: Optional[bool] = None
-    oepnv_stoerung_bus: Optional[bool] = None
-    oepnv_stoerung_bahn_linien: Optional[list] = None
-    oepnv_stoerung_bus_linien: Optional[list] = None
-    oepnv_stoerung_manuell: Optional[list] = None
-    oepnv_stoerung_ausgeblendet: Optional[list] = None
-    oepnv_stoerung_position: Optional[str] = None
+    show_free_text: Optional[bool] = None
+    free_text_title: Optional[str] = None
+    free_text_content: Optional[str] = None
+    show_custom_countdown: Optional[bool] = None
+    custom_countdown_name: Optional[str] = None
+    custom_countdown_date: Optional[datetime] = None
+    show_page_rotation: Optional[bool] = None
+    page_rotation_interval: Optional[int] = None
+    page_rotation_pages: Optional[list] = None
+    show_transit: Optional[bool] = None
+    transit_stops: Optional[list] = None
+    transit_duration: Optional[int] = None
+    transit_max_departures: Optional[int] = None
+    transit_show_bus: Optional[bool] = None
+    transit_show_rail: Optional[bool] = None
+    transit_show_long_distance: Optional[bool] = None
+    transit_source_db: Optional[bool] = None
+    transit_source_nahsh: Optional[bool] = None
+    transit_show_via: Optional[bool] = None
+    transit_show_relative: Optional[bool] = None
+    transit_color_coding: Optional[bool] = None
+    transit_highlight_next: Optional[bool] = None
+    transit_auto_scroll: Optional[bool] = None
+    transit_disruption_banner: Optional[bool] = None
+    transit_font_size: Optional[str] = None
+    transit_columns: Optional[int] = None
+    transit_strike_active: Optional[bool] = None
+    transit_strike_text: Optional[str] = None
+    transit_strike_lines: Optional[list] = None
+    transit_strike_types: Optional[list] = None
+    transit_disruption_rail: Optional[bool] = None
+    transit_disruption_bus: Optional[bool] = None
+    transit_disruption_rail_lines: Optional[list] = None
+    transit_disruption_bus_lines: Optional[list] = None
+    transit_disruption_manual: Optional[list] = None
+    transit_disruption_hidden: Optional[list] = None
+    transit_disruption_position: Optional[str] = None
     on_air_text: Optional[str] = None
-    on_air_groesse: Optional[str] = None
+    on_air_size: Optional[str] = None
     on_air_position: Optional[str] = None
-    on_air_blinken: Optional[bool] = None
-    on_air_farbe: Optional[str] = None
-    on_air_vollbild: Optional[bool] = None
+    on_air_blink: Optional[bool] = None
+    on_air_color: Optional[str] = None
+    on_air_fullscreen: Optional[bool] = None
     on_air_split: Optional[bool] = None
-    on_air_split_seite: Optional[str] = None
-    refresh_intervall: Optional[int] = None
+    on_air_split_side: Optional[str] = None
+    refresh_interval: Optional[int] = None
 
 
-class MonitorProfileCreateSchema(Schema):
+class DisplayViewCreateSchema(Schema):
     """Neues Profil erstellen"""
     name: str
     slug: str = ''
-    layout_modus: str = 'standard'
+    layout: str = 'standard'
     clone_from_id: Optional[int] = None
 
 
-class AnkuendigungSchema(Schema):
+class AnnouncementSchema(Schema):
     id: int
-    titel: str
+    title: str
     text: str
-    prioritaet: str
-    ist_aktiv: bool
-    aktiv_von: Optional[datetime] = None
-    aktiv_bis: Optional[datetime] = None
-    erstellt_am: datetime
+    priority: str
+    is_active: bool
+    active_from: Optional[datetime] = None
+    active_until: Optional[datetime] = None
+    created_at: datetime
 
 
-class AnkuendigungCreateSchema(Schema):
-    titel: str
+class AnnouncementCreateSchema(Schema):
+    title: str
     text: str = ''
-    prioritaet: str = 'normal'
-    ist_aktiv: bool = True
-    aktiv_von: Optional[datetime] = None
-    aktiv_bis: Optional[datetime] = None
+    priority: str = 'normal'
+    is_active: bool = True
+    active_from: Optional[datetime] = None
+    active_until: Optional[datetime] = None
 
 
-class VeranstaltungDisplaySchema(Schema):
+class UpcomingEventSchema(Schema):
+    """Veranstaltung (Modul veranstaltung) in der Display-Antwort"""
     id: int
     name: str
     ort: str
     datum_von: Optional[datetime] = None
     datum_bis: Optional[datetime] = None
     status: str
-    ist_laufend: bool
+    is_running: bool
 
 
-class BildschirmListSchema(Schema):
+class ScreenListSchema(Schema):
     id: int
     name: str
     slug: str
-    default_profil_id: Optional[int] = None
-    override_profil_id: Optional[int] = None
-    override_bis: Optional[datetime] = None
-    zeitplan: list = []
-    power_zeitplan: list = []
-    ferien_modus: bool = False
-    power_ausnahmen: list = []
-    power_modus: str = 'auto'
+    default_view_id: Optional[int] = None
+    override_view_id: Optional[int] = None
+    override_until: Optional[datetime] = None
+    schedule: list = []
+    power_schedule: list = []
+    holiday_mode: bool = False
+    power_exceptions: list = []
+    power_mode: str = 'auto'
     cec_status: str = ''
-    cec_status_zeit: Optional[datetime] = None
-    erstellt_am: datetime
-    aktualisiert_am: datetime
+    cec_status_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
 
 
-class BildschirmCreateSchema(Schema):
+class ScreenCreateSchema(Schema):
     name: str
     slug: str = ''
-    default_profil_id: Optional[int] = None
+    default_view_id: Optional[int] = None
 
 
-class BildschirmUpdateSchema(Schema):
+class ScreenUpdateSchema(Schema):
     name: Optional[str] = None
     slug: Optional[str] = None
-    default_profil_id: Optional[int] = None
-    override_profil_id: Optional[int] = None
-    override_bis: Optional[datetime] = None
-    zeitplan: Optional[list] = None
-    power_zeitplan: Optional[list] = None
-    ferien_modus: Optional[bool] = None
-    power_ausnahmen: Optional[list] = None
-    power_modus: Optional[str] = None
+    default_view_id: Optional[int] = None
+    override_view_id: Optional[int] = None
+    override_until: Optional[datetime] = None
+    schedule: Optional[list] = None
+    power_schedule: Optional[list] = None
+    holiday_mode: Optional[bool] = None
+    power_exceptions: Optional[list] = None
+    power_mode: Optional[str] = None
 
 
-class ConfigVersionSchema(Schema):
+class DisplayViewVersionSchema(Schema):
     id: int
-    erstellt_am: datetime
+    created_at: datetime
 
 
 class OnAirSchema(Schema):
     on_air: bool
 
 
-class NotfallSchema(Schema):
-    aktiv: bool
+class EmergencySchema(Schema):
+    active: bool
     text: str = ''
 
 
-class KlausurSchema(Schema):
+class ExamSchema(Schema):
     id: int
-    titel: str
+    title: str
     text: str
-    aktiv_von: datetime
-    aktiv_bis: datetime
-    farbe: str
-    bildschirm_ids: List[int] = []
-    anzeige_modus: str = 'vollbild'
+    active_from: datetime
+    active_until: datetime
+    color: str
+    screen_ids: List[int] = []
+    display_mode: str = 'vollbild'
     webuntis_link_id: Optional[int] = None
-    split_seite: str = 'links'
-    split_prozent: int = 50
+    split_side: str = 'links'
+    split_percent: int = 50
 
     @staticmethod
-    def resolve_bildschirm_ids(obj):
-        return list(obj.bildschirme.values_list('id', flat=True))
+    def resolve_screen_ids(obj):
+        return list(obj.screens.values_list('id', flat=True))
 
 
-class KlausurCreateSchema(Schema):
-    titel: str = 'Klausur'
+class ExamCreateSchema(Schema):
+    title: str = 'Klausur'
     text: str = ''
-    aktiv_von: datetime
-    aktiv_bis: datetime
-    farbe: str = '#1e40af'
-    bildschirm_ids: List[int] = []
-    anzeige_modus: str = 'vollbild'
+    active_from: datetime
+    active_until: datetime
+    color: str = '#1e40af'
+    screen_ids: List[int] = []
+    display_mode: str = 'vollbild'
     webuntis_link_id: Optional[int] = None
-    split_seite: str = 'links'
-    split_prozent: int = 50
+    split_side: str = 'links'
+    split_percent: int = 50
 
 
-class KlausurUpdateSchema(Schema):
-    titel: Optional[str] = None
+class ExamUpdateSchema(Schema):
+    title: Optional[str] = None
     text: Optional[str] = None
-    aktiv_von: Optional[datetime] = None
-    aktiv_bis: Optional[datetime] = None
-    farbe: Optional[str] = None
-    bildschirm_ids: Optional[List[int]] = None
-    anzeige_modus: Optional[str] = None
+    active_from: Optional[datetime] = None
+    active_until: Optional[datetime] = None
+    color: Optional[str] = None
+    screen_ids: Optional[List[int]] = None
+    display_mode: Optional[str] = None
     webuntis_link_id: Optional[int] = None
-    split_seite: Optional[str] = None
-    split_prozent: Optional[int] = None
+    split_side: Optional[str] = None
+    split_percent: Optional[int] = None
 
 
-class KlausurDisplaySchema(Schema):
-    titel: str
+class ExamDisplaySchema(Schema):
+    title: str
     text: str
-    farbe: str
-    aktiv_bis: datetime
-    anzeige_modus: str = 'vollbild'
-    split_seite: str = 'links'
-    split_prozent: int = 50
+    color: str
+    active_until: datetime
+    display_mode: str = 'vollbild'
+    split_side: str = 'links'
+    split_percent: int = 50
 
 
 # ─── Events ──────────────────────────────────────────────────
-class EventZuweisungSchema(Schema):
-    bildschirm_id: int
-    profil_id: int
-    bildschirm_name: str = ''
-    profil_name: str = ''
+class EventAssignmentSchema(Schema):
+    screen_id: int
+    view_id: int
+    screen_name: str = ''
+    view_name: str = ''
 
 
-class MonitorEventSchema(Schema):
+class DisplayEventSchema(Schema):
     id: int
     name: str
-    beschreibung: str = ''
-    farbe: str
-    aktiv: bool
-    aktiv_von: Optional[datetime] = None
-    aktiv_bis: Optional[datetime] = None
-    zuweisungen: List[EventZuweisungSchema] = []
+    description: str = ''
+    color: str
+    is_active: bool
+    active_from: Optional[datetime] = None
+    active_until: Optional[datetime] = None
+    assignments: List[EventAssignmentSchema] = []
 
     @staticmethod
-    def resolve_zuweisungen(obj):
+    def resolve_assignments(obj):
         return [
-            {'bildschirm_id': z.bildschirm_id, 'profil_id': z.profil_id,
-             'bildschirm_name': z.bildschirm.name, 'profil_name': z.profil.name}
-            for z in obj.zuweisungen.select_related('bildschirm', 'profil').all()
+            {'screen_id': a.screen_id, 'view_id': a.view_id,
+             'screen_name': a.screen.name, 'view_name': a.view.name}
+            for a in obj.assignments.select_related('screen', 'view').all()
         ]
 
 
-class MonitorEventCreateSchema(Schema):
+class DisplayEventCreateSchema(Schema):
     name: str
-    beschreibung: str = ''
-    farbe: str = '#7c3aed'
-    aktiv_von: Optional[datetime] = None
-    aktiv_bis: Optional[datetime] = None
-    zuweisungen: List[EventZuweisungSchema] = []
+    description: str = ''
+    color: str = '#7c3aed'
+    active_from: Optional[datetime] = None
+    active_until: Optional[datetime] = None
+    assignments: List[EventAssignmentSchema] = []
 
 
-class MonitorEventUpdateSchema(Schema):
+class DisplayEventUpdateSchema(Schema):
     name: Optional[str] = None
-    beschreibung: Optional[str] = None
-    farbe: Optional[str] = None
-    aktiv_von: Optional[datetime] = None
-    aktiv_bis: Optional[datetime] = None
-    zuweisungen: Optional[List[EventZuweisungSchema]] = None
+    description: Optional[str] = None
+    color: Optional[str] = None
+    active_from: Optional[datetime] = None
+    active_until: Optional[datetime] = None
+    assignments: Optional[List[EventAssignmentSchema]] = None
 
 
 # ─── Klausur-Vorlagen ────────────────────────────────────────
-class KlausurVorlageSchema(Schema):
+class ExamTemplateSchema(Schema):
     id: int
     name: str
-    dauer_minuten: int
-    titel: str
+    duration_minutes: int
+    title: str
     text: str = ''
-    farbe: str
-    anzeige_modus: str
+    color: str
+    display_mode: str
     webuntis_link_id: Optional[int] = None
-    split_seite: str
-    split_prozent: int
+    split_side: str
+    split_percent: int
 
 
-class KlausurVorlageCreateSchema(Schema):
+class ExamTemplateCreateSchema(Schema):
     name: str
-    dauer_minuten: int = 90
-    titel: str = 'Klausur'
+    duration_minutes: int = 90
+    title: str = 'Klausur'
     text: str = ''
-    farbe: str = '#1e40af'
-    anzeige_modus: str = 'vollbild'
+    color: str = '#1e40af'
+    display_mode: str = 'vollbild'
     webuntis_link_id: Optional[int] = None
-    split_seite: str = 'links'
-    split_prozent: int = 50
+    split_side: str = 'links'
+    split_percent: int = 50
 
 
 # ─── Globale Einstellungen ───────────────────────────────────
-class GlobalSettingsSchema(Schema):
-    wetter_api_key: str = ''
-    raumplan_server: str = ''
-    raumplan_schule: str = ''
-    raumplan_benutzername: str = ''
-    raumplan_passwort: str = ''
+class MonitorSettingsSchema(Schema):
+    weather_api_key: str = ''
+    webuntis_server: str = ''
+    webuntis_school: str = ''
+    webuntis_username: str = ''
+    webuntis_password: str = ''
 
 
-class GlobalSettingsUpdateSchema(Schema):
-    wetter_api_key: Optional[str] = None
-    raumplan_server: Optional[str] = None
-    raumplan_schule: Optional[str] = None
-    raumplan_benutzername: Optional[str] = None
-    raumplan_passwort: Optional[str] = None
+class MonitorSettingsUpdateSchema(Schema):
+    weather_api_key: Optional[str] = None
+    webuntis_server: Optional[str] = None
+    webuntis_school: Optional[str] = None
+    webuntis_username: Optional[str] = None
+    webuntis_password: Optional[str] = None
