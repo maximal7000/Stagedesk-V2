@@ -42,30 +42,32 @@ In `frontend/src/index.css`:
 
 ### Flächen
 
+Grundton neutral (reine Grautöne, kein Farbstich; Nutzerentscheidung 2026-10-19 nach Umsetzung, vorher leicht warm).
+
 | Token | Dunkel | Hell | Verwendung |
 |---|---|---|---|
-| `canvas` | `#0d0c0b` | `#f6f4f1` | App-Hintergrund |
-| `surface` | `#151412` | `#ffffff` | Seitenleiste, Panels, Tabellen, Listen |
-| `raised` | `#1e1c1a` | `#efece8` | Eingabefelder, Chips, Badges, Hover auf `surface`, ausgewählter Zustand |
-| `overlay` | `#181715` | `#ffffff` | Modals, Dropdowns, Popover; dunkler als raised, damit Controls und Hover darauf sichtbar sind; Abgrenzung über border-line + shadow-overlay |
-| `hover` | `#2a2825` | `#e6e2dc` | Hover auf `raised` |
+| `canvas` | `#0d0d0d` | `#f5f5f5` | App-Hintergrund |
+| `surface` | `#151515` | `#ffffff` | Seitenleiste, Panels, Tabellen, Listen |
+| `raised` | `#1e1e1e` | `#eeeeee` | Eingabefelder, Chips, Badges, Hover auf `surface`, ausgewählter Zustand |
+| `overlay` | `#181818` | `#ffffff` | Modals, Dropdowns, Popover; dunkler als raised, damit Controls und Hover darauf sichtbar sind; Abgrenzung über border-line + shadow-overlay |
+| `hover` | `#2a2a2a` | `#e4e4e4` | Hover auf `raised` |
 
 ### Linien
 
 | Token | Dunkel | Hell | Verwendung |
 |---|---|---|---|
-| `line-subtle` | `#24221f` | `#ebe7e2` | Trennlinien in Listen und Tabellen, Abschnittstrenner |
-| `line` | `#35322e` | `#d9d4cd` | Rahmen von Eingabefeldern und Overlays |
-| `line-strong` | `#4b4742` | `#b8b1a8` | Hover-/Fokus-Rahmen an Eingabefeldern |
+| `line-subtle` | `#242424` | `#e8e8e8` | Trennlinien in Listen und Tabellen, Abschnittstrenner |
+| `line` | `#353535` | `#d6d6d6` | Rahmen von Eingabefeldern und Overlays |
+| `line-strong` | `#4b4b4b` | `#b4b4b4` | Hover-/Fokus-Rahmen an Eingabefeldern |
 
 ### Text
 
 | Token | Dunkel | Hell | Verwendung |
 |---|---|---|---|
-| `fg` | `#f2efe9` | `#1a1816` | Haupttext, Überschriften |
-| `fg-muted` | `#b3ada4` | `#57524b` | Sekundärtext |
-| `fg-subtle` | `#8a847b` | `#767067` | Meta, Hinweise, Icons (≥ 4,5:1 auf `surface`) |
-| `fg-disabled` | `#5f5a53` | `#a59f96` | nur deaktivierte Elemente |
+| `fg` | `#f0f0f0` | `#181818` | Haupttext, Überschriften |
+| `fg-muted` | `#b0b0b0` | `#545454` | Sekundärtext |
+| `fg-subtle` | `#888888` | `#666666` | Meta, Hinweise, Icons (≥ 4,5:1 auf `surface`) |
+| `fg-disabled` | `#5c5c5c` | `#a2a2a2` | nur deaktivierte Elemente |
 
 ### Akzent und Status
 
@@ -205,7 +207,7 @@ Fachfarben, die Daten sind (Kalender-Kategorien, Kompetenz-Kategorie-Farben, Ver
 ## 6. Erfolgskriterien
 
 - `npm run check:tokens` und `npm run build` laufen ohne Fehler.
-- In der App-Oberfläche kommt kein blaustichiges Grau mehr vor; der Hintergrund ist `#0d0c0b`.
+- In der App-Oberfläche kommt kein blaustichiges Grau mehr vor; der Hintergrund ist `#0d0d0d`.
 - Keine Icon-Kacheln, keine Karten in Karten, keine Akzent-/Status-Tönungen, keine `rounded-xl`+ mehr.
 - Monitor-Anzeigen und Monitor-Admin sehen unverändert aus.
 - Kein Diff außerhalb von Klassen, Farb-Styles und sichtbaren Texten.

@@ -483,7 +483,7 @@ export default function InventarPage() {
                       </td>
                       <td className="p-2 hidden md:table-cell">
                         {item.kategorie_name ? (
-                          <span className="px-1.5 py-0.5 text-[11px] rounded-sm" style={{ backgroundColor: (item.kategorie_farbe || '#8a847b') + '15', color: item.kategorie_farbe || '#8a847b' }}>
+                          <span className="px-1.5 py-0.5 text-[11px] rounded-sm" style={{ backgroundColor: (item.kategorie_farbe || '#888888') + '15', color: item.kategorie_farbe || '#888888' }}>
                             {item.kategorie_name}
                           </span>
                         ) : <span className="text-fg-subtle">-</span>}
@@ -523,7 +523,7 @@ export default function InventarPage() {
                       <h3 className="text-sm font-medium text-fg truncate group-hover:text-accent-fg">{item.name}</h3>
                       <div className="flex items-center justify-between mt-1.5">
                         {item.kategorie_name ? (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: (item.kategorie_farbe || '#8a847b') + '15', color: item.kategorie_farbe || '#8a847b' }}>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: (item.kategorie_farbe || '#888888') + '15', color: item.kategorie_farbe || '#888888' }}>
                             {item.kategorie_name}
                           </span>
                         ) : <span />}

@@ -39,18 +39,18 @@
 
 /* Token-Werte: Dunkel ist Standard */
 :root {
-  --sd-canvas: #0d0c0b;
-  --sd-surface: #151412;
-  --sd-raised: #1e1c1a;
-  --sd-overlay: #181715;
-  --sd-hover: #2a2825;
-  --sd-line-subtle: #24221f;
-  --sd-line: #35322e;
-  --sd-line-strong: #4b4742;
-  --sd-fg: #f2efe9;
-  --sd-fg-muted: #b3ada4;
-  --sd-fg-subtle: #8a847b;
-  --sd-fg-disabled: #5f5a53;
+  --sd-canvas: #0d0d0d;
+  --sd-surface: #151515;
+  --sd-raised: #1e1e1e;
+  --sd-overlay: #181818;
+  --sd-hover: #2a2a2a;
+  --sd-line-subtle: #242424;
+  --sd-line: #353535;
+  --sd-line-strong: #4b4b4b;
+  --sd-fg: #f0f0f0;
+  --sd-fg-muted: #b0b0b0;
+  --sd-fg-subtle: #888888;
+  --sd-fg-disabled: #5c5c5c;
   --sd-accent-fg: #f0475f;
   --sd-ok: #5fca8b;
   --sd-warn: #e5b14a;
@@ -59,18 +59,18 @@
 }
 
 :root.light {
-  --sd-canvas: #f6f4f1;
+  --sd-canvas: #f5f5f5;
   --sd-surface: #ffffff;
-  --sd-raised: #efece8;
+  --sd-raised: #eeeeee;
   --sd-overlay: #ffffff;
-  --sd-hover: #e6e2dc;
-  --sd-line-subtle: #ebe7e2;
-  --sd-line: #d9d4cd;
-  --sd-line-strong: #b8b1a8;
-  --sd-fg: #1a1816;
-  --sd-fg-muted: #57524b;
-  --sd-fg-subtle: #767067;
-  --sd-fg-disabled: #a59f96;
+  --sd-hover: #e4e4e4;
+  --sd-line-subtle: #e8e8e8;
+  --sd-line: #d6d6d6;
+  --sd-line-strong: #b4b4b4;
+  --sd-fg: #181818;
+  --sd-fg-muted: #545454;
+  --sd-fg-subtle: #666666;
+  --sd-fg-disabled: #a2a2a2;
   --sd-accent-fg: #b8152f;
   --sd-ok: #1f7a47;
   --sd-warn: #93630c;
