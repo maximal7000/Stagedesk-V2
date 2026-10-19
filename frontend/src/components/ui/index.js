@@ -5,3 +5,4 @@ export { default as Button } from './Button';
 export { default as StatTile } from './StatTile';
 export { default as StatusBadge } from './StatusBadge';
 export { default as EmptyState } from './EmptyState';
+export { default as LogoMark } from './LogoMark';

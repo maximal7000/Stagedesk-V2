@@ -36,6 +36,7 @@ import { useUser } from '../contexts/UserContext';
 import GlobalSearchModal from './GlobalSearchModal';
 import NotificationBell from './NotificationBell';
 import ShortcutsModal from './ShortcutsModal';
+import { LogoMark } from './ui';
 import { lazy, Suspense } from 'react';
 const QRScanner = lazy(() => import('./QRScanner'));
 
@@ -194,8 +195,8 @@ export default function DashboardLayout({ children }) {
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-6 rounded-sm bg-accent shrink-0" />
+          <div className="flex items-center gap-2.5">
+            <LogoMark className="w-6 h-6 shrink-0" />
             <h1 className="font-display text-xl font-bold tracking-tight text-fg">Stagedesk</h1>
           </div>
           <button

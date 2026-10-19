@@ -6,6 +6,7 @@ import { useAuth } from 'react-oidc-context';
 import { useEffect, useState } from 'react';
 import { LogIn, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { LoginBanner } from '../components/MaintenanceBanner';
+import { LogoMark } from '../components/ui';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -73,6 +74,7 @@ export default function LoginPage() {
       <div className="relative z-10 max-w-md w-full">
         {/* Logo & Schriftzug */}
         <div className="text-center mb-10">
+          <LogoMark className="w-14 h-14 mx-auto mb-5" />
           <h1 className="font-display text-6xl sm:text-7xl font-bold text-fg tracking-tight leading-none">
             Stagedesk
           </h1>
