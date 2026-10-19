@@ -1,5 +1,6 @@
 /**
  * StatTile — kompakte Kennzahl, überall gleich (Dashboard + Modul-Header).
+ * Optik: Kennzahl auf `surface` ohne Rahmen (`rounded-lg`), Wertfarben über Status-Tokens.
  * Ersetzt die zwei verschiedenen Darstellungen derselben Zahlen.
  *
  * Props:
@@ -13,20 +14,20 @@
  *   <StatTile icon={AlertTriangle} label="Überfällig" value={0} tone="danger" />
  */
 const toneColor = {
-  default: 'text-white',
-  positive: 'text-emerald-400',
-  warning: 'text-amber-400',
-  danger: 'text-red-400',
+  default: 'text-fg',
+  positive: 'text-ok',
+  warning: 'text-warn',
+  danger: 'text-bad',
 };
 
 export default function StatTile({ icon: Icon, label, value, tone = 'default' }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-1.5 text-gray-500 mb-1.5">
+    <div className="bg-surface rounded-lg px-4 py-3">
+      <div className="flex items-center gap-1.5 text-fg-subtle mb-1.5">
         {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
-        <span className="text-xs truncate">{label}</span>
+        <span className="text-xs font-medium truncate">{label}</span>
       </div>
-      <div className={`text-2xl font-bold tabular-nums leading-none ${toneColor[tone] || toneColor.default}`}>
+      <div className={`text-2xl font-bold tabular-nums leading-none tracking-tight ${toneColor[tone] || toneColor.default}`}>
         {value}
       </div>
     </div>

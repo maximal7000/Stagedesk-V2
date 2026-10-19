@@ -17,7 +17,8 @@ Neuladen bei WLAN-Aussetzern und optionaler TV-An/Aus-Steuerung per HDMI-CEC.
 - HDMI-Monitor/TV, der **eingeschaltet** ist (sonst findet `cage` keinen Ausgang)
 - Die öffentliche Stagedesk-URL, z. B. `https://stagedesk.t410.de`
   - Aufgaben-Monitor: `…/aufgaben-monitor`
-  - Allgemeiner Monitor: `…/monitor`
+  - Allgemeiner Monitor: `…/monitor?screen=<slug>` (optional `&view=<slug>`)
+  - Die alten Parameter `?bildschirm=` und `?profil=` funktionieren weiter.
 
 ---
 
@@ -246,7 +247,7 @@ URL="https://stagedesk.t410.de/aufgaben-monitor?zoom=2"
 - beliebig feinjustierbar (`1.75`, `2.25`, `2.5` …) – **kein Deploy nötig**,
   wirkt sofort nach `sudo systemctl restart kiosk.service`
 - gilt für **beide** Seiten: `…/aufgaben-monitor?zoom=2` und `…/monitor?zoom=2`
-- weitere Parameter mit `&` anhängen, z. B. `…/monitor?profil=mensa&zoom=2`
+- weitere Parameter mit `&` anhängen, z. B. `…/monitor?view=mensa&zoom=2` (alt: `?profil=mensa`)
 
 > **Alternativ** kannst du den Pi auch fest auf 1080p ausgeben lassen (dann
 > ist alles normal groß ohne Zoom): in `/boot/firmware/cmdline.txt` (eine

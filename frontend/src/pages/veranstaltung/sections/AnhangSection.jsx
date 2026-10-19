@@ -3,6 +3,7 @@ import { Paperclip, Plus, Download, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function AnhangSection({ data, refetch, canEdit, eventId }) {
   const [name, setName] = useState('');
@@ -59,34 +60,33 @@ export default function AnhangSection({ data, refetch, canEdit, eventId }) {
       {canEdit && (
         <form onSubmit={add} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 mb-4">
           <input type="text" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
+            className="bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg placeholder:text-fg-subtle min-w-0" />
           <input type="url" placeholder="URL (optional)" value={url} onChange={(e) => setUrl(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 min-w-0" />
-          <button type="submit" disabled={adding || (!file && !url.trim())}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 text-white rounded-lg whitespace-nowrap">
-            {adding ? '…' : <><Plus className="w-4 h-4 inline mr-1" /><span>Hinzufügen</span></>}
-          </button>
+            className="bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg placeholder:text-fg-subtle min-w-0" />
+          <Button type="submit" variant="secondary" icon={adding ? undefined : Plus} disabled={adding || (!file && !url.trim())}>
+            {adding ? '…' : 'Hinzufügen'}
+          </Button>
           <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="sm:col-span-3 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm
-                       file:mr-3 file:px-3 file:py-1 file:bg-gray-700 file:text-white file:border-0 file:rounded
-                       file:text-sm file:cursor-pointer hover:file:bg-gray-600" />
+            className="sm:col-span-3 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm
+                       file:mr-3 file:px-3 file:py-1 file:bg-hover file:text-fg file:border-0 file:rounded-sm
+                       file:text-sm file:cursor-pointer hover:file:bg-line" />
         </form>
       )}
-      <ul className="space-y-2">
+      <ul className="bg-surface rounded-lg divide-y divide-line-subtle">
         {(data?.anhaenge || []).map((a) => (
-          <li key={a.id} className="flex items-center justify-between py-2 px-3 bg-gray-800 rounded-lg">
+          <li key={a.id} className="flex items-center justify-between py-2 px-3">
             <button type="button" onClick={() => download(a)}
-              className="text-accent hover:underline flex items-center gap-1.5 text-left">
+              className="text-accent-fg hover:underline flex items-center gap-1.5 text-left">
               <Download className="w-3.5 h-3.5 flex-shrink-0" /> {a.name}
             </button>
             {canEdit && (
-              <button type="button" onClick={() => remove(a.id)} className="text-gray-400 hover:text-red-400">
+              <button type="button" onClick={() => remove(a.id)} aria-label={`${a.name} löschen`} className="text-fg-muted hover:text-bad">
                 <Trash2 className="w-4 h-4" />
               </button>
             )}
           </li>
         ))}
-        {(!data?.anhaenge || data.anhaenge.length === 0) && <li className="text-gray-500 text-sm">Keine Anhänge</li>}
+        {(!data?.anhaenge || data.anhaenge.length === 0) && <li className="text-fg-subtle text-sm px-3 py-2">Keine Anhänge</li>}
       </ul>
     </CollapsibleSection>
   );

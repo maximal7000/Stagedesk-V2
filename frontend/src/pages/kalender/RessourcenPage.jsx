@@ -3,19 +3,20 @@
  * Equipment, Räume, Personal, Fahrzeuge
  */
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  Plus, Edit, Trash2, Save, X, Loader2, 
+import {
+  Plus, Edit, Trash2, Save, Loader2,
   Package, Building, Users, Truck, HelpCircle,
-  DollarSign, AlertCircle
+  Euro
 } from 'lucide-react';
 import apiClient from '../../lib/api';
+import { PageHeader, Button, StatusBadge, EmptyState } from '../../components/ui';
 
 const RESSOURCE_TYPEN = [
   { value: 'equipment', label: 'Equipment', icon: Package, color: 'text-blue-400' },
   { value: 'raum', label: 'Raum/Location', icon: Building, color: 'text-green-400' },
   { value: 'personal', label: 'Personal/Crew', icon: Users, color: 'text-purple-400' },
   { value: 'fahrzeug', label: 'Fahrzeug', icon: Truck, color: 'text-orange-400' },
-  { value: 'sonstiges', label: 'Sonstiges', icon: HelpCircle, color: 'text-gray-400' },
+  { value: 'sonstiges', label: 'Sonstiges', icon: HelpCircle, color: 'text-fg-subtle' },
 ];
 
 const FARBEN = [
@@ -27,15 +28,15 @@ export default function RessourcenPage() {
   const [ressourcen, setRessourcen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Filter
   const [filterTyp, setFilterTyp] = useState(null);
-  
+
   // Editing
   const [editingId, setEditingId] = useState(null);
   const [editingData, setEditingData] = useState({});
   const [savingId, setSavingId] = useState(null);
-  
+
   // Neue Ressource
   const [showNew, setShowNew] = useState(false);
   const [newData, setNewData] = useState({
@@ -145,32 +146,32 @@ export default function RessourcenPage() {
 
   const getTypColor = (typ) => {
     const found = RESSOURCE_TYPEN.find(t => t.value === typ);
-    return found ? found.color : 'text-gray-400';
+    return found ? found.color : 'text-fg-subtle';
   };
 
   // Form Component für Ressource
   const RessourceForm = ({ data, setData, onSave, onCancel, isSaving, isNew }) => (
-    <div className="p-4 bg-gray-800/50 rounded-lg space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {/* Name */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Name *</label>
+          <label className="mb-1 block text-sm font-medium text-fg-muted">Name *</label>
           <input
             type="text"
             value={data.name}
             onChange={(e) => setData({ ...data, name: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
-            placeholder="Ressourcenname"
+            className="w-full rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+            placeholder="z. B. Beamer, Werkstatt, Transporter"
           />
         </div>
 
         {/* Typ */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Typ</label>
+          <label className="mb-1 block text-sm font-medium text-fg-muted">Typ</label>
           <select
             value={data.typ}
             onChange={(e) => setData({ ...data, typ: e.target.value })}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            className="w-full rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           >
             {RESSOURCE_TYPEN.map(typ => (
               <option key={typ.value} value={typ.value}>{typ.label}</option>
@@ -180,14 +181,17 @@ export default function RessourcenPage() {
 
         {/* Farbe */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Farbe</label>
+          <label className="mb-1.5 block text-sm font-medium text-fg-muted">Farbe</label>
           <div className="flex gap-2">
             {FARBEN.map(farbe => (
               <button
                 key={farbe}
                 type="button"
                 onClick={() => setData({ ...data, farbe })}
-                className={`w-6 h-6 rounded ${data.farbe === farbe ? 'ring-2 ring-white' : ''}`}
+                aria-label={`Farbe ${farbe}`}
+                className={`h-6 w-6 rounded-sm transition-transform ${
+                  data.farbe === farbe ? 'scale-110 ring-2 ring-fg ring-offset-2 ring-offset-surface' : 'hover:scale-105'
+                }`}
                 style={{ backgroundColor: farbe }}
               />
             ))}
@@ -196,82 +200,78 @@ export default function RessourcenPage() {
 
         {/* Max gleichzeitig */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Max. gleichzeitig buchbar</label>
+          <label className="mb-1 block text-sm font-medium text-fg-muted">Max. gleichzeitig buchbar</label>
           <input
             type="number"
             value={data.max_gleichzeitig}
             onChange={(e) => setData({ ...data, max_gleichzeitig: parseInt(e.target.value) || 1 })}
             min="1"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            className="w-full rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         {/* Kosten pro Tag */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Kosten pro Tag (€)</label>
+          <label className="mb-1 block text-sm font-medium text-fg-muted">Kosten pro Tag (€)</label>
           <input
             type="number"
             value={data.kosten_pro_tag}
             onChange={(e) => setData({ ...data, kosten_pro_tag: e.target.value })}
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            className="w-full rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
 
         {/* Kosten pro Stunde */}
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Kosten pro Stunde (€)</label>
+          <label className="mb-1 block text-sm font-medium text-fg-muted">Kosten pro Stunde (€)</label>
           <input
             type="number"
             value={data.kosten_pro_stunde}
             onChange={(e) => setData({ ...data, kosten_pro_stunde: e.target.value })}
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+            className="w-full rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           />
         </div>
       </div>
 
       {/* Beschreibung */}
       <div>
-        <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+        <label className="mb-1 block text-sm font-medium text-fg-muted">Beschreibung</label>
         <textarea
           value={data.beschreibung}
           onChange={(e) => setData({ ...data, beschreibung: e.target.value })}
           rows={2}
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none"
+          className="w-full resize-none rounded-md border border-line bg-raised px-3 py-2 text-fg transition-colors placeholder:text-fg-subtle hover:border-line-strong focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
+          placeholder="Optionaler Hinweis zur Ressource"
         />
       </div>
 
       {/* Verfügbar */}
-      <label className="flex items-center gap-2 cursor-pointer">
+      <label className="flex w-fit cursor-pointer items-center gap-2">
         <input
           type="checkbox"
           checked={data.ist_verfuegbar}
           onChange={(e) => setData({ ...data, ist_verfuegbar: e.target.checked })}
-          className="w-4 h-4 rounded"
+          className="h-4 w-4 rounded-sm accent-accent"
         />
-        <span className="text-sm text-gray-300">Verfügbar für Buchungen</span>
+        <span className="text-sm text-fg-muted">Verfügbar für Buchungen</span>
       </label>
 
       {/* Actions */}
       <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 text-gray-400 hover:text-white rounded-lg"
-        >
-          Abbrechen
-        </button>
-        <button
+        <Button variant="ghost" onClick={onCancel}>Abbrechen</Button>
+        <Button
+          variant="primary"
+          icon={isSaving ? undefined : Save}
           onClick={onSave}
           disabled={isSaving || !data.name}
-          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg"
         >
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
           {isNew ? 'Erstellen' : 'Speichern'}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -279,42 +279,39 @@ export default function RessourcenPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">Ressourcen</h1>
-          <p className="text-gray-400 mt-1">Verwalte Equipment, Räume, Personal und mehr</p>
-        </div>
-
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg"
-        >
-          <Plus className="w-5 h-5" />
-          Neue Ressource
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Kalender"
+        title="Ressourcen"
+        meta={loading ? undefined : `${ressourcen.length} ${ressourcen.length === 1 ? 'Ressource' : 'Ressourcen'}`}
+        actions={
+          <Button variant="primary" icon={Plus} onClick={() => setShowNew(true)}>
+            Neue Ressource
+          </Button>
+        }
+      />
 
       {/* Filter */}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilterTyp(null)}
-          className={`px-4 py-2 rounded-lg text-sm transition-colors ${
-            !filterTyp ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+          className={`rounded-md px-3.5 py-2 text-sm font-medium transition-colors ${
+            !filterTyp ? 'bg-raised text-fg' : 'bg-surface text-fg-muted hover:bg-raised hover:text-fg'
           }`}
         >
           Alle
         </button>
         {RESSOURCE_TYPEN.map(typ => {
           const Icon = typ.icon;
+          const active = filterTyp === typ.value;
           return (
             <button
               key={typ.value}
               onClick={() => setFilterTyp(typ.value)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-colors ${
-                filterTyp === typ.value ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+              className={`flex items-center gap-2 rounded-md px-3.5 py-2 text-sm font-medium transition-colors ${
+                active ? 'bg-raised text-fg' : 'bg-surface text-fg-muted hover:bg-raised hover:text-fg'
               }`}
             >
-              <Icon className="w-4 h-4" />
+              <Icon className={`h-4 w-4 ${typ.color}`} />
               {typ.label}
             </button>
           );
@@ -323,8 +320,8 @@ export default function RessourcenPage() {
 
       {/* Neue Ressource Form */}
       {showNew && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Neue Ressource</h3>
+        <div className="rounded-lg bg-surface p-4">
+          <h3 className="mb-4 text-lg font-semibold text-fg">Neue Ressource</h3>
           <RessourceForm
             data={newData}
             setData={setNewData}
@@ -339,22 +336,20 @@ export default function RessourcenPage() {
       {/* Ressourcen Liste */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
+          <Loader2 className="h-10 w-10 animate-spin text-fg-subtle" />
         </div>
       ) : error ? (
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
-          <p className="text-red-400">{error}</p>
+        <div className="rounded-lg bg-surface p-8 text-center">
+          <p className="text-bad">{error}</p>
         </div>
       ) : ressourcen.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Package className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">Keine Ressourcen gefunden</p>
-          <button
-            onClick={() => setShowNew(true)}
-            className="mt-4 text-accent hover:opacity-80"
-          >
-            Erste Ressource erstellen
-          </button>
+        <div className="rounded-lg bg-surface">
+          <EmptyState
+            icon={Package}
+            title={filterTyp ? 'Keine Ressourcen in diesem Typ' : 'Noch keine Ressourcen'}
+            description="Lege Equipment, Räume, Crew und Fahrzeuge an, um sie Terminen zuzuordnen."
+            action={<Button variant="primary" icon={Plus} onClick={() => setShowNew(true)}>Erste Ressource erstellen</Button>}
+          />
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -364,7 +359,7 @@ export default function RessourcenPage() {
 
             if (isEditing) {
               return (
-                <div key={ressource.id} className="bg-gray-900 border border-accent rounded-xl">
+                <div key={ressource.id} className="rounded-lg bg-surface p-4">
                   <RessourceForm
                     data={editingData}
                     setData={setEditingData}
@@ -379,67 +374,61 @@ export default function RessourcenPage() {
             return (
               <div
                 key={ressource.id}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors"
+                className="group flex flex-col rounded-lg bg-surface p-4"
               >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
-                      style={{ backgroundColor: ressource.farbe + '20' }}
-                    >
-                      <Icon className={`w-5 h-5 ${getTypColor(ressource.typ)}`} />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-white">{ressource.name}</h3>
-                      <p className="text-xs text-gray-500">{ressource.typ_display}</p>
+                <div className="mb-3 flex items-start justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <Icon className={`h-5 w-5 shrink-0 ${getTypColor(ressource.typ)}`} />
+                    <div className="min-w-0">
+                      <h3 className="truncate font-semibold text-fg">{ressource.name}</h3>
+                      <p className="text-xs text-fg-subtle">{ressource.typ_display}</p>
                     </div>
                   </div>
-                  
-                  <div
-                    className="w-4 h-4 rounded-full"
+
+                  <span
+                    className="mt-1 h-3 w-3 shrink-0 rounded-full ring-2 ring-surface"
                     style={{ backgroundColor: ressource.farbe }}
                   />
                 </div>
 
                 {ressource.beschreibung && (
-                  <p className="text-sm text-gray-400 mb-3 line-clamp-2">{ressource.beschreibung}</p>
+                  <p className="mb-3 line-clamp-2 text-sm text-fg-muted">{ressource.beschreibung}</p>
                 )}
 
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {!ressource.ist_verfuegbar && (
-                    <span className="flex items-center gap-1 px-2 py-1 text-xs bg-red-900/30 text-red-400 rounded">
-                      <AlertCircle className="w-3 h-3" />
-                      Nicht verfügbar
-                    </span>
-                  )}
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {ressource.ist_verfuegbar
+                    ? <StatusBadge tone="positive" dot label="Verfügbar" />
+                    : <StatusBadge tone="danger" dot label="Nicht verfügbar" />}
                   {ressource.max_gleichzeitig > 1 && (
-                    <span className="px-2 py-1 text-xs bg-gray-800 text-gray-400 rounded">
+                    <span className="inline-flex items-center rounded-sm bg-raised px-2 py-[3px] text-[11px] font-semibold leading-none tracking-wide text-fg-muted">
                       Max. {ressource.max_gleichzeitig}x
                     </span>
                   )}
                   {(ressource.kosten_pro_tag > 0 || ressource.kosten_pro_stunde > 0) && (
-                    <span className="flex items-center gap-1 px-2 py-1 text-xs bg-green-900/30 text-green-400 rounded">
-                      <DollarSign className="w-3 h-3" />
-                      {ressource.kosten_pro_stunde > 0 
-                        ? `${ressource.kosten_pro_stunde}€/h` 
-                        : `${ressource.kosten_pro_tag}€/Tag`
+                    <span className="inline-flex items-center gap-1 rounded-sm bg-raised px-2 py-[3px] text-[11px] font-semibold leading-none tracking-wide text-ok">
+                      <Euro className="h-3 w-3" />
+                      {ressource.kosten_pro_stunde > 0
+                        ? `${ressource.kosten_pro_stunde} / h`
+                        : `${ressource.kosten_pro_tag} / Tag`
                       }
                     </span>
                   )}
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
+                <div className="mt-auto flex justify-end gap-1 border-t border-line-subtle pt-2">
                   <button
                     onClick={() => startEditing(ressource)}
-                    className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
+                    className="rounded-sm p-2 text-fg-muted transition-colors hover:bg-raised hover:text-fg"
+                    aria-label="Bearbeiten"
                   >
-                    <Edit className="w-4 h-4" />
+                    <Edit className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(ressource.id)}
-                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"
+                    className="rounded-sm p-2 text-fg-muted transition-colors hover:bg-raised hover:text-bad"
+                    aria-label="Löschen"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>

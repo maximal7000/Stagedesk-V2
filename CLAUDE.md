@@ -1,0 +1,54 @@
+# Stagedesk V2
+
+Internes Verwaltungs-Tool der **Technik-AG (Bühnentechnik) am Katharineum zu Lübeck**.
+Live: https://stagedesk.t410.de · Repo: github.com/maximal7000/Stagedesk-V2 (privat).
+
+## Stack
+- **Backend**: Django 5 + Django Ninja (API), Channels/WebSockets, PostgreSQL, Keycloak OIDC (`keycloak_auth`).
+- **Frontend**: React 19 + Vite + **Tailwind CSS v4** (CSS-`@theme` in `src/index.css`, **keine** `tailwind.config.js`), react-router-dom, axios. Dunkles Theme, UI-Sprache **Deutsch**.
+- **Auth**: Keycloak (`react-oidc-context` im Frontend). Realm `technik-ag` auf `auth.t410.de`.
+
+## Befehle
+```bash
+# Backend (immer venv aktivieren!)
+cd backend && source venv/bin/activate && python manage.py <cmd>
+python manage.py runserver 127.0.0.1:8000     # lokal
+
+# Frontend
+cd frontend && npm run dev        # Dev-Server :5173 (erwartet Backend :8000)
+cd frontend && npm run build      # Prod-Build
+
+# Deploy (nur nach Merge auf main)
+ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"
+# deploy.sh macht: git pull, migrate, collectstatic, npm build, systemctl restart tag-backend.service
+```
+
+## Workflow
+- Feature → eigener Branch → `git merge --no-ff` nach `main` → push → Deploy-Skript.
+- Commit-Trailer: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
+- Vor größeren Umbauten: Backup-Tag + Tarball (`~/stagedesk-backups/`).
+- DB-/API-Credentials **niemals** committen (Repo ist öffentlich) — nur in `/opt/stagedesk/backend/.env` auf dem Server.
+
+## Wichtige Muster
+- **Django-Ninja-Routen: `""` statt `"/"`** für Root-Endpoints (`@router.get("")`). Frontend-Calls ohne Trailing-Slash. Referenz: `veranstaltung`-Router.
+- **Permissions**: Backend `require_permission(request, 'modul.aktion')`; Frontend `hasPermission('modul.aktion')` via `useUser()`.
+- **Kombinierte Seiten**: Übersicht + Detail in einer Komponente, bedingt über `useParams().id` (z.B. `AusleihePage`, `AnwesenheitPage`).
+- **API-Client**: `frontend/src/lib/api.js` (axios mit Bearer-Token).
+
+## Design-System (siehe auch Memory `design-system.md`)
+- Akzent-Token `bg-accent`/`text-accent` = **TUES-Rot `#da1f3d`** (sparsam einsetzen), `hover:bg-accent-hover`.
+- `font-display` = Barlow Semi Condensed (Titel). Bausteine in `frontend/src/components/ui/` (PageHeader, Button, StatTile, StatusBadge, EmptyState) — verwenden, Props stabil halten.
+- Semantische Farben bleiben (grün=verfügbar/positiv, rot=Gefahr/überfällig, gelb=Warnung, blau=Info/Status). Generisches UI-Blau → Akzent.
+- **Design-Manifest** (Nutzer-Vorgabe): keine Lila-Verläufe, keine Pill-Buttons (rounded-lg, nicht rounded-full), keine Emoji-Icons (lucide-react nutzen), keine Em-Dashes im sichtbaren Text, keine vagen Floskeln/KI-Slop-Copy, keine Fake-Metriken.
+
+## Monitor / Raspberry-Pi-Displays
+- Öffentliche Anzeige-Seiten (kein Login): `/monitor?bildschirm=<slug>` und `/aufgaben-monitor`. 4K → URL-Param `?zoom=2`.
+- Monitor-Admin: Profile, Bildschirme (mit Reload-Knopf), Störungen (eigenes Menü), ÖPNV-Abfahrten.
+- Pi-Setup-Anleitung: `docs/raspberry-pi-monitor.md` (cage + chromium Kiosk, systemd, CEC/Power).
+- Bekannter Pi: **glocke** (`172.22.0.229`, mDNS `rpi-monitor-glocke.local`) — iiyama LH4341UHS-B2, 4K, CEC (schaltet an+aus). Power-Dienst via `wss://.../ws/monitor/pi/glocke/`.
+
+## Dateien
+- Routen: `frontend/src/App.jsx` · Navigation/Sidebar: `frontend/src/components/DashboardLayout.jsx`
+- Core-URLs: `backend/core/urls.py` · Settings: `backend/core/settings.py`
+- Permissions-Default: `backend/users/api.py` (`default_permissions`)
+- Weitere Doku: `README.md`, `QUICKSTART.md`, `DEPLOY.md`, `KEYCLOAK_SETUP.md`, `PROJEKTDOKUMENTATION.md`.

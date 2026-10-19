@@ -17,7 +17,7 @@ export default function PermissionRoute({ permission, anyOf, adminOnly, children
   if (loading || !initialized) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-fg-subtle" />
       </div>
     );
   }
@@ -39,13 +39,13 @@ export default function PermissionRoute({ permission, anyOf, adminOnly, children
   if (!allowed) {
     return (
       <div className="max-w-lg mx-auto py-16 text-center">
-        <ShieldOff className="w-12 h-12 text-red-400 mx-auto mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Keine Berechtigung</h1>
-        <p className="text-gray-400 mb-6">
+        <ShieldOff className="w-12 h-12 text-bad mx-auto mb-4" />
+        <h1 className="text-2xl font-bold text-fg mb-2">Keine Berechtigung</h1>
+        <p className="text-fg-muted mb-6">
           Du hast keine Berechtigung, diese Seite zu sehen. Wende dich an einen Administrator,
           falls du Zugriff brauchst.
         </p>
-        <Link to="/" className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+        <Link to="/" className="inline-block px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-md">
           Zurück zum Dashboard
         </Link>
       </div>

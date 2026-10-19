@@ -8,13 +8,14 @@ import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
 
-function Toggle({ checked, onChange, disabled }) {
+function Toggle({ checked, onChange, disabled, label }) {
   return (
     <button type="button" onClick={() => !disabled && onChange(!checked)} disabled={disabled}
+      role="switch" aria-checked={checked} aria-label={label}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        checked ? 'bg-indigo-600' : 'bg-gray-700'
-      } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-      <span className={`inline-block h-3.5 w-3.5 bg-white rounded-full transition-transform ${
+        disabled ? 'bg-line cursor-not-allowed' : checked ? 'bg-accent' : 'bg-hover'
+      }`}>
+      <span className={`inline-block h-3.5 w-3.5 ${disabled ? 'bg-fg-disabled' : 'bg-white'} rounded-full transition-transform ${
         checked ? 'translate-x-5' : 'translate-x-1'
       }`} />
     </button>
@@ -72,56 +73,57 @@ export default function DiscordSection({ data, refetch, canEdit, eventId }) {
     <CollapsibleSection icon={Hash} title="Discord" defaultOpen={false}>
       <div className="space-y-4">
         {/* Toggles */}
-        <ul className="divide-y divide-gray-800 bg-gray-800/40 rounded-lg overflow-hidden">
+        <ul className="divide-y divide-line-subtle bg-surface rounded-lg overflow-hidden">
           <li className="flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
-              <Hash className="w-4 h-4 text-indigo-400" />
+              <Hash className="w-4 h-4 text-fg-subtle" />
               <div>
-                <div className="text-sm text-white">Text-Channel</div>
-                <p className="text-xs text-gray-500">
+                <div className="text-sm text-fg">Text-Channel</div>
+                <p className="text-xs text-fg-subtle">
                   Privater Channel für alle Zugewiesenen
-                  {status?.channel_id && <span className="ml-1 text-green-400">· angelegt</span>}
+                  {status?.channel_id && <span className="ml-1 text-ok">· angelegt</span>}
                 </p>
               </div>
             </div>
-            <Toggle checked={draftChannel} onChange={onToggleChannel} disabled={!canEdit} />
+            <Toggle checked={draftChannel} onChange={onToggleChannel} disabled={!canEdit} label="Text-Channel" />
           </li>
           <li className="flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
-              <CalendarPlus className="w-4 h-4 text-indigo-400" />
+              <CalendarPlus className="w-4 h-4 text-fg-subtle" />
               <div>
-                <div className="text-sm text-white">Scheduled Event</div>
-                <p className="text-xs text-gray-500">
+                <div className="text-sm text-fg">Scheduled Event</div>
+                <p className="text-xs text-fg-subtle">
                   Erscheint in der Server-Eventliste
-                  {status?.event_id && <span className="ml-1 text-green-400">· angelegt</span>}
+                  {status?.event_id && <span className="ml-1 text-ok">· angelegt</span>}
                 </p>
               </div>
             </div>
-            <Toggle checked={draftEvent} onChange={onToggleEvent} disabled={!canEdit} />
+            <Toggle checked={draftEvent} onChange={onToggleEvent} disabled={!canEdit} label="Scheduled Event" />
           </li>
           <li className="flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-indigo-400" />
+              <Megaphone className="w-4 h-4 text-fg-subtle" />
               <div>
-                <div className="text-sm text-white">Info-Nachricht</div>
-                <p className="text-xs text-gray-500">
+                <div className="text-sm text-fg">Info-Nachricht</div>
+                <p className="text-xs text-fg-subtle">
                   Wird im Info-Channel gepostet wenn Channel oder Event aktiv ist.
-                  {status?.info_aktiv && <span className="ml-1 text-green-400">· gepostet</span>}
-                  {!status?.info_konfiguriert && <span className="ml-1 text-yellow-500">· DISCORD_INFO_CHANNEL_ID fehlt</span>}
+                  {status?.info_aktiv && <span className="ml-1 text-ok">· gepostet</span>}
+                  {!status?.info_konfiguriert && <span className="ml-1 text-warn">· DISCORD_INFO_CHANNEL_ID fehlt</span>}
                 </p>
               </div>
             </div>
-            <Toggle checked={!!status?.info_aktiv} disabled />
+            <Toggle checked={!!status?.info_aktiv} disabled label="Info-Nachricht" />
           </li>
         </ul>
 
         <div className="flex items-center gap-2">
           <button type="button" onClick={handleSync} disabled={!canEdit || syncing}
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-sm">
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-raised hover:bg-hover active:bg-hover disabled:text-fg-disabled disabled:pointer-events-none text-fg rounded-md text-sm font-medium leading-none transition-colors
+                       focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
             {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Synchronisieren
           </button>
-          {dirty && <span className="text-xs text-amber-400">Änderungen werden erst beim Sync angewandt</span>}
+          {dirty && <span className="text-xs text-warn">Änderungen werden erst beim Sync angewandt</span>}
         </div>
       </div>
     </CollapsibleSection>

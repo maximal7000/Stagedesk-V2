@@ -1,7 +1,9 @@
 /**
  * Button — einheitliches Aktions-System.
  * Konvention: genau EINE `primary` (gefüllt, Akzent) pro View; alles andere
- * `secondary`/`ghost`. Icon-only nur mit `title` (Tooltip) und `aria-label`.
+ * `secondary`/`ghost`. Flächen ohne Rahmen: secondary liegt auf `raised`, ghost und
+ * danger sind transparent. Gefülltes Rot nur im Bestätigungsdialog (per `className`).
+ * Alle Varianten `rounded-md`; deaktiviert = Text `fg-disabled`, keine Transparenz. Icon-only nur mit `title` (Tooltip) und `aria-label`.
  *
  * Props:
  *   variant  — "primary" | "secondary" | "ghost" | "danger"  (default "secondary")
@@ -15,9 +17,9 @@
  *   <Button as="a" href="/x" variant="secondary" icon={ExternalLink}>Öffnen</Button>
  */
 const base =
-  'inline-flex items-center justify-center gap-2 font-medium rounded-lg whitespace-nowrap transition-colors ' +
+  'inline-flex items-center justify-center gap-2 font-medium leading-none rounded-md whitespace-nowrap transition-colors duration-150 ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 ' +
-  'focus-visible:ring-offset-gray-950 disabled:opacity-50 disabled:pointer-events-none';
+  'focus-visible:ring-offset-canvas disabled:text-fg-disabled disabled:pointer-events-none';
 
 const sizes = {
   sm: 'text-xs px-2.5 py-1.5',
@@ -25,10 +27,10 @@ const sizes = {
 };
 
 const variants = {
-  primary: 'bg-accent hover:bg-accent-hover text-white shadow-sm',
-  secondary: 'bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200',
-  ghost: 'text-gray-300 hover:text-white hover:bg-gray-800/70',
-  danger: 'bg-red-600/90 hover:bg-red-600 text-white',
+  primary: 'bg-accent hover:bg-accent-hover active:bg-accent-hover text-white disabled:bg-raised disabled:text-fg-disabled',
+  secondary: 'bg-raised hover:bg-hover active:bg-hover text-fg',
+  ghost: 'text-fg-muted hover:text-fg hover:bg-raised active:bg-raised',
+  danger: 'text-bad hover:bg-raised active:bg-raised',
 };
 
 export default function Button({

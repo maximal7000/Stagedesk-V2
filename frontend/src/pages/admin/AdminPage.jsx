@@ -5,11 +5,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Users, Key, Plus, Edit, Trash2, Eye,
-  Save, X, Loader2, Sun, Moon, AlertCircle, Info, Shield, FolderOpen, Check, Settings,
-  RefreshCw, Trash,
+  Save, X, Loader2, Sun, Moon, AlertCircle, AlertTriangle, Info, Shield, FolderOpen, Check,
+  CheckCircle2, XCircle, Settings, RefreshCw, Trash, Activity, Bell, GitCommit, Archive,
 } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import apiClient from '../../lib/api';
+import { PageHeader, Button, StatusBadge, StatTile, EmptyState } from '../../components/ui';
 
 export default function AdminPage() {
   const { isAdmin, keycloakRoles, setImpersonate } = useUser();
@@ -83,10 +84,9 @@ export default function AdminPage() {
   if (!isAdmin) {
     return (
       <div className="max-w-4xl mx-auto">
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">Zugriff verweigert</h2>
-          <p className="text-gray-400 mb-4">Du hast keine Berechtigung für den Admin-Bereich.</p>
+        <div className="bg-surface rounded-lg">
+          <EmptyState icon={AlertCircle} title="Kein Zugriff"
+            description="Der Admin-Bereich ist nur mit der Keycloak-Rolle „admin“ erreichbar." />
         </div>
       </div>
     );
@@ -172,27 +172,24 @@ export default function AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Administration</h1>
-        <p className="text-gray-400 mt-1">Verwalte Benutzer, Gruppen und Berechtigungen</p>
-      </div>
+      <PageHeader eyebrow="Admin" title="Benutzer & Rechte"
+        meta={!loading && !error ? <span className="tabular-nums">{users.length} Benutzer · {groups.length} Gruppen</span> : undefined} />
 
       {/* Keycloak Info */}
-      <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-4 flex items-start gap-3">
-        <Info className="w-5 h-5 text-blue-400 mt-0.5" />
+      <div className="bg-surface rounded-lg p-4 flex items-start gap-3">
+        <Info className="w-4 h-4 text-fg-subtle mt-0.5 shrink-0" />
         <div>
-          <p className="text-blue-300 font-medium">Rollen kommen aus Keycloak</p>
-          <p className="text-sm text-blue-400/80 mt-1">
-            Der Admin-Status wird über die Keycloak-Rolle "admin" gesteuert.
-            Gruppen bündeln Berechtigungen und können Nutzern zugewiesen werden.
+          <p className="text-sm text-fg-muted font-medium">Admin-Status kommt aus Keycloak</p>
+          <p className="text-sm text-fg-muted mt-0.5">
+            Wer die Keycloak-Rolle „admin“ hat, ist hier Admin. Alles andere regeln Gruppen und Einzelberechtigungen.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <span className="text-xs text-gray-400">Deine Keycloak-Rollen:</span>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-fg-muted">Deine Keycloak-Rollen:</span>
             {keycloakRoles.map((role) => (
-              <span key={role} className={`px-2 py-0.5 text-xs rounded ${
+              <span key={role} className={`inline-flex items-center px-2 py-[3px] rounded-sm text-[11px] font-semibold leading-none tracking-wide ${
                 role.toLowerCase() === 'admin'
-                  ? 'bg-purple-600/20 text-purple-400'
-                  : 'bg-gray-700 text-gray-300'
+                  ? 'bg-raised text-accent-fg'
+                  : 'bg-raised text-fg-muted'
               }`}>{role}</span>
             ))}
           </div>
@@ -200,16 +197,17 @@ export default function AdminPage() {
       </div>
 
       {/* Tabs */}
-      <div className="border-b border-gray-800">
-        <nav className="flex gap-4">
+      <div className="border-b border-line-subtle">
+        <nav className="flex gap-1 overflow-x-auto">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             return (
               <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-colors ${
-                  activeTab === tab.id ? 'border-purple-500 text-purple-500' : 'border-transparent text-gray-400 hover:text-white'
+                aria-current={activeTab === tab.id ? 'page' : undefined}
+                className={`flex items-center gap-2 px-4 py-3 -mb-px text-sm font-medium whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-inset ${
+                  activeTab === tab.id ? 'border-accent text-fg' : 'border-transparent text-fg-muted hover:text-fg hover:border-line'
                 }`}>
-                <Icon className="w-5 h-5" />
+                <Icon className="w-4 h-4" />
                 {tab.name}
               </button>
             );
@@ -219,42 +217,35 @@ export default function AdminPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+          <Loader2 className="w-6 h-6 text-fg-subtle animate-spin" />
         </div>
       ) : error ? (
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-6 text-center">
-          <p className="text-red-400">{error}</p>
+        <div className="bg-surface rounded-lg p-4 flex items-center gap-2.5 text-sm text-bad">
+          <AlertCircle className="w-4 h-4 shrink-0" /> {error}
         </div>
       ) : (
         <>
           {/* ═══ Users Tab ═══ */}
           {activeTab === 'users' && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
-              <div className="p-4 bg-gray-800/50 flex items-center justify-between gap-2 flex-wrap">
-                <h3 className="font-semibold text-white">Benutzer ({users.length})</h3>
-                <div className="flex items-center gap-2">
-                  {selectedUserIds.size > 0 && (
-                    <>
-                      <span className="text-sm text-gray-400">{selectedUserIds.size} ausgewählt</span>
-                      <button onClick={() => setBulkOpen(true)}
-                        className="px-3 py-1.5 text-sm bg-accent hover:bg-accent-hover text-white rounded-lg">
-                        Bulk-Aktion…
-                      </button>
-                      <button onClick={() => setSelectedUserIds(new Set())}
-                        className="px-3 py-1.5 text-sm bg-gray-700 hover:bg-gray-600 text-white rounded-lg">
-                        Auswahl aufheben
-                      </button>
-                    </>
-                  )}
-                </div>
+            <div className="bg-surface rounded-lg overflow-hidden divide-y divide-line-subtle">
+              <div className="px-4 py-3 flex items-center justify-between gap-2 flex-wrap min-h-[52px]">
+                <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Benutzer <span className="text-sm font-sans text-fg-subtle font-normal tabular-nums">{users.length}</span></h3>
+                {selectedUserIds.size > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-fg-muted tabular-nums">{selectedUserIds.size} ausgewählt</span>
+                    <Button size="sm" variant="primary" onClick={() => setBulkOpen(true)}>Gemeinsam ändern</Button>
+                    <Button size="sm" variant="ghost" icon={X} onClick={() => setSelectedUserIds(new Set())}>Auswahl</Button>
+                  </div>
+                )}
               </div>
               {users.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">Keine Benutzer gefunden</div>
+                <EmptyState icon={Users} title="Keine Benutzer gefunden" />
               ) : users.map((user) => (
-                <div key={user.id} className="p-4 flex items-start gap-3">
+                <div key={user.id} className={`px-4 py-3 flex items-start gap-3 transition-colors ${editingUser?.id === user.id ? 'bg-surface border-y border-line-subtle' : selectedUserIds.has(user.id) ? 'bg-raised' : 'hover:bg-raised'}`}>
                   {editingUser?.id !== user.id && (
                     <input type="checkbox"
-                      className="mt-3 rounded border-gray-600 bg-gray-700 text-accent"
+                      aria-label="Benutzer auswählen"
+                      className="mt-3 rounded-sm border-line bg-hover accent-accent"
                       checked={selectedUserIds.has(user.id)}
                       onChange={() => setSelectedUserIds((prev) => {
                         const next = new Set(prev);
@@ -266,28 +257,29 @@ export default function AdminPage() {
                   {editingUser?.id === user.id ? (
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium text-white">{user.first_name ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}` : user.username}</span>
+                        <span className="font-display text-lg font-semibold tracking-tight text-fg">{user.first_name ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}` : user.username}</span>
                         <div className="flex gap-2">
-                          <button onClick={() => handleUpdateUser(user.id, {
-                            permission_codes: editingUser.permission_codes,
-                            group_ids: editingUser.group_ids,
-                            forced_theme: editingUser.forced_theme,
-                            theme_locked: editingUser.theme_locked,
-                            discord_id: editingUser.discord_id,
-                            bereich_ids: editingUser.bereich_ids,
-                          })} disabled={savingId === user.id} className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-lg">
-                            {savingId === user.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                          </button>
-                          <button onClick={() => setEditingUser(null)} className="p-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg"><X className="w-4 h-4" /></button>
+                          <Button size="sm" variant="primary" title="Speichern" aria-label="Speichern"
+                            icon={savingId === user.id ? Loader2 : Save}
+                            className={savingId === user.id ? '[&>svg]:animate-spin' : ''}
+                            onClick={() => handleUpdateUser(user.id, {
+                              permission_codes: editingUser.permission_codes,
+                              group_ids: editingUser.group_ids,
+                              forced_theme: editingUser.forced_theme,
+                              theme_locked: editingUser.theme_locked,
+                              discord_id: editingUser.discord_id,
+                              bereich_ids: editingUser.bereich_ids,
+                            })} disabled={savingId === user.id} />
+                          <Button size="sm" variant="ghost" icon={X} title="Abbrechen" aria-label="Abbrechen" onClick={() => setEditingUser(null)} />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-400 mb-1">Discord-ID</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-1.5">Discord-ID</label>
                         <input type="text" value={editingUser.discord_id || ''} onChange={(e) => setEditingUser({ ...editingUser, discord_id: e.target.value })}
-                          placeholder="z.B. 123456789012345678" className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 text-sm" />
+                          placeholder="z.B. 123456789012345678" className="w-full max-w-sm bg-raised border border-line rounded-md hover:border-line-strong px-3 py-2 text-fg placeholder:text-fg-subtle text-sm font-mono focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Bereich</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">Bereich</label>
                         <div className="flex flex-wrap gap-2">
                           {bereiche.map((b) => {
                             const isSelected = (editingUser.bereich_ids || []).includes(b.id);
@@ -295,17 +287,18 @@ export default function AdminPage() {
                               <button key={b.id} type="button" onClick={() => {
                                 const ids = isSelected ? editingUser.bereich_ids.filter(id => id !== b.id) : [...(editingUser.bereich_ids || []), b.id];
                                 setEditingUser({ ...editingUser, bereich_ids: ids });
-                              }} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${isSelected ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                              }} className={`px-2.5 py-1 rounded-md text-sm transition-colors flex items-center gap-1 ${isSelected ? 'bg-hover text-fg ring-1 ring-inset ring-accent' : 'bg-raised text-fg-muted hover:bg-hover hover:text-fg'}`}>
+                                {isSelected && <Check className="w-3 h-3" />}
                                 {b.name}
                               </button>
                             );
                           })}
-                          {bereiche.length === 0 && <span className="text-gray-500 text-sm">Keine Bereiche konfiguriert</span>}
+                          {bereiche.length === 0 && <span className="text-fg-subtle text-sm">Keine Bereiche konfiguriert</span>}
                         </div>
                       </div>
                       {/* Gruppen */}
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Berechtigungsgruppen</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">Berechtigungsgruppen</label>
                         <div className="flex flex-wrap gap-2">
                           {groups.map((g) => {
                             const isSelected = (editingUser.group_ids || []).includes(g.id);
@@ -313,36 +306,37 @@ export default function AdminPage() {
                               <button key={g.id} type="button" onClick={() => {
                                 const ids = isSelected ? editingUser.group_ids.filter(id => id !== g.id) : [...(editingUser.group_ids || []), g.id];
                                 setEditingUser({ ...editingUser, group_ids: ids });
-                              }} className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1 ${isSelected ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
-                                <FolderOpen className="w-3.5 h-3.5" />
+                              }} className={`px-2.5 py-1 rounded-md text-sm transition-colors flex items-center gap-1 ${isSelected ? 'bg-hover text-fg ring-1 ring-inset ring-accent' : 'bg-raised text-fg-muted hover:bg-hover hover:text-fg'}`}>
+                                {isSelected ? <Check className="w-3 h-3" /> : <FolderOpen className="w-3.5 h-3.5 text-fg-subtle" />}
                                 {g.name}
-                                {g.is_default && <span className="text-[10px] opacity-60">(Standard)</span>}
+                                {g.is_default && <span className="text-[10px] text-fg-subtle">(Standard)</span>}
                               </button>
                             );
                           })}
-                          {groups.length === 0 && <span className="text-gray-500 text-sm">Keine Gruppen erstellt — erstelle welche im "Gruppen" Tab</span>}
+                          {groups.length === 0 && <span className="text-fg-subtle text-sm">Keine Gruppen erstellt. Lege welche im Tab „Gruppen" an.</span>}
                         </div>
                       </div>
                       {/* Direkte Permissions */}
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Zusätzliche Einzelberechtigungen</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">Zusätzliche Einzelberechtigungen</label>
                         <div className="flex flex-wrap gap-2">
                           {permissions.map((perm) => (
                             <button key={perm.id} onClick={() => {
                               const codes = editingUser.permission_codes.includes(perm.code) ? editingUser.permission_codes.filter(c => c !== perm.code) : [...editingUser.permission_codes, perm.code];
                               setEditingUser({ ...editingUser, permission_codes: codes });
-                            }} className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${editingUser.permission_codes.includes(perm.code) ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}`}>
+                            }} className={`px-2 py-1 rounded-md text-xs transition-colors flex items-center gap-1 ${editingUser.permission_codes.includes(perm.code) ? 'bg-hover text-fg ring-1 ring-inset ring-accent' : 'bg-raised text-fg-muted hover:bg-hover hover:text-fg'}`}>
+                              {editingUser.permission_codes.includes(perm.code) && <Check className="w-3 h-3" />}
                               {perm.name}
                             </button>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <label className="block text-sm text-gray-400 mb-2">Theme erzwingen</label>
+                        <label className="block text-sm font-medium text-fg-muted mb-2">Farbschema festlegen</label>
                         <div className="flex gap-2">
-                          {[{ v: 'none', l: 'Keine', i: null }, { v: 'dark', l: 'Dark', i: Moon }, { v: 'light', l: 'Light', i: Sun }].map(o => (
+                          {[{ v: 'none', l: 'Frei wählbar', i: null }, { v: 'dark', l: 'Dunkel', i: Moon }, { v: 'light', l: 'Hell', i: Sun }].map(o => (
                             <button key={o.v} onClick={() => setEditingUser({ ...editingUser, forced_theme: o.v })}
-                              className={`px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 ${(editingUser.forced_theme || 'none') === o.v ? 'bg-accent text-white' : 'bg-gray-700 text-gray-300'}`}>
+                              className={`px-2.5 py-1 rounded-md text-sm flex items-center gap-1.5 transition-colors ${(editingUser.forced_theme || 'none') === o.v ? 'bg-hover text-fg ring-1 ring-inset ring-accent' : 'bg-raised text-fg-muted hover:bg-hover hover:text-fg'}`}>
                               {o.i && <o.i className="w-4 h-4" />} {o.l}
                             </button>
                           ))}
@@ -350,28 +344,30 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-accent rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium">{(user.first_name || user.username)?.charAt(0).toUpperCase() || '?'}</span>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-9 bg-raised rounded-full flex items-center justify-center shrink-0">
+                          <span className="text-fg-muted text-sm font-semibold">{(user.first_name || user.username)?.charAt(0).toUpperCase() || '?'}</span>
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-white">
+                            <span className="font-medium text-fg">
                               {user.first_name ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}` : user.username}
                             </span>
-                            {user.is_admin && <span className="px-2 py-0.5 text-xs bg-purple-600/20 text-purple-400 rounded flex items-center gap-1"><Shield className="w-3 h-3" /> Admin</span>}
+                            {user.is_admin && <StatusBadge tone="accent" label="Admin" />}
                           </div>
-                          {user.discord_id && <div className="text-xs text-indigo-400">Discord: {user.discord_id}</div>}
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {user.bereiche?.map(b => <span key={b.id} className="px-1.5 py-0.5 text-xs bg-accent/20 text-accent rounded">{b.name}</span>)}
-                            {user.permission_groups?.map(g => <span key={g.id} className="px-1.5 py-0.5 text-xs bg-purple-600/20 text-purple-400 rounded">{g.name}</span>)}
-                          </div>
+                          {user.discord_id && <div className="text-xs text-fg-subtle font-mono mt-0.5">Discord {user.discord_id}</div>}
+                          {(user.bereiche?.length > 0 || user.permission_groups?.length > 0) && (
+                            <div className="flex flex-wrap gap-1 mt-1.5">
+                              {user.bereiche?.map(b => <StatusBadge key={`b${b.id}`} tone="info" label={b.name} />)}
+                              {user.permission_groups?.map(g => <StatusBadge key={`g${g.id}`} tone="neutral" label={g.name} />)}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button
-                          title="Als dieser User ansehen (UI-Filter)"
+                        <Button variant="ghost" size="sm" icon={Eye} title="Als dieser User ansehen (UI-Filter)" aria-label="Als dieser User ansehen"
+                          className="!text-fg-muted hover:!text-warn"
                           onClick={async () => {
                             try {
                               const res = await apiClient.get(`/users/users/${user.id}/effective-permissions`);
@@ -380,20 +376,15 @@ export default function AdminPage() {
                             } catch {
                               toast.error('Konnte Berechtigungen nicht laden');
                             }
-                          }}
-                          className="p-2 text-gray-400 hover:text-amber-400 hover:bg-gray-800 rounded-lg">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setEditingUser({
+                          }} />
+                        <Button variant="ghost" size="sm" icon={Edit} title="Bearbeiten" aria-label="Bearbeiten" onClick={() => setEditingUser({
                           id: user.id,
                           permission_codes: user.permissions || [],
                           forced_theme: user.forced_theme, theme_locked: false,
                           discord_id: user.discord_id || '',
                           bereich_ids: (user.bereiche || []).map(b => b.id),
                           group_ids: (user.permission_groups || []).map(g => g.id),
-                        })} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-                          <Edit className="w-4 h-4" />
-                        </button>
+                        })} />
                       </div>
                     </div>
                   )}
@@ -407,47 +398,40 @@ export default function AdminPage() {
           {activeTab === 'groups' && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-white">Berechtigungsgruppen ({groups.length})</h3>
-                <button onClick={() => openGroupModal()} className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
-                  <Plus className="w-4 h-4" /> Neue Gruppe
-                </button>
+                <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Berechtigungsgruppen <span className="text-sm font-sans text-fg-subtle font-normal tabular-nums">{groups.length}</span></h3>
+                <Button size="sm" variant="primary" icon={Plus} onClick={() => openGroupModal()}>Neue Gruppe</Button>
               </div>
 
               {groups.length === 0 ? (
-                <div className="bg-gray-900 border border-gray-800 rounded-xl p-8 text-center">
-                  <FolderOpen className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-400 mb-2">Keine Gruppen vorhanden</p>
-                  <p className="text-gray-500 text-sm">Erstelle Gruppen wie "Techniker", "Leitung" oder "Gast" um Berechtigungen gebündelt zu vergeben.</p>
+                <div className="bg-surface rounded-lg">
+                  <EmptyState icon={FolderOpen} title="Keine Gruppen vorhanden"
+                    description={'Erstelle Gruppen wie „Techniker", „Leitung" oder „Gast", um Berechtigungen gebündelt zu vergeben.'}
+                    action={<Button variant="primary" icon={Plus} onClick={() => openGroupModal()}>Neue Gruppe</Button>} />
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="bg-surface rounded-lg overflow-hidden divide-y divide-line-subtle">
                   {groups.map(group => {
                     const memberCount = users.filter(u => u.permission_groups?.some(g => g.id === group.id)).length;
                     return (
-                      <div key={group.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center">
-                              <FolderOpen className="w-5 h-5 text-purple-400" />
+                      <div key={group.id} className="p-4">
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div className="shrink-0 mt-0.5">
+                              <FolderOpen className="w-5 h-5 text-fg-subtle" />
                             </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium text-white">{group.name}</span>
-                                {group.is_default && (
-                                  <span className="px-2 py-0.5 text-[10px] bg-green-900/30 text-green-400 rounded">Standard</span>
-                                )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-fg">{group.name}</span>
+                                {group.is_default && <StatusBadge tone="positive" label="Standard" />}
                               </div>
-                              {group.description && <p className="text-sm text-gray-400">{group.description}</p>}
+                              <p className="text-xs text-fg-subtle tabular-nums mt-0.5">{memberCount} {memberCount === 1 ? 'Mitglied' : 'Mitglieder'}</p>
+                              {group.description && <p className="text-sm text-fg-muted mt-1">{group.description}</p>}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500">{memberCount} Mitglieder</span>
-                            <button onClick={() => openGroupModal(group)} className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg">
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button onClick={() => handleDeleteGroup(group.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                          <div className="flex items-center gap-0.5 shrink-0">
+                            <Button variant="ghost" size="sm" icon={Edit} title="Bearbeiten" aria-label="Bearbeiten" onClick={() => openGroupModal(group)} />
+                            <Button variant="ghost" size="sm" icon={Trash2} title="Löschen" aria-label="Löschen"
+                              className="hover:text-bad" onClick={() => handleDeleteGroup(group.id)} />
                           </div>
                         </div>
                         {/* Permissions der Gruppe */}
@@ -456,13 +440,13 @@ export default function AdminPage() {
                             group.permissions.map(code => {
                               const perm = permissions.find(p => p.code === code);
                               return (
-                                <span key={code} className="px-2 py-0.5 text-xs bg-gray-800 text-gray-300 rounded">
+                                <span key={code} className="px-1.5 py-0.5 text-[11px] bg-raised text-fg-muted rounded-sm">
                                   {perm?.name || code}
                                 </span>
                               );
                             })
                           ) : (
-                            <span className="text-xs text-gray-500">Keine Berechtigungen zugewiesen</span>
+                            <span className="text-xs text-fg-subtle">Keine Berechtigungen zugewiesen</span>
                           )}
                         </div>
                       </div>
@@ -475,44 +459,41 @@ export default function AdminPage() {
 
           {/* ═══ Permissions Tab ═══ */}
           {activeTab === 'permissions' && (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden divide-y divide-gray-800">
-              <div className="p-4 bg-gray-800/50 flex items-center justify-between">
-                <h3 className="font-semibold text-white">Lokale Berechtigungen ({permissions.length})</h3>
-                <button onClick={handleCreatePermission} className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
-                  <Plus className="w-4 h-4" /> Neue Berechtigung
-                </button>
+            <div className="bg-surface rounded-lg overflow-hidden divide-y divide-line-subtle">
+              <div className="px-4 py-3 flex items-center justify-between gap-2">
+                <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-none">Berechtigungen <span className="text-sm font-sans text-fg-subtle font-normal tabular-nums">{permissions.length}</span></h3>
+                <Button size="sm" variant="primary" icon={Plus} onClick={handleCreatePermission}>Neue Berechtigung</Button>
               </div>
               {Object.entries(permsByCategory).map(([category, perms]) => (
                 <div key={category}>
-                  <div className="px-4 py-2 bg-gray-800/30">
-                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{category}</span>
+                  <div className="px-4 py-1.5 bg-canvas">
+                    <span className="text-xs font-semibold text-fg-muted capitalize">{category}</span>
                   </div>
                   {perms.map((perm) => (
-                    <div key={perm.id} className="p-4 flex items-center justify-between">
+                    <div key={perm.id} className="group px-4 py-2.5 flex items-center justify-between gap-3 hover:bg-raised">
                       <div>
                         <div className="flex items-center gap-2">
-                          <code className="text-xs px-2 py-0.5 bg-gray-800 text-gray-400 rounded">{perm.code}</code>
-                          <span className="font-medium text-white">{perm.name}</span>
+                          <span className="text-sm font-medium text-fg">{perm.name}</span>
+                          <code className="text-[11px] px-1.5 py-0.5 bg-raised text-fg-muted rounded-sm font-mono">{perm.code}</code>
                         </div>
                         {/* Welche Gruppen haben diese Permission? */}
                         {groups.filter(g => g.permissions?.includes(perm.code)).length > 0 && (
-                          <div className="flex gap-1 mt-1">
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            <span className="text-[11px] text-fg-subtle mr-0.5">in</span>
                             {groups.filter(g => g.permissions?.includes(perm.code)).map(g => (
-                              <span key={g.id} className="text-[10px] px-1.5 py-0.5 bg-purple-600/20 text-purple-400 rounded">{g.name}</span>
+                              <span key={g.id} className="text-[10px] px-1.5 py-0.5 bg-raised text-fg-muted rounded-sm">{g.name}</span>
                             ))}
                           </div>
                         )}
                       </div>
-                      <button onClick={() => handleDeletePermission(perm.id)} className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                      <Button variant="ghost" size="sm" icon={Trash2} title="Löschen" aria-label="Löschen"
+                        className="hover:text-bad" onClick={() => handleDeletePermission(perm.id)} />
                     </div>
                   ))}
                 </div>
               ))}
               {permissions.length === 0 && (
-                <div className="p-8 text-center text-gray-400">
-                  <Key className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Keine lokalen Berechtigungen definiert</p>
-                </div>
+                <EmptyState icon={Key} title="Keine lokalen Berechtigungen definiert" />
               )}
             </div>
           )}
@@ -525,32 +506,32 @@ export default function AdminPage() {
       {/* ═══ Group Modal ═══ */}
       {showGroupModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-6 pb-4 border-b border-gray-800">
-              <h2 className="text-lg font-semibold text-white">{editingGroup ? 'Gruppe bearbeiten' : 'Neue Gruppe'}</h2>
-              <button onClick={() => setShowGroupModal(false)} className="text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-fg">{editingGroup ? 'Gruppe bearbeiten' : 'Neue Gruppe'}</h2>
+              <Button variant="ghost" size="sm" icon={X} title="Schließen" aria-label="Schließen" onClick={() => setShowGroupModal(false)} />
             </div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1.5">Name <span className="text-accent-fg">*</span></label>
                 <input type="text" value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })}
-                  placeholder="z.B. Techniker, Leitung, Gast..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                  placeholder="z.B. Techniker, Leitung, Gast" className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md hover:border-line-strong text-fg placeholder:text-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               </div>
               <div>
-                <label className="block text-sm text-gray-400 mb-1">Beschreibung</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1.5">Beschreibung</label>
                 <input type="text" value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })}
-                  placeholder="Kurze Beschreibung der Gruppe..." className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white" />
+                  placeholder="Wer gehört in diese Gruppe?" className="w-full px-3 py-2 text-sm bg-raised border border-line rounded-md hover:border-line-strong text-fg placeholder:text-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={groupForm.is_default} onChange={e => setGroupForm({ ...groupForm, is_default: e.target.checked })}
-                  className="w-4 h-4 rounded border-gray-600 bg-gray-800 text-purple-600" />
-                <span className="text-sm text-gray-300">Standardgruppe (neue User bekommen diese automatisch)</span>
+                  className="w-4 h-4 rounded-sm border-line bg-raised accent-accent" />
+                <span className="text-sm text-fg-muted">Standardgruppe <span className="text-fg-subtle">(neue Benutzer landen automatisch hier)</span></span>
               </label>
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Berechtigungen</label>
+                <label className="block text-sm font-medium text-fg-muted mb-2">Berechtigungen <span className="text-fg-subtle font-normal tabular-nums">{groupForm.permission_codes.length} gewählt</span></label>
                 {Object.entries(permsByCategory).map(([category, perms]) => (
                   <div key={category} className="mb-3">
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">{category}</div>
+                    <div className="text-xs font-semibold text-fg-muted capitalize mb-1.5">{category}</div>
                     <div className="flex flex-wrap gap-2">
                       {perms.map(perm => {
                         const isSelected = groupForm.permission_codes.includes(perm.code);
@@ -561,8 +542,8 @@ export default function AdminPage() {
                               : [...groupForm.permission_codes, perm.code];
                             setGroupForm({ ...groupForm, permission_codes: codes });
                           }}
-                            className={`px-3 py-1.5 rounded-lg text-sm transition-colors flex items-center gap-1 ${
-                              isSelected ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                            className={`px-2.5 py-1 rounded-md text-sm transition-colors flex items-center gap-1 ${
+                              isSelected ? 'bg-hover text-fg ring-1 ring-inset ring-accent' : 'bg-raised text-fg-muted hover:bg-hover hover:text-fg'
                             }`}>
                             {isSelected && <Check className="w-3 h-3" />}
                             {perm.name}
@@ -574,12 +555,11 @@ export default function AdminPage() {
                 ))}
               </div>
             </div>
-            <div className="flex gap-2 p-6 pt-4 border-t border-gray-800">
-              <button onClick={() => setShowGroupModal(false)} className="flex-1 py-2 text-gray-400 hover:text-white">Abbrechen</button>
-              <button onClick={handleSaveGroup} disabled={!groupForm.name}
-                className="flex items-center justify-center gap-2 flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold rounded-lg">
-                <Save className="w-4 h-4" /> {editingGroup ? 'Aktualisieren' : 'Erstellen'}
-              </button>
+            <div className="flex justify-end gap-2 px-5 py-4 border-t border-line-subtle">
+              <Button variant="ghost" onClick={() => setShowGroupModal(false)}>Abbrechen</Button>
+              <Button variant="primary" icon={Save} disabled={!groupForm.name} onClick={handleSaveGroup}>
+                {editingGroup ? 'Speichern' : 'Gruppe anlegen'}
+              </Button>
             </div>
           </div>
         </div>
@@ -587,15 +567,18 @@ export default function AdminPage() {
 
       {/* Bulk-Aktion-Modal */}
       {bulkOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
              onClick={() => setBulkOpen(false)}>
-          <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4"
+          <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full p-6 space-y-4"
                onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-white">Bulk-Aktion auf {selectedUserIds.size} User</h2>
+            <h2 className="font-display text-xl font-semibold tracking-tight text-fg">
+              Gemeinsam ändern
+              <span className="block text-sm font-sans font-normal text-fg-muted tabular-nums mt-0.5">{selectedUserIds.size} Benutzer ausgewählt</span>
+            </h2>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Aktion</label>
+              <label className="block text-sm font-medium text-fg-muted mb-1.5">Aktion</label>
               <select value={bulkAction} onChange={(e) => { setBulkAction(e.target.value); setBulkTarget(''); }}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                className="w-full bg-raised border border-line rounded-md hover:border-line-strong px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent">
                 <option value="add_group">Berechtigungsgruppe hinzufügen</option>
                 <option value="remove_group">Berechtigungsgruppe entfernen</option>
                 <option value="add_bereich">Bereich hinzufügen</option>
@@ -603,10 +586,10 @@ export default function AdminPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Ziel</label>
+              <label className="block text-sm font-medium text-fg-muted mb-1.5">Ziel</label>
               <select value={bulkTarget} onChange={(e) => setBulkTarget(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
-                <option value="">— wählen —</option>
+                className="w-full bg-raised border border-line rounded-md hover:border-line-strong px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent">
+                <option value="">Bitte wählen</option>
                 {bulkAction.includes('group')
                   ? groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)
                   : bereiche.map(b => <option key={b.id} value={b.id}>{b.name}</option>)
@@ -614,12 +597,11 @@ export default function AdminPage() {
               </select>
             </div>
             <div className="flex gap-2 pt-2">
-              <button onClick={() => setBulkOpen(false)} disabled={bulkBusy}
-                className="flex-1 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg">Abbrechen</button>
-              <button onClick={runBulk} disabled={!bulkTarget || bulkBusy}
-                className="flex-1 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white font-semibold rounded-lg">
-                {bulkBusy ? 'Läuft…' : 'Anwenden'}
-              </button>
+              <Button variant="secondary" className="flex-1" disabled={bulkBusy} onClick={() => setBulkOpen(false)}>Abbrechen</Button>
+              <Button variant="primary" className={`flex-1 ${bulkBusy ? '[&>svg]:animate-spin' : ''}`}
+                disabled={!bulkTarget || bulkBusy} onClick={runBulk} icon={bulkBusy ? Loader2 : undefined}>
+                {bulkBusy ? 'Wird angewendet…' : 'Anwenden'}
+              </Button>
             </div>
           </div>
         </div>
@@ -713,57 +695,53 @@ function SystemTab() {
   };
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 space-y-6">
+    <div className="space-y-6">
       {/* Permissions initialisieren */}
       <div>
-        <h3 className="text-lg font-semibold text-white mb-2">Permissions initialisieren</h3>
-        <p className="text-sm text-gray-400 mb-3">
-          Legt alle im Code definierten Standard-Berechtigungen in der Datenbank an
-          (idempotent — bestehende werden nicht überschrieben).
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-2">Berechtigungen anlegen</h3>
+        <p className="text-sm text-fg-muted mb-3">
+          Legt alle im Code definierten Berechtigungen in der Datenbank an. Vorhandene bleiben unverändert.
         </p>
-        <button onClick={runInit} disabled={initRunning}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium rounded-lg">
-          {initRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          Permissions initialisieren
-        </button>
+        <Button variant="secondary" disabled={initRunning} onClick={runInit}
+          icon={initRunning ? Loader2 : RefreshCw} className={initRunning ? '[&>svg]:animate-spin' : ''}>
+          Berechtigungen anlegen
+        </Button>
         {initResult && (
-          <pre className="mt-3 p-3 bg-gray-800 text-xs text-gray-300 rounded-lg overflow-auto max-h-48">
+          <pre className="mt-3 p-3 bg-surface font-mono text-xs text-fg-muted rounded-lg overflow-auto max-h-48">
 {JSON.stringify(initResult, null, 2)}
           </pre>
         )}
       </div>
 
       {/* Stale-Permissions aufräumen */}
-      <div className="pt-6 border-t border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-2">Veraltete Permissions aufräumen</h3>
-        <p className="text-sm text-gray-400 mb-3">
-          Listet Permission-Codes, die nicht (mehr) im Code-Katalog vorkommen — z.B. nach Umbenennungen.
+      <div className="pt-6 border-t border-line-subtle">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-2">Veraltete Berechtigungen</h3>
+        <p className="text-sm text-fg-muted mb-3">
+          Codes, die im Code nicht mehr vorkommen, etwa nach Umbenennungen.
         </p>
         <div className="flex gap-2">
-          <button onClick={loadStale} disabled={staleLoading}
-            className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-white text-sm rounded-lg">
-            {staleLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+          <Button variant="secondary" size="sm" disabled={staleLoading} onClick={loadStale}
+            icon={staleLoading ? Loader2 : RefreshCw} className={staleLoading ? '[&>svg]:animate-spin' : ''}>
             Prüfen
-          </button>
+          </Button>
           {stale?.stale?.length > 0 && (
-            <button onClick={cleanupStale} disabled={cleanupRunning}
-              className="inline-flex items-center gap-2 px-3 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white text-sm rounded-lg">
-              {cleanupRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash className="w-4 h-4" />}
+            <Button variant="danger" size="sm" disabled={cleanupRunning} onClick={cleanupStale}
+              icon={cleanupRunning ? Loader2 : Trash} className={cleanupRunning ? '[&>svg]:animate-spin' : ''}>
               Alle löschen ({stale.stale.length})
-            </button>
+            </Button>
           )}
         </div>
         {stale && (
           stale.stale.length === 0 ? (
-            <p className="mt-3 text-sm text-green-400 inline-flex items-center gap-1">
-              <Check className="w-4 h-4" /> Keine veralteten Einträge — sauber.
+            <p className="mt-3 text-sm text-ok inline-flex items-center gap-1">
+              <CheckCircle2 className="w-4 h-4" /> Keine veralteten Einträge.
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-gray-800 bg-gray-800/40 rounded-lg">
+            <ul className="mt-3 divide-y divide-line-subtle bg-surface rounded-lg">
               {stale.stale.map((p) => (
                 <li key={p.id} className="p-3 flex items-center gap-3">
-                  <code className="text-xs px-2 py-0.5 bg-gray-900 text-red-300 rounded">{p.code}</code>
-                  <span className="text-sm text-gray-300">{p.name}</span>
+                  <code className="text-xs px-1.5 py-0.5 bg-raised text-bad rounded-sm font-mono">{p.code}</code>
+                  <span className="text-sm text-fg-muted">{p.name}</span>
                 </li>
               ))}
             </ul>
@@ -772,155 +750,155 @@ function SystemTab() {
       </div>
 
       {/* Branding + Wartung + Login-Banner */}
-      <div className="pt-6 border-t border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-3">Globale Einstellungen</h3>
-        {!global ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : (
+      <div className="pt-6 border-t border-line-subtle">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-3">Globale Einstellungen</h3>
+        {!global ? <Loader2 className="w-4 h-4 animate-spin text-fg-subtle" /> : (
           <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="text-sm">
-                <span className="block text-gray-400 mb-1">App-Name</span>
+                <span className="block text-fg-muted font-medium mb-1.5">App-Name</span>
                 <input type="text" value={global['branding.app_name'] || ''}
                   onChange={(e) => setKey('branding.app_name', e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white" />
+                  className="w-full bg-raised border border-line rounded-md hover:border-line-strong px-3 py-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               </label>
               <label className="text-sm">
-                <span className="block text-gray-400 mb-1">Akzentfarbe</span>
+                <span className="block text-fg-muted font-medium mb-1.5">Akzentfarbe</span>
                 <input type="color" value={global['branding.accent_color'] || '#3b82f6'}
                   onChange={(e) => setKey('branding.accent_color', e.target.value)}
-                  className="h-9 bg-gray-800 border border-gray-700 rounded px-1" />
+                  className="h-9 bg-raised border border-line rounded-md hover:border-line-strong px-1" />
               </label>
             </div>
             <label className="text-sm block">
-              <span className="block text-gray-400 mb-1">Login-Banner-Text (oben über dem Login)</span>
+              <span className="block text-fg-muted font-medium mb-1.5">Login-Banner-Text (oben über dem Login)</span>
               <input type="text" value={global['login.banner'] || ''}
                 onChange={(e) => setKey('login.banner', e.target.value)}
                 placeholder="z.B. Bitte 2FA aktivieren ab 01.06."
-                className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white" />
+                className="w-full bg-raised border border-line rounded-md hover:border-line-strong px-3 py-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
             </label>
-            <div className="bg-amber-950/30 border border-amber-800/40 rounded-lg p-3 space-y-2">
-              <label className="flex items-center gap-2 text-sm text-amber-300">
+            <div className="bg-surface rounded-lg p-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm text-fg font-medium cursor-pointer">
                 <input type="checkbox" checked={(global['maintenance.enabled'] || 'false') === 'true'}
                   onChange={(e) => setKey('maintenance.enabled', e.target.checked ? 'true' : 'false')}
-                  className="rounded border-gray-600 bg-gray-700 text-amber-500" />
-                Wartungsmodus aktiv (großes Banner für alle User)
+                  className="rounded-sm border-line bg-hover accent-warn" />
+                Wartungsmodus <span className="font-normal text-fg-subtle">(Banner oben für alle)</span>
               </label>
               <input type="text" value={global['maintenance.message'] || ''}
                 onChange={(e) => setKey('maintenance.message', e.target.value)}
-                placeholder="Wartungs-Nachricht…"
-                className="w-full bg-gray-900 border border-amber-800/40 rounded px-2 py-1.5 text-amber-100 text-sm" />
+                placeholder="z.B. Heute ab 18 Uhr kurz nicht erreichbar"
+                className="w-full bg-raised border border-line rounded-md hover:border-line-strong px-3 py-2 text-fg text-sm placeholder:text-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
             </div>
             {globalDirty && (
-              <button onClick={saveGlobal} disabled={globalSaving}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white rounded-lg">
-                {globalSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              <Button variant="primary" disabled={globalSaving} onClick={saveGlobal}
+                icon={globalSaving ? Loader2 : Save} className={globalSaving ? '[&>svg]:animate-spin' : ''}>
                 Speichern
-              </button>
+              </Button>
             )}
           </div>
         )}
       </div>
 
       {/* Tests */}
-      <div className="pt-6 border-t border-gray-800 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="pt-6 border-t border-line-subtle grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <h3 className="text-lg font-semibold text-white mb-2">Discord-Test</h3>
-          <button onClick={runDiscordTest}
-            className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg">
-            Verbindung prüfen
-          </button>
+          <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-2">Discord-Test</h3>
+          <Button variant="secondary" size="sm" onClick={runDiscordTest}>Verbindung prüfen</Button>
           {discordResult && (
-            <div className={`mt-2 text-xs p-2 rounded ${discordResult.ok ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
+            <div className={`mt-2 text-xs p-2 rounded-md flex items-start gap-1.5 ${discordResult.ok ? 'bg-raised text-ok' : 'bg-raised text-bad'}`}>
               {discordResult.ok
-                ? <>✓ Guild: <strong>{discordResult.guild_name}</strong> {discordResult.info_channel_konfiguriert && (discordResult.info_channel_erreichbar ? '· Info-Channel ok' : '· Info-Channel nicht erreichbar')}</>
-                : <>✗ {discordResult.reason}</>
-              }
+                ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                : <XCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />}
+              <span>
+                {discordResult.ok
+                  ? <>Guild: <strong>{discordResult.guild_name}</strong> {discordResult.info_channel_konfiguriert && (discordResult.info_channel_erreichbar ? '· Info-Channel ok' : '· Info-Channel nicht erreichbar')}</>
+                  : discordResult.reason}
+              </span>
             </div>
           )}
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-white mb-2">Email-Test</h3>
+          <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-2">E-Mail-Test</h3>
           <div className="flex gap-2">
             <input type="email" value={emailTo} onChange={(e) => setEmailTo(e.target.value)}
               placeholder="leer = an deine Adresse"
-              className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-white text-sm" />
-            <button onClick={runEmailTest}
-              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm rounded-lg">
-              Senden
-            </button>
+              className="flex-1 min-w-0 bg-raised border border-line rounded-md hover:border-line-strong px-3 py-1.5 text-fg text-sm placeholder:text-fg-subtle focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+            <Button variant="secondary" size="sm" onClick={runEmailTest}>Senden</Button>
           </div>
           {emailResult && (
-            <div className={`mt-2 text-xs p-2 rounded ${emailResult.ok ? 'bg-green-900/30 text-green-300' : 'bg-red-900/30 text-red-300'}`}>
-              {emailResult.ok ? `✓ Gesendet an ${emailResult.to}` : `✗ ${emailResult.reason}`}
+            <div className={`mt-2 text-xs p-2 rounded-md flex items-center gap-1.5 ${emailResult.ok ? 'bg-raised text-ok' : 'bg-raised text-bad'}`}>
+              {emailResult.ok
+                ? <><CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> Gesendet an {emailResult.to}</>
+                : <><XCircle className="w-3.5 h-3.5 shrink-0" /> {emailResult.reason}</>}
             </div>
           )}
         </div>
       </div>
 
       {/* App-Statistik */}
-      <div className="pt-6 border-t border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-3">App-Statistik</h3>
-        {!stats ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : (
+      <div className="pt-6 border-t border-line-subtle">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-3">App-Statistik</h3>
+        {!stats ? <Loader2 className="w-4 h-4 animate-spin text-fg-subtle" /> : (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              ['User',                stats.user_count],
-              ['Admins',              stats.admin_count],
-              ['Aktive Sessions',     stats.active_sessions_30min],
-              ['Sessions total',      stats.total_sessions],
-              ['Permissions',         stats.permissions],
-              ['Gruppen',             stats.groups],
-              ['Ungelesen (alle)',    stats.notifications_unread],
-            ].map(([label, value]) => (
-              <div key={label} className="bg-gray-800/40 rounded-lg p-3">
-                <div className="text-xs text-gray-500 uppercase">{label}</div>
-                <div className="text-2xl font-bold text-white tabular-nums">{value}</div>
-              </div>
+              [Users, 'Benutzer', stats.user_count],
+              [Shield, 'Admins', stats.admin_count],
+              [Activity, 'Aktiv (30 Min.)', stats.active_sessions_30min],
+              [Activity, 'Sitzungen gesamt', stats.total_sessions],
+              [Key, 'Berechtigungen', stats.permissions],
+              [FolderOpen, 'Gruppen', stats.groups],
+              [Bell, 'Ungelesen (alle)', stats.notifications_unread],
+            ].map(([Icon, label, value]) => (
+              <StatTile key={label} icon={Icon} label={label} value={value} />
             ))}
           </div>
         )}
       </div>
 
       {/* Version + Updates */}
-      <div className="pt-6 border-t border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-2">Version</h3>
-        {!version ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : version.error ? (
-          <p className="text-sm text-red-400">{version.error}</p>
+      <div className="pt-6 border-t border-line-subtle">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-2">Version</h3>
+        {!version ? <Loader2 className="w-4 h-4 animate-spin text-fg-subtle" /> : version.error ? (
+          <p className="text-sm text-bad">{version.error}</p>
         ) : (
-          <div className="text-sm text-gray-300 space-y-1">
-            <div>Commit: <code className="bg-gray-800 px-2 py-0.5 rounded">{version.commit}</code></div>
-            <div>vom {version.commit_date ? new Date(version.commit_date).toLocaleString('de-DE') : '—'}</div>
+          <div className="text-sm text-fg-muted space-y-1">
+            <div className="flex items-center gap-2"><GitCommit className="w-3.5 h-3.5 text-fg-subtle shrink-0" /> Commit <code className="bg-raised px-1.5 py-0.5 rounded-sm font-mono text-xs">{version.commit}</code></div>
+            <div>vom {version.commit_date ? new Date(version.commit_date).toLocaleString('de-DE') : 'unbekannt'}</div>
             {version.behind > 0 && (
-              <div className="text-amber-400 mt-2">⚠ {version.behind} Commit(s) hinter main — Update verfügbar.</div>
+              <div className="text-warn mt-2 flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 shrink-0" /> {version.behind} {version.behind === 1 ? 'Commit' : 'Commits'} hinter main, Update verfügbar
+              </div>
             )}
             {version.behind === 0 && (
-              <div className="text-green-400 mt-2">✓ Aktuell</div>
+              <div className="text-ok mt-2 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0" /> Auf dem neuesten Stand
+              </div>
             )}
           </div>
         )}
       </div>
 
       {/* Backups */}
-      <div className="pt-6 border-t border-gray-800">
-        <h3 className="text-lg font-semibold text-white mb-2">Backups</h3>
-        {!backups ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : (
+      <div className="pt-6 border-t border-line-subtle">
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg mb-2 flex items-center gap-2"><Archive className="w-4 h-4 text-fg-subtle" /> Backups</h3>
+        {!backups ? <Loader2 className="w-4 h-4 animate-spin text-fg-subtle" /> : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {['daily', 'weekly'].map((kind) => (
               <div key={kind}>
-                <div className="text-xs text-gray-500 uppercase mb-1">{kind === 'daily' ? 'Daily' : 'Weekly'}</div>
+                <div className="text-xs font-semibold text-fg-muted mb-1.5">{kind === 'daily' ? 'Täglich' : 'Wöchentlich'}</div>
                 {(backups[kind] || []).length === 0
-                  ? <p className="text-sm text-gray-500">— keine</p>
+                  ? <p className="text-sm text-fg-subtle">Keine Backups vorhanden.</p>
                   : (
                     <ul className="text-xs space-y-1 max-h-48 overflow-y-auto">
                       {backups[kind].map((b) => (
                         <li key={b.name} className="flex items-center gap-2">
-                          <code className="text-gray-300 truncate">{b.name}</code>
-                          <span className="text-gray-500 shrink-0 ml-auto">{(b.size / 1024 / 1024).toFixed(2)} MB</span>
+                          <code className="text-fg-muted truncate">{b.name}</code>
+                          <span className="text-fg-subtle shrink-0 ml-auto tabular-nums">{(b.size / 1024 / 1024).toFixed(2)} MB</span>
                         </li>
                       ))}
                     </ul>
                   )
                 }
                 {backups[`${kind}_error`] && (
-                  <p className="text-xs text-red-400 mt-1">{backups[`${kind}_error`]}</p>
+                  <p className="text-xs text-bad mt-1">{backups[`${kind}_error`]}</p>
                 )}
               </div>
             ))}

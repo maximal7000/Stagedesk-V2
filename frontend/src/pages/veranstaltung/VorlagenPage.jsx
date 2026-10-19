@@ -115,17 +115,17 @@ export default function VorlagenPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-6">
           {/* Liste */}
           <div className="space-y-2">
             {templates.length === 0 ? (
-              <p className="text-sm text-gray-500">Noch keine Vorlagen.</p>
+              <p className="text-sm text-fg-subtle">Noch keine Vorlagen.</p>
             ) : templates.map((t) => (
               <div key={t.id}
-                className={`p-3 rounded-lg border ${
-                  editing?.id === t.id ? 'border-accent bg-accent/10' : 'border-gray-800 bg-gray-900 hover:border-gray-700'
+                className={`p-3 rounded-lg ${
+                  editing?.id === t.id ? 'bg-raised' : 'bg-surface hover:bg-raised'
                 }`}>
                 <div className="flex items-start gap-2">
                   <button onClick={() => setEditing({
@@ -134,25 +134,25 @@ export default function VorlagenPage() {
                     erforderliche_kompetenzen_ids: t.erforderliche_kompetenzen_ids || [],
                     erinnerungen: t.erinnerungen || [],
                   })} className="flex-1 text-left">
-                    <div className="text-white font-medium">{t.name}</div>
-                    {t.beschreibung && <div className="text-xs text-gray-400 mt-0.5 line-clamp-2">{t.beschreibung}</div>}
+                    <div className="text-fg font-medium">{t.name}</div>
+                    {t.beschreibung && <div className="text-xs text-fg-muted mt-0.5 line-clamp-2">{t.beschreibung}</div>}
                     <div className="flex gap-1 mt-2 flex-wrap">
-                      <span className="text-[10px] px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-hover text-fg-muted rounded-sm tabular-nums">
                         {t.dauer_minuten} Min
                       </span>
                       {(t.taetigkeit_namen || []).slice(0, 3).map(n => (
-                        <span key={n} className="text-[10px] px-1.5 py-0.5 bg-purple-600/20 text-purple-300 rounded">{n}</span>
+                        <span key={n} className="text-[10px] px-1.5 py-0.5 bg-hover text-fg-muted rounded-sm">{n}</span>
                       ))}
                       {(t.erinnerungen || []).length > 0 && (
-                        <span className="text-[10px] px-1.5 py-0.5 bg-amber-600/20 text-amber-300 rounded">
-                          {t.erinnerungen.length} Erinn.
+                        <span className="text-[10px] px-1.5 py-0.5 bg-hover text-warn rounded-sm tabular-nums">
+                          {t.erinnerungen.length} Erinnerung{t.erinnerungen.length !== 1 ? 'en' : ''}
                         </span>
                       )}
                     </div>
                   </button>
                   {canEdit && (
-                    <button onClick={() => remove(t)}
-                      className="p-1.5 text-gray-500 hover:text-red-400">
+                    <button onClick={() => remove(t)} aria-label={`Vorlage "${t.name}" löschen`}
+                      className="p-1.5 text-fg-subtle hover:text-bad">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   )}
@@ -163,78 +163,78 @@ export default function VorlagenPage() {
 
           {/* Editor */}
           {editing ? (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+            <div className="bg-surface rounded-lg p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
+                <h2 className="text-lg font-semibold text-fg">
                   {editing.id ? 'Vorlage bearbeiten' : 'Neue Vorlage'}
                 </h2>
-                <button onClick={() => setEditing(null)}
-                  className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+                <button onClick={() => setEditing(null)} aria-label="Schließen"
+                  className="text-fg-subtle hover:text-fg"><X className="w-5 h-5" /></button>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Vorlagen-Name *</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Vorlagen-Name *</label>
                   <input value={editing.name}
                     onChange={(e) => setEditing(s => ({ ...s, name: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Dauer (Min)</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Dauer (Min)</label>
                   <input type="number" value={editing.dauer_minuten}
                     onChange={(e) => setEditing(s => ({ ...s, dauer_minuten: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Vorlagen-Beschreibung (intern)</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Vorlagen-Beschreibung (intern)</label>
                 <textarea rows={2} value={editing.beschreibung}
                   onChange={(e) => setEditing(s => ({ ...s, beschreibung: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm" />
+                  className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm" />
               </div>
 
-              <hr className="border-gray-800" />
+              <hr className="border-line-subtle" />
 
-              <p className="text-xs text-gray-500">Werte für neu angelegte Veranstaltungen:</p>
+              <p className="text-xs text-fg-subtle">Werte für neu angelegte Veranstaltungen:</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Titel-Vorlage</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Titel-Vorlage</label>
                   <input value={editing.titel_vorlage}
                     onChange={(e) => setEditing(s => ({ ...s, titel_vorlage: e.target.value }))}
                     placeholder="z.B. Schulkonzert {datum}"
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Ort-Vorlage</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Ort-Vorlage</label>
                   <input value={editing.ort_vorlage}
                     onChange={(e) => setEditing(s => ({ ...s, ort_vorlage: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white" />
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Beschreibung-Vorlage</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Beschreibung-Vorlage</label>
                 <textarea rows={3} value={editing.beschreibung_vorlage}
                   onChange={(e) => setEditing(s => ({ ...s, beschreibung_vorlage: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white text-sm font-mono" />
+                  className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg text-sm font-mono" />
               </div>
 
               {/* Tätigkeiten */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                <label className="block text-sm font-medium text-fg-muted mb-1 flex items-center gap-1">
                   <Layers className="w-3.5 h-3.5" /> Tätigkeiten (für Zuweisungen)
                 </label>
-                <div className="flex flex-wrap gap-1.5 bg-gray-800/40 border border-gray-800 rounded p-2 max-h-32 overflow-y-auto">
-                  {taetigkeiten.length === 0 && <span className="text-xs text-gray-600">Keine Tätigkeiten vorhanden</span>}
+                <div className="flex flex-wrap gap-1.5 bg-raised rounded-md p-2 max-h-32 overflow-y-auto">
+                  {taetigkeiten.length === 0 && <span className="text-xs text-fg-subtle">Keine Tätigkeiten vorhanden</span>}
                   {taetigkeiten.map(t => {
                     const on = (editing.taetigkeit_ids || []).includes(t.id);
                     return (
                       <button key={t.id} onClick={() => toggleSet('taetigkeit_ids', t.id)}
-                        className={`px-2 py-1 rounded text-xs ${
-                          on ? 'bg-purple-600/30 text-purple-200 border border-purple-500'
-                             : 'bg-gray-700 text-gray-300 border border-gray-700'
+                        className={`px-2 py-1 rounded-sm text-xs ${
+                          on ? 'bg-hover text-fg border border-accent'
+                             : 'bg-hover text-fg-muted border border-line'
                         }`}>
                         {t.name}
                       </button>
@@ -245,18 +245,18 @@ export default function VorlagenPage() {
 
               {/* Kompetenzen */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                <label className="block text-sm font-medium text-fg-muted mb-1 flex items-center gap-1">
                   <Award className="w-3.5 h-3.5" /> Erforderliche Kompetenzen
                 </label>
-                <div className="flex flex-wrap gap-1.5 bg-gray-800/40 border border-gray-800 rounded p-2 max-h-32 overflow-y-auto">
-                  {kompetenzen.length === 0 && <span className="text-xs text-gray-600">Keine Kompetenzen verfügbar</span>}
+                <div className="flex flex-wrap gap-1.5 bg-raised rounded-md p-2 max-h-32 overflow-y-auto">
+                  {kompetenzen.length === 0 && <span className="text-xs text-fg-subtle">Keine Kompetenzen verfügbar</span>}
                   {kompetenzen.map(k => {
                     const on = (editing.erforderliche_kompetenzen_ids || []).includes(k.id);
                     return (
                       <button key={k.id} onClick={() => toggleSet('erforderliche_kompetenzen_ids', k.id)}
-                        className={`px-2 py-1 rounded text-xs ${
-                          on ? 'bg-amber-600/30 text-amber-200 border border-amber-500'
-                             : 'bg-gray-700 text-gray-300 border border-gray-700'
+                        className={`px-2 py-1 rounded-sm text-xs ${
+                          on ? 'bg-hover text-fg border border-accent'
+                             : 'bg-hover text-fg-muted border border-line'
                         }`}>
                         {k.name}
                       </button>
@@ -267,7 +267,7 @@ export default function VorlagenPage() {
 
               {/* Erinnerungen */}
               <div>
-                <label className="block text-xs text-gray-400 mb-1 flex items-center gap-1">
+                <label className="block text-sm font-medium text-fg-muted mb-1 flex items-center gap-1">
                   <Bell className="w-3.5 h-3.5" /> Erinnerungen (vor Beginn)
                 </label>
                 <div className="space-y-1">
@@ -277,31 +277,31 @@ export default function VorlagenPage() {
                         onChange={(e) => setEditing(s => ({
                           ...s, erinnerungen: s.erinnerungen.map((x, j) => j === i ? { ...x, zeit_vorher: parseInt(e.target.value) || 1 } : x),
                         }))}
-                        className="w-20 bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm" />
+                        className="w-20 bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg text-sm" />
                       <select value={er.einheit}
                         onChange={(e) => setEditing(s => ({
                           ...s, erinnerungen: s.erinnerungen.map((x, j) => j === i ? { ...x, einheit: e.target.value } : x),
                         }))}
-                        className="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-white text-sm">
+                        className="bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-2 py-1 text-fg text-sm">
                         {EINHEITEN.map(e => <option key={e.v} value={e.v}>{e.l}</option>)}
                       </select>
-                      <span className="text-xs text-gray-500">vorher</span>
+                      <span className="text-xs text-fg-subtle">vorher</span>
                       <button onClick={() => setEditing(s => ({
                         ...s, erinnerungen: s.erinnerungen.filter((_, j) => j !== i),
-                      }))} className="ml-auto text-gray-500 hover:text-red-400">
+                      }))} aria-label="Erinnerung entfernen" className="ml-auto text-fg-subtle hover:text-bad">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
                   <button onClick={() => setEditing(s => ({
                     ...s, erinnerungen: [...(s.erinnerungen || []), { zeit_vorher: 1, einheit: 'tage' }],
-                  }))} className="text-xs text-accent hover:opacity-80 inline-flex items-center gap-1">
+                  }))} className="text-xs text-accent-fg hover:opacity-80 inline-flex items-center gap-1">
                     <Plus className="w-3 h-3" /> Erinnerung
                   </button>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-800">
+              <div className="flex justify-end gap-2 pt-2 border-t border-line-subtle">
                 <Button variant="secondary" onClick={() => setEditing(null)}>Abbrechen</Button>
                 <Button variant="primary" onClick={save} disabled={saving}
                   icon={saving ? undefined : Save}>
@@ -311,7 +311,7 @@ export default function VorlagenPage() {
               </div>
             </div>
           ) : (
-            <div className="bg-gray-900 border border-gray-800 rounded-xl">
+            <div className="bg-surface rounded-lg">
               <EmptyState icon={FileText}
                 title={canEdit ? 'Keine Vorlage ausgewählt' : 'Keine Bearbeitungs-Rechte'}
                 description={canEdit

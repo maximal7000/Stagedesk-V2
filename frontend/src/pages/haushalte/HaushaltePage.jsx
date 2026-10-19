@@ -4,7 +4,8 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Wallet, TrendingUp, TrendingDown, Edit, Trash2, Loader2, Eye, RefreshCw } from 'lucide-react';
+import { Plus, Wallet, TrendingUp, TrendingDown, Edit, Trash2, Loader2, Eye, RefreshCw, AlertTriangle } from 'lucide-react';
+import { PageHeader, Button, EmptyState } from '../../components/ui';
 import CreateHaushaltModal from '../../components/CreateHaushaltModal';
 import EditHaushaltModal from '../../components/EditHaushaltModal';
 import ArtikelModal from '../../components/ArtikelModal';
@@ -12,6 +13,12 @@ import apiClient from '../../lib/api';
 
 // Polling-Intervall in Millisekunden (5 Sekunden)
 const POLL_INTERVAL = 5000;
+
+// Euro-Betrag im deutschen Format (1.234,56 €)
+const formatEuro = (value) => {
+  const num = parseFloat(value) || 0;
+  return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+};
 
 export default function HaushaltePage() {
   const navigate = useNavigate();
@@ -92,74 +99,47 @@ export default function HaushaltePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-[1.7rem] leading-none font-bold text-white mb-2">Meine Haushalte</h1>
-          <div className="flex items-center gap-3">
-            <p className="text-gray-400">Verwalte deine Haushalte und Budget</p>
-            {/* Live-Update Status */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsPolling(!isPolling)}
-                className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs transition-colors ${
-                  isPolling 
-                    ? 'bg-green-900/50 text-green-400 hover:bg-green-900/70' 
-                    : 'bg-gray-800 text-gray-500 hover:bg-gray-700'
-                }`}
-                title={isPolling ? 'Live-Updates aktiv (klicken zum Deaktivieren)' : 'Live-Updates pausiert (klicken zum Aktivieren)'}
-              >
-                <RefreshCw className={`w-3 h-3 ${isPolling ? 'animate-spin' : ''}`} style={{ animationDuration: '3s' }} />
-                {isPolling ? 'Live' : 'Pausiert'}
-              </button>
-              {lastUpdate && (
-                <span className="text-xs text-gray-600">
-                  {lastUpdate.toLocaleTimeString('de-DE')}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Neuer Haushalt
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Finanzen"
+        title="Haushalte"
+        meta={
+          <span className="inline-flex items-center gap-2">
+            <button
+              onClick={() => setIsPolling(!isPolling)}
+              className={`inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-sm text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+                isPolling
+                  ? 'text-ok hover:bg-raised'
+                  : 'text-fg-subtle hover:bg-raised'
+              }`}
+              title={isPolling ? 'Live-Updates aktiv (klicken zum Pausieren)' : 'Live-Updates pausiert (klicken zum Fortsetzen)'}
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${isPolling ? 'bg-ok animate-pulse' : 'bg-fg-disabled'}`} />
+              {isPolling ? 'Live' : 'Pausiert'}
+            </button>
+            {lastUpdate && (
+              <span className="text-xs text-fg-subtle tabular-nums">Stand {lastUpdate.toLocaleTimeString('de-DE')}</span>
+            )}
+          </span>
+        }
+        actions={<Button variant="primary" icon={Plus} onClick={() => setShowCreateModal(true)}>Neuer Haushalt</Button>}
+      />
 
       {/* Haushalte Grid */}
       {loading ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Loader2 className="w-12 h-12 text-gray-500 mx-auto mb-4 animate-spin" />
-          <p className="text-gray-400">Haushalte werden geladen...</p>
-        </div>
+        <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : error ? (
-        <div className="bg-gray-900 border border-red-800 rounded-xl p-12 text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <button
-            onClick={fetchHaushalte}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-colors"
-          >
-            Erneut versuchen
-          </button>
+        <div className="bg-surface rounded-lg">
+          <EmptyState icon={AlertTriangle} title="Haushalte konnten nicht geladen werden" description={error}
+            action={<Button variant="secondary" icon={RefreshCw} onClick={fetchHaushalte}>Erneut versuchen</Button>} />
         </div>
       ) : haushalte.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center">
-          <Wallet className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-white mb-2">Noch keine Haushalte</h3>
-          <p className="text-gray-400 mb-6">Erstelle deinen ersten Haushalt, um loszulegen!</p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg transition-colors"
-          >
-            <Plus className="w-5 h-5" />
-            Ersten Haushalt erstellen
-          </button>
+        <div className="bg-surface rounded-lg">
+          <EmptyState icon={Wallet} title="Noch keine Haushalte"
+            description="Lege einen Haushalt mit Budget an, um Anschaffungen und Ausgaben zu erfassen."
+            action={<Button variant="primary" icon={Plus} onClick={() => setShowCreateModal(true)}>Haushalt anlegen</Button>} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {haushalte.map((haushalt) => {
             const budgetKonsumitiv = parseFloat(haushalt.budget_konsumitiv) || 0;
             const budgetInvestitiv = parseFloat(haushalt.budget_investiv) || 0;
@@ -170,30 +150,33 @@ export default function HaushaltePage() {
             const gesamtAusgaben = gesamtKonsumitiv + gesamtInvestitiv;
             const verbleibendesBudget = gesamtBudget - gesamtAusgaben;
             const budgetProzent = gesamtBudget > 0 ? (gesamtAusgaben / gesamtBudget) * 100 : 0;
+            const barColor = budgetProzent > 90 ? 'bg-bad' : budgetProzent > 75 ? 'bg-warn' : 'bg-ok';
 
             return (
               <div
                 key={haushalt.id}
-                className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors"
+                className="group bg-surface rounded-lg p-5 hover:bg-hover transition-colors flex flex-col"
               >
                 {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-1">{haushalt.name}</h3>
-                    <p className="text-sm text-gray-400">{haushalt.beschreibung}</p>
-                  </div>
-                  <div className="flex gap-2">
+                <div className="flex items-start justify-between gap-3 mb-5">
+                  <button onClick={() => navigate(`/haushalte/${haushalt.id}`)} className="min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas rounded-sm">
+                    <h3 className="font-display text-xl font-semibold tracking-tight text-fg group-hover:text-accent-fg transition-colors truncate">{haushalt.name}</h3>
+                    {haushalt.beschreibung && (
+                      <p className="text-sm text-fg-muted mt-0.5 line-clamp-2">{haushalt.beschreibung}</p>
+                    )}
+                  </button>
+                  <div className="flex gap-1 shrink-0">
                     <button 
                       onClick={() => handleEditHaushalt(haushalt)}
-                      className="p-2 text-gray-400 hover:text-accent hover:bg-gray-800 rounded-lg transition-colors"
-                      title="Bearbeiten"
+                      className="p-2 text-fg-subtle hover:text-fg hover:bg-hover rounded-sm transition-colors"
+                      title="Bearbeiten" aria-label="Haushalt bearbeiten"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => handleDeleteHaushalt(haushalt.id)}
-                      className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-lg transition-colors"
-                      title="Löschen"
+                      className="p-2 text-fg-subtle hover:text-bad hover:bg-hover rounded-sm transition-colors"
+                      title="Löschen" aria-label="Haushalt löschen"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -201,62 +184,54 @@ export default function HaushaltePage() {
                 </div>
 
                 {/* Budget Bar */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between text-sm mb-2">
-                    <span className="text-gray-400">Gesamt Budget</span>
-                    <span className="text-white font-semibold">
-                      € {gesamtAusgaben.toFixed(2)} / € {gesamtBudget.toFixed(2)}
+                <div className="mb-5">
+                  <div className="flex items-baseline justify-between gap-3 mb-2">
+                    <div>
+                      <div className="text-xs text-fg-subtle">Verbleibend</div>
+                      <div className={`text-2xl font-bold tabular-nums leading-tight tracking-tight ${verbleibendesBudget < 0 ? 'text-bad' : 'text-fg'}`}>
+                        {formatEuro(verbleibendesBudget)}
+                      </div>
+                    </div>
+                    <span className="text-sm tabular-nums text-fg-muted">
+                      {formatEuro(gesamtAusgaben)} <span className="text-fg-subtle">/</span> {formatEuro(gesamtBudget)}
                     </span>
                   </div>
-                  <div className="h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-hover rounded-sm overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-300 ${
-                        budgetProzent > 90 ? 'bg-red-500' : budgetProzent > 75 ? 'bg-yellow-500' : 'bg-green-500'
-                      }`}
+                      className={`h-full transition-all duration-300 ${barColor}`}
                       style={{ width: `${Math.min(budgetProzent, 100)}%` }}
                     />
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Verbleibend: € {verbleibendesBudget.toFixed(2)}
-                  </p>
                 </div>
 
-                {/* Konsumitiv / Investiv */}
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingDown className="w-4 h-4 text-orange-400" />
-                      <span className="text-xs text-gray-400">Konsumitiv</span>
+                {/* Konsumtiv / Investiv */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-line-subtle mb-5">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1 text-fg-muted">
+                      <TrendingDown className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-xs font-medium">Konsumtiv</span>
                     </div>
-                    <p className="text-lg font-bold text-white">€ {gesamtKonsumitiv.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">von € {budgetKonsumitiv.toFixed(2)}</p>
+                    <p className="text-base font-semibold tabular-nums text-fg">{formatEuro(gesamtKonsumitiv)}</p>
+                    <p className="text-xs tabular-nums text-fg-subtle">von {formatEuro(budgetKonsumitiv)}</p>
                   </div>
-                  <div className="bg-gray-800 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                      <TrendingUp className="w-4 h-4 text-green-400" />
-                      <span className="text-xs text-gray-400">Investitiv</span>
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-1 text-fg-muted">
+                      <TrendingUp className="w-3.5 h-3.5 text-ok" />
+                      <span className="text-xs font-medium">Investiv</span>
                     </div>
-                    <p className="text-lg font-bold text-white">€ {gesamtInvestitiv.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">von € {budgetInvestitiv.toFixed(2)}</p>
+                    <p className="text-base font-semibold tabular-nums text-fg">{formatEuro(gesamtInvestitiv)}</p>
+                    <p className="text-xs tabular-nums text-fg-subtle">von {formatEuro(budgetInvestitiv)}</p>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => handleAddArtikel(haushalt)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Artikel hinzufügen
-                  </button>
-                  <button
-                    onClick={() => navigate(`/haushalte/${haushalt.id}`)}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-semibold rounded-lg transition-colors"
-                  >
-                    <Eye className="w-4 h-4" />
-                    Details anzeigen
-                  </button>
+                <div className="flex gap-2 mt-auto">
+                  <Button size="sm" variant="secondary" icon={Plus} onClick={() => handleAddArtikel(haushalt)} className="flex-1">
+                    Artikel erfassen
+                  </Button>
+                  <Button size="sm" variant="ghost" icon={Eye} onClick={() => navigate(`/haushalte/${haushalt.id}`)} className="flex-1">
+                    Details
+                  </Button>
                 </div>
               </div>
             );

@@ -13,7 +13,7 @@ Der Consumer:
   - Hat einen 60 s Heartbeat: schickt {type:"ping"}, erwartet pong; bricht
     nach 90 s ohne pong die Verbindung ab (tote Verbindungen erkennen)
   - Empfängt CEC-Status- und pong-Updates vom Pi
-  - Ermöglicht push_power_to_bildschirm() aus anderen Modulen, um bei
+  - Ermöglicht push_power_to_screen() aus anderen Modulen, um bei
     Config-Änderungen einen sofortigen Push auszulösen
 """
 
@@ -33,10 +33,10 @@ PONG_TIMEOUT = 90    # >90s ohne pong → Verbindung kappen
 
 
 def _group_name(slug: str) -> str:
-    return f"bildschirm_{slug}"
+    return f"screen_{slug}"
 
 
-def push_power_to_bildschirm(slug: str, power: bool = None) -> None:
+def push_power_to_screen(slug: str, power: bool = None) -> None:
     """Aus synchronem Django-Code: Power-Befehl an alle verbundenen Pi-Sockets
     eines Bildschirms senden. Wenn `power` None ist, wertet der Consumer beim
     Empfang selbst aus — das ist sicherer, weil der Server immer den
@@ -50,7 +50,7 @@ def push_power_to_bildschirm(slug: str, power: bool = None) -> None:
     })
 
 
-class BildschirmPiConsumer(AsyncWebsocketConsumer):
+class ScreenPiConsumer(AsyncWebsocketConsumer):
     """WebSocket-Endpunkt für den Raspberry Pi.  URL: /ws/monitor/pi/<slug>/"""
 
     async def connect(self):
@@ -141,7 +141,7 @@ class BildschirmPiConsumer(AsyncWebsocketConsumer):
         except Exception:
             pass
 
-    # ── Channel-Layer Handler (von push_power_to_bildschirm aufgerufen) ──
+    # ── Channel-Layer Handler (von push_power_to_screen aufgerufen) ──
 
     async def power_command(self, event):
         """Externer Push (z.B. nach Config-Änderung im Admin). Wenn power
@@ -156,20 +156,20 @@ class BildschirmPiConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_power_state(self) -> bool:
-        from .models import Bildschirm
+        from .models import Screen
         try:
-            bs = Bildschirm.objects.get(slug=self.slug)
-            return bs.get_power_state()
-        except Bildschirm.DoesNotExist:
+            screen = Screen.objects.get(slug=self.slug)
+            return screen.get_power_state()
+        except Screen.DoesNotExist:
             return True
 
     @database_sync_to_async
     def _save_cec_status(self, status: str) -> None:
-        from .models import Bildschirm
+        from .models import Screen
         try:
-            bs = Bildschirm.objects.get(slug=self.slug)
-            bs.cec_status = status
-            bs.cec_status_zeit = timezone.now()
-            bs.save(update_fields=["cec_status", "cec_status_zeit", "aktualisiert_am"])
-        except Bildschirm.DoesNotExist:
+            screen = Screen.objects.get(slug=self.slug)
+            screen.cec_status = status
+            screen.cec_status_at = timezone.now()
+            screen.save(update_fields=["cec_status", "cec_status_at", "updated_at"])
+        except Screen.DoesNotExist:
             pass

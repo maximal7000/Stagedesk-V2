@@ -51,54 +51,54 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col"
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay max-w-lg w-full max-h-[80vh] flex flex-col"
            onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <div className="flex items-center gap-2 text-white">
-            <FileText className="w-5 h-5" />
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line-subtle">
+          <div className="flex items-center gap-2 text-fg">
+            <FileText className="w-5 h-5 text-fg-subtle" />
             <h2 className="font-semibold">Aus Vorlage anlegen</h2>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="text-fg-subtle hover:text-fg"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto">
           {loading ? (
-            <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-gray-500" /></div>
+            <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-fg-subtle" /></div>
           ) : templates.length === 0 ? (
             <div className="space-y-2">
-              <p className="text-sm text-gray-500">Noch keine Vorlagen vorhanden.</p>
+              <p className="text-sm text-fg-subtle">Noch keine Vorlagen vorhanden.</p>
               <Link to="/veranstaltung/vorlagen" onClick={onClose}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-lg">
+                className="inline-flex items-center gap-2 px-3 py-2 bg-accent hover:bg-accent-hover text-white text-sm rounded-md">
                 <Settings className="w-4 h-4" /> Vorlagen verwalten
               </Link>
             </div>
           ) : (
             <>
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Vorlage</label>
+                <label className="block text-sm font-medium text-fg-muted mb-1">Vorlage</label>
                 <ul className="space-y-1 max-h-56 overflow-y-auto">
                   {templates.map((t) => (
                     <li key={t.id}>
                       <button onClick={() => setSelected(t)}
-                        className={`w-full text-left p-3 rounded-lg border ${
+                        className={`w-full text-left p-3 rounded-md border ${
                           selected?.id === t.id
-                            ? 'bg-accent/15 border-accent'
-                            : 'bg-gray-800 border-gray-700 hover:border-gray-600'
+                            ? 'bg-raised border-accent'
+                            : 'bg-raised border-transparent hover:bg-hover'
                         }`}>
-                        <div className="text-white font-medium">{t.name}</div>
-                        {t.beschreibung && <div className="text-xs text-gray-400 mt-0.5">{t.beschreibung}</div>}
+                        <div className="text-fg font-medium">{t.name}</div>
+                        {t.beschreibung && <div className="text-xs text-fg-muted mt-0.5">{t.beschreibung}</div>}
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          <span className="text-[10px] px-1.5 py-0.5 bg-gray-700 text-gray-300 rounded">
+                          <span className="text-[10px] px-1.5 py-0.5 bg-hover text-fg-muted rounded-sm">
                             {t.dauer_minuten} Min
                           </span>
                           {(t.taetigkeit_namen || []).map(n => (
-                            <span key={n} className="text-[10px] px-1.5 py-0.5 bg-purple-600/20 text-purple-300 rounded">
+                            <span key={n} className="text-[10px] px-1.5 py-0.5 bg-hover text-fg-muted rounded-sm">
                               {n}
                             </span>
                           ))}
                           {(t.erinnerungen || []).length > 0 && (
-                            <span className="text-[10px] px-1.5 py-0.5 bg-amber-600/20 text-amber-300 rounded">
+                            <span className="text-[10px] px-1.5 py-0.5 bg-hover text-warn rounded-sm">
                               {t.erinnerungen.length} Erinnerung{t.erinnerungen.length === 1 ? '' : 'en'}
                             </span>
                           )}
@@ -110,11 +110,11 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
               </div>
               {selected && (
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1">Start-Zeitpunkt</label>
+                  <label className="block text-sm font-medium text-fg-muted mb-1">Start-Zeitpunkt</label>
                   <input type="datetime-local" value={datumVon}
                     onChange={(e) => setDatumVon(e.target.value)}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white" />
-                  <p className="text-xs text-gray-500 mt-1">
+                    className="w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-fg" />
+                  <p className="text-xs text-fg-subtle mt-1">
                     Ende wird auf Start + {selected.dauer_minuten} Min gesetzt.
                   </p>
                 </div>
@@ -123,17 +123,17 @@ export default function VeranstaltungTemplateModal({ open, onClose }) {
           )}
         </div>
 
-        <div className="flex gap-2 p-5 border-t border-gray-800">
+        <div className="flex justify-end gap-2 p-5 border-t border-line-subtle">
           <Link to="/veranstaltung/vorlagen" onClick={onClose}
-            className="px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg inline-flex items-center gap-1.5 text-sm">
+            className="mr-auto px-3 py-2 text-fg-muted hover:text-fg hover:bg-hover rounded-md inline-flex items-center gap-1.5 text-sm">
             <Settings className="w-4 h-4" /> Verwalten
           </Link>
           <button onClick={onClose} disabled={creating}
-            className="flex-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg disabled:opacity-50">
+            className="px-4 py-2 bg-raised hover:bg-hover text-fg rounded-md disabled:text-fg-disabled">
             Abbrechen
           </button>
           <button onClick={create} disabled={!selected || !datumVon || creating}
-            className="flex-1 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg disabled:opacity-50 flex items-center justify-center gap-2">
+            className="px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md disabled:bg-raised disabled:text-fg-disabled flex items-center justify-center gap-2">
             {creating && <Loader2 className="w-4 h-4 animate-spin" />}
             Anlegen
           </button>

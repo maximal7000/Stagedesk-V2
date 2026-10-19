@@ -3,6 +3,7 @@
  * sowie den Login-Banner-Text. Pollt alle 60 s.
  */
 import { useEffect, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -19,8 +20,9 @@ export function MaintenanceBanner() {
   }, []);
   if (!s?.['maintenance.enabled']) return null;
   return (
-    <div className="bg-amber-600 text-black text-sm text-center py-2 px-4 font-medium">
-      ⚠ Wartungsmodus: {s['maintenance.message'] || 'Eingeschränkter Betrieb.'}
+    <div className="flex items-center justify-center gap-2 bg-warn text-canvas text-sm text-center py-2 px-4 font-medium">
+      <AlertTriangle className="w-4 h-4 shrink-0" />
+      <span><span className="font-semibold">Wartungsmodus:</span> {s['maintenance.message'] || 'Eingeschränkter Betrieb.'}</span>
     </div>
   );
 }
@@ -33,7 +35,7 @@ export function LoginBanner() {
   const text = s?.['login.banner'];
   if (!text) return null;
   return (
-    <div className="bg-blue-900/40 border border-blue-700/40 text-blue-200 text-sm rounded-lg px-4 py-2 mb-4">
+    <div className="bg-raised text-fg-muted text-sm rounded-lg px-4 py-2 mb-4">
       {text}
     </div>
   );

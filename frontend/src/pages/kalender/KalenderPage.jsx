@@ -3,10 +3,10 @@
  * Features: Events, Drag & Drop, Kategorien, Ressourcen
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  ChevronLeft, ChevronRight, Plus, Calendar, List, Grid3X3,
+import {
+  ChevronLeft, ChevronRight, Plus, CalendarX2, List,
   Loader2, Filter, Download, RefreshCw, Clock, MapPin,
-  LayoutGrid, CalendarDays, CalendarRange
+  LayoutGrid, CalendarDays, CalendarRange, Check
 } from 'lucide-react';
 import {
   format, startOfMonth, endOfMonth, startOfWeek, endOfWeek,
@@ -18,9 +18,32 @@ import {
 import { de } from 'date-fns/locale';
 import apiClient from '../../lib/api';
 import EventModal from '../../components/kalender/EventModal';
+import { PageHeader, Button, StatusBadge, EmptyState } from '../../components/ui';
 
 const WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
 const STUNDEN = Array.from({ length: 24 }, (_, i) => i);
+
+// Ansichten für den Umschalter (semantisch: Zeitraum-Granularität)
+const VIEWS = [
+  { key: 'month', label: 'Monat', icon: LayoutGrid },
+  { key: 'week', label: 'Woche', icon: CalendarRange },
+  { key: 'day', label: 'Tag', icon: CalendarDays },
+  { key: 'list', label: 'Liste', icon: List },
+];
+
+// Status-Töne für StatusBadge (semantische Farben bleiben erhalten)
+const STATUS_TONE = {
+  geplant: 'info',
+  laufend: 'positive',
+  abgeschlossen: 'neutral',
+  abgesagt: 'danger',
+};
+const STATUS_LABEL = {
+  geplant: 'Geplant',
+  laufend: 'Laufend',
+  abgeschlossen: 'Abgeschlossen',
+  abgesagt: 'Abgesagt',
+};
 
 export default function KalenderPage() {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -29,16 +52,16 @@ export default function KalenderPage() {
   const [kategorien, setKategorien] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Filter
   const [selectedKategorie, setSelectedKategorie] = useState(null);
   const [showFilter, setShowFilter] = useState(false);
-  
+
   // Modal
   const [showEventModal, setShowEventModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [newEventDate, setNewEventDate] = useState(null);
-  
+
   // Drag & Drop
   const [draggingEvent, setDraggingEvent] = useState(null);
   const dragRef = useRef(null);
@@ -216,109 +239,138 @@ export default function KalenderPage() {
     if (viewMode === 'week') {
       const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-      return `${format(weekStart, 'd. MMM', { locale: de })} - ${format(weekEnd, 'd. MMM yyyy', { locale: de })}`;
+      return `${format(weekStart, 'd. MMM', { locale: de })} bis ${format(weekEnd, 'd. MMM yyyy', { locale: de })}`;
     }
     return format(currentDate, 'EEEE, d. MMMM yyyy', { locale: de });
   };
 
-  // Event-Chip Komponente
-  const EventChip = ({ event, compact = false }) => (
-    <div
-      draggable
-      onDragStart={(e) => handleDragStart(e, event)}
-      onClick={(e) => {
-        e.stopPropagation();
-        handleEditEvent(event);
-      }}
-      className={`px-2 py-1 rounded text-xs font-medium cursor-pointer truncate transition-transform hover:scale-105 ${
-        compact ? 'text-[10px]' : ''
-      }`}
-      style={{ backgroundColor: event.kategorie_farbe || '#6B7280' }}
-      title={event.titel}
-    >
-      {!compact && !event.ganztaegig && (
-        <span className="mr-1 opacity-75">
-          {format(parseISO(event.start), 'HH:mm')}
+  const aktiveKategorie = kategorien.find(k => k.id === selectedKategorie);
+
+  // Event-Chip: farbcodierter Streifen + lesbarer Titel auf dunklem Grund
+  const EventChip = ({ event, compact = false }) => {
+    const color = event.kategorie_farbe || '#6B7280';
+    const status = event.effektiv_status || event.status || 'geplant';
+    const abgesagt = status === 'abgesagt';
+    const gedimmt = abgesagt || status === 'abgeschlossen';
+    return (
+      <div
+        draggable
+        onDragStart={(e) => handleDragStart(e, event)}
+        onClick={(e) => {
+          e.stopPropagation();
+          handleEditEvent(event);
+        }}
+        className={`flex items-center gap-1.5 rounded-md cursor-pointer truncate transition-colors hover:ring-1 hover:ring-inset hover:ring-white/15 ${
+          compact ? 'pl-2 pr-1.5 py-[3px] text-[11px]' : 'pl-2 pr-2 py-1 text-xs'
+        } ${gedimmt ? 'opacity-60' : ''}`}
+        style={{ backgroundColor: `${color}22`, boxShadow: `inset 2px 0 0 ${color}` }}
+        title={event.titel}
+      >
+        {!compact && !event.ganztaegig && (
+          <span className="shrink-0 font-semibold tabular-nums text-fg-muted">
+            {format(parseISO(event.start), 'HH:mm')}
+          </span>
+        )}
+        <span className={`truncate text-fg font-medium ${abgesagt ? 'line-through' : ''}`}>
+          {event.titel}
         </span>
-      )}
-      <span className="text-white">{event.titel}</span>
-    </div>
-  );
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h1 className="font-display text-[1.6rem] leading-none font-bold text-white">Kalender</h1>
-          <p className="text-gray-400 mt-1">Plane und verwalte Events</p>
-        </div>
+      <PageHeader
+        eyebrow="Kalender"
+        title="Terminübersicht"
+        meta={loading ? undefined : `${events.length} ${events.length === 1 ? 'Termin' : 'Termine'} im Zeitraum`}
+        actions={
+          <>
+            <Button variant="secondary" size="sm" icon={Download} onClick={handleExport} title="Als iCal exportieren" aria-label="Als iCal exportieren">
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+            <Button variant="secondary" size="sm" icon={RefreshCw} onClick={fetchData} title="Aktualisieren" aria-label="Aktualisieren">
+              <span className="hidden sm:inline">Aktualisieren</span>
+            </Button>
+            <Button variant="primary" icon={Plus} onClick={() => handleCreateEvent()}>
+              <span className="hidden sm:inline">Neuer Termin</span>
+              <span className="sm:hidden">Neu</span>
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* View Mode Toggle */}
-          <div className="flex bg-gray-800 rounded-lg p-1">
+      {/* Steuerleiste: Datums-Navigation links, Filter + Ansicht rechts */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center rounded-md bg-surface">
             <button
-              onClick={() => setViewMode('month')}
-              className={`p-2 rounded ${viewMode === 'month' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
-              title="Monat"
+              onClick={navigatePrev}
+              className="rounded-l-md p-2 text-fg-muted transition-colors hover:bg-raised hover:text-fg"
+              aria-label="Zurück"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <ChevronLeft className="h-5 w-5" />
             </button>
             <button
-              onClick={() => setViewMode('week')}
-              className={`p-2 rounded ${viewMode === 'week' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
-              title="Woche"
+              onClick={navigateNext}
+              className="rounded-r-md border-l border-line-subtle p-2 text-fg-muted transition-colors hover:bg-raised hover:text-fg"
+              aria-label="Weiter"
             >
-              <CalendarRange className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('day')}
-              className={`p-2 rounded ${viewMode === 'day' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
-              title="Tag"
-            >
-              <CalendarDays className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded ${viewMode === 'list' ? 'bg-accent text-white' : 'text-gray-400 hover:text-white'}`}
-              title="Liste"
-            >
-              <List className="w-4 h-4" />
+              <ChevronRight className="h-5 w-5" />
             </button>
           </div>
+          <h2 className="font-display text-lg font-semibold tracking-tight text-fg sm:text-xl">
+            {getHeaderTitle()}
+          </h2>
+          <button
+            onClick={goToToday}
+            className="rounded-md px-2.5 py-1 text-sm font-medium text-accent-fg transition-colors hover:bg-raised"
+          >
+            Heute
+          </button>
+        </div>
 
-          {/* Filter */}
+        <div className="flex items-center gap-2">
+          {/* Kategorie-Filter */}
           <div className="relative">
             <button
               onClick={() => setShowFilter(!showFilter)}
-              className={`p-2 rounded-lg transition-colors ${
-                selectedKategorie ? 'bg-accent text-white' : 'bg-gray-800 text-gray-400 hover:text-white'
+              className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                selectedKategorie
+                  ? 'bg-raised text-fg'
+                  : 'bg-surface text-fg-muted hover:bg-raised hover:text-fg'
               }`}
             >
-              <Filter className="w-5 h-5" />
+              <Filter className={`h-4 w-4 ${selectedKategorie ? 'text-accent-fg' : ''}`} />
+              <span className="hidden sm:inline">
+                {aktiveKategorie ? aktiveKategorie.name : 'Alle Kategorien'}
+              </span>
             </button>
-            
+
             {showFilter && (
-              <div className="absolute right-0 top-full mt-2 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50">
-                <div className="p-2">
+              <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-lg border border-line bg-overlay shadow-overlay">
+                <div className="p-1.5">
                   <button
                     onClick={() => { setSelectedKategorie(null); setShowFilter(false); }}
-                    className={`w-full text-left px-3 py-2 rounded text-sm ${
-                      !selectedKategorie ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'
+                    className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                      !selectedKategorie ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover'
                     }`}
                   >
                     Alle Kategorien
+                    {!selectedKategorie && <Check className="h-4 w-4 text-accent-fg" />}
                   </button>
                   {kategorien.map(kat => (
                     <button
                       key={kat.id}
                       onClick={() => { setSelectedKategorie(kat.id); setShowFilter(false); }}
-                      className={`w-full text-left px-3 py-2 rounded text-sm flex items-center gap-2 ${
-                        selectedKategorie === kat.id ? 'bg-gray-700 text-white' : 'text-gray-300 hover:bg-gray-700'
+                      className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                        selectedKategorie === kat.id ? 'bg-hover text-fg' : 'text-fg-muted hover:bg-hover'
                       }`}
                     >
-                      <span className="w-3 h-3 rounded-full" style={{ backgroundColor: kat.farbe }} />
-                      {kat.name}
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: kat.farbe }} />
+                      <span className="truncate">{kat.name}</span>
+                      {selectedKategorie === kat.id && <Check className="ml-auto h-4 w-4 text-accent-fg" />}
                     </button>
                   ))}
                 </div>
@@ -326,77 +378,51 @@ export default function KalenderPage() {
             )}
           </div>
 
-          <button
-            onClick={handleExport}
-            className="p-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg"
-            title="iCal Export"
-          >
-            <Download className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={fetchData}
-            className="p-2 bg-gray-800 text-gray-400 hover:text-white rounded-lg"
-            title="Aktualisieren"
-          >
-            <RefreshCw className="w-5 h-5" />
-          </button>
-
-          <button
-            onClick={() => handleCreateEvent()}
-            className="flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-white font-semibold rounded-lg"
-          >
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Neues Event</span>
-          </button>
+          {/* Ansicht-Umschalter */}
+          <div className="inline-flex rounded-md bg-surface p-0.5">
+            {VIEWS.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setViewMode(key)}
+                aria-pressed={viewMode === key}
+                title={label}
+                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors ${
+                  viewMode === key
+                    ? 'bg-raised text-fg'
+                    : 'text-fg-muted hover:text-fg'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden md:inline">{label}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Navigation */}
-      <div className="flex items-center justify-between bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <button
-          onClick={navigatePrev}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold text-white">{getHeaderTitle()}</h2>
-          <button
-            onClick={goToToday}
-            className="px-3 py-1 text-sm text-accent hover:opacity-80 hover:bg-accent/10 rounded"
-          >
-            Heute
-          </button>
-        </div>
-
-        <button
-          onClick={navigateNext}
-          className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
       </div>
 
       {/* Kalender Content */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-gray-500 animate-spin" />
+          <Loader2 className="h-10 w-10 animate-spin text-fg-subtle" />
         </div>
       ) : error ? (
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-8 text-center">
-          <p className="text-red-400">{error}</p>
+        <div className="rounded-lg bg-surface p-8 text-center">
+          <p className="text-bad">{error}</p>
         </div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="overflow-hidden rounded-lg bg-surface">
           {/* Monatsansicht */}
           {viewMode === 'month' && (
             <div>
               {/* Wochentage Header */}
-              <div className="grid grid-cols-7 border-b border-gray-800">
-                {WOCHENTAGE.map(tag => (
-                  <div key={tag} className="p-3 text-center text-sm font-medium text-gray-400 bg-gray-800/50">
+              <div className="grid grid-cols-7 border-b border-line-subtle">
+                {WOCHENTAGE.map((tag, i) => (
+                  <div
+                    key={tag}
+                    className={`py-2.5 text-center text-xs font-semibold uppercase tracking-wider ${
+                      i >= 5 ? 'text-fg-subtle' : 'text-fg-muted'
+                    }`}
+                  >
                     {tag}
                   </div>
                 ))}
@@ -408,6 +434,7 @@ export default function KalenderPage() {
                   const dayEvents = getEventsForDay(day);
                   const isCurrentMonth = isSameMonth(day, currentDate);
                   const isCurrentDay = isToday(day);
+                  const isWeekend = getDay(day) === 0 || getDay(day) === 6;
 
                   return (
                     <div
@@ -415,16 +442,19 @@ export default function KalenderPage() {
                       onClick={() => handleCreateEvent(day)}
                       onDrop={(e) => handleDrop(e, day)}
                       onDragOver={handleDragOver}
-                      className={`min-h-[100px] p-2 border-b border-r border-gray-800 cursor-pointer transition-colors ${
-                        isCurrentMonth ? 'bg-gray-900' : 'bg-gray-950'
-                      } hover:bg-gray-800/50`}
+                      className={`group min-h-[104px] border-b border-r border-line-subtle p-1.5 transition-colors last:border-r-0 [&:nth-child(7n)]:border-r-0 ${
+                        isCurrentMonth ? 'bg-surface' : 'bg-canvas'
+                      } cursor-pointer hover:bg-raised`}
                     >
-                      <div className={`text-sm font-medium mb-1 ${
-                        isCurrentDay 
-                          ? 'w-7 h-7 flex items-center justify-center bg-accent text-white rounded-full' 
-                          : isCurrentMonth ? 'text-white' : 'text-gray-600'
-                      }`}>
-                        {format(day, 'd')}
+                      <div className="mb-1 flex items-center justify-between">
+                        <span className={`flex h-6 w-6 items-center justify-center text-sm font-semibold ${
+                          isCurrentDay
+                            ? 'rounded-full bg-accent text-white'
+                            : isCurrentMonth ? (isWeekend ? 'text-fg-muted' : 'text-fg') : 'text-fg-disabled'
+                        }`}>
+                          {format(day, 'd')}
+                        </span>
+                        <Plus className="h-3.5 w-3.5 text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
 
                       <div className="space-y-1">
@@ -432,7 +462,7 @@ export default function KalenderPage() {
                           <EventChip key={event.id} event={event} compact />
                         ))}
                         {dayEvents.length > 3 && (
-                          <div className="text-xs text-gray-500 px-1">
+                          <div className="px-1 text-[11px] font-medium text-fg-subtle">
                             +{dayEvents.length - 3} weitere
                           </div>
                         )}
@@ -448,17 +478,19 @@ export default function KalenderPage() {
           {viewMode === 'week' && (
             <div>
               {/* Header mit Tagen */}
-              <div className="grid grid-cols-8 border-b border-gray-800">
-                <div className="p-3 text-center text-sm font-medium text-gray-400 bg-gray-800/50" />
+              <div className="grid grid-cols-8 border-b border-line-subtle">
+                <div className="py-3" />
                 {getWeekDays().map(day => (
                   <div
                     key={day.toISOString()}
-                    className={`p-3 text-center border-l border-gray-800 ${
-                      isToday(day) ? 'bg-accent/10' : 'bg-gray-800/50'
+                    className={`border-l border-line-subtle py-2.5 text-center ${
+                      isToday(day) ? 'bg-raised' : ''
                     }`}
                   >
-                    <div className="text-xs text-gray-400">{format(day, 'EEE', { locale: de })}</div>
-                    <div className={`text-lg font-semibold ${isToday(day) ? 'text-accent' : 'text-white'}`}>
+                    <div className="text-[11px] font-medium uppercase tracking-wide text-fg-muted">
+                      {format(day, 'EEE', { locale: de })}
+                    </div>
+                    <div className={`mt-0.5 text-lg font-semibold ${isToday(day) ? 'text-accent-fg' : 'text-fg'}`}>
                       {format(day, 'd')}
                     </div>
                   </div>
@@ -468,8 +500,8 @@ export default function KalenderPage() {
               {/* Stunden Grid */}
               <div className="max-h-[600px] overflow-y-auto">
                 {STUNDEN.map(stunde => (
-                  <div key={stunde} className="grid grid-cols-8 border-b border-gray-800">
-                    <div className="p-2 text-xs text-gray-500 text-right pr-3 bg-gray-800/30">
+                  <div key={stunde} className="grid grid-cols-8 border-b border-line-subtle last:border-b-0">
+                    <div className="py-2 pr-3 text-right text-[11px] font-medium tabular-nums text-fg-subtle">
                       {stunde.toString().padStart(2, '0')}:00
                     </div>
                     {getWeekDays().map(day => {
@@ -485,7 +517,9 @@ export default function KalenderPage() {
                           onClick={() => handleCreateEvent(cellDate)}
                           onDrop={(e) => handleDrop(e, cellDate)}
                           onDragOver={handleDragOver}
-                          className="min-h-[50px] p-1 border-l border-gray-800 hover:bg-gray-800/30 cursor-pointer"
+                          className={`min-h-[50px] cursor-pointer space-y-1 border-l border-line-subtle p-1 transition-colors hover:bg-raised ${
+                            isToday(day) ? 'bg-raised' : ''
+                          }`}
                         >
                           {cellEvents.map(event => (
                             <EventChip key={event.id} event={event} />
@@ -515,12 +549,12 @@ export default function KalenderPage() {
                     onClick={() => handleCreateEvent(cellDate)}
                     onDrop={(e) => handleDrop(e, cellDate)}
                     onDragOver={handleDragOver}
-                    className="flex border-b border-gray-800 hover:bg-gray-800/30 cursor-pointer"
+                    className="flex cursor-pointer border-b border-line-subtle transition-colors last:border-b-0 hover:bg-raised"
                   >
-                    <div className="w-20 p-3 text-sm text-gray-500 text-right bg-gray-800/30 shrink-0">
+                    <div className="w-16 shrink-0 py-3 pr-3 text-right text-xs font-medium tabular-nums text-fg-subtle">
                       {stunde.toString().padStart(2, '0')}:00
                     </div>
-                    <div className="flex-1 p-2 min-h-[60px] space-y-1">
+                    <div className="min-h-[60px] flex-1 space-y-1 border-l border-line-subtle p-2">
                       {hourEvents.map(event => (
                         <EventChip key={event.id} event={event} />
                       ))}
@@ -533,56 +567,48 @@ export default function KalenderPage() {
 
           {/* Listenansicht */}
           {viewMode === 'list' && (
-            <div className="divide-y divide-gray-800">
+            <div className="divide-y divide-line-subtle">
               {events.length === 0 ? (
-                <div className="p-8 text-center text-gray-400">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Keine Events in diesem Zeitraum</p>
-                </div>
+                <EmptyState
+                  icon={CalendarX2}
+                  title="Keine Termine im Zeitraum"
+                  description="In den nächsten 30 Tagen ist nichts geplant. Leg den ersten Termin an."
+                  action={<Button variant="primary" icon={Plus} onClick={() => handleCreateEvent()}>Neuer Termin</Button>}
+                />
               ) : (
-                events.map(event => (
-                  <div
-                    key={event.id}
-                    onClick={() => handleEditEvent(event)}
-                    className="p-4 hover:bg-gray-800/50 cursor-pointer flex items-start gap-4"
-                  >
+                events.map(event => {
+                  const status = event.effektiv_status || event.status || 'geplant';
+                  return (
                     <div
-                      className="w-1 h-12 rounded-full shrink-0"
-                      style={{ backgroundColor: event.kategorie_farbe || '#6B7280' }}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-white">{event.titel}</h3>
-                      <div className="flex flex-wrap gap-3 mt-1 text-sm text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {format(parseISO(event.start), 'EEE, d. MMM HH:mm', { locale: de })}
-                          {' - '}
-                          {format(parseISO(event.ende), 'HH:mm')}
-                        </span>
-                        {event.ort && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            {event.ort}
+                      key={event.id}
+                      onClick={() => handleEditEvent(event)}
+                      className="flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-raised"
+                    >
+                      <div
+                        className="h-12 w-1 shrink-0 rounded-full"
+                        style={{ backgroundColor: event.kategorie_farbe || '#6B7280' }}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-medium text-fg">{event.titel}</h3>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-fg-muted">
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-4 w-4 shrink-0" />
+                            {format(parseISO(event.start), 'EEE, d. MMM HH:mm', { locale: de })}
+                            {' bis '}
+                            {format(parseISO(event.ende), 'HH:mm')}
                           </span>
-                        )}
+                          {event.ort && (
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="h-4 w-4 shrink-0" />
+                              {event.ort}
+                            </span>
+                          )}
+                        </div>
                       </div>
+                      <StatusBadge tone={STATUS_TONE[status] || 'neutral'} label={STATUS_LABEL[status] || status} />
                     </div>
-                    {(() => {
-                      const eff = event.effektiv_status || event.status || 'geplant';
-                      const cls = {
-                        geplant: 'bg-blue-900/30 text-blue-400',
-                        laufend: 'bg-green-900/30 text-green-400',
-                        abgeschlossen: 'bg-slate-800/40 text-slate-400',
-                        abgesagt: 'bg-red-900/30 text-red-400',
-                      }[eff] || 'bg-gray-700 text-gray-300';
-                      const label = {
-                        geplant: 'Geplant', laufend: 'Laufend',
-                        abgeschlossen: 'Abgeschlossen', abgesagt: 'Abgesagt',
-                      }[eff] || eff;
-                      return <div className={`px-2 py-1 text-xs rounded ${cls}`}>{label}</div>;
-                    })()}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           )}

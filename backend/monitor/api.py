@@ -6,8 +6,6 @@ import re
 import uuid
 import urllib.request
 import urllib.parse
-import http.cookiejar
-from datetime import datetime as dt
 from ninja import Router, File, Form
 from ninja.files import UploadedFile
 from django.utils import timezone
@@ -19,8 +17,8 @@ from users.api import is_admin
 from users.models import UserProfile
 from ninja.errors import HttpError
 from .models import (
-    MonitorConfig, Ankuendigung, MonitorDatei, Bildschirm, Klausur, WebUntisLink,
-    MonitorEvent, EventBildschirm, KlausurVorlage, MonitorGlobalSettings,
+    DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
+    DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
 )
 
 
@@ -38,29 +36,29 @@ def _require_perm(request, code: str):
     raise HttpError(403, "Keine Berechtigung")
 
 
-def _log_audit(request, aktion, detail='', via_token=False):
+def _log_audit(request, action, detail='', via_token=False):
     """Schreibt in den globalen Audit-Log (core.audit → inventar.AuditLog)."""
     from core.audit import log as _corelog
-    low = aktion.lower()
+    low = action.lower()
     if 'deaktiv' in low or ' aus' in low:
         a = 'status_geaendert'
     elif 'aktiv' in low or ' an' in low:
         a = 'aktiviert'
     else:
         a = 'status_geaendert'
-    name = f"{aktion}: {detail}" if detail else aktion
+    name = f"{action}: {detail}" if detail else action
     _corelog(request, a, 'monitor', 0, name, {'via': 'token'} if via_token else None)
 from .schemas import (
-    MonitorConfigSchema, MonitorConfigUpdateSchema,
-    MonitorProfileListSchema, MonitorProfileCreateSchema,
-    AnkuendigungSchema, AnkuendigungCreateSchema,
-    MonitorDateiSchema, OnAirSchema, NotfallSchema, ConfigVersionSchema,
-    BildschirmListSchema, BildschirmCreateSchema, BildschirmUpdateSchema,
-    KlausurSchema, KlausurCreateSchema, KlausurUpdateSchema,
+    DisplayViewSchema, DisplayViewUpdateSchema,
+    DisplayViewListSchema, DisplayViewCreateSchema,
+    AnnouncementSchema, AnnouncementCreateSchema,
+    MediaFileSchema, OnAirSchema, EmergencySchema, LegacyEmergencySchema, DisplayViewVersionSchema,
+    ScreenListSchema, ScreenCreateSchema, ScreenUpdateSchema,
+    ExamSchema, ExamCreateSchema, ExamUpdateSchema,
     WebUntisLinkSchema, WebUntisLinkCreateSchema,
-    MonitorEventSchema, MonitorEventCreateSchema, MonitorEventUpdateSchema,
-    KlausurVorlageSchema, KlausurVorlageCreateSchema,
-    GlobalSettingsSchema, GlobalSettingsUpdateSchema,
+    DisplayEventSchema, DisplayEventCreateSchema, DisplayEventUpdateSchema,
+    ExamTemplateSchema, ExamTemplateCreateSchema,
+    MonitorSettingsSchema, MonitorSettingsUpdateSchema,
 )
 from . import oepnv
 
@@ -76,64 +74,64 @@ def _clamp_int(v, lo, hi):
         return None
 
 
-def _validate_config_data(data: dict) -> dict:
-    """Serverseitige Validierung/Sanitisierung der Config-Update-Daten.
+def _validate_view_data(data: dict) -> dict:
+    """Serverseitige Validierung/Sanitisierung der Ansicht-Update-Daten.
     Klemmt Zahlenbereiche, verwirft ungültige Hex-Farben, prüft Zeitfenster."""
     for key, lo, hi in [
-        ('split_links_prozent', 20, 80), ('split_prozent', 20, 80),
-        ('bild_fokus_x', 0, 100), ('bild_fokus_y', 0, 100),
-        ('webuntis_zoom', 25, 400), ('refresh_intervall', 3, 3600),
+        ('split_left_percent', 20, 80), ('split_percent', 20, 80),
+        ('image_focus_x', 0, 100), ('image_focus_y', 0, 100),
+        ('webuntis_zoom', 25, 400), ('refresh_interval', 3, 3600),
     ]:
         if key in data and data[key] is not None:
             c = _clamp_int(data[key], lo, hi)
             if c is not None:
                 data[key] = c
-    # Hex-Farben: ungültige verwerfen (alter Wert bleibt). on_air_farbe darf leer sein.
-    for key in ['hintergrund_farbe', 'akzent_farbe', 'on_air_farbe']:
+    # Hex-Farben: ungültige verwerfen (alter Wert bleibt). on_air_color darf leer sein.
+    for key in ['background_color', 'accent_color', 'on_air_color']:
         if key in data and data[key]:
             if not _HEX_RE.match(str(data[key])):
                 data.pop(key)
-    # Zeitplan: von < bis erzwingen
-    if 'zeitplan' in data and isinstance(data['zeitplan'], list):
-        for e in data['zeitplan']:
+    # Zeitplan: Beginn < Ende erzwingen
+    if 'schedule' in data and isinstance(data['schedule'], list):
+        for e in data['schedule']:
             if isinstance(e, dict):
-                von, bis = e.get('von'), e.get('bis')
-                if von and bis and str(von) >= str(bis):
-                    raise HttpError(422, f"Zeitfenster ungültig: {von} muss vor {bis} liegen")
+                start, end = e.get('from'), e.get('until')
+                if start and end and str(start) >= str(end):
+                    raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
     return data
 
 
-def _validate_klausur_data(data: dict) -> dict:
-    """Klausur-Daten prüfen: Zeitraum von<bis, split_prozent, Hex-Farbe."""
-    von, bis = data.get('aktiv_von'), data.get('aktiv_bis')
-    if von and bis and von >= bis:
+def _validate_exam_data(data: dict) -> dict:
+    """Klausur-Daten prüfen: Zeitraum Beginn<Ende, split_percent, Hex-Farbe."""
+    start, end = data.get('active_from'), data.get('active_until')
+    if start and end and start >= end:
         raise HttpError(422, "Klausur: Ende muss nach dem Beginn liegen")
-    if 'split_prozent' in data and data['split_prozent'] is not None:
-        c = _clamp_int(data['split_prozent'], 20, 80)
+    if 'split_percent' in data and data['split_percent'] is not None:
+        c = _clamp_int(data['split_percent'], 20, 80)
         if c is not None:
-            data['split_prozent'] = c
-    if data.get('farbe') and not _HEX_RE.match(str(data['farbe'])):
-        data.pop('farbe')
+            data['split_percent'] = c
+    if data.get('color') and not _HEX_RE.match(str(data['color'])):
+        data.pop('color')
     return data
 
 
-def _fetch_weather(config):
+def _fetch_weather(view):
     """Wetter von OpenWeatherMap holen und cachen (15 Min)"""
-    gs = MonitorGlobalSettings.load()
-    api_key = gs.wetter_api_key or config.wetter_api_key   # global hat Vorrang
-    if not config.zeige_wetter or not config.wetter_stadt or not api_key:
+    settings = MonitorSettings.load()
+    api_key = settings.weather_api_key or view.weather_api_key   # global hat Vorrang
+    if not view.show_weather or not view.weather_city or not api_key:
         return None
 
     # Cache noch gültig?
-    if config.wetter_cache and config.wetter_cache_zeit:
-        age = (timezone.now() - config.wetter_cache_zeit).total_seconds()
+    if view.weather_cache and view.weather_cache_at:
+        age = (timezone.now() - view.weather_cache_at).total_seconds()
         if age < 900:
-            return config.wetter_cache
+            return view.weather_cache
 
     try:
         url = (
             f"https://api.openweathermap.org/data/2.5/weather"
-            f"?q={urllib.parse.quote(config.wetter_stadt)}"
+            f"?q={urllib.parse.quote(view.weather_city)}"
             f"&appid={api_key}"
             f"&units=metric&lang=de"
         )
@@ -141,387 +139,303 @@ def _fetch_weather(config):
         with urllib.request.urlopen(req, timeout=3) as resp:
             data = json.loads(resp.read())
 
-        wetter = {
-            'temperatur': round(data['main']['temp'], 1),
+        weather = {
+            'temperature': round(data['main']['temp'], 1),
             'feels_like': round(data['main']['feels_like'], 1),
-            'beschreibung': data['weather'][0]['description'].capitalize(),
+            'description': data['weather'][0]['description'].capitalize(),
             'icon': data['weather'][0]['icon'],
-            'luftfeuchtigkeit': data['main']['humidity'],
-            'stadt': data['name'],
+            'humidity': data['main']['humidity'],
+            'city': data['name'],
         }
-        config.wetter_cache = wetter
-        config.wetter_cache_zeit = timezone.now()
-        config.save(update_fields=['wetter_cache', 'wetter_cache_zeit', 'aktualisiert_am'])
-        return wetter
+        view.weather_cache = weather
+        view.weather_cache_at = timezone.now()
+        view.save(update_fields=['weather_cache', 'weather_cache_at', 'updated_at'])
+        return weather
     except Exception:
-        return config.wetter_cache or None
+        return view.weather_cache or None
 
 
-def _fetch_raumplan(config):
-    """Raumplan von WebUntis JSONRPC API holen und cachen (15 Min)"""
-    gs = MonitorGlobalSettings.load()
-    server = gs.raumplan_server or config.raumplan_server        # global hat Vorrang
-    schule = gs.raumplan_schule or config.raumplan_schule
-    if not config.zeige_raumplan or not server or not schule:
-        return None
-
-    # Cache noch gültig?
-    if config.raumplan_cache and config.raumplan_cache_zeit:
-        age = (timezone.now() - config.raumplan_cache_zeit).total_seconds()
-        if age < 900:
-            return config.raumplan_cache
-
-    base_url = f"https://{server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(schule)}"
-
-    def _rpc(method, params=None, cookie_jar=None):
-        body = json.dumps({
-            "id": "1", "method": method,
-            "params": params or {}, "jsonrpc": "2.0"
-        }).encode()
-        req = urllib.request.Request(base_url, data=body,
-            headers={"Content-Type": "application/json"})
-        opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cookie_jar))
-        with opener.open(req, timeout=5) as resp:
-            return json.loads(resp.read())
-
-    try:
-        jar = http.cookiejar.CookieJar()
-
-        # 1. Authentifizieren (anonym oder mit Credentials; global hat Vorrang)
-        user = gs.raumplan_benutzername or config.raumplan_benutzername or "#anonymous#"
-        pwd = gs.raumplan_passwort or config.raumplan_passwort or ""
-        auth_resp = _rpc("authenticate", {"user": user, "password": pwd, "client": "stagedesk"}, jar)
-        if "error" in auth_resp:
-            return config.raumplan_cache or None
-
-        # 2. Räume holen und Zielraum finden
-        rooms_resp = _rpc("getRooms", {}, jar)
-        rooms = rooms_resp.get("result", [])
-        target_room = None
-        raum_kuerzel = config.raumplan_raum.lower()
-        for r in rooms:
-            if r.get("name", "").lower() == raum_kuerzel or r.get("longName", "").lower() == raum_kuerzel:
-                target_room = r
-                break
-
-        if not target_room:
-            _rpc("logout", {}, jar)
-            return config.raumplan_cache or None
-
-        # 3. Stundenplan für heute holen
-        today = dt.now().strftime("%Y%m%d")
-        today_int = int(today)
-        tt_resp = _rpc("getTimetable", {
-            "options": {
-                "element": {"id": target_room["id"], "type": 4},
-                "startDate": today_int,
-                "endDate": today_int,
-                "showInfo": True,
-                "showSubstText": True,
-                "showLsText": True,
-                "showStudentgroup": True,
-            }
-        }, jar)
-
-        # 4. Logout
-        _rpc("logout", {}, jar)
-
-        # 5. Daten aufbereiten
-        entries = []
-        for lesson in tt_resp.get("result", []):
-            start = str(lesson.get("startTime", "")).zfill(4)
-            end = str(lesson.get("endTime", "")).zfill(4)
-            subjects = [s.get("longname", s.get("name", "")) for s in lesson.get("su", [])]
-            teachers = [t.get("longname", t.get("name", "")) for t in lesson.get("te", [])]
-            classes = [k.get("name", "") for k in lesson.get("kl", [])]
-            entries.append({
-                'von': f"{start[:2]}:{start[2:]}",
-                'bis': f"{end[:2]}:{end[2:]}",
-                'fach': ", ".join(subjects) or "—",
-                'lehrer': ", ".join(teachers) or "",
-                'klassen': ", ".join(classes) or "",
-                'info': lesson.get("info", "") or lesson.get("substText", "") or "",
-            })
-
-        entries.sort(key=lambda x: x['von'])
-
-        raumplan = {
-            'raum': target_room.get("longName", target_room.get("name", "")),
-            'raum_kurz': target_room.get("name", ""),
-            'eintraege': entries,
-            'datum': dt.now().strftime("%d.%m.%Y"),
-        }
-
-        config.raumplan_cache = raumplan
-        config.raumplan_cache_zeit = timezone.now()
-        config.save(update_fields=['raumplan_cache', 'raumplan_cache_zeit', 'aktualisiert_am'])
-        return raumplan
-
-    except Exception as e:
-        print(f"Raumplan-Fehler: {e}")
-        return config.raumplan_cache or None
-
-
-def _fetch_oepnv(config):
+def _fetch_transit(view):
     """ÖPNV-Abfahrten holen und cachen (2 Min, bei Fehler 1 Min Pause)"""
-    # Immer laden wenn Layout 'abfahrten', sonst nur wenn Widget aktiv
-    if config.layout_modus != 'abfahrten' and not config.zeige_oepnv:
+    # Immer laden wenn Layout 'departures', sonst nur wenn Widget aktiv
+    if view.layout != 'departures' and not view.show_transit:
         return None
-    if not config.oepnv_stationen:
+    if not view.transit_stops:
         return None
 
     # Cache noch gültig? (1 Minute, bei Fehler auch 1 Min Pause)
-    if config.oepnv_cache_zeit:
-        age = (timezone.now() - config.oepnv_cache_zeit).total_seconds()
-        if config.oepnv_cache and age < 60:
-            return config.oepnv_cache
+    if view.transit_cache_at:
+        age = (timezone.now() - view.transit_cache_at).total_seconds()
+        if view.transit_cache and age < 60:
+            return view.transit_cache
         # Auch bei leerem Cache: min. 60s warten (verhindert API-Spam bei Fehlern)
         if age < 60:
-            return config.oepnv_cache
+            return view.transit_cache
 
     try:
         result = oepnv.fetch_departures(
-            stationen=config.oepnv_stationen,
-            dauer=config.oepnv_dauer,
-            max_pro_station=config.oepnv_max_abfahrten,
-            zeige_bus=config.oepnv_zeige_bus,
-            zeige_bahn=config.oepnv_zeige_bahn,
-            zeige_fernverkehr=config.oepnv_zeige_fernverkehr,
-            use_db=config.oepnv_api_db,
-            use_nahsh=config.oepnv_api_nahsh,
-            zeige_via=config.oepnv_zeige_via,
-            streik_linien=config.oepnv_streik_linien if config.oepnv_streik_aktiv else None,
-            streik_typen=config.oepnv_streik_typen if config.oepnv_streik_aktiv else None,
+            stops=view.transit_stops,
+            duration=view.transit_duration,
+            max_per_stop=view.transit_max_departures,
+            show_bus=view.transit_show_bus,
+            show_rail=view.transit_show_rail,
+            show_long_distance=view.transit_show_long_distance,
+            use_db=view.transit_source_db,
+            use_nahsh=view.transit_source_nahsh,
+            show_via=view.transit_show_via,
+            strike_lines=view.transit_strike_lines if view.transit_strike_active else None,
+            strike_types=view.transit_strike_types if view.transit_strike_active else None,
         )
-        config.oepnv_cache = result
-        config.oepnv_cache_zeit = timezone.now()
-        config.save(update_fields=['oepnv_cache', 'oepnv_cache_zeit', 'aktualisiert_am'])
+        view.transit_cache = result
+        view.transit_cache_at = timezone.now()
+        view.save(update_fields=['transit_cache', 'transit_cache_at', 'updated_at'])
         return result
     except Exception as e:
         print(f"ÖPNV-Fehler: {e}")
         # Auch bei Fehler Timestamp setzen → nächster Retry frühestens in 60s
-        config.oepnv_cache_zeit = timezone.now()
-        config.save(update_fields=['oepnv_cache_zeit', 'aktualisiert_am'])
-        return config.oepnv_cache or None
+        view.transit_cache_at = timezone.now()
+        view.save(update_fields=['transit_cache_at', 'updated_at'])
+        return view.transit_cache or None
 
 
-def _fetch_stoerungen(config):
+def _fetch_disruptions(view):
     """Störungen/Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell), gecacht 5 Min."""
-    if config.layout_modus != 'abfahrten' and not config.zeige_oepnv:
+    if view.layout != 'departures' and not view.show_transit:
         return []
     # Nur wenn mind. eine Quelle aktiv ist
-    if not (config.oepnv_stoerung_bahn or config.oepnv_stoerung_bus or (config.oepnv_stoerung_manuell or [])):
+    if not (view.transit_disruption_rail or view.transit_disruption_bus or (view.transit_disruption_manual or [])):
         return []
     # Cache 5 Min (Störungen ändern sich langsam)
-    if config.oepnv_stoerung_cache_zeit:
-        age = (timezone.now() - config.oepnv_stoerung_cache_zeit).total_seconds()
+    if view.transit_disruption_cache_at:
+        age = (timezone.now() - view.transit_disruption_cache_at).total_seconds()
         if age < 300:
-            return config.oepnv_stoerung_cache or []
+            return view.transit_disruption_cache or []
     result = []
+    all_sources_ok = True
     try:
-        if config.oepnv_stoerung_bahn:
-            result += oepnv.fetch_stoerungen_nahsh(config.oepnv_stoerung_bahn_linien or None)
-        if config.oepnv_stoerung_bus:
-            result += oepnv.fetch_stoerungen_swl(config.oepnv_stoerung_bus_linien or None)
+        if view.transit_disruption_rail:
+            rail = oepnv.fetch_disruptions_nahsh(view.transit_disruption_rail_lines or None)
+            all_sources_ok = all_sources_ok and bool(rail)
+            result += rail
+        if view.transit_disruption_bus:
+            bus = oepnv.fetch_disruptions_swl(view.transit_disruption_bus_lines or None)
+            all_sources_ok = all_sources_ok and bool(bus)
+            result += bus
     except Exception as e:
+        all_sources_ok = False
         print(f"Störungs-Fehler: {e}")
     # Manuelle Meldungen voranstellen
-    for m in (config.oepnv_stoerung_manuell or []):
-        if isinstance(m, dict) and (m.get('titel') or m.get('text')):
+    for m in (view.transit_disruption_manual or []):
+        if isinstance(m, dict) and (m.get('title') or m.get('text')):
             result.insert(0, {
-                'id': oepnv._stoerung_id('manuell', m.get('titel'), m.get('text')),
-                'quelle': 'manuell', 'typ': 'stoerung',
-                'titel': m.get('titel') or 'Hinweis', 'text': m.get('text') or '',
-                'linien': [], 'von': '', 'bis': '',
-                'all_lines': False, 'bild': m.get('bild') or '', 'haltestellen': [], 'vorschlag': '',
+                # Hash-Eingabe bleibt bei der alten Quellkennung 'manuell', damit ausgeblendete
+                # Meldungen (transit_disruption_hidden) ausgeblendet bleiben (Spec §5.4).
+                'id': oepnv._disruption_id('manuell', m.get('title'), m.get('text')),
+                'source': 'manual', 'kind': 'disruption',
+                'title': m.get('title') or 'Hinweis', 'text': m.get('text') or '',
+                'lines': [], 'from': '', 'until': '',
+                'all_lines': False, 'image': m.get('image') or '', 'stops': [], 'suggestion': '',
                 'highlighted': bool(m.get('highlighted')),
             })
-    # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren
-    aktuelle_ids = {s.get('id') for s in result}
-    versteckt = [h for h in (config.oepnv_stoerung_ausgeblendet or []) if h in aktuelle_ids]
-    felder = ['oepnv_stoerung_cache', 'oepnv_stoerung_cache_zeit', 'aktualisiert_am']
-    if versteckt != (config.oepnv_stoerung_ausgeblendet or []):
-        config.oepnv_stoerung_ausgeblendet = versteckt
-        felder.append('oepnv_stoerung_ausgeblendet')
-    config.oepnv_stoerung_cache = result
-    config.oepnv_stoerung_cache_zeit = timezone.now()
-    config.save(update_fields=felder)
+    # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren.
+    # Nur wenn jede aktive Quelle Daten geliefert hat; ein Ausfall (fehlender Token,
+    # Netzwerkfehler) darf keine Ausblendungen dauerhaft löschen.
+    if all_sources_ok:
+        current_ids = {s.get('id') for s in result}
+        hidden = [h for h in (view.transit_disruption_hidden or []) if h in current_ids]
+    else:
+        hidden = list(view.transit_disruption_hidden or [])
+    fields = ['transit_disruption_cache', 'transit_disruption_cache_at', 'updated_at']
+    if hidden != (view.transit_disruption_hidden or []):
+        view.transit_disruption_hidden = hidden
+        fields.append('transit_disruption_hidden')
+    view.transit_disruption_cache = result
+    view.transit_disruption_cache_at = timezone.now()
+    view.save(update_fields=fields)
     return result
 
 
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
+def _legacy_reload_key(now) -> str:
+    """ISO-Zeit auf die Minute abgerundet. Schon geladene Pis mit altem JS
+    laden sich neu, sobald sich dieser Wert ändert (Spec 6.3)."""
+    return now.replace(second=0, microsecond=0).isoformat()
+
+
 @monitor_router.get("/display")
-def get_display_data(request, profil: str = None, bildschirm: str = None):
-    """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display"""
-    bs_obj = None
-    if bildschirm:
+def get_display_data(request, view: str = None, screen: str = None,
+                     profil: str = None, bildschirm: str = None):
+    """Öffentlicher Endpunkt: Alle Daten für das Monitor-Display.
+    Die alten Query-Namen `profil` und `bildschirm` gelten weiter (Kiosk-URLs)."""
+    screen_slug = screen or bildschirm
+    view_slug = view or profil
+    screen = None
+    if screen_slug:
         try:
-            bs_obj = Bildschirm.objects.get(slug=bildschirm)
-            config = bs_obj.get_active_profil()
-        except Bildschirm.DoesNotExist:
-            config = MonitorConfig.get(slug=profil)
+            screen = Screen.objects.get(slug=screen_slug)
+            view = screen.get_active_view()
+        except Screen.DoesNotExist:
+            view = DisplayView.get(slug=view_slug)
     else:
-        config = MonitorConfig.get(slug=profil)
+        view = DisplayView.get(slug=view_slug)
     now = timezone.now()
 
     # Aktive Klausur (pro Bildschirm)
-    klausur = None
-    if bs_obj:
-        k = bs_obj.get_active_klausur()
+    exam = None
+    if screen:
+        k = screen.get_active_exam()
         if k:
             k_link = k.webuntis_link.url if k.webuntis_link else ''
-            klausur = {
-                'titel': k.titel, 'text': k.text,
-                'farbe': k.farbe, 'aktiv_bis': k.aktiv_bis,
-                'anzeige_modus': k.anzeige_modus,
-                'split_seite': k.split_seite,
-                'split_prozent': k.split_prozent,
+            exam = {
+                'title': k.title, 'text': k.text,
+                'color': k.color, 'active_until': k.active_until,
+                'display_mode': k.display_mode,
+                'split_side': k.split_side,
+                'split_percent': k.split_percent,
                 'webuntis_url': k_link,
             }
 
     # Ankündigungen: nur aktive + im Zeitfenster
-    ankuendigungen = []
-    for a in Ankuendigung.objects.filter(ist_aktiv=True):
-        if a.aktiv_von and now < a.aktiv_von:
+    announcements = []
+    for a in Announcement.objects.filter(is_active=True):
+        if a.active_from and now < a.active_from:
             continue
-        if a.aktiv_bis and now > a.aktiv_bis:
+        if a.active_until and now > a.active_until:
             continue
-        ankuendigungen.append({
-            'id': a.id, 'titel': a.titel, 'text': a.text,
-            'prioritaet': a.prioritaet, 'ist_aktiv': a.ist_aktiv,
-            'aktiv_von': a.aktiv_von, 'aktiv_bis': a.aktiv_bis,
-            'erstellt_am': a.erstellt_am,
+        announcements.append({
+            'id': a.id, 'title': a.title, 'text': a.text,
+            'priority': a.priority, 'is_active': a.is_active,
+            'active_from': a.active_from, 'active_until': a.active_until,
+            'created_at': a.created_at,
         })
 
     # Veranstaltungen: nächste 7 Tage + aktuell laufende
-    veranstaltungen = []
-    if config.zeige_veranstaltungen:
+    events = []
+    if view.show_events:
         from veranstaltung.models import Veranstaltung
-        sieben_tage = now + timezone.timedelta(days=7)
-        events = Veranstaltung.objects.filter(
+        in_seven_days = now + timezone.timedelta(days=7)
+        upcoming = Veranstaltung.objects.filter(
             status__in=['bestaetigt', 'laufend'],
             datum_bis__gte=now,
-            datum_von__lte=sieben_tage,
+            datum_von__lte=in_seven_days,
         ).order_by('datum_von')[:10]
 
-        for v in events:
-            ist_laufend = v.status == 'laufend' or (
+        for v in upcoming:
+            is_running = v.status == 'laufend' or (
                 v.datum_von and v.datum_bis and v.datum_von <= now <= v.datum_bis
             )
-            veranstaltungen.append({
-                'id': v.id, 'name': v.titel, 'ort': v.ort or '',
-                'datum_von': v.datum_von, 'datum_bis': v.datum_bis,
-                'status': v.status, 'ist_laufend': ist_laufend,
+            events.append({
+                'id': v.id, 'name': v.titel, 'location': v.ort or '',
+                'date_from': v.datum_von, 'date_until': v.datum_bis,
+                'status': v.status, 'is_running': is_running,
             })
 
     # Dateien
-    dateien = []
-    for d in MonitorDatei.objects.all():
-        dateien.append({
-            'id': d.id, 'name': d.name, 'typ': d.typ,
-            'datei_url': d.datei.url if d.datei else '',
-            'reihenfolge': d.reihenfolge,
+    files = []
+    for d in MediaFile.objects.all():
+        files.append({
+            'id': d.id, 'name': d.name, 'kind': d.kind,
+            'file_url': d.file.url if d.file else '',
+            'sort_order': d.sort_order,
         })
 
     # Wetter
-    wetter = _fetch_weather(config)
-
-    # Raumplan
-    raumplan = _fetch_raumplan(config)
+    weather = _fetch_weather(view)
 
     # ÖPNV Abfahrten
-    abfahrten = _fetch_oepnv(config)
+    departures = _fetch_transit(view)
     # Ausgeblendete Störungen nicht ans Display schicken
-    _versteckt = set(config.oepnv_stoerung_ausgeblendet or [])
-    stoerungen = [s for s in _fetch_stoerungen(config) if s.get('id') not in _versteckt]
+    _hidden = set(view.transit_disruption_hidden or [])
+    disruptions = [s for s in _fetch_disruptions(view) if s.get('id') not in _hidden]
 
-    # Config (sensitive Felder entfernen)
-    config_data = MonitorConfigSchema.from_orm(config).dict()
-    config_data['api_token'] = ''
-    config_data['wetter_api_key'] = ''
-    config_data['raumplan_benutzername'] = ''
-    config_data['raumplan_passwort'] = ''
-    config_data['logo_url_resolved'] = config.get_logo_url()
-    config_data['pdf_url_resolved'] = config.get_pdf_url()
-    config_data['hintergrundbild_url_resolved'] = config.get_hintergrundbild_url()
-    config_data['bild_url_resolved'] = config.get_bild_url()
-    config_data['webuntis_url_resolved'] = config.get_webuntis_url()
-    config_data['webuntis_url_1tag_resolved'] = config.get_webuntis_url_1tag()
+    # Ansicht (sensitive Felder entfernen)
+    view_data = DisplayViewSchema.from_orm(view).dict()
+    view_data['api_token'] = ''
+    view_data['weather_api_key'] = ''
+    view_data['logo_url_resolved'] = view.get_logo_url()
+    view_data['pdf_url_resolved'] = view.get_pdf_url()
+    view_data['background_image_url_resolved'] = view.get_background_image_url()
+    view_data['image_url_resolved'] = view.get_image_url()
+    view_data['webuntis_url_resolved'] = view.get_webuntis_url()
+    view_data['webuntis_url_next_day_resolved'] = view.get_webuntis_url_next_day()
 
-    # Wenn on_air_vollbild aktiv → ON AIR Display Profil-Config mitliefern
-    on_air_profil = None
-    if config.on_air_vollbild:
-        onair_config = MonitorConfig.objects.filter(layout_modus='onair').exclude(pk=config.pk).first()
-        if onair_config:
-            on_air_profil = {
-                'on_air_farbe': onair_config.on_air_farbe,
-                'on_air_text': onair_config.on_air_text,
-                'on_air_groesse': onair_config.on_air_groesse,
-                'on_air_position': onair_config.on_air_position,
-                'on_air_blinken': onair_config.on_air_blinken,
-                'zeige_uhr': onair_config.zeige_uhr,
+    # Wenn on_air_fullscreen aktiv → Einstellungen der ON-AIR-Ansicht mitliefern
+    on_air_view = None
+    if view.on_air_fullscreen:
+        on_air_source = DisplayView.objects.filter(layout='on_air').exclude(pk=view.pk).first()
+        if on_air_source:
+            on_air_view = {
+                'on_air_color': on_air_source.on_air_color,
+                'on_air_text': on_air_source.on_air_text,
+                'on_air_size': on_air_source.on_air_size,
+                'on_air_position': on_air_source.on_air_position,
+                'on_air_blink': on_air_source.on_air_blink,
+                'show_clock': on_air_source.show_clock,
             }
 
     return {
-        'config': config_data,
-        'ankuendigungen': ankuendigungen,
-        'veranstaltungen': veranstaltungen,
-        'dateien': dateien,
-        'wetter': wetter,
-        'raumplan': raumplan,
-        'abfahrten': abfahrten,
-        'stoerungen': stoerungen,
-        'on_air_profil': on_air_profil,
-        'klausur': klausur,
-        'neu_laden_zeit': bs_obj.neu_laden_zeit.isoformat() if (bs_obj and bs_obj.neu_laden_zeit) else None,
+        'config': view_data,
+        'announcements': announcements,
+        'events': events,
+        'files': files,
+        'weather': weather,
+        'departures': departures,
+        'disruptions': disruptions,
+        'on_air_view': on_air_view,
+        'exam': exam,
+        'reload_requested_at': (screen.reload_requested_at.isoformat()
+                                if (screen and screen.reload_requested_at) else None),
+        # TODO(step-b): remove legacy reload key
+        'neu_laden_zeit': _legacy_reload_key(now),
     }
 
 
 @monitor_router.get("/clock")
 def get_clock_data(request):
     """Schlanker öffentlicher Endpunkt für externe Uhr-/Status-Displays:
-    ON-AIR-Status + nächste Veranstaltungen. Kein Login nötig."""
+    ON-AIR-Status + nächste Veranstaltungen. Kein Login nötig.
+    Die Antwortform bleibt für externe Aufrufer unverändert."""
     now = timezone.now()
-    on_air = MonitorConfig.objects.filter(ist_on_air=True).exists()
-    cfg = MonitorConfig.get()
-    on_air_text = cfg.on_air_text if cfg else 'ON AIR'
+    on_air = DisplayView.objects.filter(is_on_air=True).exists()
+    view = DisplayView.get()
+    on_air_text = view.on_air_text if view else 'ON AIR'
 
     from veranstaltung.models import Veranstaltung
-    events = (Veranstaltung.objects
-              .exclude(status='abgesagt')
-              .filter(datum_bis__gte=now)
-              .order_by('datum_von')[:5])
-    veranstaltungen = [{
+    upcoming = (Veranstaltung.objects
+                .exclude(status='abgesagt')
+                .filter(datum_bis__gte=now)
+                .order_by('datum_von')[:5])
+    events = [{
         'titel': v.titel,
         'ort': v.ort or '',
         'datum_von': v.datum_von,
         'datum_bis': v.datum_bis,
         'status': v.effektiv_status,
         'ist_laufend': v.effektiv_status == 'laufend',
-    } for v in events]
+    } for v in upcoming]
 
     return {
         'on_air': on_air,
         'on_air_text': on_air_text,
-        'veranstaltungen': veranstaltungen,
+        'veranstaltungen': events,
     }
 
 
 # ═══ ON AIR Endpunkt (Token-Auth) ════════════════════════════════
 
-@monitor_router.post("/onair", response={200: dict, 401: dict, 403: dict})
+@monitor_router.post("/on-air", response={200: dict, 401: dict, 403: dict})
 def toggle_on_air(request, payload: OnAirSchema):
     """ON AIR Status ändern — betrifft ALLE Profile"""
     # Erst per Token prüfen
     token = request.headers.get('X-Monitor-Token', '')
     if token:
-        config = MonitorConfig.objects.filter(api_token=token).first()
-        if config:
+        view = DisplayView.objects.filter(api_token=token).first()
+        if view:
             # Alle Profile updaten
-            MonitorConfig.objects.all().update(
-                ist_on_air=payload.on_air,
-                on_air_seit=timezone.now() if payload.on_air else None,
+            DisplayView.objects.all().update(
+                is_on_air=payload.on_air,
+                on_air_since=timezone.now() if payload.on_air else None,
             )
             _log_audit(request, 'ON AIR ' + ('an' if payload.on_air else 'aus'), via_token=True)
             return 200, {"success": True, "on_air": payload.on_air}
@@ -535,9 +449,9 @@ def toggle_on_air(request, payload: OnAirSchema):
         _require_perm(request, 'monitor.onair')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
-    MonitorConfig.objects.all().update(
-        ist_on_air=payload.on_air,
-        on_air_seit=timezone.now() if payload.on_air else None,
+    DisplayView.objects.all().update(
+        is_on_air=payload.on_air,
+        on_air_since=timezone.now() if payload.on_air else None,
     )
     _log_audit(request, 'ON AIR ' + ('an' if payload.on_air else 'aus'))
     return 200, {"success": True, "on_air": payload.on_air}
@@ -545,18 +459,18 @@ def toggle_on_air(request, payload: OnAirSchema):
 
 # ═══ Notfall Endpunkt (Token-Auth) ═══════════════════════════════
 
-@monitor_router.post("/notfall", response={200: dict, 401: dict, 403: dict})
-def toggle_notfall(request, payload: NotfallSchema):
+@monitor_router.post("/emergency", response={200: dict, 401: dict, 403: dict})
+def toggle_emergency(request, payload: EmergencySchema):
     """Notfall-Meldung aktivieren/deaktivieren — betrifft ALLE Profile"""
     token = request.headers.get('X-Monitor-Token', '')
     if token:
-        config = MonitorConfig.objects.filter(api_token=token).first()
-        if config:
-            MonitorConfig.objects.all().update(
-                notfall_aktiv=payload.aktiv,
-                notfall_text=payload.text,
+        view = DisplayView.objects.filter(api_token=token).first()
+        if view:
+            DisplayView.objects.all().update(
+                emergency_active=payload.active,
+                emergency_text=payload.text,
             )
-            _log_audit(request, 'Notfall ' + ('an' if payload.aktiv else 'aus'), payload.text if payload.aktiv else '', via_token=True)
+            _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '', via_token=True)
             return 200, {"success": True}
         return 401, {"success": False, "message": "Ungültiges Token"}
 
@@ -565,270 +479,257 @@ def toggle_notfall(request, payload: NotfallSchema):
         return 401, {"success": False, "message": "Nicht autorisiert"}
     request.auth = auth_result
     try:
-        _require_perm(request, 'monitor.notfall')
+        _require_perm(request, 'monitor.emergency')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
-    MonitorConfig.objects.all().update(
-        notfall_aktiv=payload.aktiv,
-        notfall_text=payload.text,
+    DisplayView.objects.all().update(
+        emergency_active=payload.active,
+        emergency_text=payload.text,
     )
-    _log_audit(request, 'Notfall ' + ('an' if payload.aktiv else 'aus'), payload.text if payload.aktiv else '')
+    _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '')
     return 200, {"success": True}
 
 
 # ═══ Admin: Profile ══════════════════════════════════════════════
 
-@monitor_router.get("/profile", response=list[MonitorProfileListSchema], auth=keycloak_auth)
-def list_profiles(request):
+@monitor_router.get("/views", response=list[DisplayViewListSchema], auth=keycloak_auth)
+def list_views(request):
     _require_perm(request, 'monitor.view')
-    return MonitorConfig.objects.filter(geloescht_am__isnull=True).order_by('sortierung', 'name')
+    return DisplayView.objects.filter(deleted_at__isnull=True).order_by('sort_order', 'name')
 
 
-@monitor_router.post("/profile", auth=keycloak_auth)
-def create_profile(request, payload: MonitorProfileCreateSchema):
+@monitor_router.post("/views", auth=keycloak_auth)
+def create_view(request, payload: DisplayViewCreateSchema):
     _require_perm(request, 'monitor.edit')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
 
     # Slug-Kollision vermeiden
     base_slug = slug
     counter = 1
-    while MonitorConfig.objects.filter(slug=slug).exists():
+    while DisplayView.objects.filter(slug=slug).exists():
         slug = f"{base_slug}-{counter}"
         counter += 1
 
     if payload.clone_from_id:
         # Von bestehendem Profil klonen
-        source = get_object_or_404(MonitorConfig, id=payload.clone_from_id)
+        source = get_object_or_404(DisplayView, id=payload.clone_from_id)
         source.pk = None
         source.name = payload.name
         source.slug = slug
-        source.ist_standard = False
-        source.layout_modus = payload.layout_modus
+        source.is_default = False
+        source.layout = payload.layout
         source.api_token = uuid.uuid4().hex
         source.save()
         return {'id': source.id, 'name': source.name, 'slug': source.slug}
     else:
-        config = MonitorConfig(
+        view = DisplayView(
             name=payload.name,
             slug=slug,
-            ist_standard=False,
-            layout_modus=payload.layout_modus,
+            is_default=False,
+            layout=payload.layout,
         )
-        config.save()
-        return {'id': config.id, 'name': config.name, 'slug': config.slug}
+        view.save()
+        return {'id': view.id, 'name': view.name, 'slug': view.slug}
 
 
-@monitor_router.delete("/profile/{id}", auth=keycloak_auth)
-def delete_profile(request, id: int):
+@monitor_router.delete("/views/{id}", auth=keycloak_auth)
+def delete_view(request, id: int):
     _require_perm(request, 'monitor.edit')
-    config = get_object_or_404(MonitorConfig, id=id)
-    if config.ist_standard:
+    view = get_object_or_404(DisplayView, id=id)
+    if view.is_default:
         return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
-    config.geloescht_am = timezone.now()
-    config.save(update_fields=['geloescht_am', 'aktualisiert_am'])
+    view.deleted_at = timezone.now()
+    view.save(update_fields=['deleted_at', 'updated_at'])
     return {"success": True}
 
 
 # ═══ Admin: Config ════════════════════════════════════════════════
 
-@monitor_router.get("/config", response=MonitorConfigSchema, auth=keycloak_auth)
-def get_config(request, profil_id: int = None):
+@monitor_router.get("/config", response=DisplayViewSchema, auth=keycloak_auth)
+def get_view(request, view_id: int = None):
     _require_perm(request, 'monitor.view')
-    if profil_id:
-        return get_object_or_404(MonitorConfig, id=profil_id)
-    return MonitorConfig.get()
+    if view_id:
+        return get_object_or_404(DisplayView, id=view_id)
+    return DisplayView.get()
 
 
-@monitor_router.get("/stoerungen", auth=keycloak_auth)
-def list_stoerungen(request, profil_id: int = None):
+@monitor_router.get("/disruptions", auth=keycloak_auth)
+def list_disruptions(request, view_id: int = None):
     """Admin: alle aktuellen Störungen (aller Quellen) mit hidden-Flag zum Ausblenden."""
     _require_perm(request, 'monitor.view')
-    config = get_object_or_404(MonitorConfig, id=profil_id) if profil_id else MonitorConfig.get()
-    versteckt = set(config.oepnv_stoerung_ausgeblendet or [])
+    view = get_object_or_404(DisplayView, id=view_id) if view_id else DisplayView.get()
+    hidden = set(view.transit_disruption_hidden or [])
     out = []
-    for s in _fetch_stoerungen(config):
+    for s in _fetch_disruptions(view):
         out.append({
-            'id': s.get('id'), 'quelle': s.get('quelle'), 'typ': s.get('typ'),
-            'titel': s.get('titel'), 'text': (s.get('text') or '')[:160],
-            'linien': s.get('linien', []), 'von': s.get('von', ''), 'bis': s.get('bis', ''),
-            'hat_bild': bool(s.get('bild')), 'hidden': s.get('id') in versteckt,
+            'id': s.get('id'), 'source': s.get('source'), 'kind': s.get('kind'),
+            'title': s.get('title'), 'text': (s.get('text') or '')[:160],
+            'lines': s.get('lines', []), 'from': s.get('from', ''), 'until': s.get('until', ''),
+            'has_image': bool(s.get('image')), 'hidden': s.get('id') in hidden,
         })
     return out
 
 
-_VERSION_DENY = {'id', 'api_token', 'slug', 'erstellt_am', 'aktualisiert_am'}
+_VERSION_DENY = {'id', 'api_token', 'slug', 'created_at', 'updated_at'}
 
 
-def _snapshot_config(config):
+def _snapshot_view(view):
     """Aktuellen Zustand als Version sichern; nur die letzten 15 behalten."""
-    from .models import MonitorConfigVersion
+    from .models import DisplayViewVersion
     try:
-        daten = json.loads(json.dumps(MonitorConfigSchema.from_orm(config).dict(), default=str))
-        daten.pop('api_token', None)
-        MonitorConfigVersion.objects.create(config=config, daten=daten)
-        alte = list(MonitorConfigVersion.objects.filter(config=config).values_list('id', flat=True)[15:])
-        if alte:
-            MonitorConfigVersion.objects.filter(id__in=alte).delete()
+        data = json.loads(json.dumps(DisplayViewSchema.from_orm(view).dict(), default=str))
+        data.pop('api_token', None)
+        DisplayViewVersion.objects.create(view=view, data=data)
+        old_ids = list(DisplayViewVersion.objects.filter(view=view).values_list('id', flat=True)[15:])
+        if old_ids:
+            DisplayViewVersion.objects.filter(id__in=old_ids).delete()
     except Exception:
         pass  # Versionierung darf das Speichern nie blockieren
 
 
-@monitor_router.put("/config", response=MonitorConfigSchema, auth=keycloak_auth)
-def update_config(request, payload: MonitorConfigUpdateSchema, profil_id: int = None):
+@monitor_router.put("/config", response=DisplayViewSchema, auth=keycloak_auth)
+def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
     _require_perm(request, 'monitor.edit')
-    if profil_id:
-        config = get_object_or_404(MonitorConfig, id=profil_id)
+    if view_id:
+        view = get_object_or_404(DisplayView, id=view_id)
     else:
-        config = MonitorConfig.get()
+        view = DisplayView.get()
 
-    _snapshot_config(config)  # Zustand vor der Änderung sichern
+    _snapshot_view(view)  # Zustand vor der Änderung sichern
 
     data = payload.dict(exclude_unset=True)
-    data = _validate_config_data(data)
+    data = _validate_view_data(data)
 
     # FK-Felder separat behandeln
-    if 'aktives_logo_id' in data:
-        val = data.pop('aktives_logo_id')
-        config.aktives_logo_id = val if val else None
-    if 'aktive_pdf_id' in data:
-        val = data.pop('aktive_pdf_id')
-        config.aktive_pdf_id = val if val else None
-    if 'aktives_hintergrundbild_id' in data:
-        val = data.pop('aktives_hintergrundbild_id')
-        config.aktives_hintergrundbild_id = val if val else None
-    if 'aktives_bild_id' in data:
-        val = data.pop('aktives_bild_id')
-        config.aktives_bild_id = val if val else None
-    if 'webuntis_link_id' in data:
-        val = data.pop('webuntis_link_id')
-        config.webuntis_link_id = val if val else None
-    if 'webuntis_link_1tag_id' in data:
-        val = data.pop('webuntis_link_1tag_id')
-        config.webuntis_link_1tag_id = val if val else None
+    for fk_key in ('active_logo_id', 'active_pdf_id', 'active_background_image_id',
+                   'active_image_id', 'webuntis_link_id', 'webuntis_link_next_day_id'):
+        if fk_key in data:
+            val = data.pop(fk_key)
+            setattr(view, fk_key, val if val else None)
 
     for key, value in data.items():
-        setattr(config, key, value)
-    # ÖPNV-/Störungs-Cache verwerfen, damit Config-Änderungen sofort greifen
-    config.oepnv_cache_zeit = None
-    config.oepnv_stoerung_cache_zeit = None
-    config.save()
-    return config
+        setattr(view, key, value)
+    # ÖPNV-/Störungs-Cache verwerfen, damit Änderungen sofort greifen
+    view.transit_cache_at = None
+    view.transit_disruption_cache_at = None
+    view.save()
+    return view
 
 
-@monitor_router.get("/config/versionen", response=list[ConfigVersionSchema], auth=keycloak_auth)
-def list_config_versionen(request, profil_id: int):
+@monitor_router.get("/config/versions", response=list[DisplayViewVersionSchema], auth=keycloak_auth)
+def list_view_versions(request, view_id: int):
     _require_perm(request, 'monitor.view')
-    from .models import MonitorConfigVersion
-    return list(MonitorConfigVersion.objects.filter(config_id=profil_id)[:15])
+    from .models import DisplayViewVersion
+    return list(DisplayViewVersion.objects.filter(view_id=view_id)[:15])
 
 
-@monitor_router.post("/config/restore", response=MonitorConfigSchema, auth=keycloak_auth)
-def restore_config_version(request, version_id: int):
+@monitor_router.post("/config/restore", response=DisplayViewSchema, auth=keycloak_auth)
+def restore_view_version(request, version_id: int):
     _require_perm(request, 'monitor.edit')
-    from .models import MonitorConfigVersion
-    version = get_object_or_404(MonitorConfigVersion, id=version_id)
-    config = version.config
-    _snapshot_config(config)  # aktuellen Stand vor dem Zurücksetzen ebenfalls sichern
-    for key, value in (version.daten or {}).items():
-        if key in _VERSION_DENY or not hasattr(config, key):
+    from .models import DisplayViewVersion
+    version = get_object_or_404(DisplayViewVersion, id=version_id)
+    view = version.view
+    _snapshot_view(view)  # aktuellen Stand vor dem Zurücksetzen ebenfalls sichern
+    for key, value in (version.data or {}).items():
+        if key in _VERSION_DENY or not hasattr(view, key):
             continue
         try:
-            setattr(config, key, value)
+            setattr(view, key, value)
         except Exception:
             continue
-    config.save()
-    return config
+    view.save()
+    return view
 
 
 @monitor_router.post("/config/regenerate-token", auth=keycloak_auth)
-def regenerate_token(request, profil_id: int = None):
+def regenerate_token(request, view_id: int = None):
     _require_perm(request, 'monitor.edit')
-    if profil_id:
-        config = get_object_or_404(MonitorConfig, id=profil_id)
+    if view_id:
+        view = get_object_or_404(DisplayView, id=view_id)
     else:
-        config = MonitorConfig.get()
-    config.api_token = uuid.uuid4().hex
-    config.save(update_fields=['api_token', 'aktualisiert_am'])
-    return {"api_token": config.api_token}
+        view = DisplayView.get()
+    view.api_token = uuid.uuid4().hex
+    view.save(update_fields=['api_token', 'updated_at'])
+    return {"api_token": view.api_token}
 
 
 # ═══ Admin: Dateien (Upload/Manage) ══════════════════════════════
 
-@monitor_router.get("/dateien", response=list[MonitorDateiSchema], auth=keycloak_auth)
-def list_dateien(request, typ: str = None):
+@monitor_router.get("/files", response=list[MediaFileSchema], auth=keycloak_auth)
+def list_files(request, kind: str = None):
     _require_perm(request, 'monitor.view')
-    qs = MonitorDatei.objects.filter(geloescht_am__isnull=True)
-    if typ:
-        qs = qs.filter(typ=typ)
+    qs = MediaFile.objects.filter(deleted_at__isnull=True)
+    if kind:
+        qs = qs.filter(kind=kind)
     return qs
 
 
-@monitor_router.post("/dateien", auth=keycloak_auth)
-def upload_datei(request, datei: UploadedFile = File(...), name: str = Form(""), typ: str = Form("bild")):
+@monitor_router.post("/files", auth=keycloak_auth)
+def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), kind: str = Form("image")):
     _require_perm(request, 'monitor.edit')
-    obj = MonitorDatei.objects.create(
-        name=name or datei.name,
-        datei=datei,
-        typ=typ,
+    obj = MediaFile.objects.create(
+        name=name or file.name,
+        file=file,
+        kind=kind,
     )
     return {
-        'id': obj.id, 'name': obj.name, 'typ': obj.typ,
-        'datei_url': obj.datei.url, 'reihenfolge': obj.reihenfolge,
+        'id': obj.id, 'name': obj.name, 'kind': obj.kind,
+        'file_url': obj.file.url, 'sort_order': obj.sort_order,
     }
 
 
-@monitor_router.delete("/dateien/{id}", auth=keycloak_auth)
-def delete_datei(request, id: int):
+@monitor_router.delete("/files/{id}", auth=keycloak_auth)
+def delete_file(request, id: int):
     _require_perm(request, 'monitor.edit')
-    d = get_object_or_404(MonitorDatei, id=id)
+    d = get_object_or_404(MediaFile, id=id)
     # Soft-Delete → Papierkorb (Datei bleibt für Wiederherstellung erhalten)
-    d.geloescht_am = timezone.now()
-    d.save(update_fields=['geloescht_am'])
+    d.deleted_at = timezone.now()
+    d.save(update_fields=['deleted_at'])
     return {"success": True}
 
 
 # ═══ Admin: Papierkorb (Soft-Delete) ═════════════════════════════
 
-@monitor_router.get("/papierkorb", auth=keycloak_auth)
-def get_papierkorb(request):
+@monitor_router.get("/trash", auth=keycloak_auth)
+def get_trash(request):
     _require_perm(request, 'monitor.view')
-    ansichten = [
-        {'id': c.id, 'name': c.name, 'geloescht_am': c.geloescht_am}
-        for c in MonitorConfig.objects.filter(geloescht_am__isnull=False).order_by('-geloescht_am')
+    views = [
+        {'id': c.id, 'name': c.name, 'deleted_at': c.deleted_at}
+        for c in DisplayView.objects.filter(deleted_at__isnull=False).order_by('-deleted_at')
     ]
-    medien = [
-        {'id': d.id, 'name': d.name, 'typ': d.typ, 'geloescht_am': d.geloescht_am}
-        for d in MonitorDatei.objects.filter(geloescht_am__isnull=False).order_by('-geloescht_am')
+    media = [
+        {'id': d.id, 'name': d.name, 'kind': d.kind, 'deleted_at': d.deleted_at}
+        for d in MediaFile.objects.filter(deleted_at__isnull=False).order_by('-deleted_at')
     ]
-    return {'ansichten': ansichten, 'medien': medien}
+    return {'views': views, 'media': media}
 
 
-@monitor_router.post("/papierkorb/wiederherstellen", auth=keycloak_auth)
-def restore_papierkorb(request, art: str, id: int):
+@monitor_router.post("/trash/restore", auth=keycloak_auth)
+def restore_trash(request, kind: str, id: int):
     _require_perm(request, 'monitor.edit')
-    if art == 'ansicht':
-        obj = get_object_or_404(MonitorConfig, id=id)
-        obj.geloescht_am = None
-        obj.save(update_fields=['geloescht_am', 'aktualisiert_am'])
-    elif art == 'medium':
-        obj = get_object_or_404(MonitorDatei, id=id)
-        obj.geloescht_am = None
-        obj.save(update_fields=['geloescht_am'])
+    if kind == 'view':
+        obj = get_object_or_404(DisplayView, id=id)
+        obj.deleted_at = None
+        obj.save(update_fields=['deleted_at', 'updated_at'])
+    elif kind == 'media':
+        obj = get_object_or_404(MediaFile, id=id)
+        obj.deleted_at = None
+        obj.save(update_fields=['deleted_at'])
     else:
         raise HttpError(400, "Unbekannte Art")
     return {"success": True}
 
 
-@monitor_router.delete("/papierkorb/endgueltig", auth=keycloak_auth)
-def delete_papierkorb_permanent(request, art: str, id: int):
+@monitor_router.delete("/trash/purge", auth=keycloak_auth)
+def purge_trash(request, kind: str, id: int):
     _require_perm(request, 'monitor.edit')
-    if art == 'ansicht':
-        obj = get_object_or_404(MonitorConfig, id=id, geloescht_am__isnull=False)
+    if kind == 'view':
+        obj = get_object_or_404(DisplayView, id=id, deleted_at__isnull=False)
         obj.delete()
-    elif art == 'medium':
-        obj = get_object_or_404(MonitorDatei, id=id, geloescht_am__isnull=False)
-        if obj.datei:
-            obj.datei.delete(save=False)
+    elif kind == 'media':
+        obj = get_object_or_404(MediaFile, id=id, deleted_at__isnull=False)
+        if obj.file:
+            obj.file.delete(save=False)
         obj.delete()
     else:
         raise HttpError(400, "Unbekannte Art")
@@ -837,32 +738,32 @@ def delete_papierkorb_permanent(request, art: str, id: int):
 
 # ═══ Admin: Ankündigungen ═════════════════════════════════════════
 
-@monitor_router.get("/ankuendigungen", response=list[AnkuendigungSchema], auth=keycloak_auth)
-def list_ankuendigungen(request):
+@monitor_router.get("/announcements", response=list[AnnouncementSchema], auth=keycloak_auth)
+def list_announcements(request):
     _require_perm(request, 'monitor.view')
-    return Ankuendigung.objects.all()
+    return Announcement.objects.all()
 
 
-@monitor_router.post("/ankuendigungen", response=AnkuendigungSchema, auth=keycloak_auth)
-def create_ankuendigung(request, payload: AnkuendigungCreateSchema):
+@monitor_router.post("/announcements", response=AnnouncementSchema, auth=keycloak_auth)
+def create_announcement(request, payload: AnnouncementCreateSchema):
     _require_perm(request, 'monitor.edit')
-    return Ankuendigung.objects.create(**payload.dict())
+    return Announcement.objects.create(**payload.dict())
 
 
-@monitor_router.put("/ankuendigungen/{id}", response=AnkuendigungSchema, auth=keycloak_auth)
-def update_ankuendigung(request, id: int, payload: AnkuendigungCreateSchema):
+@monitor_router.put("/announcements/{id}", response=AnnouncementSchema, auth=keycloak_auth)
+def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
     _require_perm(request, 'monitor.edit')
-    a = get_object_or_404(Ankuendigung, id=id)
+    a = get_object_or_404(Announcement, id=id)
     for key, value in payload.dict().items():
         setattr(a, key, value)
     a.save()
     return a
 
 
-@monitor_router.delete("/ankuendigungen/{id}", auth=keycloak_auth)
-def delete_ankuendigung(request, id: int):
+@monitor_router.delete("/announcements/{id}", auth=keycloak_auth)
+def delete_announcement(request, id: int):
     _require_perm(request, 'monitor.edit')
-    a = get_object_or_404(Ankuendigung, id=id)
+    a = get_object_or_404(Announcement, id=id)
     a.delete()
     return {"success": True}
 
@@ -900,274 +801,311 @@ def delete_webuntis_link(request, id: int):
 
 # ═══ Admin: ÖPNV Stationssuche ═══════════════════════════════════
 
-@monitor_router.get("/oepnv/suche", auth=keycloak_auth)
-def search_oepnv_stations(request, q: str = "", results: int = 10,
-                           use_db: bool = True, use_nahsh: bool = True):
+@monitor_router.get("/transit/search", auth=keycloak_auth)
+def search_transit_stops(request, q: str = "", results: int = 10,
+                         use_db: bool = True, use_nahsh: bool = True):
     """Stationen für ÖPNV-Abfahrtsmonitor suchen"""
     _require_perm(request, 'monitor.edit')
     if len(q) < 2:
         return []
     return oepnv.search_stations(q, results=min(results, 20),
-                                  use_db=use_db, use_nahsh=use_nahsh)
+                                 use_db=use_db, use_nahsh=use_nahsh)
 
 
 # ═══ Bildschirm: Power-Status (öffentlich, kein Auth) ═════════════
 
-@monitor_router.get("/bildschirm/power")
-def get_bildschirm_power(request, slug: str):
+@monitor_router.get("/screen/power")
+def get_screen_power(request, slug: str):
     """Öffentlicher Endpunkt: Soll der Bildschirm gerade an sein?
-    Wird vom Raspberry Pi per Cronjob gepollt."""
+    Wird vom Raspberry Pi per Cronjob gepollt. Die Antwortschlüssel folgen
+    den neuen Feldnamen."""
     try:
-        bs = Bildschirm.objects.get(slug=slug)
+        screen = Screen.objects.get(slug=slug)
         return {
-            'slug': bs.slug,
-            'power': bs.get_power_state(),
-            'power_zeitplan': bs.power_zeitplan,
-            'ferien_modus': bs.ferien_modus,
-            'power_ausnahmen': bs.power_ausnahmen,
-            'cec_status': bs.cec_status,
-            'cec_status_zeit': bs.cec_status_zeit,
+            'slug': screen.slug,
+            'power': screen.get_power_state(),
+            'power_schedule': screen.power_schedule,
+            'holiday_mode': screen.holiday_mode,
+            'power_exceptions': screen.power_exceptions,
+            'cec_status': screen.cec_status,
+            'cec_status_at': screen.cec_status_at,
         }
-    except Bildschirm.DoesNotExist:
+    except Screen.DoesNotExist:
         return {'slug': slug, 'power': True, 'error': 'Bildschirm nicht gefunden'}
 
 
-@monitor_router.post("/bildschirm/cec-status")
+@monitor_router.post("/screen/cec-status")
 def report_cec_status(request, slug: str, status: str):
     """Öffentlicher Endpunkt: Pi meldet den tatsächlichen CEC-Status zurück.
     status: 'on', 'standby', 'unknown'"""
     try:
-        bs = Bildschirm.objects.get(slug=slug)
-        bs.cec_status = status[:20]
-        bs.cec_status_zeit = timezone.now()
-        bs.save(update_fields=['cec_status', 'cec_status_zeit', 'aktualisiert_am'])
-        return {'success': True, 'slug': bs.slug, 'cec_status': bs.cec_status}
-    except Bildschirm.DoesNotExist:
+        screen = Screen.objects.get(slug=slug)
+        screen.cec_status = status[:20]
+        screen.cec_status_at = timezone.now()
+        screen.save(update_fields=['cec_status', 'cec_status_at', 'updated_at'])
+        return {'success': True, 'slug': screen.slug, 'cec_status': screen.cec_status}
+    except Screen.DoesNotExist:
         return {'success': False, 'error': 'Bildschirm nicht gefunden'}
 
 
 # ═══ Admin: Bildschirme ═══════════════════════════════════════════
 
-@monitor_router.get("/bildschirme", response=list[BildschirmListSchema], auth=keycloak_auth)
-def list_bildschirme(request):
+@monitor_router.get("/screens", response=list[ScreenListSchema], auth=keycloak_auth)
+def list_screens(request):
     _require_perm(request, 'monitor.view')
-    return Bildschirm.objects.all()
+    return Screen.objects.all()
 
 
-@monitor_router.post("/bildschirme", auth=keycloak_auth)
-def create_bildschirm(request, payload: BildschirmCreateSchema):
+@monitor_router.post("/screens", auth=keycloak_auth)
+def create_screen(request, payload: ScreenCreateSchema):
     _require_perm(request, 'monitor.edit')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
     base_slug = slug
     counter = 1
-    while Bildschirm.objects.filter(slug=slug).exists():
+    while Screen.objects.filter(slug=slug).exists():
         slug = f"{base_slug}-{counter}"
         counter += 1
-    bs = Bildschirm.objects.create(
+    screen = Screen.objects.create(
         name=payload.name,
         slug=slug,
-        default_profil_id=payload.default_profil_id,
+        default_view_id=payload.default_view_id,
     )
-    return {'id': bs.id, 'name': bs.name, 'slug': bs.slug}
+    return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
-@monitor_router.put("/bildschirme/{id}", response=BildschirmListSchema, auth=keycloak_auth)
-def update_bildschirm(request, id: int, payload: BildschirmUpdateSchema):
+@monitor_router.put("/screens/{id}", response=ScreenListSchema, auth=keycloak_auth)
+def update_screen(request, id: int, payload: ScreenUpdateSchema):
     _require_perm(request, 'monitor.edit')
-    bs = get_object_or_404(Bildschirm, id=id)
+    screen = get_object_or_404(Screen, id=id)
     data = payload.dict(exclude_unset=True)
-    if 'default_profil_id' in data:
-        val = data.pop('default_profil_id')
-        bs.default_profil_id = val if val else None
-    if 'override_profil_id' in data:
-        val = data.pop('override_profil_id')
-        bs.override_profil_id = val if val else None
+    if 'default_view_id' in data:
+        val = data.pop('default_view_id')
+        screen.default_view_id = val if val else None
+    if 'override_view_id' in data:
+        val = data.pop('override_view_id')
+        screen.override_view_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
-    power_keys = {'zeitplan', 'power_zeitplan', 'ferien_modus', 'power_ausnahmen', 'power_modus'}
+    power_keys = {'schedule', 'power_schedule', 'holiday_mode', 'power_exceptions', 'power_mode'}
     power_changed = bool(power_keys & set(data.keys()))
     for key, value in data.items():
-        setattr(bs, key, value)
-    bs.save()
+        setattr(screen, key, value)
+    screen.save()
     if power_changed:
-        from .consumers import push_power_to_bildschirm
-        push_power_to_bildschirm(bs.slug)
-    return bs
+        from .consumers import push_power_to_screen
+        push_power_to_screen(screen.slug)
+    return screen
 
 
-@monitor_router.delete("/bildschirme/{id}", auth=keycloak_auth)
-def delete_bildschirm(request, id: int):
+@monitor_router.delete("/screens/{id}", auth=keycloak_auth)
+def delete_screen(request, id: int):
     _require_perm(request, 'monitor.edit')
-    bs = get_object_or_404(Bildschirm, id=id)
-    bs.delete()
+    screen = get_object_or_404(Screen, id=id)
+    screen.delete()
     return {"success": True}
 
 
-@monitor_router.post("/bildschirme/{id}/reload", auth=keycloak_auth)
-def reload_bildschirm(request, id: int):
-    """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt neu_laden_zeit)."""
+@monitor_router.post("/screens/{id}/reload", auth=keycloak_auth)
+def reload_screen(request, id: int):
+    """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt reload_requested_at)."""
     _require_perm(request, 'monitor.edit')
-    bs = get_object_or_404(Bildschirm, id=id)
-    bs.neu_laden_zeit = timezone.now()
-    bs.save(update_fields=['neu_laden_zeit'])
+    screen = get_object_or_404(Screen, id=id)
+    screen.reload_requested_at = timezone.now()
+    screen.save(update_fields=['reload_requested_at'])
     return {"success": True}
 
 
 # ═══ Klausuren ════════════════════════════════════════════════════
 
-@monitor_router.get("/klausuren", response=list[KlausurSchema], auth=keycloak_auth)
-def list_klausuren(request):
+@monitor_router.get("/exams", response=list[ExamSchema], auth=keycloak_auth)
+def list_exams(request):
     _require_perm(request, 'monitor.view')
-    return list(Klausur.objects.prefetch_related('bildschirme').all())
+    return list(Exam.objects.prefetch_related('screens').all())
 
 
-@monitor_router.post("/klausuren", response=KlausurSchema, auth=keycloak_auth)
-def create_klausur(request, payload: KlausurCreateSchema):
+@monitor_router.post("/exams", response=ExamSchema, auth=keycloak_auth)
+def create_exam(request, payload: ExamCreateSchema):
     _require_perm(request, 'monitor.edit')
     data = payload.dict()
-    _validate_klausur_data(data)
-    bildschirm_ids = data.pop('bildschirm_ids', [])
-    k = Klausur.objects.create(**data)
-    if bildschirm_ids:
-        k.bildschirme.set(Bildschirm.objects.filter(id__in=bildschirm_ids))
-    return k
+    _validate_exam_data(data)
+    screen_ids = data.pop('screen_ids', [])
+    exam = Exam.objects.create(**data)
+    if screen_ids:
+        exam.screens.set(Screen.objects.filter(id__in=screen_ids))
+    return exam
 
 
-@monitor_router.put("/klausuren/{id}", response=KlausurSchema, auth=keycloak_auth)
-def update_klausur(request, id: int, payload: KlausurUpdateSchema):
+@monitor_router.put("/exams/{id}", response=ExamSchema, auth=keycloak_auth)
+def update_exam(request, id: int, payload: ExamUpdateSchema):
     _require_perm(request, 'monitor.edit')
-    k = get_object_or_404(Klausur, id=id)
+    exam = get_object_or_404(Exam, id=id)
     data = payload.dict(exclude_unset=True)
-    _validate_klausur_data(data)
-    bildschirm_ids = data.pop('bildschirm_ids', None)
+    _validate_exam_data(data)
+    screen_ids = data.pop('screen_ids', None)
     for key, value in data.items():
-        setattr(k, key, value)
-    k.save()
-    if bildschirm_ids is not None:
-        k.bildschirme.set(Bildschirm.objects.filter(id__in=bildschirm_ids))
-    return k
+        setattr(exam, key, value)
+    exam.save()
+    if screen_ids is not None:
+        exam.screens.set(Screen.objects.filter(id__in=screen_ids))
+    return exam
 
 
-@monitor_router.delete("/klausuren/{id}", auth=keycloak_auth)
-def delete_klausur(request, id: int):
+@monitor_router.delete("/exams/{id}", auth=keycloak_auth)
+def delete_exam(request, id: int):
     _require_perm(request, 'monitor.edit')
-    k = get_object_or_404(Klausur, id=id)
-    k.delete()
+    exam = get_object_or_404(Exam, id=id)
+    exam.delete()
     return {"success": True}
 
 
 # ═══ Admin: Events (aktivierbare Modi) ═══════════════════════════
 
-def _apply_event_zuweisungen(event, zuweisungen):
+def _apply_event_assignments(event, assignments):
     """Setzt die Bildschirm→Profil-Zuweisungen eines Events neu."""
-    event.zuweisungen.all().delete()
-    for z in zuweisungen or []:
-        d = z if isinstance(z, dict) else z.dict()
-        if d.get('bildschirm_id') and d.get('profil_id'):
-            EventBildschirm.objects.create(
-                event=event, bildschirm_id=d['bildschirm_id'], profil_id=d['profil_id'])
+    event.assignments.all().delete()
+    for a in assignments or []:
+        d = a if isinstance(a, dict) else a.dict()
+        if d.get('screen_id') and d.get('view_id'):
+            DisplayEventScreen.objects.create(
+                event=event, screen_id=d['screen_id'], view_id=d['view_id'])
 
 
-@monitor_router.get("/events", response=list[MonitorEventSchema], auth=keycloak_auth)
+@monitor_router.get("/events", response=list[DisplayEventSchema], auth=keycloak_auth)
 def list_events(request):
     _require_perm(request, 'monitor.view')
-    return MonitorEvent.objects.all()
+    return DisplayEvent.objects.all()
 
 
-@monitor_router.post("/events", response=MonitorEventSchema, auth=keycloak_auth)
-def create_event(request, payload: MonitorEventCreateSchema):
+@monitor_router.post("/events", response=DisplayEventSchema, auth=keycloak_auth)
+def create_event(request, payload: DisplayEventCreateSchema):
     _require_perm(request, 'monitor.edit')
     data = payload.dict()
-    zuweisungen = data.pop('zuweisungen', [])
-    event = MonitorEvent.objects.create(**data)
-    _apply_event_zuweisungen(event, zuweisungen)
+    assignments = data.pop('assignments', [])
+    event = DisplayEvent.objects.create(**data)
+    _apply_event_assignments(event, assignments)
     return event
 
 
-@monitor_router.put("/events/{id}", response=MonitorEventSchema, auth=keycloak_auth)
-def update_event(request, id: int, payload: MonitorEventUpdateSchema):
+@monitor_router.put("/events/{id}", response=DisplayEventSchema, auth=keycloak_auth)
+def update_event(request, id: int, payload: DisplayEventUpdateSchema):
     _require_perm(request, 'monitor.edit')
-    event = get_object_or_404(MonitorEvent, id=id)
+    event = get_object_or_404(DisplayEvent, id=id)
     data = payload.dict(exclude_unset=True)
-    zuweisungen = data.pop('zuweisungen', None)
+    assignments = data.pop('assignments', None)
     for key, value in data.items():
         setattr(event, key, value)
     event.save()
-    if zuweisungen is not None:
-        _apply_event_zuweisungen(event, zuweisungen)
+    if assignments is not None:
+        _apply_event_assignments(event, assignments)
     return event
 
 
 @monitor_router.delete("/events/{id}", auth=keycloak_auth)
 def delete_event(request, id: int):
     _require_perm(request, 'monitor.edit')
-    get_object_or_404(MonitorEvent, id=id).delete()
+    get_object_or_404(DisplayEvent, id=id).delete()
     return {"success": True}
 
 
-@monitor_router.post("/events/{id}/aktivieren", response=MonitorEventSchema, auth=keycloak_auth)
+@monitor_router.post("/events/{id}/activate", response=DisplayEventSchema, auth=keycloak_auth)
 def activate_event(request, id: int):
     _require_perm(request, 'monitor.edit')
-    event = get_object_or_404(MonitorEvent, id=id)
-    event.aktiv = True
-    event.save(update_fields=['aktiv'])
+    event = get_object_or_404(DisplayEvent, id=id)
+    event.is_active = True
+    event.save(update_fields=['is_active'])
     _log_audit(request, 'Event aktiviert', event.name)
     return event
 
 
-@monitor_router.post("/events/{id}/deaktivieren", response=MonitorEventSchema, auth=keycloak_auth)
+@monitor_router.post("/events/{id}/deactivate", response=DisplayEventSchema, auth=keycloak_auth)
 def deactivate_event(request, id: int):
     _require_perm(request, 'monitor.edit')
-    event = get_object_or_404(MonitorEvent, id=id)
-    event.aktiv = False
-    event.save(update_fields=['aktiv'])
+    event = get_object_or_404(DisplayEvent, id=id)
+    event.is_active = False
+    event.save(update_fields=['is_active'])
     _log_audit(request, 'Event deaktiviert', event.name)
     return event
 
 
 # ═══ Admin: Klausur-Vorlagen ═════════════════════════════════════
 
-@monitor_router.get("/klausur-vorlagen", response=list[KlausurVorlageSchema], auth=keycloak_auth)
-def list_klausur_vorlagen(request):
+@monitor_router.get("/exam-templates", response=list[ExamTemplateSchema], auth=keycloak_auth)
+def list_exam_templates(request):
     _require_perm(request, 'monitor.view')
-    return KlausurVorlage.objects.all()
+    return ExamTemplate.objects.all()
 
 
-@monitor_router.post("/klausur-vorlagen", response=KlausurVorlageSchema, auth=keycloak_auth)
-def create_klausur_vorlage(request, payload: KlausurVorlageCreateSchema):
+@monitor_router.post("/exam-templates", response=ExamTemplateSchema, auth=keycloak_auth)
+def create_exam_template(request, payload: ExamTemplateCreateSchema):
     _require_perm(request, 'monitor.edit')
-    return KlausurVorlage.objects.create(**payload.dict())
+    return ExamTemplate.objects.create(**payload.dict())
 
 
-@monitor_router.put("/klausur-vorlagen/{id}", response=KlausurVorlageSchema, auth=keycloak_auth)
-def update_klausur_vorlage(request, id: int, payload: KlausurVorlageCreateSchema):
+@monitor_router.put("/exam-templates/{id}", response=ExamTemplateSchema, auth=keycloak_auth)
+def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
     _require_perm(request, 'monitor.edit')
-    v = get_object_or_404(KlausurVorlage, id=id)
+    template = get_object_or_404(ExamTemplate, id=id)
     for key, value in payload.dict().items():
-        setattr(v, key, value)
-    v.save()
-    return v
+        setattr(template, key, value)
+    template.save()
+    return template
 
 
-@monitor_router.delete("/klausur-vorlagen/{id}", auth=keycloak_auth)
-def delete_klausur_vorlage(request, id: int):
+@monitor_router.delete("/exam-templates/{id}", auth=keycloak_auth)
+def delete_exam_template(request, id: int):
     _require_perm(request, 'monitor.edit')
-    get_object_or_404(KlausurVorlage, id=id).delete()
+    get_object_or_404(ExamTemplate, id=id).delete()
     return {"success": True}
 
 
-# ═══ Admin: Globale Einstellungen (Wetter/Raumplan-Zugang) ═══════
+# ═══ Admin: Globale Einstellungen (Wetter/WebUntis-Zugang) ═══════
 
-@monitor_router.get("/global-settings", response=GlobalSettingsSchema, auth=keycloak_auth)
-def get_global_settings(request):
+@monitor_router.get("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
+def get_settings(request):
     _require_perm(request, 'monitor.view')
-    return MonitorGlobalSettings.load()
+    return MonitorSettings.load()
 
 
-@monitor_router.put("/global-settings", response=GlobalSettingsSchema, auth=keycloak_auth)
-def update_global_settings(request, payload: GlobalSettingsUpdateSchema):
+@monitor_router.put("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
+def update_settings(request, payload: MonitorSettingsUpdateSchema):
     _require_perm(request, 'monitor.edit')
-    gs = MonitorGlobalSettings.load()
+    settings = MonitorSettings.load()
     for key, value in payload.dict(exclude_unset=True).items():
-        setattr(gs, key, value)
-    gs.save()
-    return gs
+        setattr(settings, key, value)
+    settings.save()
+    return settings
+
+
+# ═══ Legacy aliases (ATEM, Pi scripts) ═══════════════════════════
+# Nur für Aufrufer außerhalb dieses Repos. Die Aliase rufen die neuen
+# Funktionen auf, damit Token- und Keycloak-Prüfung identisch bleiben.
+
+@monitor_router.post("/onair", response={200: dict, 401: dict, 403: dict})
+def legacy_toggle_on_air(request, payload: OnAirSchema):
+    return toggle_on_air(request, payload)
+
+
+@monitor_router.post("/notfall", response={200: dict, 401: dict, 403: dict})
+def legacy_toggle_emergency(request, payload: LegacyEmergencySchema):
+    return toggle_emergency(request, EmergencySchema(active=payload.aktiv, text=payload.text))
+
+
+@monitor_router.get("/bildschirm/power")
+def legacy_get_screen_power(request, slug: str):
+    """Alte Antwortform für Pi-Skripte, die vor der Umbenennung installiert wurden."""
+    result = get_screen_power(request, slug)
+    if 'power_schedule' not in result:
+        return result  # Fehlerantwort: unverändert
+    return {
+        'slug': result['slug'],
+        'power': result['power'],
+        'power_zeitplan': result['power_schedule'],
+        'ferien_modus': result['holiday_mode'],
+        'power_ausnahmen': result['power_exceptions'],
+        'cec_status': result['cec_status'],
+        'cec_status_zeit': result['cec_status_at'],
+    }
+
+
+@monitor_router.post("/bildschirm/cec-status")
+def legacy_report_cec_status(request, slug: str, status: str):
+    return report_cec_status(request, slug, status)

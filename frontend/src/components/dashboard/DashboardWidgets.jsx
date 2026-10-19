@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Calendar, ChevronRight, Loader2, AlertTriangle, Package, Boxes, Award, CheckCircle2,
+  Calendar, CalendarPlus, ChevronRight, Loader2, AlertTriangle,
+  Package, Boxes, Wallet, History, Award, CheckCircle2,
 } from 'lucide-react';
 import apiClient from '../../lib/api';
 import { StatTile, EmptyState } from '../ui';
@@ -19,10 +20,29 @@ function formatDatum(d) {
   });
 }
 
+function formatKurz(d) {
+  return new Date(d).toLocaleDateString('de-DE', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+}
+
 function Card({ children }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+    <div className="bg-surface rounded-lg p-6">
       {children}
+    </div>
+  );
+}
+
+// Einheitlicher Widget-Kopf: Titel in Display-Schrift, dezentes Icon, optionale Aktion.
+function WidgetHeader({ icon: Icon, title, action }) {
+  return (
+    <div className="flex items-center justify-between gap-4 mb-5">
+      <h2 className="flex items-center gap-2 font-display text-lg font-semibold tracking-tight text-fg">
+        {Icon && <Icon className="w-4 h-4 shrink-0 text-fg-subtle" />}
+        {title}
+      </h2>
+      {action}
     </div>
   );
 }
@@ -39,32 +59,41 @@ function MeineVeranstaltungenWidget() {
   }, []);
   return (
     <Card>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <Calendar className="w-5 h-5" /> Meine Veranstaltungen
-        </h2>
-        <Link to="/veranstaltung" className="text-sm text-accent hover:opacity-80">
-          Alle anzeigen
-        </Link>
-      </div>
+      <WidgetHeader
+        icon={Calendar}
+        title="Meine Veranstaltungen"
+        action={(
+          <Link to="/veranstaltung" className="text-sm text-fg-muted hover:text-fg transition-colors">
+            Alle anzeigen
+          </Link>
+        )}
+      />
       {loading ? (
-        <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : items.length === 0 ? (
         <EmptyState icon={Calendar} title="Keine Veranstaltung zugewiesen"
           description="Sobald dir eine Veranstaltung zugeteilt wird, erscheint sie hier." />
       ) : (
-        <ul className="space-y-2">
+        <ul className="-mx-1 space-y-0.5">
           {items.map((v) => (
             <li key={v.id}>
               <Link to={`/veranstaltung/${v.id}`}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-800 transition-colors group">
-                <div>
-                  <span className="font-medium text-white group-hover:text-accent">{v.titel}</span>
-                  <p className="text-sm text-gray-500 mt-0.5">
-                    {formatDatum(v.datum_von)}{v.ort && ` · ${v.ort}`}
-                  </p>
+                className="group flex items-center gap-3 rounded-md px-3 py-2.5 hover:bg-raised transition-colors">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-medium text-fg">
+                    {v.titel}
+                  </div>
+                  <div className="mt-0.5 flex items-center gap-1.5 text-sm text-fg-subtle">
+                    <span className="tabular-nums">{formatDatum(v.datum_von)}</span>
+                    {v.ort && (
+                      <>
+                        <span className="text-fg-disabled">·</span>
+                        <span className="truncate">{v.ort}</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-accent" />
+                <ChevronRight className="w-4 h-4 shrink-0 text-fg-subtle group-hover:text-fg transition-colors" />
               </Link>
             </li>
           ))}
@@ -81,20 +110,21 @@ function UeberfaelligeAusleihenWidget() {
     apiClient.get('/inventar/stats').then(r => setStats(r.data)).catch(() => {});
   }, []);
   if (!stats || !stats.ueberfaellige_ausleihen) return null;
+  const anzahl = stats.ueberfaellige_ausleihen;
+  const namen = stats.ueberfaellige_liste?.slice(0, 3).map(a =>
+    `${a.ausleiher_name}, fällig am ${new Date(a.frist).toLocaleDateString('de-DE')}`
+  ).join(' · ');
   return (
-    <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 flex items-center gap-4">
-      <AlertTriangle className="w-8 h-8 text-red-400 flex-shrink-0" />
-      <div className="flex-1">
-        <h3 className="font-semibold text-red-300">
-          {stats.ueberfaellige_ausleihen} überfällige Ausleihe{stats.ueberfaellige_ausleihen > 1 ? 'n' : ''}
+    <div className="flex items-center gap-4 rounded-lg bg-surface p-5">
+      <AlertTriangle className="w-5 h-5 shrink-0 text-bad" />
+      <div className="min-w-0 flex-1">
+        <h3 className="font-display text-base font-semibold tracking-tight text-fg">
+          <span className="tabular-nums">{anzahl}</span> überfällige Ausleihe{anzahl > 1 ? 'n' : ''}
         </h3>
-        <p className="text-sm text-red-400/80">
-          {stats.ueberfaellige_liste?.slice(0, 3).map(a =>
-            `${a.ausleiher_name} (Frist: ${new Date(a.frist).toLocaleDateString('de-DE')})`
-          ).join(', ')}
-        </p>
+        {namen && <p className="mt-0.5 truncate text-sm text-fg-muted">{namen}</p>}
       </div>
-      <Link to="/ausleihen" className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg flex-shrink-0">
+      <Link to="/ausleihen"
+        className="shrink-0 rounded-md bg-bad px-4 py-2 text-sm font-medium text-white hover:brightness-110 transition">
         Anzeigen
       </Link>
     </div>
@@ -109,13 +139,16 @@ function InventarStatsWidget() {
   }, []);
   if (!stats) return null;
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <StatTile icon={Boxes} label="Items gesamt" value={stats.total_items} />
-      <StatTile icon={Package} label="Aktive Ausleihen" value={stats.aktive_ausleihen} />
-      <StatTile icon={CheckCircle2} label="Verfügbar" value={stats.status_counts?.verfuegbar || 0} tone="positive" />
-      <StatTile icon={AlertTriangle} label="Überfällig" value={stats.ueberfaellige_ausleihen}
-        tone={stats.ueberfaellige_ausleihen > 0 ? 'danger' : 'default'} />
-    </div>
+    <section className="space-y-3">
+      <h2 className="px-1 font-display text-lg font-semibold tracking-tight text-fg">Inventar</h2>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatTile icon={Boxes} label="Items gesamt" value={stats.total_items} />
+        <StatTile icon={Package} label="Aktive Ausleihen" value={stats.aktive_ausleihen} />
+        <StatTile icon={CheckCircle2} label="Verfügbar" value={stats.status_counts?.verfuegbar || 0} tone="positive" />
+        <StatTile icon={AlertTriangle} label="Überfällig" value={stats.ueberfaellige_ausleihen}
+          tone={stats.ueberfaellige_ausleihen > 0 ? 'danger' : 'default'} />
+      </div>
+    </section>
   );
 }
 
@@ -129,25 +162,30 @@ function AuditLogWidget() {
   }, []);
   return (
     <Card>
-      <h2 className="text-xl font-bold text-white mb-4">Letzte Aktivitäten</h2>
+      <WidgetHeader icon={History} title="Letzte Aktivitäten" />
       {items.length === 0 ? (
-        <div className="text-center py-8 text-gray-500"><p>Noch keine Aktivitäten vorhanden</p></div>
+        <EmptyState icon={History} title="Noch keine Aktivitäten"
+          description="Aktionen an Inventar und Ausleihen erscheinen hier." />
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-3.5">
           {items.map(log => (
-            <li key={log.id} className="flex items-start gap-3 text-sm">
-              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                log.aktion === 'erstellt' ? 'bg-green-500' :
-                log.aktion === 'zurueckgegeben' ? 'bg-blue-500' :
-                log.aktion === 'geloescht' ? 'bg-red-500' :
-                log.aktion === 'mahnung' ? 'bg-orange-500' : 'bg-gray-500'
+            <li key={log.id} className="flex items-start gap-3">
+              <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                log.aktion === 'erstellt' ? 'bg-ok' :
+                log.aktion === 'zurueckgegeben' ? 'bg-info' :
+                log.aktion === 'geloescht' ? 'bg-bad' :
+                log.aktion === 'mahnung' ? 'bg-warn' : 'bg-fg-subtle'
               }`} />
-              <div className="flex-1 min-w-0">
-                <span className="text-white">{log.aktion_display}</span>
-                <span className="text-gray-400"> – {log.entity_name || `${log.entity_type} #${log.entity_id}`}</span>
-                <p className="text-gray-500 text-xs mt-0.5">
-                  {log.user_username} · {new Date(log.timestamp).toLocaleDateString('de-DE',
-                    { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-snug">
+                  <span className="font-medium text-fg">{log.aktion_display}</span>
+                  <span className="text-fg-disabled"> · </span>
+                  <span className="text-fg-muted">{log.entity_name || `${log.entity_type} #${log.entity_id}`}</span>
+                </p>
+                <p className="mt-0.5 text-xs text-fg-subtle">
+                  {log.user_username}
+                  <span className="text-fg-disabled"> · </span>
+                  <span className="tabular-nums">{formatKurz(log.timestamp)}</span>
                 </p>
               </div>
             </li>
@@ -159,29 +197,27 @@ function AuditLogWidget() {
 }
 
 // ─── Widget: Schnellzugriff ────────────────────────────────────────
+const SCHNELLZUGRIFF = [
+  { to: '/veranstaltung/neu', icon: CalendarPlus, title: 'Neue Veranstaltung', desc: 'Termin erfassen' },
+  { to: '/haushalte', icon: Wallet, title: 'Haushalte', desc: 'Budgets verwalten' },
+  { to: '/inventar', icon: Package, title: 'Inventar', desc: 'Bestand durchsuchen' },
+];
+
 function SchnellzugriffWidget() {
   return (
     <Card>
-      <h2 className="text-xl font-bold text-white mb-4">Schnellzugriff</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link to="/veranstaltung/neu"
-          className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group">
-          <div className="text-3xl mb-2">📅</div>
-          <h3 className="font-semibold text-white mb-1 group-hover:text-accent">Neue Veranstaltung</h3>
-          <p className="text-sm text-gray-400">Veranstaltung anlegen</p>
-        </Link>
-        <Link to="/haushalte"
-          className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group">
-          <div className="text-3xl mb-2">🏠</div>
-          <h3 className="font-semibold text-white mb-1 group-hover:text-accent">Haushalte</h3>
-          <p className="text-sm text-gray-400">Haushalte verwalten</p>
-        </Link>
-        <Link to="/inventar"
-          className="p-4 bg-gray-800 hover:bg-gray-750 border border-gray-700 rounded-lg text-left transition-colors group">
-          <div className="text-3xl mb-2">📦</div>
-          <h3 className="font-semibold text-white mb-1 group-hover:text-accent">Inventar</h3>
-          <p className="text-sm text-gray-400">Inventar durchsuchen</p>
-        </Link>
+      <WidgetHeader title="Schnellzugriff" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-1">
+        {SCHNELLZUGRIFF.map(({ to, icon: Icon, title, desc }) => (
+          <Link key={to} to={to}
+            className="group flex flex-col gap-3 rounded-md p-4 hover:bg-raised transition-colors">
+            <Icon className="w-5 h-5 text-fg-subtle transition-colors group-hover:text-accent-fg" />
+            <div>
+              <h3 className="font-medium text-fg">{title}</h3>
+              <p className="mt-0.5 text-sm text-fg-subtle">{desc}</p>
+            </div>
+          </Link>
+        ))}
       </div>
     </Card>
   );
@@ -195,24 +231,29 @@ function KompetenzPunkteWidget() {
   }, []);
   return (
     <Card>
-      <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-        <Award className="w-5 h-5 text-yellow-400" /> Meine Kompetenz-Punkte
-      </h2>
+      <WidgetHeader icon={Award} title="Meine Kompetenz-Punkte" />
       {!stats ? (
-        <div className="flex justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : (
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <div className="text-xs text-gray-400 uppercase">Punkte</div>
-            <div className="text-2xl font-bold text-accent mt-1">{stats.punkte}</div>
+        <div className="grid grid-cols-3 divide-x divide-line-subtle">
+          <div className="pr-4">
+            <div className="text-xs uppercase tracking-wide text-fg-subtle">Punkte</div>
+            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-accent-fg">
+              {stats.punkte}
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-gray-400 uppercase">Aktiv</div>
-            <div className="text-2xl font-bold text-white mt-1">{stats.anzahl_aktiv} / {stats.anzahl_gesamt}</div>
+          <div className="px-4">
+            <div className="text-xs uppercase tracking-wide text-fg-subtle">Kompetenzen</div>
+            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-fg">
+              {stats.anzahl_aktiv}
+              <span className="text-lg font-semibold text-fg-subtle"> / {stats.anzahl_gesamt}</span>
+            </div>
           </div>
-          <div>
-            <div className="text-xs text-gray-400 uppercase">Badges</div>
-            <div className="text-2xl font-bold text-yellow-400 mt-1">{stats.badges?.length || 0}</div>
+          <div className="pl-4">
+            <div className="text-xs uppercase tracking-wide text-fg-subtle">Badges</div>
+            <div className="mt-2 font-display text-3xl font-bold leading-none tabular-nums text-warn">
+              {stats.badges?.length || 0}
+            </div>
           </div>
         </div>
       )}

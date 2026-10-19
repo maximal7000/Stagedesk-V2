@@ -108,23 +108,23 @@ export default function GlobalSearchModal({ open, onClose }) {
   const showResults = query.trim().length >= 2;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 bg-black/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-xl max-h-[70vh] overflow-hidden flex flex-col"
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 bg-black/70" onClick={onClose}>
+      <div className="bg-overlay border border-line rounded-lg shadow-overlay w-full max-w-xl max-h-[70vh] overflow-hidden flex flex-col"
            onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-800">
-          <Search className="w-5 h-5 text-gray-400" />
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-line-subtle">
+          <Search className="w-5 h-5 text-fg-subtle" />
           <input ref={inputRef} type="text" value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Suchen — Veranstaltungen, Items, Anwesenheit, User..."
-            className="flex-1 bg-transparent text-white outline-none placeholder-gray-500" />
-          {loading && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
-          <button onClick={onClose} className="text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+            placeholder="Suchen: Veranstaltungen, Items, Anwesenheit, User..."
+            className="flex-1 bg-transparent text-fg placeholder:text-fg-subtle" />
+          {loading && <Loader2 className="w-4 h-4 animate-spin text-fg-subtle" />}
+          <button onClick={onClose} className="text-fg-subtle hover:text-fg"><X className="w-4 h-4" /></button>
         </div>
         <div className="overflow-y-auto flex-1">
           {!showResults ? (
             <RecentFavorites recent={recent} favorites={favorites}
               onPick={go} onToggleFav={toggleFavorite} isFavorite={isFavorite} />
           ) : !hasResults && !loading ? (
-            <div className="p-6 text-center text-gray-500 text-sm">Keine Treffer</div>
+            <div className="p-6 text-center text-fg-subtle text-sm">Keine Treffer</div>
           ) : (
             <ResultGroups results={results} onPick={go} onToggleFav={toggleFavorite} isFavorite={isFavorite} />
           )}
@@ -137,8 +137,8 @@ export default function GlobalSearchModal({ open, onClose }) {
 function RecentFavorites({ recent, favorites, onPick, onToggleFav, isFavorite }) {
   if (recent.length === 0 && favorites.length === 0) {
     return (
-      <div className="p-6 text-center text-gray-500 text-sm">
-        Mindestens 2 Zeichen eingeben — oder öffne ein Ergebnis, um es hier wiederzufinden.
+      <div className="p-6 text-center text-fg-subtle text-sm">
+        Mindestens 2 Zeichen eingeben oder öffne ein Ergebnis, um es hier wiederzufinden.
       </div>
     );
   }
@@ -199,7 +199,7 @@ function Group({ title, icon: Icon, children }) {
   if (empty) return null;
   return (
     <div className="py-2">
-      <div className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1.5">
+      <div className="px-4 text-xs font-semibold text-fg-subtle uppercase tracking-wide mb-1 flex items-center gap-1.5">
         {Icon && <Icon className="w-3.5 h-3.5" />} {title}
       </div>
       {children}
@@ -209,19 +209,19 @@ function Group({ title, icon: Icon, children }) {
 
 function Row({ entry, onClick, onToggleFav, isFavorite }) {
   return (
-    <div className="w-full px-4 py-2 hover:bg-gray-800 flex items-center justify-between gap-2 group">
+    <div className="w-full px-4 py-2 hover:bg-hover flex items-center justify-between gap-2 group">
       <button onClick={onClick} className="flex-1 text-left min-w-0">
-        <div className="text-white truncate">{entry.title}</div>
-        <div className="text-xs text-gray-500 truncate">
-          <span className="text-gray-600">{TYPE_LABEL[entry.type] || ''}</span>
+        <div className="text-fg truncate">{entry.title}</div>
+        <div className="text-xs text-fg-subtle truncate">
+          <span>{TYPE_LABEL[entry.type] || ''}</span>
           {entry.sub && <span> · {entry.sub}</span>}
         </div>
       </button>
       <button
         onClick={(e) => { e.stopPropagation(); onToggleFav(entry); }}
         title={isFavorite ? 'Favorit entfernen' : 'Als Favorit speichern'}
-        className={`p-1 rounded ${
-          isFavorite ? 'text-yellow-400' : 'text-gray-600 opacity-0 group-hover:opacity-100 hover:text-yellow-400'
+        className={`p-1 rounded-sm ${
+          isFavorite ? 'text-warn' : 'text-fg-subtle opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-warn'
         }`}>
         {isFavorite ? <Star className="w-4 h-4 fill-current" /> : <StarOff className="w-4 h-4" />}
       </button>

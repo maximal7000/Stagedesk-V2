@@ -1,99 +1,222 @@
+import hashlib
+import json
 from datetime import timedelta
+from unittest import mock
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 from ninja.errors import HttpError
 
-from .models import MonitorConfig, Bildschirm, MonitorEvent, EventBildschirm
-from .api import _validate_config_data, _validate_klausur_data
+from .models import DisplayView, Screen, DisplayEvent, DisplayEventScreen
+from .api import _validate_view_data, _validate_exam_data, _fetch_disruptions
+from . import oepnv
 
 
-class ActiveProfilPriorityTest(TestCase):
+class ActiveViewPriorityTest(TestCase):
     """Reihenfolge: Sofort-Override > aktives Event > Zeitplan > Default."""
 
     def setUp(self):
-        self.default = MonitorConfig.objects.create(name='Default', slug='default')
-        self.zeit = MonitorConfig.objects.create(name='Zeit', slug='zeit')
-        self.event = MonitorConfig.objects.create(name='Event', slug='event')
-        self.override = MonitorConfig.objects.create(name='Override', slug='override')
-        self.bs = Bildschirm.objects.create(name='BS', slug='bs', default_profil=self.default)
+        self.default = DisplayView.objects.create(name='Default', slug='default')
+        self.scheduled = DisplayView.objects.create(name='Zeit', slug='scheduled')
+        self.event = DisplayView.objects.create(name='Event', slug='event')
+        self.override = DisplayView.objects.create(name='Override', slug='override')
+        self.screen = Screen.objects.create(name='BS', slug='bs', default_view=self.default)
 
-    def _immer_zeitplan(self):
-        self.bs.zeitplan = [{'profil_id': self.zeit.id, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}]
-        self.bs.save()
+    def _always_schedule(self):
+        self.screen.schedule = [{'view_id': self.scheduled.id, 'days': list(range(7)), 'from': '00:00', 'until': '23:59'}]
+        self.screen.save()
 
-    def _aktives_event(self):
-        ev = MonitorEvent.objects.create(name='E', aktiv=True)
-        EventBildschirm.objects.create(event=ev, bildschirm=self.bs, profil=self.event)
+    def _active_event(self):
+        ev = DisplayEvent.objects.create(name='E', is_active=True)
+        DisplayEventScreen.objects.create(event=ev, screen=self.screen, view=self.event)
 
-    def test_default_wenn_nichts_greift(self):
-        self.assertEqual(self.bs.get_active_profil(), self.default)
+    def test_default_when_nothing_applies(self):
+        self.assertEqual(self.screen.get_active_view(), self.default)
 
-    def test_zeitplan_schlaegt_default(self):
-        self._immer_zeitplan()
-        self.assertEqual(self.bs.get_active_profil(), self.zeit)
+    def test_schedule_beats_default(self):
+        self._always_schedule()
+        self.assertEqual(self.screen.get_active_view(), self.scheduled)
 
-    def test_event_schlaegt_zeitplan(self):
-        self._immer_zeitplan()
-        self._aktives_event()
-        self.assertEqual(self.bs.get_active_profil(), self.event)
+    def test_event_beats_schedule(self):
+        self._always_schedule()
+        self._active_event()
+        self.assertEqual(self.screen.get_active_view(), self.event)
 
-    def test_override_schlaegt_alles(self):
-        self._immer_zeitplan()
-        self._aktives_event()
-        self.bs.override_profil = self.override
-        self.bs.save()
-        self.assertEqual(self.bs.get_active_profil(), self.override)
+    def test_override_beats_everything(self):
+        self._always_schedule()
+        self._active_event()
+        self.screen.override_view = self.override
+        self.screen.save()
+        self.assertEqual(self.screen.get_active_view(), self.override)
 
-    def test_abgelaufener_override_ignoriert(self):
-        self.bs.override_profil = self.override
-        self.bs.override_bis = timezone.now() - timedelta(hours=1)
-        self.bs.save()
-        self.assertEqual(self.bs.get_active_profil(), self.default)
+    def test_expired_override_ignored(self):
+        self.screen.override_view = self.override
+        self.screen.override_until = timezone.now() - timedelta(hours=1)
+        self.screen.save()
+        self.assertEqual(self.screen.get_active_view(), self.default)
 
-    def test_override_mit_zukunftsablauf_gilt(self):
-        self.bs.override_profil = self.override
-        self.bs.override_bis = timezone.now() + timedelta(hours=1)
-        self.bs.save()
-        self.assertEqual(self.bs.get_active_profil(), self.override)
+    def test_override_with_future_expiry_applies(self):
+        self.screen.override_view = self.override
+        self.screen.override_until = timezone.now() + timedelta(hours=1)
+        self.screen.save()
+        self.assertEqual(self.screen.get_active_view(), self.override)
 
 
-class ConfigValidationTest(TestCase):
+class ViewValidationTest(TestCase):
 
-    def test_split_prozent_geklemmt(self):
-        self.assertEqual(_validate_config_data({'split_links_prozent': 95})['split_links_prozent'], 80)
-        self.assertEqual(_validate_config_data({'split_links_prozent': 5})['split_links_prozent'], 20)
+    def test_split_percent_clamped(self):
+        self.assertEqual(_validate_view_data({'split_left_percent': 95})['split_left_percent'], 80)
+        self.assertEqual(_validate_view_data({'split_left_percent': 5})['split_left_percent'], 20)
 
-    def test_bild_fokus_geklemmt(self):
-        self.assertEqual(_validate_config_data({'bild_fokus_x': 150})['bild_fokus_x'], 100)
-        self.assertEqual(_validate_config_data({'bild_fokus_y': -10})['bild_fokus_y'], 0)
+    def test_image_focus_clamped(self):
+        self.assertEqual(_validate_view_data({'image_focus_x': 150})['image_focus_x'], 100)
+        self.assertEqual(_validate_view_data({'image_focus_y': -10})['image_focus_y'], 0)
 
-    def test_ungueltige_hexfarbe_verworfen(self):
-        self.assertNotIn('akzent_farbe', _validate_config_data({'akzent_farbe': 'rot'}))
-        self.assertEqual(_validate_config_data({'akzent_farbe': '#aabbcc'})['akzent_farbe'], '#aabbcc')
+    def test_invalid_hex_color_dropped(self):
+        self.assertNotIn('accent_color', _validate_view_data({'accent_color': 'rot'}))
+        self.assertEqual(_validate_view_data({'accent_color': '#aabbcc'})['accent_color'], '#aabbcc')
 
-    def test_zeitplan_von_nach_bis_wirft(self):
+    def test_schedule_from_after_until_raises(self):
         with self.assertRaises(HttpError):
-            _validate_config_data({'zeitplan': [{'von': '16:00', 'bis': '08:00', 'profil_id': 1, 'tage': [0]}]})
+            _validate_view_data({'schedule': [{'from': '16:00', 'until': '08:00', 'view_id': 1, 'days': [0]}]})
 
-    def test_klausur_ende_vor_beginn_wirft(self):
+    def test_exam_end_before_start_raises(self):
         with self.assertRaises(HttpError):
-            _validate_klausur_data({'aktiv_von': '2026-01-02T10:00', 'aktiv_bis': '2026-01-02T09:00'})
+            _validate_exam_data({'active_from': '2026-01-02T10:00', 'active_until': '2026-01-02T09:00'})
 
 
 class SoftDeleteTest(TestCase):
 
-    def test_geloeschte_default_ansicht_wird_nicht_zurueckgegeben(self):
-        default = MonitorConfig.objects.create(name='D', slug='d')
-        bs = Bildschirm.objects.create(name='B', slug='b', default_profil=default)
-        default.geloescht_am = timezone.now()
+    def test_deleted_default_view_not_returned(self):
+        default = DisplayView.objects.create(name='D', slug='d')
+        screen = Screen.objects.create(name='B', slug='b', default_view=default)
+        default.deleted_at = timezone.now()
         default.save()
         # gelöschte Default-Ansicht darf nicht mehr angezeigt werden
-        self.assertIsNone(bs.get_active_profil().geloescht_am)
+        self.assertIsNone(screen.get_active_view().deleted_at)
 
-    def test_get_ueberspringt_geloeschte(self):
-        MonitorConfig.objects.create(name='Std', slug='std', ist_standard=True)
-        MonitorConfig.objects.create(
-            name='Z', slug='z', geloescht_am=timezone.now(),
-            zeitplan=[{'profil_id': 999, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}])
-        self.assertNotEqual(MonitorConfig.get().slug, 'z')
+    def test_get_skips_deleted(self):
+        DisplayView.objects.create(name='Std', slug='std', is_default=True)
+        DisplayView.objects.create(
+            name='Z', slug='z', deleted_at=timezone.now(),
+            schedule=[{'view_id': 999, 'days': list(range(7)), 'from': '00:00', 'until': '23:59'}])
+        self.assertNotEqual(DisplayView.get().slug, 'z')
+
+
+class TransitCredentialsTest(TestCase):
+    """ÖPNV-Zugangsdaten kommen aus den Settings (.env), nicht aus dem Code."""
+
+    @override_settings(NAHSH_HAFAS_AID='')
+    def test_nahsh_without_aid_returns_none_and_logs(self):
+        with self.assertLogs('monitor.oepnv', level='WARNING') as log, \
+             mock.patch.object(oepnv._post_opener, 'open') as opener_open:
+            self.assertIsNone(oepnv._nahsh_rpc('StationBoard', {}))
+        opener_open.assert_not_called()
+        self.assertIn('NAHSH_HAFAS_AID', log.output[0])
+
+    @override_settings(SWHL_STORYBLOK_TOKEN='')
+    def test_swl_without_token_returns_empty_list(self):
+        with self.assertLogs('monitor.oepnv', level='WARNING'), \
+             mock.patch('urllib.request.urlopen') as urlopen:
+            self.assertEqual(oepnv.fetch_disruptions_swl(), [])
+        urlopen.assert_not_called()
+
+    @override_settings(NAHSH_HAFAS_AID='test-aid')
+    def test_nahsh_uses_aid_from_settings(self):
+        # _nahsh_rpc nutzt _post_opener.open (Redirect-Handler), nicht urlopen
+        with mock.patch.object(oepnv._post_opener, 'open') as opener_open:
+            opener_open.return_value.__enter__.return_value.read.return_value = b'{"svcResL":[{"res":{}}]}'
+            oepnv._nahsh_rpc('StationBoard', {})
+        body = json.loads(opener_open.call_args[0][0].data)
+        self.assertEqual(body['auth'], {'type': 'AID', 'aid': 'test-aid'})
+
+
+class DisruptionIdTest(TestCase):
+
+    def test_disruption_id_is_stable(self):
+        # Hash-Eingaben bleiben identisch, sonst tauchen ausgeblendete Meldungen wieder auf
+        self.assertEqual(oepnv._disruption_id('manuell', 'Titel', 'Text'),
+                         hashlib.md5('manuell|Titel|Text'.encode()).hexdigest()[:12])
+
+
+class ManualDisruptionTest(TestCase):
+
+    def test_manual_disruption_uses_english_keys_and_stable_id(self):
+        view = DisplayView.objects.create(
+            name='V', slug='v', layout='departures', transit_disruption_rail=False, transit_disruption_bus=False,
+            transit_disruption_manual=[{'title': 'Titel', 'text': 'Text', 'image': 'k.png', 'highlighted': True}])
+        [d] = _fetch_disruptions(view)
+        self.assertEqual(d['id'], oepnv._disruption_id('manuell', 'Titel', 'Text'))
+        self.assertEqual((d['source'], d['kind'], d['title'], d['image'], d['lines'], d['from'], d['until']),
+                         ('manual', 'disruption', 'Titel', 'k.png', [], '', ''))
+
+
+class PowerStateTest(TestCase):
+
+    def test_manual_modes(self):
+        screen = Screen.objects.create(name='S', slug='s', power_mode='manual_off')
+        self.assertFalse(screen.get_power_state())
+        screen.power_mode = 'manual_on'
+        self.assertTrue(screen.get_power_state())
+
+    def test_exception_with_english_keys(self):
+        today = timezone.localdate().isoformat()
+        screen = Screen.objects.create(name='S', slug='s', holiday_mode=True, power_exceptions=[
+            {'from_date': today, 'until_date': today, 'from': '00:00', 'until': '23:59', 'note': 'x'}])
+        self.assertTrue(screen.get_power_state())
+
+
+class UploadPathTest(TestCase):
+
+    def test_upload_dirs_unchanged(self):
+        from .models import MediaFile, monitor_upload_path
+        self.assertEqual(monitor_upload_path(MediaFile(kind='image'), 'a.png'), 'monitor/bild/a.png')
+        self.assertEqual(monitor_upload_path(MediaFile(kind='background'), 'a.png'), 'monitor/hintergrund/a.png')
+        self.assertEqual(monitor_upload_path(MediaFile(kind='pdf'), 'a.pdf'), 'monitor/pdf/a.pdf')
+
+
+class OrderingTest(TestCase):
+
+    def test_announcements_urgent_important_normal(self):
+        from .models import Announcement
+        for p in ('normal', 'urgent', 'important'):
+            Announcement.objects.create(title=p, priority=p)
+        self.assertEqual([a.priority for a in Announcement.objects.all()], ['urgent', 'important', 'normal'])
+
+    def test_media_files_keep_old_kind_order(self):
+        from .models import MediaFile
+        for k in ('pdf', 'logo', 'background', 'image'):
+            MediaFile.objects.create(name=k, file=f'monitor/{k}/x', kind=k)
+        self.assertEqual([m.kind for m in MediaFile.objects.all()], ['image', 'background', 'logo', 'pdf'])
+
+
+class DisruptionHiddenPruneTest(TestCase):
+    """Ausblend-Liste wird nur bereinigt, wenn alle aktiven Quellen Daten lieferten."""
+
+    def _view(self):
+        return DisplayView.objects.create(
+            name='D', slug='d', layout='departures',
+            transit_disruption_rail=True, transit_disruption_bus=True,
+            transit_disruption_hidden=['rail1', 'bus1', 'gone'])
+
+    @staticmethod
+    def _item(i, src):
+        return {'id': i, 'source': src, 'kind': 'disruption', 'title': i, 'text': '',
+                'lines': [], 'from': '', 'until': '', 'all_lines': False,
+                'image': '', 'stops': [], 'suggestion': ''}
+
+    def test_failed_source_keeps_hidden_list(self):
+        view = self._view()
+        with mock.patch.object(oepnv, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
+             mock.patch.object(oepnv, 'fetch_disruptions_swl', return_value=[]):
+            _fetch_disruptions(view)
+        view.refresh_from_db()
+        self.assertEqual(view.transit_disruption_hidden, ['rail1', 'bus1', 'gone'])
+
+    def test_all_sources_ok_prunes_stale_ids(self):
+        view = self._view()
+        with mock.patch.object(oepnv, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
+             mock.patch.object(oepnv, 'fetch_disruptions_swl', return_value=[self._item('bus1', 'swl')]):
+            _fetch_disruptions(view)
+        view.refresh_from_db()
+        self.assertEqual(view.transit_disruption_hidden, ['rail1', 'bus1'])

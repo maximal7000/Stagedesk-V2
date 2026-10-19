@@ -1,11 +1,12 @@
 /**
- * Login-Seite — theatralisches Bühnen-Motiv mit animierten Spotlights.
+ * Login-Seite: theatralisches Bühnen-Motiv mit animierten Spotlights.
  * Reine CSS-Animation, kein extra Asset.
  */
 import { useAuth } from 'react-oidc-context';
 import { useEffect, useState } from 'react';
-import { LogIn, Download } from 'lucide-react';
+import { LogIn, Download, Loader2, AlertTriangle } from 'lucide-react';
 import { LoginBanner } from '../components/MaintenanceBanner';
+import { LogoMark } from '../components/ui';
 
 export default function LoginPage() {
   const auth = useAuth();
@@ -45,16 +46,16 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-black flex items-center justify-center p-4">
+    <div className="relative min-h-screen overflow-hidden bg-canvas flex items-center justify-center p-4">
       {/* ── Bühnen-Hintergrund ─────────────────────────────────── */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(30,41,59,0.6),transparent_70%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,color-mix(in_srgb,var(--sd-raised)_50%,transparent),transparent_70%)] pointer-events-none" />
 
       {/* "Bühnenboden": dezenter Verlauf nach unten */}
-      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black via-black/80 to-transparent pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-canvas via-canvas/80 to-transparent pointer-events-none" />
 
-      {/* Spotlights — Konus-Form über conic-gradient + blur */}
-      <div className="spotlight spotlight-blue" />
-      <div className="spotlight spotlight-purple" />
+      {/* Spotlights: Konus-Form über radial-gradient + blur */}
+      <div className="spotlight spotlight-white" />
+      <div className="spotlight spotlight-accent" />
       <div className="spotlight spotlight-amber" />
 
       {/* Staub-/Funken-Punkte */}
@@ -73,55 +74,54 @@ export default function LoginPage() {
       <div className="relative z-10 max-w-md w-full">
         {/* Logo & Schriftzug */}
         <div className="text-center mb-10">
-          <div className="inline-block mb-3 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm bg-white/5 text-[10px] tracking-[0.3em] uppercase text-white/60">
-            Backstage
-          </div>
-          <h1 className="text-6xl sm:text-7xl font-extrabold text-white tracking-tight"
-              style={{ textShadow: '0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(168,85,247,0.2)' }}>
+          <LogoMark className="w-14 h-14 mx-auto mb-5" />
+          <h1 className="font-display text-6xl sm:text-7xl font-bold text-fg tracking-tight leading-none">
             Stagedesk
           </h1>
+          <p className="mt-3 text-sm text-fg-muted">Technik-AG am Katharineum zu Lübeck</p>
         </div>
 
         <LoginBanner />
 
-        {/* Glas-Card */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-8">
+        {/* Anmelde-Karte */}
+        <div className="bg-surface rounded-lg shadow-[0_20px_80px_-20px_rgba(0,0,0,0.8)] p-6 sm:p-7">
           <button
             onClick={handleLogin}
             disabled={auth.isLoading}
-            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-gray-900 hover:bg-gray-100 font-semibold rounded-xl transition-all duration-200 shadow-[0_10px_40px_-10px_rgba(255,255,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2.5 px-5 py-3.5 bg-accent hover:bg-accent-hover text-white font-semibold rounded-md transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:bg-raised disabled:text-fg-disabled disabled:cursor-not-allowed"
           >
             {auth.isLoading ? (
               <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900" />
-                <span>Lädt…</span>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Verbinde…</span>
               </>
             ) : (
               <>
                 <LogIn className="w-5 h-5" />
-                <span>Anmelden</span>
+                <span>Mit Technik-AG-Konto anmelden</span>
               </>
             )}
           </button>
 
           {auth.error && (
-            <div className="mt-4 p-4 bg-red-950/60 border border-red-800/60 rounded-lg backdrop-blur-sm">
-              <p className="text-sm text-red-300">
-                <strong>Fehler:</strong> {auth.error.message}
+            <div className="mt-4 flex items-start gap-2.5 p-3.5 bg-raised rounded-md">
+              <AlertTriangle className="w-4 h-4 text-bad shrink-0 mt-0.5" />
+              <p className="text-sm text-fg">
+                <span className="font-semibold">Anmeldung fehlgeschlagen.</span> {auth.error.message}
               </p>
             </div>
           )}
 
           {installPrompt && (
             <button onClick={installApp}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/70 hover:text-white rounded-xl text-sm transition-colors">
+              className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-raised hover:bg-hover text-fg-muted hover:text-fg rounded-md text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas">
               <Download className="w-4 h-4" /> Als App installieren
             </button>
           )}
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/30 tracking-wide">
-          Sichere Authentifizierung über Keycloak
+        <p className="mt-5 text-center text-xs text-fg-subtle">
+          Anmeldung über den Keycloak-Login der Technik-AG
         </p>
       </div>
 
@@ -151,14 +151,14 @@ export default function LoginPage() {
           mix-blend-mode: screen;
           transform-origin: top center;
         }
-        .spotlight-blue {
+        .spotlight-white {
           background: radial-gradient(ellipse 50% 100% at 50% 0%,
-            rgba(59,130,246,0.45) 0%, rgba(59,130,246,0.18) 30%, transparent 70%);
+            rgba(226,232,240,0.30) 0%, rgba(226,232,240,0.10) 30%, transparent 70%);
           animation: spotlight-sweep-1 18s ease-in-out infinite;
         }
-        .spotlight-purple {
+        .spotlight-accent {
           background: radial-gradient(ellipse 50% 100% at 50% 0%,
-            rgba(168,85,247,0.40) 0%, rgba(168,85,247,0.15) 30%, transparent 70%);
+            rgba(218,31,61,0.32) 0%, rgba(218,31,61,0.12) 30%, transparent 70%);
           animation: spotlight-sweep-2 22s ease-in-out infinite;
         }
         .spotlight-amber {

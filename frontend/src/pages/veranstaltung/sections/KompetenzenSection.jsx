@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Award, AlertTriangle, CheckCircle2, Plus, X, Save } from 'lucide-react';
+import { Award, AlertTriangle, CheckCircle2, Pen, X, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../../../lib/api';
 import CollapsibleSection from './CollapsibleSection';
+import { Button } from '../../../components/ui';
 
 export default function KompetenzenSection({ data, refetch, canEdit, eventId }) {
   const [katalog, setKatalog] = useState([]);
@@ -81,19 +82,16 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
       title="Erforderliche Kompetenzen"
       count={total || undefined}
       actions={canEdit && !editing && (
-        <button type="button" onClick={() => setEditing(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-gray-300 hover:bg-gray-700">
-          <Plus className="w-4 h-4" /> Bearbeiten
-        </button>
+        <Button variant="secondary" size="sm" icon={Pen} onClick={() => setEditing(true)}>Bearbeiten</Button>
       )}
     >
       <div className="space-y-4">
         {/* Status-Check für den eingeloggten User */}
         {check && !editing && (erforderlich.length > 0 || empfohlen.length > 0) && (
-          <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${
+          <div className={`flex items-start gap-2 p-3 rounded-lg bg-surface text-sm ${
             check.erfuellt
-              ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-              : 'bg-red-500/10 border border-red-500/30 text-red-400'
+              ? 'text-ok'
+              : 'text-bad'
           }`}>
             {check.erfuellt
               ? <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
@@ -120,10 +118,10 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
           <>
             {erforderlich.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Pflicht</h3>
+                <h3 className="text-xs font-semibold text-fg-muted uppercase tracking-wide mb-2">Pflicht</h3>
                 <div className="flex flex-wrap gap-2">
                   {erforderlich.map(k => (
-                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-300 rounded-full text-sm">
+                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-raised text-bad rounded-sm text-sm">
                       <Award className="w-3.5 h-3.5" /> {k.name}
                     </span>
                   ))}
@@ -132,10 +130,10 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
             )}
             {empfohlen.length > 0 && (
               <div>
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Empfohlen</h3>
+                <h3 className="text-xs font-semibold text-fg-muted uppercase tracking-wide mb-2">Empfohlen</h3>
                 <div className="flex flex-wrap gap-2">
                   {empfohlen.map(k => (
-                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-accent/10 border border-accent/30 text-accent rounded-full text-sm">
+                    <span key={k.id} className="inline-flex items-center gap-1.5 px-3 py-1 bg-raised text-fg-muted rounded-sm text-sm">
                       <Award className="w-3.5 h-3.5" /> {k.name}
                     </span>
                   ))}
@@ -143,7 +141,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
               </div>
             )}
             {total === 0 && (
-              <p className="text-gray-500 text-sm">Keine Kompetenzen gefordert.</p>
+              <p className="text-fg-subtle text-sm">Keine Kompetenzen gefordert.</p>
             )}
           </>
         )}
@@ -151,22 +149,22 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
         {/* Edit-Mode: Multi-Select */}
         {editing && (
           <div className="space-y-4">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-fg-subtle">
               Klick einmal für Empfohlen, zweimal für Pflicht, dreimal zum Entfernen.
             </p>
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
               {Object.entries(katalogGrouped).map(([kat, items]) => (
                 <div key={kat}>
-                  <div className="text-xs font-semibold text-gray-400 uppercase mb-1">{kat}</div>
+                  <div className="text-xs font-semibold text-fg-muted uppercase mb-1">{kat}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {items.map(k => {
                       const istPflicht = draft.erforderlich.includes(k.id);
                       const istEmpf = draft.empfohlen.includes(k.id);
                       const cls = istPflicht
-                        ? 'bg-red-500/20 border-red-500/50 text-red-300'
+                        ? 'bg-raised border-bad text-bad'
                         : istEmpf
-                          ? 'bg-accent/15 border-accent/50 text-accent'
-                          : 'bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700';
+                          ? 'bg-raised border-accent text-accent-fg'
+                          : 'bg-raised border-line text-fg-muted hover:bg-hover';
                       const onClick = () => {
                         if (istPflicht) {
                           toggleDraft('erforderlich', k.id);
@@ -179,7 +177,7 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                       };
                       return (
                         <button type="button" key={k.id} onClick={onClick}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 border rounded-full text-xs transition-colors ${cls}`}>
+                          className={`inline-flex items-center gap-1 px-2.5 py-1 border rounded-sm text-xs transition-colors ${cls}`}>
                           {k.name}
                           {istPflicht && <span className="text-[10px] font-bold ml-1">P</span>}
                           {istEmpf && <span className="text-[10px] font-bold ml-1">E</span>}
@@ -190,16 +188,12 @@ export default function KompetenzenSection({ data, refetch, canEdit, eventId }) 
                 </div>
               ))}
             </div>
-            <div className="flex gap-2 pt-2 border-t border-gray-800">
-              <button type="button" onClick={save} disabled={saving}
-                className="inline-flex items-center gap-1 px-3 py-1.5 bg-accent text-white rounded hover:bg-accent-hover text-sm disabled:opacity-50">
-                <Save className="w-4 h-4" /> Speichern
-              </button>
-              <button type="button"
-                onClick={() => { setEditing(false); setDraft({ erforderlich: [...erforderlichIds], empfohlen: [...empfohlenIds] }); }}
-                className="inline-flex items-center gap-1 px-3 py-1.5 text-gray-400 hover:text-white text-sm">
-                <X className="w-4 h-4" /> Abbrechen
-              </button>
+            <div className="flex gap-2 pt-2 border-t border-line-subtle">
+              <Button variant="primary" size="sm" icon={Save} onClick={save} disabled={saving}>Speichern</Button>
+              <Button variant="ghost" size="sm" icon={X}
+                onClick={() => { setEditing(false); setDraft({ erforderlich: [...erforderlichIds], empfohlen: [...empfohlenIds] }); }}>
+                Abbrechen
+              </Button>
             </div>
           </div>
         )}

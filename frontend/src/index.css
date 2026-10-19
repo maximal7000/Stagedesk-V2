@@ -15,6 +15,69 @@
   --font-display: "Barlow Semi Condensed", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* Bühnenschwarz: semantische Tokens als Tailwind-Klassen (bg-surface, text-fg-muted, border-line …) */
+@theme inline {
+  --color-canvas: var(--sd-canvas);
+  --color-surface: var(--sd-surface);
+  --color-raised: var(--sd-raised);
+  --color-overlay: var(--sd-overlay);
+  --color-hover: var(--sd-hover);
+  --color-line-subtle: var(--sd-line-subtle);
+  --color-line: var(--sd-line);
+  --color-line-strong: var(--sd-line-strong);
+  --color-fg: var(--sd-fg);
+  --color-fg-muted: var(--sd-fg-muted);
+  --color-fg-subtle: var(--sd-fg-subtle);
+  --color-fg-disabled: var(--sd-fg-disabled);
+  --color-accent-fg: var(--sd-accent-fg);
+  --color-ok: var(--sd-ok);
+  --color-warn: var(--sd-warn);
+  --color-bad: var(--sd-bad);
+  --color-info: var(--sd-info);
+  --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
+}
+
+/* Token-Werte: Dunkel ist Standard */
+:root {
+  --sd-canvas: #0d0d0d;
+  --sd-surface: #151515;
+  --sd-raised: #1e1e1e;
+  --sd-overlay: #181818;
+  --sd-hover: #2a2a2a;
+  --sd-line-subtle: #242424;
+  --sd-line: #353535;
+  --sd-line-strong: #4b4b4b;
+  --sd-fg: #f0f0f0;
+  --sd-fg-muted: #b0b0b0;
+  --sd-fg-subtle: #888888;
+  --sd-fg-disabled: #5c5c5c;
+  --sd-accent-fg: #f0475f;
+  --sd-ok: #5fca8b;
+  --sd-warn: #e5b14a;
+  --sd-bad: #ef5d5d;
+  --sd-info: #6fa8dc;
+}
+
+:root.light {
+  --sd-canvas: #f5f5f5;
+  --sd-surface: #ffffff;
+  --sd-raised: #eeeeee;
+  --sd-overlay: #ffffff;
+  --sd-hover: #e4e4e4;
+  --sd-line-subtle: #e8e8e8;
+  --sd-line: #d6d6d6;
+  --sd-line-strong: #b4b4b4;
+  --sd-fg: #181818;
+  --sd-fg-muted: #545454;
+  --sd-fg-subtle: #666666;
+  --sd-fg-disabled: #a2a2a2;
+  --sd-accent-fg: #b8152f;
+  --sd-ok: #1f7a47;
+  --sd-warn: #93630c;
+  --sd-bad: #b42323;
+  --sd-info: #235f96;
+}
+
 /* ===== DARK MODE (Standard) ===== */
 :root.dark,
 :root:not(.light) {
@@ -52,12 +115,19 @@
 
 /* Global Styles mit CSS Variables */
 * {
-  border-color: var(--border-color);
+  border-color: var(--sd-line-subtle);
+}
+
+@layer base {
+  :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
 }
 
 body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
+  background-color: var(--sd-canvas);
+  color: var(--sd-fg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
@@ -67,6 +137,24 @@ body {
   min-height: 100vh;
 }
 
+/* Browser-Flächen aus der Palette statt Browser-Defaults:
+   Auswahl, Caret, Checkbox/Radio/Range, Scrollbars, Tabellenziffern */
+:root {
+  accent-color: var(--color-accent);
+  scrollbar-color: var(--sd-line-strong) transparent;
+}
+::selection {
+  background-color: rgb(218 31 61 / 0.35);
+  color: inherit;
+}
+input, textarea, [contenteditable] {
+  caret-color: var(--color-accent);
+}
+td, th {
+  font-variant-numeric: tabular-nums;
+}
+
+/* legacy-gray:start */
 /* Light Mode Overrides für bestimmte Komponenten */
 :root.light .bg-gray-900 {
   background-color: var(--bg-secondary) !important;
@@ -93,7 +181,7 @@ body {
   border-color: var(--border-hover) !important;
 }
 
-:root.light .text-white {
+:root.light .text-white:not([class*="bg-accent"], [class*="bg-bad"]):not([class*="bg-accent"] *, [class*="bg-bad"] *) {
   color: var(--text-primary) !important;
 }
 
@@ -131,6 +219,7 @@ body {
   background-color: var(--bg-secondary) !important;
   border-color: var(--border-color) !important;
 }
+/* legacy-gray:end */
 
 /* ON AIR pulsating text glow */
 @keyframes on-air-pulse {

@@ -1,0 +1,22 @@
+# Tokens, die nie als Fund gelten (ein Token pro Zeile).
+
+onair  # Legacy-Alias-Routen und -Parameter (Spec 6.1)
+notfall  # Legacy-Alias-Routen und -Parameter (Spec 6.1)
+bildschirm  # Legacy-Alias-Routen und -Parameter (Spec 6.1)
+profil  # Legacy-Alias-Routen und -Parameter (Spec 6.1)
+aktiv  # Legacy-Alias-Routen und -Parameter (Spec 6.1)
+neu_laden_zeit  # Uebergangsschluessel (Spec 6.3)
+manuell  # Hash-Eingabe von _disruption_id (Spec 5.4)
+power_zeitplan  # Legacy-Antwort von /bildschirm/power
+ferien_modus  # Legacy-Antwort von /bildschirm/power
+power_ausnahmen  # Legacy-Antwort von /bildschirm/power
+cec_status_zeit  # Legacy-Antwort von /bildschirm/power
+deaktiv  # Teilstring-Pruefung auf sichtbare Audit-Texte in _log_audit (core.audit-Aktionscodes bleiben)
+aktiviert  # core.audit-Aktionscode (anderes Modul)
+titel  # Feld titel des Models veranstaltung.Veranstaltung und Schluessel von /clock (Ruling R8)
+ist_laufend  # /clock-Antwortschluessel bleibt fuer externe Aufrufer (Ruling R8)
+veranstaltungen  # /clock-Antwortschluessel bleibt fuer externe Aufrufer (Ruling R8)
+bild  # Upload-Ordnername in _UPLOAD_DIRS, Upload-Pfade aendern sich nicht
+hintergrund  # Upload-Ordnername in _UPLOAD_DIRS, Upload-Pfade aendern sich nicht
+bahn  # Hash-Eingabe von _disruption_id (Spec 5.4)
+linien  # Externes Storyblok-Feld in oepnv.py

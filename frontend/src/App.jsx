@@ -128,7 +128,7 @@ function App() {
         position="bottom-right"
         richColors
         toastOptions={{
-          className: 'border border-gray-800',
+          className: 'border border-line',
         }}
       />
     </>

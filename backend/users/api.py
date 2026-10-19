@@ -790,7 +790,7 @@ def initialize_system(request):
          'description': 'Erlaubt das Bearbeiten der Monitor-Konfiguration', 'category': 'monitor'},
         {'code': 'monitor.onair', 'name': 'ON AIR steuern',
          'description': 'Erlaubt das Aktivieren/Deaktivieren von ON AIR', 'category': 'monitor'},
-        {'code': 'monitor.notfall', 'name': 'Notfall-Meldung verwalten',
+        {'code': 'monitor.emergency', 'name': 'Notfall-Meldung verwalten',
          'description': 'Erlaubt das Aktivieren/Deaktivieren der Notfall-Meldung', 'category': 'monitor'},
         # Anwesenheit
         {'code': 'anwesenheit.view', 'name': 'Anwesenheit anzeigen',
@@ -897,7 +897,7 @@ KNOWN_PERMISSION_CODES = {
     'inventar.view', 'inventar.create', 'inventar.edit', 'inventar.delete', 'inventar.ausleihe',
     'veranstaltung.view', 'veranstaltung.create', 'veranstaltung.edit', 'veranstaltung.delete',
     'veranstaltung.zuweisungen', 'veranstaltung.discord',
-    'monitor.view', 'monitor.edit', 'monitor.onair', 'monitor.notfall',
+    'monitor.view', 'monitor.edit', 'monitor.onair', 'monitor.emergency',
     'anwesenheit.view', 'anwesenheit.create', 'anwesenheit.edit', 'anwesenheit.delete',
     'anwesenheit.statistik', 'anwesenheit.export', 'anwesenheit.view_all',
     'kompetenzen.view', 'kompetenzen.view_all', 'kompetenzen.manage', 'kompetenzen.edit_catalog',

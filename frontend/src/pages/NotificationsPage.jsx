@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Bell, Check, Trash2, Loader2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '../lib/api';
+import { PageHeader, Button, EmptyState, StatusBadge } from '../components/ui';
 
 const KIND_LABEL = {
   zuweisung: 'Zuweisung', mahnung: 'Mahnung', erinnerung: 'Erinnerung',
@@ -12,16 +13,23 @@ const KIND_LABEL = {
   info: 'Info', system: 'System',
 };
 
-const KIND_CLASS = {
-  zuweisung: 'bg-blue-500/20 text-blue-400',
-  mahnung: 'bg-orange-500/20 text-orange-400',
-  erinnerung: 'bg-amber-500/20 text-amber-400',
-  kompetenz: 'bg-purple-500/20 text-purple-400',
-  deadline: 'bg-red-500/20 text-red-400',
-  konflikt: 'bg-red-500/20 text-red-400',
-  info: 'bg-gray-500/20 text-gray-400',
-  system: 'bg-gray-500/20 text-gray-400',
+// Töne für StatusBadge (semantisch: rot = dringend, gelb = Erinnerung)
+const KIND_TONE = {
+  zuweisung: 'accent', mahnung: 'danger', erinnerung: 'warning',
+  kompetenz: 'info', deadline: 'danger', konflikt: 'danger',
+  info: 'neutral', system: 'neutral',
 };
+
+function FilterTab({ active, onClick, children }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+        active ? 'bg-raised text-fg' : 'text-fg-muted hover:text-fg hover:bg-raised'
+      }`}>
+      {children}
+    </button>
+  );
+}
 
 export default function NotificationsPage() {
   const [items, setItems] = useState([]);
@@ -66,57 +74,62 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Bell className="w-5 h-5 text-gray-400" />
-          <h1 className="text-2xl font-bold text-white">Benachrichtigungen</h1>
-          {unread > 0 && <span className="text-sm text-accent">{unread} ungelesen</span>}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setOnlyUnread((v) => !v)}
-            className={`px-3 py-1.5 text-sm rounded-lg ${
-              onlyUnread ? 'bg-accent text-white' : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}>
-            {onlyUnread ? 'Nur ungelesen' : 'Alle'}
-          </button>
-          {unread > 0 && (
-            <button onClick={markAllRead}
-              className="px-3 py-1.5 text-sm bg-gray-800 hover:bg-gray-700 text-white rounded-lg inline-flex items-center gap-1">
-              <Check className="w-4 h-4" /> Alle gelesen
-            </button>
-          )}
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto">
+      <PageHeader
+        title="Benachrichtigungen"
+        meta={<span className="tabular-nums">{unread > 0 ? `${unread} ungelesen` : 'Alles gelesen'}</span>}
+        actions={
+          <>
+            <div className="flex items-center gap-0.5 p-0.5 bg-surface rounded-md">
+              <FilterTab active={!onlyUnread} onClick={() => setOnlyUnread(false)}>Alle</FilterTab>
+              <FilterTab active={onlyUnread} onClick={() => setOnlyUnread(true)}>Ungelesen</FilterTab>
+            </div>
+            {unread > 0 && (
+              <Button variant="secondary" icon={Check} onClick={markAllRead}>
+                Alle gelesen
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : items.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-12 text-center text-gray-500">
-          Keine Benachrichtigungen
+        <div className="bg-surface rounded-lg">
+          {onlyUnread ? (
+            <EmptyState icon={Check} title="Alles gelesen"
+              description="Es gibt keine ungelesenen Benachrichtigungen."
+              action={<Button variant="secondary" onClick={() => setOnlyUnread(false)}>Alle anzeigen</Button>} />
+          ) : (
+            <EmptyState icon={Bell} title="Keine Benachrichtigungen"
+              description="Neue Zuweisungen, Erinnerungen und Hinweise erscheinen hier." />
+          )}
         </div>
       ) : (
-        <ul className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
+        <ul className="bg-surface rounded-lg divide-y divide-line-subtle overflow-hidden">
           {items.map((n) => (
             <li key={n.id}
-              className={`flex items-start gap-3 p-4 hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/5'}`}>
-              <span className={`text-[10px] uppercase font-semibold px-2 py-0.5 rounded ${KIND_CLASS[n.kind] || 'bg-gray-500/20 text-gray-400'}`}>
-                {KIND_LABEL[n.kind] || n.kind}
+              className="group relative flex items-start gap-3 p-4 transition-colors hover:bg-raised">
+              <span className="shrink-0 w-24 pt-0.5">
+                <StatusBadge tone={KIND_TONE[n.kind] || 'neutral'} label={KIND_LABEL[n.kind] || n.kind} />
               </span>
-              <button onClick={() => open(n)} className="flex-1 min-w-0 text-left">
+              <button onClick={() => open(n)} className="flex-1 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm">
                 <div className="flex items-center gap-2">
-                  <span className={`truncate ${n.is_read ? 'text-gray-300' : 'text-white font-medium'}`}>
+                  {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-label="ungelesen" />}
+                  <span className={`truncate ${n.is_read ? 'text-fg-muted' : 'text-fg font-semibold'}`}>
                     {n.title}
                   </span>
-                  {n.link && <ExternalLink className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
+                  {n.link && <ExternalLink className="w-3.5 h-3.5 text-fg-subtle shrink-0" />}
                 </div>
-                {n.body && <p className="text-sm text-gray-400 mt-1 whitespace-pre-wrap">{n.body}</p>}
-                <div className="text-xs text-gray-600 mt-1">
+                {n.body && <p className="text-sm text-fg-muted mt-1 whitespace-pre-wrap">{n.body}</p>}
+                <div className="text-xs text-fg-subtle tabular-nums mt-1">
                   {n.created_at ? new Date(n.created_at).toLocaleString('de-DE') : ''}
                 </div>
               </button>
               <button onClick={() => remove(n)}
-                className="p-1 text-gray-500 hover:text-red-400" title="Löschen">
+                className="p-1.5 text-fg-subtle hover:text-bad hover:bg-raised rounded-sm sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                title="Löschen" aria-label="Benachrichtigung löschen">
                 <Trash2 className="w-4 h-4" />
               </button>
             </li>
