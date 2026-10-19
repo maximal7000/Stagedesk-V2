@@ -495,7 +495,7 @@ def list_views(request):
 
 @monitor_router.post("/views", auth=keycloak_auth)
 def create_view(request, payload: DisplayViewCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
 
     # Slug-Kollision vermeiden
@@ -529,7 +529,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
 
 @monitor_router.delete("/views/{id}", auth=keycloak_auth)
 def delete_view(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     view = get_object_or_404(DisplayView, id=id)
     if view.is_default:
         return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
@@ -584,7 +584,7 @@ def _snapshot_view(view):
 
 @monitor_router.put("/config", response=DisplayViewSchema, auth=keycloak_auth)
 def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     if view_id:
         view = get_object_or_404(DisplayView, id=view_id)
     else:
@@ -619,7 +619,7 @@ def list_view_versions(request, view_id: int):
 
 @monitor_router.post("/config/restore", response=DisplayViewSchema, auth=keycloak_auth)
 def restore_view_version(request, version_id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     from .models import DisplayViewVersion
     version = get_object_or_404(DisplayViewVersion, id=version_id)
     view = version.view
@@ -637,7 +637,7 @@ def restore_view_version(request, version_id: int):
 
 @monitor_router.post("/config/regenerate-token", auth=keycloak_auth)
 def regenerate_token(request, view_id: int = None):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     if view_id:
         view = get_object_or_404(DisplayView, id=view_id)
     else:
@@ -660,7 +660,7 @@ def list_files(request, kind: str = None):
 
 @monitor_router.post("/files", auth=keycloak_auth)
 def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), kind: str = Form("image")):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.media')
     obj = MediaFile.objects.create(
         name=name or file.name,
         file=file,
@@ -674,7 +674,7 @@ def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), k
 
 @monitor_router.delete("/files/{id}", auth=keycloak_auth)
 def delete_file(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.media')
     d = get_object_or_404(MediaFile, id=id)
     # Soft-Delete → Papierkorb (Datei bleibt für Wiederherstellung erhalten)
     d.deleted_at = timezone.now()
@@ -700,7 +700,7 @@ def get_trash(request):
 
 @monitor_router.post("/trash/restore", auth=keycloak_auth)
 def restore_trash(request, kind: str, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.media' if kind == 'media' else 'monitor.setup')
     if kind == 'view':
         obj = get_object_or_404(DisplayView, id=id)
         obj.deleted_at = None
@@ -716,7 +716,7 @@ def restore_trash(request, kind: str, id: int):
 
 @monitor_router.delete("/trash/purge", auth=keycloak_auth)
 def purge_trash(request, kind: str, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.media' if kind == 'media' else 'monitor.setup')
     if kind == 'view':
         obj = get_object_or_404(DisplayView, id=id, deleted_at__isnull=False)
         obj.delete()
@@ -740,13 +740,13 @@ def list_announcements(request):
 
 @monitor_router.post("/announcements", response=AnnouncementSchema, auth=keycloak_auth)
 def create_announcement(request, payload: AnnouncementCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     return Announcement.objects.create(**payload.dict())
 
 
 @monitor_router.put("/announcements/{id}", response=AnnouncementSchema, auth=keycloak_auth)
 def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     a = get_object_or_404(Announcement, id=id)
     for key, value in payload.dict().items():
         setattr(a, key, value)
@@ -756,7 +756,7 @@ def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
 
 @monitor_router.delete("/announcements/{id}", auth=keycloak_auth)
 def delete_announcement(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     a = get_object_or_404(Announcement, id=id)
     a.delete()
     return {"success": True}
@@ -772,13 +772,13 @@ def list_webuntis_links(request):
 
 @monitor_router.post("/webuntis-links", response=WebUntisLinkSchema, auth=keycloak_auth)
 def create_webuntis_link(request, payload: WebUntisLinkCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     return WebUntisLink.objects.create(**payload.dict())
 
 
 @monitor_router.put("/webuntis-links/{id}", response=WebUntisLinkSchema, auth=keycloak_auth)
 def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     link = get_object_or_404(WebUntisLink, id=id)
     for key, value in payload.dict().items():
         setattr(link, key, value)
@@ -788,7 +788,7 @@ def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
 
 @monitor_router.delete("/webuntis-links/{id}", auth=keycloak_auth)
 def delete_webuntis_link(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     get_object_or_404(WebUntisLink, id=id).delete()
     return {"success": True}
 
@@ -799,7 +799,7 @@ def delete_webuntis_link(request, id: int):
 def search_transit_stops(request, q: str = "", results: int = 10,
                          use_db: bool = True, use_nahsh: bool = True):
     """Stationen für ÖPNV-Abfahrtsmonitor suchen"""
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     if len(q) < 2:
         return []
     return oepnv.search_stations(q, results=min(results, 20),
@@ -853,7 +853,7 @@ def list_screens(request):
 
 @monitor_router.post("/screens", auth=keycloak_auth)
 def create_screen(request, payload: ScreenCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
     base_slug = slug
     counter = 1
@@ -870,7 +870,7 @@ def create_screen(request, payload: ScreenCreateSchema):
 
 @monitor_router.put("/screens/{id}", response=ScreenListSchema, auth=keycloak_auth)
 def update_screen(request, id: int, payload: ScreenUpdateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
     data = payload.dict(exclude_unset=True)
     if 'default_view_id' in data:
@@ -893,7 +893,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
 
 @monitor_router.delete("/screens/{id}", auth=keycloak_auth)
 def delete_screen(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
     screen.delete()
     return {"success": True}
@@ -902,7 +902,7 @@ def delete_screen(request, id: int):
 @monitor_router.post("/screens/{id}/reload", auth=keycloak_auth)
 def reload_screen(request, id: int):
     """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt reload_requested_at)."""
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
     screen.reload_requested_at = timezone.now()
     screen.save(update_fields=['reload_requested_at'])
@@ -919,7 +919,7 @@ def list_exams(request):
 
 @monitor_router.post("/exams", response=ExamSchema, auth=keycloak_auth)
 def create_exam(request, payload: ExamCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     data = payload.dict()
     _validate_exam_data(data)
     screen_ids = data.pop('screen_ids', [])
@@ -931,7 +931,7 @@ def create_exam(request, payload: ExamCreateSchema):
 
 @monitor_router.put("/exams/{id}", response=ExamSchema, auth=keycloak_auth)
 def update_exam(request, id: int, payload: ExamUpdateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     exam = get_object_or_404(Exam, id=id)
     data = payload.dict(exclude_unset=True)
     _validate_exam_data(data)
@@ -946,7 +946,7 @@ def update_exam(request, id: int, payload: ExamUpdateSchema):
 
 @monitor_router.delete("/exams/{id}", auth=keycloak_auth)
 def delete_exam(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     exam = get_object_or_404(Exam, id=id)
     exam.delete()
     return {"success": True}
@@ -972,7 +972,7 @@ def list_events(request):
 
 @monitor_router.post("/events", response=DisplayEventSchema, auth=keycloak_auth)
 def create_event(request, payload: DisplayEventCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     data = payload.dict()
     assignments = data.pop('assignments', [])
     event = DisplayEvent.objects.create(**data)
@@ -982,7 +982,7 @@ def create_event(request, payload: DisplayEventCreateSchema):
 
 @monitor_router.put("/events/{id}", response=DisplayEventSchema, auth=keycloak_auth)
 def update_event(request, id: int, payload: DisplayEventUpdateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     event = get_object_or_404(DisplayEvent, id=id)
     data = payload.dict(exclude_unset=True)
     assignments = data.pop('assignments', None)
@@ -996,14 +996,14 @@ def update_event(request, id: int, payload: DisplayEventUpdateSchema):
 
 @monitor_router.delete("/events/{id}", auth=keycloak_auth)
 def delete_event(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     get_object_or_404(DisplayEvent, id=id).delete()
     return {"success": True}
 
 
 @monitor_router.post("/events/{id}/activate", response=DisplayEventSchema, auth=keycloak_auth)
 def activate_event(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = True
     event.save(update_fields=['is_active'])
@@ -1013,7 +1013,7 @@ def activate_event(request, id: int):
 
 @monitor_router.post("/events/{id}/deactivate", response=DisplayEventSchema, auth=keycloak_auth)
 def deactivate_event(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = False
     event.save(update_fields=['is_active'])
@@ -1031,13 +1031,13 @@ def list_exam_templates(request):
 
 @monitor_router.post("/exam-templates", response=ExamTemplateSchema, auth=keycloak_auth)
 def create_exam_template(request, payload: ExamTemplateCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     return ExamTemplate.objects.create(**payload.dict())
 
 
 @monitor_router.put("/exam-templates/{id}", response=ExamTemplateSchema, auth=keycloak_auth)
 def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     template = get_object_or_404(ExamTemplate, id=id)
     for key, value in payload.dict().items():
         setattr(template, key, value)
@@ -1047,7 +1047,7 @@ def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
 
 @monitor_router.delete("/exam-templates/{id}", auth=keycloak_auth)
 def delete_exam_template(request, id: int):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.exams')
     get_object_or_404(ExamTemplate, id=id).delete()
     return {"success": True}
 
@@ -1062,7 +1062,7 @@ def get_settings(request):
 
 @monitor_router.put("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def update_settings(request, payload: MonitorSettingsUpdateSchema):
-    _require_perm(request, 'monitor.edit')
+    _require_perm(request, 'monitor.setup')
     settings = MonitorSettings.load()
     for key, value in payload.dict(exclude_unset=True).items():
         setattr(settings, key, value)
