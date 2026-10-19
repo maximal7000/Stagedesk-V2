@@ -41,9 +41,7 @@ class DisplayViewListSchema(Schema):
     is_default: bool
     sort_order: int = 0
     schedule: list = []
-    layout: str
-    is_on_air: bool
-    emergency_active: bool
+    kind: str
 
 
 class DisplayViewSchema(Schema):
@@ -54,63 +52,31 @@ class DisplayViewSchema(Schema):
     is_default: bool
     sort_order: int = 0
     schedule: list = []
-    layout: str
-    title: str
-    subtitle: str
-    background_color: str
-    accent_color: str
-    show_logo: bool
-    logo_url: str
-    active_logo_id: Optional[int] = None
     show_clock: bool
     show_events: bool
     show_announcements: bool
-    show_on_air: bool
     show_countdown: bool
-    emergency_active: bool
-    emergency_text: str
     show_weather: bool
     weather_city: str
     weather_api_key: str
-    show_slideshow: bool
-    slideshow_interval: int
-    show_pdf: bool
-    active_pdf_id: Optional[int] = None
-    fullscreen_header: bool = False
     pdf_mode: str = 'cycle'
-    pdf_interval: int = 10
     pdf_per_screen: int = 1
     pdf_pages: str = ''
     pdf_static_page: int = 1
-    active_image_id: Optional[int] = None
-    image_fit: str = 'contain'
-    image_focus_x: int = 50
-    image_focus_y: int = 50
     split_left: str = 'exam'
     split_right: str = 'webuntis'
     split_left_percent: int = 50
-    theme_preset: str
-    show_webuntis: bool
     webuntis_url: str
     webuntis_url_next_day: str = ''
     webuntis_link_id: Optional[int] = None
     webuntis_link_next_day_id: Optional[int] = None
     webuntis_zoom: int
-    webuntis_dark_mode: bool
-    show_background_image: bool
-    active_background_image_id: Optional[int] = None
     show_qr_code: bool
     qr_code_url: str
     qr_code_label: str
-    show_free_text: bool
-    free_text_title: str
-    free_text_content: str
     show_custom_countdown: bool
     custom_countdown_name: str
     custom_countdown_date: Optional[datetime] = None
-    show_page_rotation: bool
-    page_rotation_interval: int
-    page_rotation_pages: list = []
     show_transit: bool
     transit_stops: list = []
     transit_duration: int
@@ -139,15 +105,6 @@ class DisplayViewSchema(Schema):
     transit_disruption_manual: list = []
     transit_disruption_hidden: list = []
     transit_disruption_position: str = 'bottom'
-    is_on_air: bool
-    on_air_text: str
-    on_air_since: Optional[datetime] = None
-    on_air_size: str
-    on_air_position: str
-    on_air_blink: bool
-    on_air_color: str
-    on_air_fullscreen: bool
-    on_air_split: bool = False
     on_air_split_side: str = 'right'
     kind: str = 'info'
     style: str = 'auto'
@@ -158,7 +115,6 @@ class DisplayViewSchema(Schema):
     substitutions_next_day: bool = True
     page_seconds: int = 15
     api_token: str
-    refresh_interval: int
 
 
 class DisplayViewUpdateSchema(Schema):
@@ -167,63 +123,31 @@ class DisplayViewUpdateSchema(Schema):
     is_default: Optional[bool] = None
     sort_order: Optional[int] = None
     schedule: Optional[list] = None
-    layout: Optional[str] = None
-    title: Optional[str] = None
-    subtitle: Optional[str] = None
-    background_color: Optional[str] = None
-    accent_color: Optional[str] = None
-    show_logo: Optional[bool] = None
-    logo_url: Optional[str] = None
-    active_logo_id: Optional[int] = None
     show_clock: Optional[bool] = None
     show_events: Optional[bool] = None
     show_announcements: Optional[bool] = None
-    show_on_air: Optional[bool] = None
     show_countdown: Optional[bool] = None
-    emergency_active: Optional[bool] = None
-    emergency_text: Optional[str] = None
     show_weather: Optional[bool] = None
     weather_city: Optional[str] = None
     weather_api_key: Optional[str] = None
-    show_slideshow: Optional[bool] = None
-    slideshow_interval: Optional[int] = None
-    show_pdf: Optional[bool] = None
-    active_pdf_id: Optional[int] = None
-    fullscreen_header: Optional[bool] = None
     pdf_mode: Optional[str] = None
-    pdf_interval: Optional[int] = None
     pdf_per_screen: Optional[int] = None
     pdf_pages: Optional[str] = None
     pdf_static_page: Optional[int] = None
-    active_image_id: Optional[int] = None
-    image_fit: Optional[str] = None
-    image_focus_x: Optional[int] = None
-    image_focus_y: Optional[int] = None
     split_left: Optional[str] = None
     split_right: Optional[str] = None
     split_left_percent: Optional[int] = None
-    theme_preset: Optional[str] = None
-    show_webuntis: Optional[bool] = None
     webuntis_url: Optional[str] = None
     webuntis_url_next_day: Optional[str] = None
     webuntis_link_id: Optional[int] = None
     webuntis_link_next_day_id: Optional[int] = None
     webuntis_zoom: Optional[int] = None
-    webuntis_dark_mode: Optional[bool] = None
-    show_background_image: Optional[bool] = None
-    active_background_image_id: Optional[int] = None
     show_qr_code: Optional[bool] = None
     qr_code_url: Optional[str] = None
     qr_code_label: Optional[str] = None
-    show_free_text: Optional[bool] = None
-    free_text_title: Optional[str] = None
-    free_text_content: Optional[str] = None
     show_custom_countdown: Optional[bool] = None
     custom_countdown_name: Optional[str] = None
     custom_countdown_date: Optional[datetime] = None
-    show_page_rotation: Optional[bool] = None
-    page_rotation_interval: Optional[int] = None
-    page_rotation_pages: Optional[list] = None
     show_transit: Optional[bool] = None
     transit_stops: Optional[list] = None
     transit_duration: Optional[int] = None
@@ -252,13 +176,6 @@ class DisplayViewUpdateSchema(Schema):
     transit_disruption_manual: Optional[list] = None
     transit_disruption_hidden: Optional[list] = None
     transit_disruption_position: Optional[str] = None
-    on_air_text: Optional[str] = None
-    on_air_size: Optional[str] = None
-    on_air_position: Optional[str] = None
-    on_air_blink: Optional[bool] = None
-    on_air_color: Optional[str] = None
-    on_air_fullscreen: Optional[bool] = None
-    on_air_split: Optional[bool] = None
     on_air_split_side: Optional[str] = None
     kind: Optional[str] = None
     style: Optional[str] = None
@@ -268,14 +185,13 @@ class DisplayViewUpdateSchema(Schema):
     media_seconds: Optional[int] = None
     substitutions_next_day: Optional[bool] = None
     page_seconds: Optional[int] = None
-    refresh_interval: Optional[int] = None
 
 
 class DisplayViewCreateSchema(Schema):
     """Neues Profil erstellen"""
     name: str
     slug: str = ''
-    layout: str = 'standard'
+    kind: str = 'info'
     clone_from_id: Optional[int] = None
 
 
@@ -319,7 +235,6 @@ class ScreenListSchema(Schema):
     override_until: Optional[datetime] = None
     schedule: list = []
     power_schedule: list = []
-    holiday_mode: bool = False
     power_exceptions: list = []
     power_mode: str = 'auto'
     cec_status: str = ''
@@ -348,7 +263,6 @@ class ScreenUpdateSchema(Schema):
     override_until: Optional[datetime] = None
     schedule: Optional[list] = None
     power_schedule: Optional[list] = None
-    holiday_mode: Optional[bool] = None
     power_exceptions: Optional[list] = None
     power_mode: Optional[str] = None
     location: Optional[str] = None

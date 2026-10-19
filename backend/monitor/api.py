@@ -77,21 +77,15 @@ def _clamp_int(v, lo, hi):
 
 def _validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     """Serverseitige Validierung/Sanitisierung der Ansicht-Update-Daten.
-    Klemmt Zahlenbereiche, verwirft ungültige Hex-Farben, prüft Zeitfenster."""
+    Klemmt Zahlenbereiche, prüft Zeitfenster und Rotationseinträge."""
     for key, lo, hi in [
         ('split_left_percent', 20, 80), ('split_percent', 20, 80),
-        ('image_focus_x', 0, 100), ('image_focus_y', 0, 100),
-        ('webuntis_zoom', 25, 400), ('refresh_interval', 3, 3600),
+        ('webuntis_zoom', 25, 400),
     ]:
         if key in data and data[key] is not None:
             c = _clamp_int(data[key], lo, hi)
             if c is not None:
                 data[key] = c
-    # Hex-Farben: ungültige verwerfen (alter Wert bleibt). on_air_color darf leer sein.
-    for key in ['background_color', 'accent_color', 'on_air_color']:
-        if key in data and data[key]:
-            if not _HEX_RE.match(str(data[key])):
-                data.pop(key)
     # Zeitplan: Beginn < Ende erzwingen
     if 'schedule' in data and isinstance(data['schedule'], list):
         for e in data['schedule']:
@@ -165,8 +159,8 @@ def _fetch_weather(view):
 
 def _fetch_transit(view):
     """ÖPNV-Abfahrten holen und cachen (2 Min, bei Fehler 1 Min Pause)"""
-    # Immer laden wenn Layout 'departures', sonst nur wenn Widget aktiv
-    if view.layout != 'departures' and not view.show_transit:
+    # Immer laden bei Ansichtsart 'departures', sonst nur wenn Widget aktiv
+    if view.kind != 'departures' and not view.show_transit:
         return None
     if not view.transit_stops:
         return None
@@ -208,7 +202,7 @@ def _fetch_transit(view):
 
 def _fetch_disruptions(view):
     """Störungen/Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell), gecacht 5 Min."""
-    if view.layout != 'departures' and not view.show_transit:
+    if view.kind != 'departures' and not view.show_transit:
         return []
     # Nur wenn mind. eine Quelle aktiv ist
     if not (view.transit_disruption_rail or view.transit_disruption_bus or (view.transit_disruption_manual or [])):
@@ -361,26 +355,20 @@ def get_display_data(request, view: str = None, screen: str = None,
     view_data = DisplayViewSchema.from_orm(view).dict()
     view_data['api_token'] = ''
     view_data['weather_api_key'] = ''
-    view_data['logo_url_resolved'] = view.get_logo_url()
-    view_data['pdf_url_resolved'] = view.get_pdf_url()
-    view_data['background_image_url_resolved'] = view.get_background_image_url()
-    view_data['image_url_resolved'] = view.get_image_url()
     view_data['webuntis_url_resolved'] = view.get_webuntis_url()
     view_data['webuntis_url_next_day_resolved'] = view.get_webuntis_url_next_day()
 
-    # Wenn on_air_fullscreen aktiv → Einstellungen der ON-AIR-Ansicht mitliefern
-    on_air_view = None
-    if view.on_air_fullscreen:
-        on_air_source = DisplayView.objects.filter(layout='on_air').exclude(pk=view.pk).first()
-        if on_air_source:
-            on_air_view = {
-                'on_air_color': on_air_source.on_air_color,
-                'on_air_text': on_air_source.on_air_text,
-                'on_air_size': on_air_source.on_air_size,
-                'on_air_position': on_air_source.on_air_position,
-                'on_air_blink': on_air_source.on_air_blink,
-                'show_clock': on_air_source.show_clock,
-            }
+    # On-Air und Notfall sind global (MonitorSettings). Den vollständigen Vertrag baut display.py.
+    settings = MonitorSettings.load()
+    on_air = {
+        'active': settings.on_air_active, 'since': settings.on_air_since,
+        'text': settings.on_air_text, 'animation': settings.on_air_animation,
+        'show_clock': settings.on_air_show_clock,
+    }
+    emergency = {
+        'active': settings.emergency_active, 'since': settings.emergency_since,
+        'text': settings.emergency_text, 'note': settings.emergency_note,
+    }
 
     return {
         'config': view_data,
@@ -390,7 +378,8 @@ def get_display_data(request, view: str = None, screen: str = None,
         'weather': weather,
         'departures': departures,
         'disruptions': disruptions,
-        'on_air_view': on_air_view,
+        'on_air': on_air,
+        'emergency': emergency,
         'exam': exam,
         'reload_requested_at': (screen.reload_requested_at.isoformat()
                                 if (screen and screen.reload_requested_at) else None),
@@ -405,9 +394,7 @@ def get_clock_data(request):
     ON-AIR-Status + nächste Veranstaltungen. Kein Login nötig.
     Die Antwortform bleibt für externe Aufrufer unverändert."""
     now = timezone.now()
-    on_air = DisplayView.objects.filter(is_on_air=True).exists()
-    view = DisplayView.get()
-    on_air_text = view.on_air_text if view else 'ON AIR'
+    settings = MonitorSettings.load()
 
     from veranstaltung.models import Veranstaltung
     upcoming = (Veranstaltung.objects
@@ -424,27 +411,37 @@ def get_clock_data(request):
     } for v in upcoming]
 
     return {
-        'on_air': on_air,
-        'on_air_text': on_air_text,
+        'on_air': settings.on_air_active,
+        'on_air_text': settings.on_air_text,
         'veranstaltungen': events,
     }
 
 
 # ═══ ON AIR Endpunkt (Token-Auth) ════════════════════════════════
 
+def _set_on_air(active: bool):
+    settings = MonitorSettings.load()
+    settings.on_air_active = active
+    settings.on_air_since = timezone.now() if active else None
+    settings.save(update_fields=['on_air_active', 'on_air_since'])
+
+
+def _set_emergency(active: bool, text: str):
+    settings = MonitorSettings.load()
+    settings.emergency_active = active
+    settings.emergency_text = text
+    settings.emergency_since = timezone.now() if active else None
+    settings.save(update_fields=['emergency_active', 'emergency_text', 'emergency_since'])
+
+
 @monitor_router.post("/on-air", response={200: dict, 401: dict, 403: dict})
 def toggle_on_air(request, payload: OnAirSchema):
-    """ON AIR Status ändern — betrifft ALLE Profile"""
+    """ON AIR Status ändern (global, MonitorSettings)"""
     # Erst per Token prüfen
     token = request.headers.get('X-Monitor-Token', '')
     if token:
-        view = DisplayView.objects.filter(api_token=token).first()
-        if view:
-            # Alle Profile updaten
-            DisplayView.objects.all().update(
-                is_on_air=payload.on_air,
-                on_air_since=timezone.now() if payload.on_air else None,
-            )
+        if DisplayView.objects.filter(api_token=token).exists():
+            _set_on_air(payload.on_air)
             _log_audit(request, 'ON AIR ' + ('an' if payload.on_air else 'aus'), via_token=True)
             return 200, {"success": True, "on_air": payload.on_air}
         return 401, {"success": False, "message": "Ungültiges Token"}
@@ -457,10 +454,7 @@ def toggle_on_air(request, payload: OnAirSchema):
         _require_perm(request, 'monitor.onair')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
-    DisplayView.objects.all().update(
-        is_on_air=payload.on_air,
-        on_air_since=timezone.now() if payload.on_air else None,
-    )
+    _set_on_air(payload.on_air)
     _log_audit(request, 'ON AIR ' + ('an' if payload.on_air else 'aus'))
     return 200, {"success": True, "on_air": payload.on_air}
 
@@ -469,15 +463,11 @@ def toggle_on_air(request, payload: OnAirSchema):
 
 @monitor_router.post("/emergency", response={200: dict, 401: dict, 403: dict})
 def toggle_emergency(request, payload: EmergencySchema):
-    """Notfall-Meldung aktivieren/deaktivieren — betrifft ALLE Profile"""
+    """Notfall-Meldung aktivieren/deaktivieren (global, MonitorSettings)"""
     token = request.headers.get('X-Monitor-Token', '')
     if token:
-        view = DisplayView.objects.filter(api_token=token).first()
-        if view:
-            DisplayView.objects.all().update(
-                emergency_active=payload.active,
-                emergency_text=payload.text,
-            )
+        if DisplayView.objects.filter(api_token=token).exists():
+            _set_emergency(payload.active, payload.text)
             _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '', via_token=True)
             return 200, {"success": True}
         return 401, {"success": False, "message": "Ungültiges Token"}
@@ -490,10 +480,7 @@ def toggle_emergency(request, payload: EmergencySchema):
         _require_perm(request, 'monitor.emergency')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
-    DisplayView.objects.all().update(
-        emergency_active=payload.active,
-        emergency_text=payload.text,
-    )
+    _set_emergency(payload.active, payload.text)
     _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '')
     return 200, {"success": True}
 
@@ -525,7 +512,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
         source.name = payload.name
         source.slug = slug
         source.is_default = False
-        source.layout = payload.layout
+        source.kind = payload.kind
         source.api_token = uuid.uuid4().hex
         source.save()
         return {'id': source.id, 'name': source.name, 'slug': source.slug}
@@ -534,7 +521,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
             name=payload.name,
             slug=slug,
             is_default=False,
-            layout=payload.layout,
+            kind=payload.kind,
         )
         view.save()
         return {'id': view.id, 'name': view.name, 'slug': view.slug}
@@ -609,8 +596,7 @@ def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
     data = _validate_view_data(data, own_id=view.id, current_kind=view.kind)
 
     # FK-Felder separat behandeln
-    for fk_key in ('active_logo_id', 'active_pdf_id', 'active_background_image_id',
-                   'active_image_id', 'webuntis_link_id', 'webuntis_link_next_day_id'):
+    for fk_key in ('webuntis_link_id', 'webuntis_link_next_day_id'):
         if fk_key in data:
             val = data.pop(fk_key)
             setattr(view, fk_key, val if val else None)
@@ -833,7 +819,8 @@ def get_screen_power(request, slug: str):
             'slug': screen.slug,
             'power': screen.get_power_state(),
             'power_schedule': screen.power_schedule,
-            'holiday_mode': screen.holiday_mode,
+            # Der Ferienmodus-Schalter ist entfallen (jetzt power_mode='manual_off'); Schlüssel bleibt für Pi-Skripte.
+            'holiday_mode': False,
             'power_exceptions': screen.power_exceptions,
             'cec_status': screen.cec_status,
             'cec_status_at': screen.cec_status_at,
@@ -893,7 +880,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         val = data.pop('override_view_id')
         screen.override_view_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
-    power_keys = {'schedule', 'power_schedule', 'holiday_mode', 'power_exceptions', 'power_mode'}
+    power_keys = {'schedule', 'power_schedule', 'power_exceptions', 'power_mode'}
     power_changed = bool(power_keys & set(data.keys()))
     for key, value in data.items():
         setattr(screen, key, value)
