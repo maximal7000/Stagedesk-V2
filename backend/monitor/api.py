@@ -95,7 +95,7 @@ def _validate_view_data(data: dict) -> dict:
     if 'schedule' in data and isinstance(data['schedule'], list):
         for e in data['schedule']:
             if isinstance(e, dict):
-                start, end = e.get('von'), e.get('bis')
+                start, end = e.get('from'), e.get('until')
                 if start and end and str(start) >= str(end):
                     raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
     return data
@@ -140,12 +140,12 @@ def _fetch_weather(view):
             data = json.loads(resp.read())
 
         weather = {
-            'temperatur': round(data['main']['temp'], 1),
+            'temperature': round(data['main']['temp'], 1),
             'feels_like': round(data['main']['feels_like'], 1),
-            'beschreibung': data['weather'][0]['description'].capitalize(),
+            'description': data['weather'][0]['description'].capitalize(),
             'icon': data['weather'][0]['icon'],
-            'luftfeuchtigkeit': data['main']['humidity'],
-            'stadt': data['name'],
+            'humidity': data['main']['humidity'],
+            'city': data['name'],
         }
         view.weather_cache = weather
         view.weather_cache_at = timezone.now()
@@ -157,8 +157,8 @@ def _fetch_weather(view):
 
 def _fetch_transit(view):
     """ÖPNV-Abfahrten holen und cachen (2 Min, bei Fehler 1 Min Pause)"""
-    # Immer laden wenn Layout 'abfahrten', sonst nur wenn Widget aktiv
-    if view.layout != 'abfahrten' and not view.show_transit:
+    # Immer laden wenn Layout 'departures', sonst nur wenn Widget aktiv
+    if view.layout != 'departures' and not view.show_transit:
         return None
     if not view.transit_stops:
         return None
@@ -200,7 +200,7 @@ def _fetch_transit(view):
 
 def _fetch_disruptions(view):
     """Störungen/Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell), gecacht 5 Min."""
-    if view.layout != 'abfahrten' and not view.show_transit:
+    if view.layout != 'departures' and not view.show_transit:
         return []
     # Nur wenn mind. eine Quelle aktiv ist
     if not (view.transit_disruption_rail or view.transit_disruption_bus or (view.transit_disruption_manual or [])):
@@ -220,13 +220,15 @@ def _fetch_disruptions(view):
         print(f"Störungs-Fehler: {e}")
     # Manuelle Meldungen voranstellen
     for m in (view.transit_disruption_manual or []):
-        if isinstance(m, dict) and (m.get('titel') or m.get('text')):
+        if isinstance(m, dict) and (m.get('title') or m.get('text')):
             result.insert(0, {
-                'id': oepnv._disruption_id('manuell', m.get('titel'), m.get('text')),
-                'quelle': 'manuell', 'typ': 'stoerung',
-                'titel': m.get('titel') or 'Hinweis', 'text': m.get('text') or '',
-                'linien': [], 'von': '', 'bis': '',
-                'all_lines': False, 'bild': m.get('bild') or '', 'haltestellen': [], 'vorschlag': '',
+                # Hash-Eingabe bleibt bei der alten Quellkennung 'manuell', damit ausgeblendete
+                # Meldungen (transit_disruption_hidden) ausgeblendet bleiben (Spec §5.4).
+                'id': oepnv._disruption_id('manuell', m.get('title'), m.get('text')),
+                'source': 'manual', 'kind': 'disruption',
+                'title': m.get('title') or 'Hinweis', 'text': m.get('text') or '',
+                'lines': [], 'from': '', 'until': '',
+                'all_lines': False, 'image': m.get('image') or '', 'stops': [], 'suggestion': '',
                 'highlighted': bool(m.get('highlighted')),
             })
     # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren
@@ -303,8 +305,8 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
                 v.datum_von and v.datum_bis and v.datum_von <= now <= v.datum_bis
             )
             events.append({
-                'id': v.id, 'name': v.titel, 'ort': v.ort or '',
-                'datum_von': v.datum_von, 'datum_bis': v.datum_bis,
+                'id': v.id, 'name': v.titel, 'location': v.ort or '',
+                'date_from': v.datum_von, 'date_until': v.datum_bis,
                 'status': v.status, 'is_running': is_running,
             })
 
@@ -340,7 +342,7 @@ def get_display_data(request, profil: str = None, bildschirm: str = None):
     # Wenn on_air_fullscreen aktiv → Einstellungen der ON-AIR-Ansicht mitliefern
     on_air_view = None
     if view.on_air_fullscreen:
-        on_air_source = DisplayView.objects.filter(layout='onair').exclude(pk=view.pk).first()
+        on_air_source = DisplayView.objects.filter(layout='on_air').exclude(pk=view.pk).first()
         if on_air_source:
             on_air_view = {
                 'on_air_color': on_air_source.on_air_color,
@@ -454,7 +456,7 @@ def toggle_emergency(request, payload: EmergencySchema):
         return 401, {"success": False, "message": "Nicht autorisiert"}
     request.auth = auth_result
     try:
-        _require_perm(request, 'monitor.notfall')
+        _require_perm(request, 'monitor.emergency')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
     DisplayView.objects.all().update(
@@ -537,10 +539,10 @@ def list_disruptions(request, profil_id: int = None):
     out = []
     for s in _fetch_disruptions(view):
         out.append({
-            'id': s.get('id'), 'quelle': s.get('quelle'), 'typ': s.get('typ'),
-            'titel': s.get('titel'), 'text': (s.get('text') or '')[:160],
-            'linien': s.get('linien', []), 'von': s.get('von', ''), 'bis': s.get('bis', ''),
-            'hat_bild': bool(s.get('bild')), 'hidden': s.get('id') in hidden,
+            'id': s.get('id'), 'source': s.get('source'), 'kind': s.get('kind'),
+            'title': s.get('title'), 'text': (s.get('text') or '')[:160],
+            'lines': s.get('lines', []), 'from': s.get('from', ''), 'until': s.get('until', ''),
+            'has_image': bool(s.get('image')), 'hidden': s.get('id') in hidden,
         })
     return out
 
@@ -640,7 +642,7 @@ def list_files(request, typ: str = None):
 
 
 @monitor_router.post("/dateien", auth=keycloak_auth)
-def upload_file(request, datei: UploadedFile = File(...), name: str = Form(""), typ: str = Form("bild")):
+def upload_file(request, datei: UploadedFile = File(...), name: str = Form(""), typ: str = Form("image")):
     _require_perm(request, 'monitor.edit')
     obj = MediaFile.objects.create(
         name=name or datei.name,

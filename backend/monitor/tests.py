@@ -8,7 +8,7 @@ from django.utils import timezone
 from ninja.errors import HttpError
 
 from .models import DisplayView, Screen, DisplayEvent, DisplayEventScreen
-from .api import _validate_view_data, _validate_exam_data
+from .api import _validate_view_data, _validate_exam_data, _fetch_disruptions
 from . import oepnv
 
 
@@ -17,13 +17,13 @@ class ActiveViewPriorityTest(TestCase):
 
     def setUp(self):
         self.default = DisplayView.objects.create(name='Default', slug='default')
-        self.scheduled = DisplayView.objects.create(name='Zeit', slug='zeit')
+        self.scheduled = DisplayView.objects.create(name='Zeit', slug='scheduled')
         self.event = DisplayView.objects.create(name='Event', slug='event')
         self.override = DisplayView.objects.create(name='Override', slug='override')
         self.screen = Screen.objects.create(name='BS', slug='bs', default_view=self.default)
 
     def _always_schedule(self):
-        self.screen.schedule = [{'profil_id': self.scheduled.id, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}]
+        self.screen.schedule = [{'view_id': self.scheduled.id, 'days': list(range(7)), 'from': '00:00', 'until': '23:59'}]
         self.screen.save()
 
     def _active_event(self):
@@ -78,7 +78,7 @@ class ViewValidationTest(TestCase):
 
     def test_schedule_from_after_until_raises(self):
         with self.assertRaises(HttpError):
-            _validate_view_data({'schedule': [{'von': '16:00', 'bis': '08:00', 'profil_id': 1, 'tage': [0]}]})
+            _validate_view_data({'schedule': [{'from': '16:00', 'until': '08:00', 'view_id': 1, 'days': [0]}]})
 
     def test_exam_end_before_start_raises(self):
         with self.assertRaises(HttpError):
@@ -99,7 +99,7 @@ class SoftDeleteTest(TestCase):
         DisplayView.objects.create(name='Std', slug='std', is_default=True)
         DisplayView.objects.create(
             name='Z', slug='z', deleted_at=timezone.now(),
-            schedule=[{'profil_id': 999, 'tage': list(range(7)), 'von': '00:00', 'bis': '23:59'}])
+            schedule=[{'view_id': 999, 'days': list(range(7)), 'from': '00:00', 'until': '23:59'}])
         self.assertNotEqual(DisplayView.get().slug, 'z')
 
 
@@ -137,3 +137,39 @@ class DisruptionIdTest(TestCase):
         # Hash-Eingaben bleiben identisch, sonst tauchen ausgeblendete Meldungen wieder auf
         self.assertEqual(oepnv._disruption_id('manuell', 'Titel', 'Text'),
                          hashlib.md5('manuell|Titel|Text'.encode()).hexdigest()[:12])
+
+
+class ManualDisruptionTest(TestCase):
+
+    def test_manual_disruption_uses_english_keys_and_stable_id(self):
+        view = DisplayView.objects.create(
+            name='V', slug='v', layout='departures', transit_disruption_rail=False, transit_disruption_bus=False,
+            transit_disruption_manual=[{'title': 'Titel', 'text': 'Text', 'image': 'k.png', 'highlighted': True}])
+        [d] = _fetch_disruptions(view)
+        self.assertEqual(d['id'], oepnv._disruption_id('manuell', 'Titel', 'Text'))
+        self.assertEqual((d['source'], d['kind'], d['title'], d['image'], d['lines'], d['from'], d['until']),
+                         ('manual', 'disruption', 'Titel', 'k.png', [], '', ''))
+
+
+class PowerStateTest(TestCase):
+
+    def test_manual_modes(self):
+        screen = Screen.objects.create(name='S', slug='s', power_mode='manual_off')
+        self.assertFalse(screen.get_power_state())
+        screen.power_mode = 'manual_on'
+        self.assertTrue(screen.get_power_state())
+
+    def test_exception_with_english_keys(self):
+        today = timezone.localdate().isoformat()
+        screen = Screen.objects.create(name='S', slug='s', holiday_mode=True, power_exceptions=[
+            {'from_date': today, 'until_date': today, 'from': '00:00', 'until': '23:59', 'note': 'x'}])
+        self.assertTrue(screen.get_power_state())
+
+
+class UploadPathTest(TestCase):
+
+    def test_upload_dirs_unchanged(self):
+        from .models import MediaFile, monitor_upload_path
+        self.assertEqual(monitor_upload_path(MediaFile(kind='image'), 'a.png'), 'monitor/bild/a.png')
+        self.assertEqual(monitor_upload_path(MediaFile(kind='background'), 'a.png'), 'monitor/hintergrund/a.png')
+        self.assertEqual(monitor_upload_path(MediaFile(kind='pdf'), 'a.pdf'), 'monitor/pdf/a.pdf')

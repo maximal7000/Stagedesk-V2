@@ -7,8 +7,13 @@ from django.db import models
 from django.utils import timezone
 
 
+# Upload-Ordner bleiben die bisherigen (Spec-Vorgabe: Upload-Pfade ändern sich nicht),
+# auch nachdem die gespeicherten kind-Werte englisch sind.
+_UPLOAD_DIRS = {'image': 'bild', 'background': 'hintergrund'}
+
+
 def monitor_upload_path(instance, filename):
-    return f'monitor/{instance.kind}/{filename}'
+    return f'monitor/{_UPLOAD_DIRS.get(instance.kind, instance.kind)}/{filename}'
 
 
 class MediaFile(models.Model):
@@ -16,9 +21,9 @@ class MediaFile(models.Model):
 
     KIND_CHOICES = [
         ('logo', 'Logo'),
-        ('bild', 'Slideshow-Bild'),
+        ('image', 'Slideshow-Bild'),
         ('pdf', 'PDF-Datei'),
-        ('hintergrund', 'Hintergrundbild'),
+        ('background', 'Hintergrundbild'),
     ]
 
     name = models.CharField(max_length=200)
@@ -64,15 +69,15 @@ class DisplayView(models.Model):
     is_default = models.BooleanField(default=True)
     sort_order = models.IntegerField(default=0, help_text="Reihenfolge in der Profil-Liste")
     schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]')
+        help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
 
     LAYOUT_CHOICES = [
         ('standard', 'Standard-Layout'),
-        ('stundenplan', 'Stundenplan-Vollbild'),
-        ('onair', 'ON AIR Display'),
-        ('abfahrten', 'Abfahrtsmonitor (ÖPNV)'),
-        ('pdf_vollbild', 'PDF-Vollbild'),
-        ('bild_vollbild', 'Bild-Vollbild'),
+        ('timetable', 'Stundenplan-Vollbild'),
+        ('on_air', 'ON AIR Display'),
+        ('departures', 'Abfahrtsmonitor (ÖPNV)'),
+        ('pdf_fullscreen', 'PDF-Vollbild'),
+        ('image_fullscreen', 'Bild-Vollbild'),
         ('split', 'Splitscreen'),
     ]
     layout = models.CharField(max_length=20, choices=LAYOUT_CHOICES, default='standard')
@@ -84,15 +89,15 @@ class DisplayView(models.Model):
 
     # ─── Splitscreen (layout='split') ───
     SPLIT_CONTENT_CHOICES = [
-        ('klausur',  'Klausur'),
-        ('onair',    'On Air'),
+        ('exam',     'Klausur'),
+        ('on_air',   'On Air'),
         ('webuntis', 'WebUntis'),
-        ('uhr',      'Uhr'),
-        ('leer',     'Leer'),
+        ('clock',    'Uhr'),
+        ('empty',    'Leer'),
     ]
     split_left = models.CharField(max_length=20, choices=SPLIT_CONTENT_CHOICES, default='webuntis',
         help_text="Inhalt der linken Split-Seite")
-    split_right = models.CharField(max_length=20, choices=SPLIT_CONTENT_CHOICES, default='klausur',
+    split_right = models.CharField(max_length=20, choices=SPLIT_CONTENT_CHOICES, default='exam',
         help_text="Inhalt der rechten Split-Seite")
     split_left_percent = models.IntegerField(default=50,
         help_text="Breite der linken Seite in Prozent (20–80)")
@@ -139,20 +144,20 @@ class DisplayView(models.Model):
         MediaFile, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='as_active_pdf'
     )
-    # PDF-Vollbild-Konfiguration (layout='pdf_vollbild')
+    # PDF-Vollbild-Konfiguration (layout='pdf_fullscreen')
     PDF_MODE_CHOICES = [
-        ('durchschalten', 'Seiten automatisch durchschalten'),
-        ('statisch', 'Feste Seite anzeigen'),
-        ('seiten', 'Nur bestimmte Seiten'),
+        ('cycle', 'Seiten automatisch durchschalten'),
+        ('static', 'Feste Seite anzeigen'),
+        ('selection', 'Nur bestimmte Seiten'),
     ]
-    pdf_mode = models.CharField(max_length=20, choices=PDF_MODE_CHOICES, default='durchschalten')
+    pdf_mode = models.CharField(max_length=20, choices=PDF_MODE_CHOICES, default='cycle')
     pdf_interval = models.IntegerField(default=10, help_text="Sekunden pro Seite (Durchschalten)")
     pdf_per_screen = models.IntegerField(default=1, help_text="Seiten pro Ansicht (1 oder 2)")
     pdf_pages = models.CharField(max_length=200, blank=True, default='',
         help_text="Seiten-Auswahl, z.B. '1,3,5-7'. Leer = alle.")
-    pdf_static_page = models.IntegerField(default=1, help_text="Feste Seite (Modus 'statisch')")
+    pdf_static_page = models.IntegerField(default=1, help_text="Feste Seite (Modus 'static')")
 
-    # ─── Bild-Vollbild (layout='bild_vollbild') ───
+    # ─── Bild-Vollbild (layout='image_fullscreen') ───
     active_image = models.ForeignKey(
         MediaFile, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='as_active_image'
@@ -170,9 +175,9 @@ class DisplayView(models.Model):
     # ─── Theme ─────────────────────────────
     THEME_CHOICES = [
         ('custom', 'Benutzerdefiniert'),
-        ('veranstaltung', 'Veranstaltung'),
-        ('schulbetrieb', 'Schulbetrieb'),
-        ('nacht', 'Nacht'),
+        ('event', 'Veranstaltung'),
+        ('school', 'Schulbetrieb'),
+        ('night', 'Nacht'),
     ]
     theme_preset = models.CharField(max_length=20, choices=THEME_CHOICES, default='custom')
 
@@ -221,7 +226,7 @@ class DisplayView(models.Model):
     # ─── ÖPNV / Abfahrten ──────────────────
     show_transit = models.BooleanField(default=False)
     transit_stops = models.JSONField(default=list, blank=True,
-        help_text='[{"id": "...", "name": "...", "filter_linien": [], "filter_richtung": "", "zeige_bus": true, "zeige_bahn": true, "zeige_fernverkehr": true, "wegzeit_minuten": 0}]')
+        help_text='[{"id": "...", "name": "...", "filter_lines": [], "filter_direction": "", "show_bus": true, "show_rail": true, "show_long_distance": true, "walk_minutes": 0}]')
     transit_duration = models.IntegerField(default=60, help_text="Minuten vorausschauen")
     transit_max_departures = models.IntegerField(default=20, help_text="Max Abfahrten pro Station")
     transit_show_bus = models.BooleanField(default=True)
@@ -237,10 +242,10 @@ class DisplayView(models.Model):
     transit_disruption_banner = models.BooleanField(default=True, help_text="Störungsbanner anzeigen")
     TRANSIT_FONT_SIZE_CHOICES = [
         ('normal', 'Normal'),
-        ('gross', 'Groß (HD)'),
+        ('large', 'Groß (HD)'),
         ('4k', 'Sehr groß (4K)'),
     ]
-    transit_font_size = models.CharField(max_length=10, choices=TRANSIT_FONT_SIZE_CHOICES, default='gross', help_text="Schriftgröße für Abfahrtsanzeige")
+    transit_font_size = models.CharField(max_length=10, choices=TRANSIT_FONT_SIZE_CHOICES, default='large', help_text="Schriftgröße für Abfahrtsanzeige")
     transit_columns = models.IntegerField(default=3, help_text="Anzahl Spalten im Layout (1-4)")
 
     # ─── Streik-Modus ────────────────────
@@ -260,13 +265,17 @@ class DisplayView(models.Model):
     transit_disruption_bus_lines = models.JSONField(default=list, blank=True,
         help_text="Bus-Linienfilter, z.B. ['1','3','16']. Leer = alle.")
     transit_disruption_manual = models.JSONField(default=list, blank=True,
-        help_text="Manuelle Meldungen: [{'titel':..., 'text':...}]")
+        help_text="Manuelle Meldungen: [{'title':..., 'text':..., 'image':..., 'highlighted':...}]")
     transit_disruption_cache = models.JSONField(default=list, blank=True)
     transit_disruption_cache_at = models.DateTimeField(null=True, blank=True)
     transit_disruption_hidden = models.JSONField(default=list, blank=True,
         help_text="IDs manuell ausgeblendeter Störungen (auto-bereinigt wenn Meldung verschwindet)")
-    transit_disruption_position = models.CharField(max_length=10, default='unten',
-        help_text="Störungs-Anzeige: 'unten' (Streifen) oder 'spalte' (eigene Spalte)")
+    TRANSIT_DISRUPTION_POSITION_CHOICES = [
+        ('bottom', 'Unten (Streifen)'),
+        ('column', 'Eigene Spalte'),
+    ]
+    transit_disruption_position = models.CharField(max_length=10, choices=TRANSIT_DISRUPTION_POSITION_CHOICES,
+        default='bottom', help_text="Störungs-Anzeige: 'bottom' (Streifen) oder 'column' (eigene Spalte)")
 
     # ─── ON AIR ────────────────────────────
     is_on_air = models.BooleanField(default=False)
@@ -275,31 +284,31 @@ class DisplayView(models.Model):
 
     # ─── ON AIR Anzeige ──────────────────
     ON_AIR_SIZE_CHOICES = [
-        ('klein', 'Klein'),
-        ('mittel', 'Mittel'),
-        ('gross', 'Groß'),
-        ('riesig', 'Riesig'),
+        ('small', 'Klein'),
+        ('medium', 'Mittel'),
+        ('large', 'Groß'),
+        ('huge', 'Riesig'),
     ]
     ON_AIR_POSITION_CHOICES = [
-        ('banner-oben', 'Banner oben (volle Breite)'),
-        ('banner-unten', 'Banner unten (volle Breite)'),
-        ('oben-rechts', 'Oben rechts'),
-        ('oben-links', 'Oben links'),
-        ('oben-mitte', 'Oben Mitte'),
-        ('unten-rechts', 'Unten rechts'),
-        ('unten-links', 'Unten links'),
-        ('unten-mitte', 'Unten Mitte'),
-        ('mitte', 'Mitte (Overlay)'),
+        ('banner-top', 'Banner oben (volle Breite)'),
+        ('banner-bottom', 'Banner unten (volle Breite)'),
+        ('top-right', 'Oben rechts'),
+        ('top-left', 'Oben links'),
+        ('top-center', 'Oben Mitte'),
+        ('bottom-right', 'Unten rechts'),
+        ('bottom-left', 'Unten links'),
+        ('bottom-center', 'Unten Mitte'),
+        ('center', 'Mitte (Overlay)'),
     ]
-    on_air_size = models.CharField(max_length=10, choices=ON_AIR_SIZE_CHOICES, default='gross')
-    on_air_position = models.CharField(max_length=20, choices=ON_AIR_POSITION_CHOICES, default='banner-oben')
+    on_air_size = models.CharField(max_length=10, choices=ON_AIR_SIZE_CHOICES, default='large')
+    on_air_position = models.CharField(max_length=20, choices=ON_AIR_POSITION_CHOICES, default='banner-top')
     on_air_blink = models.BooleanField(default=True)
     on_air_color = models.CharField(max_length=7, blank=True, help_text="Leer = Akzentfarbe")
     on_air_fullscreen = models.BooleanField(default=False, help_text="Bei ON AIR automatisch Vollbild-Anzeige")
     on_air_split = models.BooleanField(default=False,
         help_text="Bei ON AIR Splitscreen (ON AIR + Stundenplan) statt reinem Vollbild")
-    ON_AIR_SIDE_CHOICES = [('links', 'Links'), ('rechts', 'Rechts')]
-    on_air_split_side = models.CharField(max_length=6, choices=ON_AIR_SIDE_CHOICES, default='rechts',
+    SIDE_CHOICES = [('left', 'Links'), ('right', 'Rechts')]
+    on_air_split_side = models.CharField(max_length=6, choices=SIDE_CHOICES, default='right',
         help_text="Auf welcher Seite ON AIR im Splitscreen steht")
 
     # ─── API ───────────────────────────────
@@ -348,9 +357,9 @@ class DisplayView(models.Model):
             for entry in schedule:
                 if not isinstance(entry, dict):
                     continue
-                days = entry.get('tage', [])
-                start = entry.get('von', '00:00')
-                end = entry.get('bis', '23:59')
+                days = entry.get('days', [])
+                start = entry.get('from', '00:00')
+                end = entry.get('until', '23:59')
                 if isinstance(days, list) and weekday in days and start <= time <= end:
                     return view
 
@@ -420,7 +429,7 @@ class Screen(models.Model):
         help_text="Fallback-Profil wenn kein Zeitplan greift"
     )
     schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"profil_id": 3, "tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]')
+        help_text='[{"view_id": 3, "days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
     # Manueller Sofort-Override (Cockpit): zeigt bis zum Zurücksetzen/Ablauf diese Ansicht.
     override_view = models.ForeignKey(
         DisplayView, on_delete=models.SET_NULL, null=True, blank=True,
@@ -429,19 +438,19 @@ class Screen(models.Model):
     override_until = models.DateTimeField(null=True, blank=True,
         help_text="Optionales Ablaufdatum des Overrides; leer = bis manuell zurückgesetzt")
     power_schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"tage": [0-6], "von": "HH:MM", "bis": "HH:MM"}]. Leer = immer an.')
+        help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]. Leer = immer an.')
     holiday_mode = models.BooleanField(default=False,
         help_text="Wenn aktiv: Bildschirm grundsätzlich aus, nur Ausnahmen greifen.")
     power_exceptions = models.JSONField(default=list, blank=True,
-        help_text='[{"von_datum": "YYYY-MM-DD", "bis_datum": "YYYY-MM-DD", "von": "HH:MM", "bis": "HH:MM", "notiz": ""}]')
+        help_text='[{"from_date": "YYYY-MM-DD", "until_date": "YYYY-MM-DD", "from": "HH:MM", "until": "HH:MM", "note": ""}]')
     reload_requested_at = models.DateTimeField(null=True, blank=True,
         help_text="Wird beim Reload-Knopf gesetzt; das Display lädt sich neu wenn dieser Wert steigt.")
 
     # Manueller Override: deaktiviert den Zeitplan und erzwingt einen Zustand.
     POWER_MODE_CHOICES = [
         ('auto', 'Automatisch (Zeitplan)'),
-        ('manuell_an', 'Manuell — Immer An'),
-        ('manuell_aus', 'Manuell — Immer Aus'),
+        ('manual_on', 'Manuell — Immer An'),
+        ('manual_off', 'Manuell — Immer Aus'),
     ]
     power_mode = models.CharField(max_length=20, choices=POWER_MODE_CHOICES, default='auto')
 
@@ -480,8 +489,8 @@ class Screen(models.Model):
             if not isinstance(e, dict):
                 continue
             try:
-                start_date = date.fromisoformat(e.get('von_datum', ''))
-                end_date = date.fromisoformat(e.get('bis_datum') or e.get('von_datum', ''))
+                start_date = date.fromisoformat(e.get('from_date', ''))
+                end_date = date.fromisoformat(e.get('until_date') or e.get('from_date', ''))
             except (ValueError, TypeError):
                 continue
             if start_date <= today <= end_date:
@@ -493,9 +502,9 @@ class Screen(models.Model):
         Reihenfolge: Manueller Modus > Ausnahme (Datum) > Ferienmodus > Wochentag-Zeitplan > immer an.
         Zeit wird in Europe/Berlin (settings.TIME_ZONE) gerechnet."""
         # Manueller Override hat höchste Priorität
-        if self.power_mode == 'manuell_an':
+        if self.power_mode == 'manual_on':
             return True
-        if self.power_mode == 'manuell_aus':
+        if self.power_mode == 'manual_off':
             return False
 
         now = timezone.localtime()
@@ -504,7 +513,7 @@ class Screen(models.Model):
 
         exception = self._active_exception(now.date())
         if exception is not None:
-            return self._time_in_window(time, exception.get('von', ''), exception.get('bis', ''))
+            return self._time_in_window(time, exception.get('from', ''), exception.get('until', ''))
 
         if self.holiday_mode:
             return False
@@ -515,10 +524,10 @@ class Screen(models.Model):
         for e in schedule:
             if not isinstance(e, dict):
                 continue
-            days = e.get('tage', [])
+            days = e.get('days', [])
             if not isinstance(days, list) or weekday not in days:
                 continue
-            if self._time_in_window(time, e.get('von', ''), e.get('bis', '')):
+            if self._time_in_window(time, e.get('from', ''), e.get('until', '')):
                 return True
         return False
 
@@ -555,10 +564,10 @@ class Screen(models.Model):
             for entry in self.schedule:
                 if not isinstance(entry, dict):
                     continue
-                days = entry.get('tage', [])
-                start = entry.get('von', '00:00')
-                end = entry.get('bis', '23:59')
-                view_id = entry.get('profil_id')
+                days = entry.get('days', [])
+                start = entry.get('from', '00:00')
+                end = entry.get('until', '23:59')
+                view_id = entry.get('view_id')
                 if (isinstance(days, list) and weekday in days
                         and start <= time <= end and view_id):
                     try:
@@ -594,17 +603,17 @@ class Exam(models.Model):
 
     # ─── Anzeige während der Klausur ───
     DISPLAY_MODE_CHOICES = [
-        ('vollbild', 'Vollbild (Klausur-Hinweis)'),
+        ('fullscreen', 'Vollbild (Klausur-Hinweis)'),
         ('split', 'Splitscreen (Klausur + Stundenplan)'),
         ('standard', 'Kein Zwang (Profil-Layout)'),
     ]
-    display_mode = models.CharField(max_length=10, choices=DISPLAY_MODE_CHOICES, default='vollbild',
+    display_mode = models.CharField(max_length=10, choices=DISPLAY_MODE_CHOICES, default='fullscreen',
         help_text="Wie der Bildschirm während der Klausur aussieht")
     webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='as_exam_link',
         help_text="Stundenplan-Link für den Split während der Klausur")
-    split_side = models.CharField(max_length=6, choices=[('links', 'Links'), ('rechts', 'Rechts')],
-        default='rechts', help_text="Auf welcher Seite die Klausur steht (Split)")
+    split_side = models.CharField(max_length=6, choices=DisplayView.SIDE_CHOICES,
+        default='right', help_text="Auf welcher Seite die Klausur steht (Split)")
     split_percent = models.IntegerField(default=50, help_text="Breite der Klausur-Seite in Prozent")
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -628,8 +637,8 @@ class Announcement(models.Model):
 
     PRIORITY_CHOICES = [
         ('normal', 'Normal'),
-        ('wichtig', 'Wichtig'),
-        ('dringend', 'Dringend'),
+        ('important', 'Wichtig'),
+        ('urgent', 'Dringend'),
     ]
 
     title = models.CharField(max_length=200)
@@ -717,9 +726,9 @@ class ExamTemplate(models.Model):
     title = models.CharField(max_length=200, default='Klausur')
     text = models.TextField(blank=True)
     color = models.CharField(max_length=7, default='#1e40af')
-    display_mode = models.CharField(max_length=10, choices=Exam.DISPLAY_MODE_CHOICES, default='vollbild')
+    display_mode = models.CharField(max_length=10, choices=Exam.DISPLAY_MODE_CHOICES, default='fullscreen')
     webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL, null=True, blank=True, related_name='as_template_link')
-    split_side = models.CharField(max_length=6, default='rechts')
+    split_side = models.CharField(max_length=6, default='right')
     split_percent = models.IntegerField(default=50)
     created_at = models.DateTimeField(auto_now_add=True)
 

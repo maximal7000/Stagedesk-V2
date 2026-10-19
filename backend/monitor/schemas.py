@@ -77,7 +77,7 @@ class DisplayViewSchema(Schema):
     show_pdf: bool
     active_pdf_id: Optional[int] = None
     fullscreen_header: bool = False
-    pdf_mode: str = 'durchschalten'
+    pdf_mode: str = 'cycle'
     pdf_interval: int = 10
     pdf_per_screen: int = 1
     pdf_pages: str = ''
@@ -86,7 +86,7 @@ class DisplayViewSchema(Schema):
     image_fit: str = 'contain'
     image_focus_x: int = 50
     image_focus_y: int = 50
-    split_left: str = 'klausur'
+    split_left: str = 'exam'
     split_right: str = 'webuntis'
     split_left_percent: int = 50
     theme_preset: str
@@ -138,7 +138,7 @@ class DisplayViewSchema(Schema):
     transit_disruption_bus_lines: list = []
     transit_disruption_manual: list = []
     transit_disruption_hidden: list = []
-    transit_disruption_position: str = 'unten'
+    transit_disruption_position: str = 'bottom'
     is_on_air: bool
     on_air_text: str
     on_air_since: Optional[datetime] = None
@@ -148,7 +148,7 @@ class DisplayViewSchema(Schema):
     on_air_color: str
     on_air_fullscreen: bool
     on_air_split: bool = False
-    on_air_split_side: str = 'rechts'
+    on_air_split_side: str = 'right'
     api_token: str
     refresh_interval: int
 
@@ -353,9 +353,9 @@ class ExamSchema(Schema):
     active_until: datetime
     color: str
     screen_ids: List[int] = []
-    display_mode: str = 'vollbild'
+    display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'links'
+    split_side: str = 'left'
     split_percent: int = 50
 
     @staticmethod
@@ -370,9 +370,9 @@ class ExamCreateSchema(Schema):
     active_until: datetime
     color: str = '#1e40af'
     screen_ids: List[int] = []
-    display_mode: str = 'vollbild'
+    display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'links'
+    split_side: str = 'left'
     split_percent: int = 50
 
 
@@ -394,8 +394,8 @@ class ExamDisplaySchema(Schema):
     text: str
     color: str
     active_until: datetime
-    display_mode: str = 'vollbild'
-    split_side: str = 'links'
+    display_mode: str = 'fullscreen'
+    split_side: str = 'left'
     split_percent: int = 50
 
 
@@ -464,9 +464,9 @@ class ExamTemplateCreateSchema(Schema):
     title: str = 'Klausur'
     text: str = ''
     color: str = '#1e40af'
-    display_mode: str = 'vollbild'
+    display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'links'
+    split_side: str = 'left'
     split_percent: int = 50
 
 
