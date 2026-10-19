@@ -129,25 +129,25 @@ export default function AufgabenPage() {
         }
       />
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input type="text" placeholder="Neue Aufgabe, mit Enter anlegen" value={neuerTitel}
           onChange={(e) => setNeuerTitel(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addAufgabe()}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
+          className="flex-1 bg-raised border border-line rounded-md px-3 py-2 text-sm text-fg placeholder:text-fg-subtle hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
         <Button variant="primary" icon={Plus} disabled={!neuerTitel.trim()} onClick={addAufgabe}>Hinzufügen</Button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : aufgaben.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           <EmptyState icon={ListChecks} title="Keine Aufgaben"
             description="Aufgaben, die du oben anlegst, erscheinen auch auf dem Aufgaben-Monitor." />
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={aufgaben.map(a => a.id)} strategy={verticalListSortingStrategy}>
-            <ul className="space-y-2">
+            <ul className="bg-surface rounded-lg divide-y divide-line-subtle">
               {aufgaben.map(a => (
                 <SortableAufgabe
                   key={a.id} a={a}
@@ -161,7 +161,7 @@ export default function AufgabenPage() {
           </SortableContext>
         </DndContext>
       )}
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-fg-subtle">
         Tipp: Aufgaben per Griff <GripVertical className="w-3 h-3 inline" /> neu sortieren.
         Funktioniert mit Maus, Touch (lang drücken) und Tastatur.
       </p>
@@ -189,12 +189,12 @@ function SortableAufgabe({
   };
   return (
     <li ref={setNodeRef} style={style}
-      className={`bg-gray-900 border rounded-xl p-4 ${
-        done ? 'border-gray-800 opacity-60' : 'border-gray-800 hover:border-gray-600'
-      } ${isDragging ? 'ring-2 ring-accent' : ''}`}>
+      className={`p-4 first:rounded-t-lg last:rounded-b-lg ${
+        done ? '' : 'hover:bg-raised'
+      } ${isDragging ? 'bg-raised ring-2 ring-accent' : ''}`}>
       <div className="flex items-start gap-3 flex-wrap">
         <button {...attributes} {...listeners}
-          className="shrink-0 mt-1 text-gray-500 hover:text-white cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
+          className="shrink-0 mt-1 text-fg-subtle hover:text-fg cursor-grab active:cursor-grabbing touch-none p-1 -m-1"
           aria-label="Verschieben">
           <GripVertical className="w-5 h-5" />
         </button>
@@ -203,34 +203,34 @@ function SortableAufgabe({
           aria-label={done ? 'Wieder öffnen' : 'Als erledigt markieren'}
           className="shrink-0 mt-0.5">
           {done
-            ? <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-            : <Circle className="w-6 h-6 text-gray-500 hover:text-white" />}
+            ? <CheckCircle2 className="w-6 h-6 text-ok" />
+            : <Circle className="w-6 h-6 text-fg-subtle hover:text-fg" />}
         </button>
         <div className="flex-1 min-w-[200px]">
-          <div className={`font-medium ${done ? 'text-gray-500 line-through' : 'text-white'}`}>
+          <div className={`font-medium ${done ? 'text-fg-subtle line-through' : 'text-fg'}`}>
             {a.titel}
           </div>
           {a.beschreibung && <div className="text-sm mt-0.5"><Markdown>{a.beschreibung}</Markdown></div>}
           <div className="flex flex-wrap gap-1 mt-2">
             {a.zugewiesene.map(z => (
               <span key={z.id}
-                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-gray-800 text-gray-200 ring-1 ring-inset ring-gray-700 rounded-md text-xs">
+                className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 bg-raised text-fg-muted rounded-sm text-xs">
                 {z.name}
-                <button onClick={() => toggleAssign(a, z.id)} className="hover:text-white" aria-label={`${z.name} entfernen`}>
+                <button onClick={() => toggleAssign(a, z.id)} className="hover:text-fg" aria-label={`${z.name} entfernen`}>
                   <X className="w-3 h-3" />
                 </button>
               </span>
             ))}
             <button onClick={() => setEditAssignId(editAssignId === a.id ? null : a.id)}
-              className="inline-flex items-center gap-1 px-2 py-0.5 text-gray-400 hover:text-white hover:bg-gray-800 border border-dashed border-gray-700 rounded-md text-xs transition-colors">
+              className="inline-flex items-center gap-1 px-2 py-0.5 text-fg-muted hover:text-fg hover:bg-raised border border-dashed border-line rounded-sm text-xs transition-colors">
               <Plus className="w-3 h-3" /> Zuweisen
             </button>
           </div>
           {editAssignId === a.id && (
-            <div className="mt-2 p-2 bg-gray-800/60 border border-gray-700 rounded-lg space-y-1 max-h-48 overflow-y-auto">
+            <div className="mt-2 p-2 bg-canvas rounded-lg space-y-1 max-h-48 overflow-y-auto">
               <input type="text" placeholder="Name suchen" value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full bg-gray-900 border border-gray-700 rounded-md px-2 py-1 text-white text-sm mb-1 focus:outline-none focus:border-accent" />
+                className="w-full bg-raised border border-line rounded-md px-2 py-1 text-fg text-sm mb-1 hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               {users
                 .filter(u => !search || u.name.toLowerCase().includes(search.toLowerCase())
                   || (u.username || '').toLowerCase().includes(search.toLowerCase()))
@@ -238,11 +238,11 @@ function SortableAufgabe({
                   const on = a.zugewiesene.some(z => z.id === u.id);
                   return (
                     <label key={u.id}
-                      className="flex items-center gap-2 px-2 py-1 rounded hover:bg-gray-700/60 cursor-pointer">
+                      className="flex items-center gap-2 px-2 py-1 rounded-sm hover:bg-raised cursor-pointer">
                       <input type="checkbox" checked={on}
                         onChange={() => toggleAssign(a, u.id)}
-                        className="rounded border-gray-600 bg-gray-700 accent-accent" />
-                      <span className="text-sm text-white">{u.name}</span>
+                        className="rounded-sm border-line bg-raised accent-accent" />
+                      <span className="text-sm text-fg">{u.name}</span>
                     </label>
                   );
                 })
@@ -254,43 +254,43 @@ function SortableAufgabe({
           {(subtasks.length > 0 || !done) && (
             <div className="mt-3 space-y-1">
               {subtasks.length > 0 && (
-                <div className="text-[11px] text-gray-500 mb-1 tabular-nums">
+                <div className="text-[11px] text-fg-subtle mb-1 tabular-nums">
                   Unteraufgaben {subDone}/{subtasks.length}
                 </div>
               )}
               {subtasks.map((s) => (
                 <div key={s.id} className="flex items-center gap-2 group/sub">
                   <button onClick={() => toggleSubtask(a.id, s)}
-                    className="text-gray-500 hover:text-white">
+                    className="text-fg-subtle hover:text-fg">
                     {s.erledigt
-                      ? <CheckSquare className="w-4 h-4 text-emerald-400" />
+                      ? <CheckSquare className="w-4 h-4 text-ok" />
                       : <Square className="w-4 h-4" />}
                   </button>
-                  <span className={`text-sm flex-1 ${s.erledigt ? 'text-gray-500 line-through' : 'text-gray-200'}`}>
+                  <span className={`text-sm flex-1 ${s.erledigt ? 'text-fg-subtle line-through' : 'text-fg-muted'}`}>
                     {s.titel}
                   </span>
                   <button onClick={() => removeSubtask(a.id, s.id)} aria-label={`Unteraufgabe „${s.titel}" löschen`}
-                    className="opacity-0 group-hover/sub:opacity-100 text-gray-500 hover:text-red-400 p-1">
+                    className="opacity-0 group-hover/sub:opacity-100 text-fg-subtle hover:text-bad p-1">
                     <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
               {!done && (
                 <div className="flex items-center gap-2 mt-1">
-                  <Plus className="w-3.5 h-3.5 text-gray-600" />
+                  <Plus className="w-3.5 h-3.5 text-fg-subtle" />
                   <input type="text" placeholder="Unteraufgabe hinzufügen…" value={newSubtask}
                     onChange={(e) => setNewSubtask(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') { e.preventDefault(); addSubtask(a.id, newSubtask); setNewSubtask(''); }
                     }}
-                    className="flex-1 bg-transparent border-b border-gray-800 focus:border-gray-600 px-1 py-0.5 text-sm text-white placeholder-gray-600 outline-none" />
+                    className="flex-1 bg-transparent border-b border-line-subtle focus:border-line px-1 py-0.5 text-sm text-fg placeholder:text-fg-subtle outline-none" />
                 </div>
               )}
             </div>
           )}
         </div>
         <Button variant="ghost" size="sm" icon={Trash2} title="Löschen" aria-label={`Aufgabe „${a.titel}" löschen`}
-          className="!text-gray-500 hover:!text-red-400" onClick={() => remove(a)} />
+          className="!text-fg-subtle hover:!text-bad" onClick={() => remove(a)} />
       </div>
     </li>
   );

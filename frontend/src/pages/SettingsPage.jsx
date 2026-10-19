@@ -19,8 +19,8 @@ function SectionHead({ title, description, children }) {
   return (
     <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
       <div className="min-w-0">
-        <h3 className="font-display text-lg font-semibold tracking-tight text-white leading-tight">{title}</h3>
-        {description && <p className="text-sm text-gray-400 mt-1 max-w-prose">{description}</p>}
+        <h3 className="font-display text-lg font-semibold tracking-tight text-fg leading-tight">{title}</h3>
+        {description && <p className="text-sm text-fg-muted mt-1 max-w-prose">{description}</p>}
       </div>
       {children && <div className="flex gap-2 flex-wrap">{children}</div>}
     </div>
@@ -30,13 +30,18 @@ function SectionHead({ title, description, children }) {
 // Hinweiszeile (Info/Warnung) im Panel
 function Notice({ tone = 'neutral', children }) {
   const cls = {
-    neutral: 'bg-gray-800/50 border-gray-700 text-gray-300',
-    warning: 'bg-amber-500/10 border-amber-500/30 text-amber-200',
-    danger: 'bg-red-500/10 border-red-500/30 text-red-200',
+    neutral: 'bg-raised text-fg-muted',
+    warning: 'bg-raised text-fg',
+    danger: 'bg-raised text-fg',
+  }[tone];
+  const iconCls = {
+    neutral: 'text-fg-subtle',
+    warning: 'text-warn',
+    danger: 'text-bad',
   }[tone];
   return (
-    <div className={`mb-4 p-3 border rounded-lg flex items-start gap-2.5 text-sm ${cls}`}>
-      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+    <div className={`mb-4 p-3 rounded-lg flex items-start gap-2.5 text-sm ${cls}`}>
+      <AlertCircle className={`w-4 h-4 shrink-0 mt-0.5 ${iconCls}`} />
       <div>{children}</div>
     </div>
   );
@@ -112,12 +117,12 @@ export default function SettingsPage() {
       <div className="mb-6 flex items-center gap-2">
         {mobileDetail && (
           <button onClick={() => setMobileDetail(false)} aria-label="Zurück zur Übersicht"
-            className="md:hidden p-2 -ml-2 text-gray-400 hover:text-white rounded-lg">
+            className="md:hidden p-2 -ml-2 text-fg-muted hover:text-fg rounded-md">
             <ChevronLeft className="w-5 h-5" />
           </button>
         )}
         <div className="min-w-0">
-          <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-white truncate">
+          <h1 className="font-display text-[1.6rem] leading-none font-bold tracking-tight text-fg truncate">
             <span className="md:hidden">{mobileDetail ? activeTabName : 'Einstellungen'}</span>
             <span className="hidden md:inline">Einstellungen</span>
           </h1>
@@ -127,7 +132,7 @@ export default function SettingsPage() {
       <div className="md:flex md:gap-6 md:items-start">
         {/* Nav-Liste (wie System-Einstellungen) */}
         <aside className={`md:w-60 md:shrink-0 md:sticky md:top-4 ${mobileDetail ? 'hidden md:block' : 'block'}`}>
-          <nav className="space-y-0.5 md:bg-gray-900 md:border md:border-gray-800 md:rounded-xl md:p-1.5">
+          <nav className="space-y-0.5 md:bg-surface md:rounded-lg md:p-1.5">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -136,16 +141,16 @@ export default function SettingsPage() {
                   key={tab.id}
                   onClick={() => { setActiveTab(tab.id); setMobileDetail(true); }}
                   aria-current={active ? 'page' : undefined}
-                  className={`relative w-full flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-lg text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`relative w-full flex items-center gap-3 px-3 py-2.5 md:py-2 rounded-md text-left text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
                     active
-                      ? 'md:bg-gray-800 md:text-white text-gray-200 bg-gray-800/60'
-                      : 'text-gray-300 hover:bg-gray-800/70 hover:text-white'
+                      ? 'md:bg-raised md:text-fg text-fg-muted bg-raised'
+                      : 'text-fg-muted hover:bg-raised hover:text-fg'
                   }`}
                 >
-                  {active && <span className="hidden md:block absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r bg-accent" aria-hidden="true" />}
-                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'md:text-accent' : 'text-gray-400'}`} />
+                  {active && <span className="hidden md:block absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-sm bg-accent" aria-hidden="true" />}
+                  <Icon className={`w-4 h-4 shrink-0 ${active ? 'md:text-accent-fg' : 'text-fg-subtle'}`} />
                   <span className="flex-1 font-medium">{tab.name}</span>
-                  <ChevronRight className="w-4 h-4 text-gray-500 md:hidden" />
+                  <ChevronRight className="w-4 h-4 text-fg-subtle md:hidden" />
                 </button>
               );
             })}
@@ -154,7 +159,7 @@ export default function SettingsPage() {
 
         {/* Detail-Inhalt */}
         <main className={`flex-1 min-w-0 ${mobileDetail ? 'block' : 'hidden md:block'}`}>
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 sm:p-6">
+      <div>
         {/* Profile Tab */}
         {activeTab === 'profile' && <ProfileTab />}
 
@@ -177,20 +182,18 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleThemeChange('dark')}
                   disabled={!!forcedTheme || saving}
-                  className={`relative p-4 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`relative p-4 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
                     effectiveTheme === 'dark'
-                      ? 'border-accent bg-accent/[0.06] ring-1 ring-inset ring-accent/40'
-                      : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'
-                  } ${forcedTheme ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? 'bg-raised'
+                      : 'bg-surface hover:bg-raised'
+                  } ${forcedTheme ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg]:!text-fg-disabled' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-11 h-11 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-                      <Moon className="w-5 h-5 text-gray-200" />
-                    </div>
-                    <span className="text-sm font-medium text-white">Dunkel</span>
+                    <Moon className="w-6 h-6 text-fg-subtle" />
+                    <span className="text-sm font-medium text-fg">Dunkel</span>
                   </div>
                   {effectiveTheme === 'dark' && (
-                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent" />
+                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
                   )}
                 </button>
 
@@ -198,20 +201,18 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleThemeChange('light')}
                   disabled={!!forcedTheme || !hasPermission('theme.light_mode') || saving}
-                  className={`relative p-4 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`relative p-4 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
                     effectiveTheme === 'light'
-                      ? 'border-accent bg-accent/[0.06] ring-1 ring-inset ring-accent/40'
-                      : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'
-                  } ${(forcedTheme || !hasPermission('theme.light_mode')) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? 'bg-raised'
+                      : 'bg-surface hover:bg-raised'
+                  } ${(forcedTheme || !hasPermission('theme.light_mode')) ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg]:!text-fg-disabled' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-11 h-11 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-                      <Sun className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <span className="text-sm font-medium text-white">Hell</span>
+                    <Sun className="w-6 h-6 text-warn" />
+                    <span className="text-sm font-medium text-fg">Hell</span>
                   </div>
                   {effectiveTheme === 'light' && (
-                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent" />
+                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
                   )}
                 </button>
 
@@ -219,20 +220,18 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleThemeChange('system')}
                   disabled={!!forcedTheme || saving}
-                  className={`relative p-4 rounded-xl border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  className={`relative p-4 rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
                     effectiveTheme === 'system'
-                      ? 'border-accent bg-accent/[0.06] ring-1 ring-inset ring-accent/40'
-                      : 'border-gray-700 hover:border-gray-500 bg-gray-800/30'
-                  } ${forcedTheme ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      ? 'bg-raised'
+                      : 'bg-surface hover:bg-raised'
+                  } ${forcedTheme ? 'cursor-not-allowed [&_span]:!text-fg-disabled [&_svg]:!text-fg-disabled' : ''}`}
                 >
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-11 h-11 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center">
-                      <Monitor className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <span className="text-sm font-medium text-white">Wie System</span>
+                    <Monitor className="w-6 h-6 text-fg-subtle" />
+                    <span className="text-sm font-medium text-fg">Wie System</span>
                   </div>
                   {effectiveTheme === 'system' && (
-                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent" />
+                    <CheckCircle className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
                   )}
                 </button>
               </div>
@@ -279,31 +278,29 @@ export default function SettingsPage() {
                 <EmptyState icon={Globe} title="Keine Sitzungen gefunden"
                   description="Sitzungen erscheinen hier, sobald du dich auf einem Gerät anmeldest." />
               ) : (
-                <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
+                <div className="divide-y divide-line-subtle bg-surface rounded-lg overflow-hidden">
                   {sessions.map((session) => {
                     const DeviceIcon = getDeviceIcon(session.device_info);
                     return (
                       <div
                         key={session.id}
-                        className={`p-3.5 ${session.is_current ? 'bg-emerald-500/[0.05]' : 'bg-gray-800/20'}`}
+                        className="p-3.5"
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                              session.is_current ? 'bg-emerald-500/15' : 'bg-gray-800'
-                            }`}>
-                              <DeviceIcon className={`w-4 h-4 ${
-                                session.is_current ? 'text-emerald-400' : 'text-gray-400'
+                            <div className="shrink-0">
+                              <DeviceIcon className={`w-5 h-5 ${
+                                session.is_current ? 'text-ok' : 'text-fg-subtle'
                               }`} />
                             </div>
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-white truncate">
+                                <span className="text-sm font-medium text-fg truncate">
                                   {session.device_info}
                                 </span>
                                 {session.is_current && <StatusBadge tone="positive" dot label="Dieses Gerät" />}
                               </div>
-                              <div className="text-xs text-gray-500 tabular-nums mt-0.5">
+                              <div className="text-xs text-fg-subtle tabular-nums mt-0.5">
                                 {session.ip_address || 'IP unbekannt'} · zuletzt aktiv {new Date(session.last_activity).toLocaleString('de-DE')}
                               </div>
                             </div>
@@ -311,7 +308,7 @@ export default function SettingsPage() {
                           {!session.is_current && (
                             <button
                               onClick={() => handleRevokeSession(session.id)}
-                              className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors shrink-0"
+                              className="p-2 text-fg-muted hover:text-bad hover:bg-raised rounded-sm transition-colors shrink-0"
                               title="Sitzung beenden" aria-label="Sitzung beenden"
                             >
                               <LogOut className="w-4 h-4" />
@@ -334,18 +331,16 @@ export default function SettingsPage() {
               <SectionHead title="Zwei-Faktor-Anmeldung"
                 description="Schützt dein Konto zusätzlich mit einem Code aus einer Authenticator-App." />
 
-              <div className="p-4 rounded-lg border border-gray-800 bg-gray-800/30">
+              <div className="p-4 rounded-lg bg-surface">
                 <div className="flex items-center justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                      profile?.two_factor_enabled ? 'bg-emerald-500/15' : 'bg-gray-800'
-                    }`}>
-                      <Key className={`w-4 h-4 ${
-                        profile?.two_factor_enabled ? 'text-emerald-400' : 'text-gray-400'
+                    <div className="shrink-0">
+                      <Key className={`w-5 h-5 ${
+                        profile?.two_factor_enabled ? 'text-ok' : 'text-fg-subtle'
                       }`} />
                     </div>
                     <div>
-                      <span className="text-sm font-medium text-white">Status</span>
+                      <span className="text-sm font-medium text-fg">Status</span>
                       <div className="mt-1">
                         {profile?.two_factor_enabled
                           ? <StatusBadge tone="positive" dot label="Aktiviert" />
@@ -357,14 +352,14 @@ export default function SettingsPage() {
                     href={`${import.meta.env.VITE_KEYCLOAK_URL || 'https://auth.t410.de'}/realms/${import.meta.env.VITE_KEYCLOAK_REALM || 'technik-ag'}/account/#/security/signingin`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-lg transition-colors"
+                    className="inline-flex items-center gap-2 px-3.5 py-2 text-sm bg-accent hover:bg-accent-hover text-white font-medium rounded-md transition-colors"
                   >
                     {profile?.two_factor_enabled ? 'Verwalten' : 'Aktivieren'}
                   </a>
                 </div>
               </div>
 
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-fg-subtle mt-2">
                 Die Einrichtung läuft über dein Keycloak-Konto und öffnet sich in einem neuen Tab.
               </p>
             </div>
@@ -415,17 +410,17 @@ function NotificationsTab() {
         ) : status.permission === 'denied' ? (
           <Notice tone="danger">
             <p className="font-medium">Im Browser blockiert.</p>
-            <p className="mt-0.5 opacity-90">Über das Schloss-Symbol neben der Adresszeile kannst du Benachrichtigungen wieder erlauben.</p>
+            <p className="mt-0.5">Über das Schloss-Symbol neben der Adresszeile kannst du Benachrichtigungen wieder erlauben.</p>
           </Notice>
         ) : (
-          <div className="p-4 rounded-lg border border-gray-800 bg-gray-800/30 flex items-center justify-between gap-3 flex-wrap">
+          <div className="p-4 rounded-lg bg-surface flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${status.subscribed ? 'bg-emerald-500/15' : 'bg-gray-800'}`}>
-                <Bell className={`w-4 h-4 ${status.subscribed ? 'text-emerald-400' : 'text-gray-400'}`} />
+              <div className="shrink-0">
+                <Bell className={`w-5 h-5 ${status.subscribed ? 'text-ok' : 'text-fg-subtle'}`} />
               </div>
               <div>
-                <span className="text-sm font-medium text-white">{status.subscribed ? 'Auf diesem Gerät aktiv' : 'Auf diesem Gerät aus'}</span>
-                <p className="text-xs text-gray-500 mt-0.5">Gilt pro Browser. Jedes Gerät einzeln aktivieren.</p>
+                <span className="text-sm font-medium text-fg">{status.subscribed ? 'Auf diesem Gerät aktiv' : 'Auf diesem Gerät aus'}</span>
+                <p className="text-xs text-fg-subtle mt-0.5">Gilt pro Browser. Jedes Gerät einzeln aktivieren.</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -443,7 +438,7 @@ function NotificationsTab() {
             </div>
           </div>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-fg-subtle mt-2">
           Auf iPhone und iPad klappt Push nur, wenn Stagedesk über „Zum Home-Bildschirm" installiert ist.
         </p>
       </div>
@@ -453,11 +448,11 @@ function NotificationsTab() {
   );
 }
 
-function NotifSwitch({ on, onClick, disabled, offColor = 'bg-gray-600' }) {
+function NotifSwitch({ on, onClick, disabled, offColor = 'bg-hover' }) {
   return (
     <button onClick={onClick} disabled={disabled}
       role="switch" aria-checked={on}
-      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900 ${on ? 'bg-accent' : offColor} disabled:opacity-40`}>
+      className={`relative w-11 h-6 rounded-full transition-colors shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${on ? 'bg-accent' : offColor} disabled:cursor-not-allowed disabled:bg-raised`}>
       <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${on ? 'translate-x-5' : ''}`} />
     </button>
   );
@@ -490,14 +485,14 @@ function NotificationCategories() {
     <>
       <div>
         <SectionHead title="Kategorien" description="Wähle, worüber du informiert werden willst." />
-        <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
+        <div className="divide-y divide-line-subtle bg-surface rounded-lg overflow-hidden">
           {cfg.kinds.map(k => {
             const globalOff = cfg.global_disabled.includes(k.value);
             const on = !cfg.my_disabled.includes(k.value) && !globalOff;
             return (
-              <div key={k.value} className="flex items-center justify-between gap-3 px-3.5 py-3 bg-gray-800/20">
+              <div key={k.value} className="flex items-center justify-between gap-3 px-3.5 py-3">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-sm text-white">{k.label}</span>
+                  <span className="text-sm text-fg">{k.label}</span>
                   {globalOff && <StatusBadge tone="warning" label="Systemweit aus" />}
                 </div>
                 <NotifSwitch on={on} disabled={globalOff} onClick={() => toggleMine(k.value)} />
@@ -508,16 +503,16 @@ function NotificationCategories() {
       </div>
 
       {cfg.is_admin && (
-        <div className="pt-6 border-t border-gray-800">
+        <div className="pt-6 border-t border-line-subtle">
           <SectionHead title="Systemweit (Admin)"
             description="Abgeschaltete Kategorien werden an niemanden mehr verschickt, unabhängig von den persönlichen Einstellungen." />
-          <div className="divide-y divide-gray-800 border border-gray-800 rounded-lg overflow-hidden">
+          <div className="divide-y divide-line-subtle bg-surface rounded-lg overflow-hidden">
             {cfg.kinds.map(k => {
               const on = !cfg.global_disabled.includes(k.value);
               return (
-                <div key={k.value} className="flex items-center justify-between gap-3 px-3.5 py-3 bg-gray-800/20">
-                  <span className="text-sm text-white">{k.label}</span>
-                  <NotifSwitch on={on} offColor="bg-red-600" onClick={() => toggleGlobal(k.value)} />
+                <div key={k.value} className="flex items-center justify-between gap-3 px-3.5 py-3">
+                  <span className="text-sm text-fg">{k.label}</span>
+                  <NotifSwitch on={on} offColor="bg-bad" onClick={() => toggleGlobal(k.value)} />
                 </div>
               );
             })}
@@ -579,14 +574,14 @@ function ProfileTab() {
       <div>
         <SectionHead title="Profilbild" description="Erscheint in der Seitenleiste, bei Zuweisungen und in der Anwesenheit." />
         <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-800 ring-1 ring-gray-700 flex items-center justify-center shrink-0">
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-raised flex items-center justify-center shrink-0">
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
-              : <User className="w-9 h-9 text-gray-500" />
+              : <User className="w-9 h-9 text-fg-subtle" />
             }
           </div>
           <div className="flex flex-col gap-2">
-            <label className="inline-flex items-center gap-2 px-3 py-2 bg-gray-800/60 hover:bg-gray-800 border border-gray-700 text-gray-200 text-sm font-medium rounded-lg cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-accent">
+            <label className="inline-flex items-center gap-2 px-3 py-2 bg-raised hover:bg-hover text-fg text-sm font-medium rounded-md cursor-pointer transition-colors focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-canvas">
               {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
               {profile?.avatar_url ? 'Bild ersetzen' : 'Bild hochladen'}
               <input type="file" className="hidden" accept="image/*"
@@ -594,21 +589,21 @@ function ProfileTab() {
             </label>
             {profile?.avatar_url && (
               <button onClick={removeAvatar}
-                className="inline-flex items-center gap-1.5 self-start text-sm text-gray-400 hover:text-red-400">
+                className="inline-flex items-center gap-1.5 self-start text-sm text-fg-muted hover:text-bad">
                 <Trash2 className="w-3.5 h-3.5" /> Entfernen
               </button>
             )}
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-3">Max. 5 MB · JPG, PNG, GIF oder WebP</p>
+        <p className="text-xs text-fg-subtle mt-3">Max. 5 MB · JPG, PNG, GIF oder WebP</p>
       </div>
 
       {/* Landing Page */}
-      <div className="pt-6 border-t border-gray-800">
+      <div className="pt-6 border-t border-line-subtle">
         <SectionHead title="Startseite" description="Diese Seite öffnet sich direkt nach dem Anmelden." />
         <select value={landing} onChange={(e) => saveLanding(e.target.value)}
           disabled={saving}
-          className="w-full md:w-80 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:opacity-60">
+          className="w-full md:w-80 bg-raised border border-line rounded-md px-3 py-2 text-sm text-fg hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent disabled:text-fg-disabled">
           {LANDING_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
         </select>
       </div>
@@ -656,27 +651,27 @@ function KalenderAboTab() {
         description="Alle Stagedesk-Termine in Apple Kalender, Google Kalender, Thunderbird oder Outlook. Änderungen kommen dort automatisch an." />
 
       {loading ? (
-        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-6"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : (
         <>
           <div>
-            <label className="block text-xs font-medium text-gray-400 mb-1.5">Persönliche Abo-Adresse</label>
+            <label className="block text-sm font-medium text-fg-muted mb-1.5">Persönliche Abo-Adresse</label>
             <div className="flex gap-2 flex-wrap">
               <input type="text" readOnly value={url}
                 onFocus={(e) => e.target.select()}
-                className="flex-1 min-w-[260px] bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-gray-200 text-xs font-mono focus:outline-none focus:border-accent" />
+                className="flex-1 min-w-[260px] bg-raised border border-line rounded-md px-3 py-2 text-fg-muted text-xs font-mono hover:border-line-strong focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent" />
               <Button variant="primary" icon={Copy} onClick={copy}>Kopieren</Button>
             </div>
-            <p className="text-xs text-gray-500 mt-2">
-              Für Apple Kalender als <code className="text-gray-400">webcal://</code>-Link:{' '}
-              <a href={webcalUrl} className="text-gray-200 underline decoration-accent underline-offset-2 hover:text-white">direkt abonnieren</a>.
+            <p className="text-xs text-fg-subtle mt-2">
+              Für Apple Kalender als <code className="text-fg-muted">webcal://</code>-Link:{' '}
+              <a href={webcalUrl} className="text-fg-muted underline decoration-accent underline-offset-2 hover:text-fg">direkt abonnieren</a>.
             </p>
           </div>
 
-          <div className="pt-4 border-t border-gray-800">
-            <p className="text-sm text-gray-400 mb-3">
+          <div className="pt-4 border-t border-line-subtle">
+            <p className="text-sm text-fg-muted mb-3">
               Adresse versehentlich geteilt? Erzeuge eine neue.
-              <span className="text-amber-400"> Bestehende Abos funktionieren danach nicht mehr.</span>
+              <span className="text-warn"> Bestehende Abos funktionieren danach nicht mehr.</span>
             </p>
             <Button variant="secondary" onClick={regenerate} disabled={regenerating}
               icon={regenerating ? Loader2 : RefreshCw} className={regenerating ? '[&>svg]:animate-spin' : ''}>

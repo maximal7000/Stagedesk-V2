@@ -23,8 +23,8 @@ const KIND_TONE = {
 function FilterTab({ active, onClick, children }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active}
-      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-        active ? 'bg-gray-700 text-white shadow-sm' : 'text-gray-400 hover:text-white'
+      className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas ${
+        active ? 'bg-raised text-fg' : 'text-fg-muted hover:text-fg hover:bg-raised'
       }`}>
       {children}
     </button>
@@ -80,7 +80,7 @@ export default function NotificationsPage() {
         meta={<span className="tabular-nums">{unread > 0 ? `${unread} ungelesen` : 'Alles gelesen'}</span>}
         actions={
           <>
-            <div className="flex items-center gap-0.5 p-0.5 bg-gray-800/60 border border-gray-700 rounded-lg">
+            <div className="flex items-center gap-0.5 p-0.5 bg-surface rounded-md">
               <FilterTab active={!onlyUnread} onClick={() => setOnlyUnread(false)}>Alle</FilterTab>
               <FilterTab active={onlyUnread} onClick={() => setOnlyUnread(true)}>Ungelesen</FilterTab>
             </div>
@@ -94,9 +94,9 @@ export default function NotificationsPage() {
       />
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-gray-500" /></div>
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-fg-subtle" /></div>
       ) : items.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl">
+        <div className="bg-surface rounded-lg">
           {onlyUnread ? (
             <EmptyState icon={Check} title="Alles gelesen"
               description="Es gibt keine ungelesenen Benachrichtigungen."
@@ -107,28 +107,28 @@ export default function NotificationsPage() {
           )}
         </div>
       ) : (
-        <ul className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 overflow-hidden">
+        <ul className="bg-surface rounded-lg divide-y divide-line-subtle overflow-hidden">
           {items.map((n) => (
             <li key={n.id}
-              className={`group relative flex items-start gap-3 p-4 transition-colors hover:bg-gray-800/40 ${n.is_read ? '' : 'bg-accent/[0.04]'}`}>
+              className="group relative flex items-start gap-3 p-4 transition-colors hover:bg-raised">
               <span className="shrink-0 w-24 pt-0.5">
                 <StatusBadge tone={KIND_TONE[n.kind] || 'neutral'} label={KIND_LABEL[n.kind] || n.kind} />
               </span>
-              <button onClick={() => open(n)} className="flex-1 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded">
+              <button onClick={() => open(n)} className="flex-1 min-w-0 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent rounded-sm">
                 <div className="flex items-center gap-2">
                   {!n.is_read && <span className="w-1.5 h-1.5 rounded-full bg-accent shrink-0" aria-label="ungelesen" />}
-                  <span className={`truncate ${n.is_read ? 'text-gray-300' : 'text-white font-semibold'}`}>
+                  <span className={`truncate ${n.is_read ? 'text-fg-muted' : 'text-fg font-semibold'}`}>
                     {n.title}
                   </span>
-                  {n.link && <ExternalLink className="w-3.5 h-3.5 text-gray-500 shrink-0" />}
+                  {n.link && <ExternalLink className="w-3.5 h-3.5 text-fg-subtle shrink-0" />}
                 </div>
-                {n.body && <p className="text-sm text-gray-400 mt-1 whitespace-pre-wrap">{n.body}</p>}
-                <div className="text-xs text-gray-500 tabular-nums mt-1">
+                {n.body && <p className="text-sm text-fg-muted mt-1 whitespace-pre-wrap">{n.body}</p>}
+                <div className="text-xs text-fg-subtle tabular-nums mt-1">
                   {n.created_at ? new Date(n.created_at).toLocaleString('de-DE') : ''}
                 </div>
               </button>
               <button onClick={() => remove(n)}
-                className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="p-1.5 text-fg-subtle hover:text-bad hover:bg-raised rounded-sm sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 title="Löschen" aria-label="Benachrichtigung löschen">
                 <Trash2 className="w-4 h-4" />
               </button>
