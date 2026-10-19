@@ -2,6 +2,7 @@
 
 2026-10-19 ist ein Montag.
 """
+import itertools
 from datetime import date, datetime
 from io import StringIO
 from unittest import mock
@@ -178,6 +179,97 @@ class SubstitutionsTest(WebUntisTestBase):
             {'subject': 'Wandertag', 'text': '<p>Kl. 5 bis 7 <b>frei</b></p>'}]}})
         result = self.run_with(FakeUntis(getSubstitutions=[]), news=news)
         self.assertEqual(result['news'], 'Wandertag: Kl. 5 bis 7 frei')
+
+
+class ResilienceTest(WebUntisTestBase):
+    """Budget, Single-Flight, letztes gutes Ergebnis, Fehlerzähler, Abmelden (Review-Runde 1)."""
+
+    GOOD = [subst(20261019, 1140, 1225, 'cancel'), subst(20261020, 800, 845, 'cancel', kl='9b')]
+
+    def prime_last_good(self):
+        good = self.run_with(FakeUntis(getSubstitutions=self.GOOD))
+        cache.delete(webuntis.CACHE_KEY)
+        return good
+
+    def test_deadline_exceeded_falls_back_to_last_good(self):
+        good = self.prime_last_good()
+        fake = FakeUntis(getSubstitutions=self.GOOD)
+        clock = itertools.chain([0, 0], itertools.repeat(100))
+        with mock.patch.object(webuntis.time, 'monotonic', side_effect=lambda: next(clock)):
+            result = self.run_with(fake)
+        self.assertEqual(fake.calls, ['authenticate', 'logout'])
+        self.assertEqual(result, good)
+        self.assertEqual(cache.get(webuntis.CACHE_KEY), good)
+
+    def test_lock_held_returns_last_good_without_rpc(self):
+        good = self.prime_last_good()
+        cache.add(webuntis.LOCK_KEY, 1, 30)
+        fake = FakeUntis(getSubstitutions=self.GOOD)
+        self.assertEqual(self.run_with(fake), good)
+        cache.delete(webuntis.LAST_GOOD_KEY)
+        self.assertEqual(self.run_with(fake), {'source': 'unavailable', 'news': None, 'days': []})
+        self.assertEqual(fake.calls, [])
+
+    def test_lock_released_after_refresh(self):
+        self.run_with(FakeUntis(authenticate=OSError('timeout')))
+        self.assertIsNone(cache.get(webuntis.LOCK_KEY))
+
+    def test_last_good_only_with_relevant_days(self):
+        self.prime_last_good()
+        tuesday = local(2026, 10, 20, 8)
+        result = self.run_with(FakeUntis(authenticate=OSError('timeout')), now=tuesday)
+        self.assertEqual([(d['date'], d['label']) for d in result['days']], [('2026-10-20', 'Heute')])
+        cache.delete(webuntis.CACHE_KEY)
+        result = self.run_with(FakeUntis(authenticate=OSError('timeout')), now=local(2026, 10, 21, 8))
+        self.assertEqual(result['source'], 'unavailable')
+
+    def test_single_failure_keeps_source_second_failure_saves_unavailable(self):
+        self.prime_last_good()
+        checked_at = MonitorSettings.load().webuntis_checked_at
+        failing = FakeUntis(authenticate=OSError('timeout'))
+        self.run_with(failing, now=local(2026, 10, 19, 9))
+        settings = MonitorSettings.load()
+        self.assertEqual(settings.webuntis_source, 'substitutions')
+        self.assertEqual(settings.webuntis_checked_at, checked_at)
+        cache.delete(webuntis.CACHE_KEY)
+        self.run_with(failing, now=local(2026, 10, 19, 10))
+        settings = MonitorSettings.load()
+        self.assertEqual(settings.webuntis_source, 'unavailable')
+        self.assertEqual(settings.webuntis_checked_at, local(2026, 10, 19, 10))
+
+    def test_success_resets_failure_count(self):
+        failing = FakeUntis(authenticate=OSError('timeout'))
+        self.run_with(failing)
+        cache.delete(webuntis.CACHE_KEY)
+        self.prime_last_good()
+        self.run_with(failing)
+        self.assertEqual(MonitorSettings.load().webuntis_source, 'substitutions')
+
+    def test_checked_at_updated_without_source_change(self):
+        self.prime_last_good()
+        self.run_with(FakeUntis(getSubstitutions=[]), now=local(2026, 10, 19, 9))
+        settings = MonitorSettings.load()
+        self.assertEqual(settings.webuntis_source, 'substitutions')
+        self.assertEqual(settings.webuntis_checked_at, local(2026, 10, 19, 9))
+
+    def test_missing_credentials_saves_unavailable(self):
+        settings = MonitorSettings.load()
+        settings.webuntis_school = ''
+        settings.webuntis_source = 'substitutions'
+        settings.save()
+        webuntis.get_substitutions(MONDAY_8)
+        self.assertEqual(MonitorSettings.load().webuntis_source, 'unavailable')
+
+    def test_logout_after_errors(self):
+        cases = [
+            (FakeUntis(getSubstitutions=WebUntisError(-1, 'kaputt')), None),
+            (FakeUntis(getSubstitutions=NO_RIGHT, getKlassen=OSError('timeout')), None),
+            (FakeUntis(getSubstitutions=[]), mock.Mock(side_effect=OSError)),
+        ]
+        for fake, news in cases:
+            cache.clear()
+            self.run_with(fake, news=news)
+            self.assertEqual(fake.calls[-1], 'logout', fake.calls)
 
 
 class NextSchoolDayTest(TestCase):

@@ -5,12 +5,16 @@ Quelle wird automatisch erkannt: getSubstitutions, bei fehlendem Recht (-8509) d
 Stundenplan aller Klassen, sonst "unavailable". Die gesamte Antwort liegt 5 Minuten
 im Django-Cache (Fehler 60 s), gemeinsam für alle Bildschirme.
 
+Ein Abruf hat ein Gesamtbudget (DEADLINE_SECONDS). Nur ein Worker lädt gleichzeitig
+(Sperre im Cache); scheitert ein Abruf, gilt das letzte gute Ergebnis weiter.
+
 Es werden keine Zugangsdaten und keine Datenzeilen geloggt.
 """
 import http.cookiejar
 import json
 import logging
 import re
+import time
 import urllib.parse
 import urllib.request
 from datetime import date, datetime, timedelta
@@ -24,9 +28,18 @@ from .power import is_holiday
 logger = logging.getLogger(__name__)
 
 CACHE_KEY = 'monitor:webuntis:subs'
+LOCK_KEY = 'monitor:webuntis:subs:lock'
+LAST_GOOD_KEY = 'monitor:webuntis:subs:last_good'
+FAILURES_KEY = 'monitor:webuntis:subs:failures'
 CACHE_SECONDS = 300
 CACHE_SECONDS_UNAVAILABLE = 60
+LOCK_SECONDS = 30
+LAST_GOOD_SECONDS = 24 * 3600
+FAILURES_SECONDS = 3600
+# Erst nach so vielen Fehlschlägen in Folge wird "unavailable" gespeichert.
+FAILURES_BEFORE_UNAVAILABLE = 2
 TIMEOUT = 5
+DEADLINE_SECONDS = 20
 NO_RIGHT_CODE = -8509
 # Höchstens so weit nach dem nächsten Schultag suchen (lange Ferien).
 MAX_LOOKAHEAD_DAYS = 60
@@ -46,6 +59,10 @@ class WebUntisError(Exception):
         self.message = message
 
 
+class DeadlineExceeded(Exception):
+    """Das Gesamtbudget eines Abrufs ist aufgebraucht."""
+
+
 class WebUntisSession:
     """Verbindung zu einem WebUntis-Server (Basis-URL plus Cookie-Jar)."""
 
@@ -55,12 +72,19 @@ class WebUntisSession:
         self.rpc_url = f"https://{server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(school)}"
         self.cookie_jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookie_jar))
+        # time.monotonic()-Zeitpunkt, ab dem keine Aufrufe mehr starten (None = ohne Budget).
+        self.deadline = None
+
+    def _timeout(self):
+        if self.deadline is None:
+            return TIMEOUT
+        return max(0.1, min(TIMEOUT, self.deadline - time.monotonic()))
 
     def call(self, method, params=None):
         """JSON-RPC-Aufruf. Gibt `result` zurück, wirft WebUntisError bei Fehlerantwort."""
         body = json.dumps({"id": "1", "method": method, "params": params or {}, "jsonrpc": "2.0"}).encode()
         req = urllib.request.Request(self.rpc_url, data=body, headers={"Content-Type": "application/json"})
-        with self.opener.open(req, timeout=TIMEOUT) as resp:
+        with self.opener.open(req, timeout=self._timeout()) as resp:
             payload = json.loads(resp.read())
         if 'error' in payload:
             error = payload['error'] or {}
@@ -72,7 +96,7 @@ class WebUntisSession:
         url = f"https://{self.server}{path}"
         if query:
             url += '?' + urllib.parse.urlencode(query)
-        with self.opener.open(urllib.request.Request(url), timeout=TIMEOUT) as resp:
+        with self.opener.open(urllib.request.Request(url), timeout=self._timeout()) as resp:
             return json.loads(resp.read())
 
 
@@ -86,10 +110,22 @@ def _credentials():
     return settings
 
 
-def _login(settings):
+def _check_deadline(session):
+    if session.deadline is not None and time.monotonic() >= session.deadline:
+        raise DeadlineExceeded()
+
+
+def _rpc(session, method, params=None):
+    """RPC mit Budgetprüfung vor dem Aufruf."""
+    _check_deadline(session)
+    return session.call(method, params)
+
+
+def _login(settings, deadline=None):
     """Anmelden (ohne Benutzername anonym mit '#anonymous#'). Wirft bei Fehler."""
     session = WebUntisSession(settings.webuntis_server, settings.webuntis_school)
-    session.call("authenticate", {
+    session.deadline = deadline
+    _rpc(session, "authenticate", {
         "user": settings.webuntis_username or "#anonymous#",
         "password": settings.webuntis_password or "",
         "client": "stagedesk",
@@ -104,13 +140,12 @@ def _logout(session):
         pass
 
 
-def _save_source(source, now=None, force=False):
+def _save_source(source, now=None):
+    """Speichert eine getroffene Entscheidung, immer mit neuem webuntis_checked_at."""
     from .models import MonitorSettings
     MonitorSettings.load()
-    qs = MonitorSettings.objects.filter(pk=1)
-    if not force:
-        qs = qs.exclude(webuntis_source=source)
-    qs.update(webuntis_source=source, webuntis_checked_at=now or timezone.now())
+    MonitorSettings.objects.filter(pk=1).update(webuntis_source=source,
+                                                webuntis_checked_at=now or timezone.now())
 
 
 def _is_no_right(error):
@@ -165,7 +200,9 @@ def _parse_untis_date(value) -> date:
 def _timegrid(session):
     """{Untis-Wochentag (1 = Sonntag): [(name, start, end)]}. Leer, wenn nicht abrufbar."""
     try:
-        grid = session.call("getTimegridUnits") or []
+        grid = _rpc(session, "getTimegridUnits") or []
+    except DeadlineExceeded:
+        raise
     except Exception as exc:
         _log_failure('getTimegridUnits', exc)
         return {}
@@ -224,7 +261,7 @@ def _row(class_name, subject, teacher, teacher_old, room, room_old, kind, note):
 
 
 def _call_substitutions(session, start: date, end: date):
-    return session.call("getSubstitutions", {
+    return _rpc(session, "getSubstitutions", {
         "startDate": _untis_date(start), "endDate": _untis_date(end), "departmentId": 0})
 
 
@@ -242,7 +279,7 @@ def _fetch_substitution_entries(session, start: date, end: date):
 
 
 def _get_timetable(session, class_id, start: date, end: date):
-    return session.call("getTimetable", {"options": {
+    return _rpc(session, "getTimetable", {"options": {
         "element": {"id": class_id, "type": 1},
         "startDate": _untis_date(start), "endDate": _untis_date(end),
         "showSubstText": True, "showLsText": True,
@@ -269,7 +306,7 @@ def _fetch_timetable_entries(session, start: date, end: date):
     """[(date, start, end, row)] aus den Stundenplänen aller Klassen (nur Abweichungen)."""
     lessons = {}
     class_names = {}
-    for klasse in session.call("getKlassen") or []:
+    for klasse in _rpc(session, "getKlassen") or []:
         for lesson in _get_timetable(session, klasse['id'], start, end):
             kind = _timetable_kind(lesson)
             if not kind:
@@ -288,6 +325,7 @@ def _fetch_timetable_entries(session, start: date, end: date):
 
 
 def _news_json(session, day: date):
+    _check_deadline(session)
     return session.get_json('/WebUntis/api/public/news/newsWidgetData', {'date': _untis_date(day)})
 
 
@@ -296,6 +334,8 @@ def _fetch_news(session, day: date):
     try:
         data = _news_json(session, day)
         messages = (data.get('data') or {}).get('messagesOfDay') or []
+    except DeadlineExceeded:
+        raise
     except Exception as exc:
         _log_failure('news', exc)
         return None
@@ -335,7 +375,7 @@ def _load(settings, now: datetime):
     local_now = timezone.localtime(now)
     today = local_now.date()
     days = school_days(today)
-    session = _login(settings)
+    session = _login(settings, deadline=time.monotonic() + DEADLINE_SECONDS)
     try:
         try:
             entries = _fetch_substitution_entries(session, days[0], days[-1])
@@ -353,30 +393,64 @@ def _load(settings, now: datetime):
     return {'source': source, 'news': news, 'days': _build_days(entries, timegrid, days, today, now_hhmm)}
 
 
+def _relevant_last_good(today: date):
+    """Letztes gutes Ergebnis, nur mit Tagen ab heute und neu beschriftet; sonst None."""
+    last_good = cache.get(LAST_GOOD_KEY)
+    if not last_good:
+        return None
+    days = [{**d, 'label': _day_label(date.fromisoformat(d['date']), today)}
+            for d in last_good['days'] if date.fromisoformat(d['date']) >= today]
+    if not days:
+        return None
+    return {**last_good, 'days': days}
+
+
+def _record_failure(now: datetime):
+    """Zählt Fehlschläge in Folge; erst ab dem zweiten wird "unavailable" gespeichert."""
+    failures = (cache.get(FAILURES_KEY) or 0) + 1
+    cache.set(FAILURES_KEY, failures, FAILURES_SECONDS)
+    if failures >= FAILURES_BEFORE_UNAVAILABLE:
+        _save_source('unavailable', now)
+
+
 def get_substitutions(now: datetime) -> dict:
     """Vertretungen für heute und den nächsten Schultag, gecacht (Spec §4.3)."""
     cached = cache.get(CACHE_KEY)
     if cached is not None:
         return cached
+    today = timezone.localtime(now).date()
     settings = _credentials()
     if settings is None:
-        return _unavailable()
-    try:
-        result = _load(settings, now)
-    except Exception as exc:
-        _log_failure('Abruf', exc)
+        _save_source('unavailable', now)
         result = _unavailable()
-    _save_source(result['source'], now)
-    seconds = CACHE_SECONDS_UNAVAILABLE if result['source'] == 'unavailable' else CACHE_SECONDS
-    cache.set(CACHE_KEY, result, seconds)
-    return result
+        cache.set(CACHE_KEY, result, CACHE_SECONDS_UNAVAILABLE)
+        return result
+    if not cache.add(LOCK_KEY, 1, LOCK_SECONDS):
+        # Ein anderer Worker lädt gerade: nicht warten.
+        return _relevant_last_good(today) or _unavailable()
+    try:
+        try:
+            result = _load(settings, now)
+        except Exception as exc:
+            _log_failure('Abruf', exc)
+            _record_failure(now)
+            result = _relevant_last_good(today) or _unavailable()
+            cache.set(CACHE_KEY, result, CACHE_SECONDS_UNAVAILABLE)
+            return result
+        cache.delete(FAILURES_KEY)
+        _save_source(result['source'], now)
+        cache.set(CACHE_KEY, result, CACHE_SECONDS)
+        cache.set(LAST_GOOD_KEY, result, LAST_GOOD_SECONDS)
+        return result
+    finally:
+        cache.delete(LOCK_KEY)
 
 
 # ═══ Diagnose ═════════════════════════════════════════════════════
 
 def _probe_timetable(session, day: date) -> bool:
     try:
-        classes = session.call("getKlassen") or []
+        classes = _rpc(session, "getKlassen") or []
         if classes:
             _get_timetable(session, classes[0]['id'], day, day)
         return True
@@ -434,6 +508,6 @@ def check() -> dict:
         result['source'] = 'substitutions'
     elif result['timetable']:
         result['source'] = 'timetable'
-    _save_source(result['source'], now, force=True)
+    _save_source(result['source'], now)
     cache.delete(CACHE_KEY)
     return result
