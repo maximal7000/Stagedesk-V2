@@ -200,3 +200,38 @@ class GetFileTest(MediaTestBase):
         self.assertEqual(data['pages'][0]['orientation'], 'portrait')
         self.assertEqual(data['pages'][0]['index'], 0)
         self.assertEqual([u['name'] for u in data['used_in']], ['Aktiv'])
+
+
+class ListFilesTest(MediaTestBase):
+    """GET /files liefert Status, Seitenzahl, Fehler sowie Ausrichtung und Bild der ersten Seite (Kacheln)."""
+
+    def test_list_has_status_and_first_page(self):
+        ready = self.make('pdf', make_pdf([(595, 842), (842, 595)]), 'pdf')
+        media.render_file(ready)
+        failed = self.make('pdf', b'kaputt', 'pdf')
+        with self.assertLogs('monitor.media', 'WARNING'):
+            media.render_file(failed)
+        processing = self.make('image', make_exif_jpeg(), 'jpg')
+        with mock.patch.object(api, '_require_perm'):
+            rows = {r['id']: r for r in
+                    (api.MediaFileSchema.from_orm(o).dict() for o in api.list_files(mock.Mock()))}
+        first = rows[ready.id]
+        self.assertEqual((first['status'], first['page_count'], first['orientation']), ('ready', 2, 'portrait'))
+        self.assertTrue(first['first_page_url'].endswith('.webp'))
+        self.assertEqual(rows[failed.id]['status'], 'failed')
+        self.assertNotEqual(rows[failed.id]['error'], '')
+        self.assertEqual((rows[failed.id]['first_page_url'], rows[failed.id]['orientation']), ('', ''))
+        self.assertEqual((rows[processing.id]['status'], rows[processing.id]['page_count']), ('processing', 0))
+
+    def test_list_skips_trash(self):
+        f = self.make('image', make_exif_jpeg(), 'jpg')
+        MediaFile.objects.filter(id=f.id).update(deleted_at='2026-01-01T00:00:00Z')
+        with mock.patch.object(api, '_require_perm'):
+            self.assertEqual(list(api.list_files(mock.Mock())), [])
+
+    def test_detail_of_trashed_file_is_404(self):
+        f = self.make('image', make_exif_jpeg(), 'jpg')
+        MediaFile.objects.filter(id=f.id).update(deleted_at='2026-01-01T00:00:00Z')
+        from django.http import Http404
+        with mock.patch.object(api, '_require_perm'), self.assertRaises(Http404):
+            api.get_file(mock.Mock(), f.id)

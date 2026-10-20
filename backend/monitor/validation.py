@@ -31,6 +31,7 @@ NUMBER_FIELDS = {
     'media_seconds': ('Sekunden pro Seite', 3, 600),
     'pdf_per_screen': ('Seiten nebeneinander', 1, 3),
     'pdf_static_page': ('Feste Seite', 1, 999),
+    'transit_duration': ('Vorausschau', 10, 240),
 }
 WALK_MINUTES = (0, 60)
 MAX_DEPARTURES = (1, 30)

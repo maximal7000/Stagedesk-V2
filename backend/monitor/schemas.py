@@ -13,10 +13,31 @@ class MediaFileSchema(Schema):
     kind: str
     sort_order: int
     created_at: datetime
+    status: str = 'ready'
+    page_count: int = 0
+    error: str = ''
+    # Kachel im Admin: erste Seite (leer, solange keine Seite vorbereitet ist)
+    first_page_url: str = ''
+    orientation: str = ''
 
     @staticmethod
     def resolve_file_url(obj):
         return obj.file.url if obj.file else ''
+
+    @staticmethod
+    def _first_page(obj):
+        pages = list(obj.pages.all())   # nutzt prefetch_related('pages')
+        return min(pages, key=lambda p: p.index) if pages else None
+
+    @staticmethod
+    def resolve_first_page_url(obj):
+        page = MediaFileSchema._first_page(obj)
+        return page.image.url if page else ''
+
+    @staticmethod
+    def resolve_orientation(obj):
+        page = MediaFileSchema._first_page(obj)
+        return page.orientation if page else ''
 
 
 class WebUntisLinkSchema(Schema):
@@ -58,7 +79,9 @@ class DisplayViewSchema(Schema):
     show_countdown: bool
     show_weather: bool
     weather_city: str
-    weather_api_key: str
+    # Alter Wetter-Schlüssel pro Ansicht: write-only (Ruling R22), der globale hat Vorrang
+    weather_api_key: str = ''
+    weather_api_key_set: bool = False
     pdf_mode: str = 'cycle'
     pdf_per_screen: int = 1
     pdf_pages: str = ''
@@ -115,6 +138,14 @@ class DisplayViewSchema(Schema):
     substitutions_next_day: bool = True
     page_seconds: int = 15
     api_token: str
+
+    @staticmethod
+    def resolve_weather_api_key(obj):
+        return ''
+
+    @staticmethod
+    def resolve_weather_api_key_set(obj):
+        return bool(obj.weather_api_key)
 
 
 class DisplayViewUpdateSchema(Schema):
@@ -364,7 +395,7 @@ class ExamCreateSchema(Schema):
     screen_ids: List[int] = []
     display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'left'
+    split_side: str = 'right'
     split_percent: int = 50
 
 
@@ -458,17 +489,20 @@ class ExamTemplateCreateSchema(Schema):
     color: str = '#1e40af'
     display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'left'
+    split_side: str = 'right'
     split_percent: int = 50
 
 
 # ─── Globale Einstellungen ───────────────────────────────────
 class MonitorSettingsSchema(Schema):
+    # Zugangsdaten sind write-only: immer '' plus *_set (Ruling R22)
     weather_api_key: str = ''
+    weather_api_key_set: bool = False
     webuntis_server: str = ''
     webuntis_school: str = ''
     webuntis_username: str = ''
     webuntis_password: str = ''
+    webuntis_password_set: bool = False
     on_air_active: bool = False
     on_air_since: Optional[datetime] = None
     on_air_text: str = 'ON AIR'
@@ -481,6 +515,22 @@ class MonitorSettingsSchema(Schema):
     webuntis_source: str = ''
     webuntis_checked_at: Optional[datetime] = None
 
+    @staticmethod
+    def resolve_weather_api_key(obj):
+        return ''
+
+    @staticmethod
+    def resolve_webuntis_password(obj):
+        return ''
+
+    @staticmethod
+    def resolve_weather_api_key_set(obj):
+        return bool(obj.weather_api_key)
+
+    @staticmethod
+    def resolve_webuntis_password_set(obj):
+        return bool(obj.webuntis_password)
+
 
 class MonitorSettingsUpdateSchema(Schema):
     weather_api_key: Optional[str] = None
@@ -488,6 +538,9 @@ class MonitorSettingsUpdateSchema(Schema):
     webuntis_school: Optional[str] = None
     webuntis_username: Optional[str] = None
     webuntis_password: Optional[str] = None
+    # Leere Zugangsdaten bleiben unverändert; geleert wird nur über diese Schalter
+    webuntis_password_clear: Optional[bool] = None
+    weather_api_key_clear: Optional[bool] = None
     on_air_text: Optional[str] = None
     on_air_animation: Optional[Literal['still', 'pulse', 'blink']] = None
     on_air_show_clock: Optional[bool] = None

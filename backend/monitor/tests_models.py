@@ -98,6 +98,8 @@ class UpdateViewApiTest(TestCase):
             ({'page_seconds': 121}, 'Blättertakt'), ({'media_seconds': None}, 'Sekunden pro Seite'),
             ({'media_seconds': 2}, 'Sekunden pro Seite'), ({'pdf_per_screen': 4}, 'Seiten nebeneinander'),
             ({'pdf_static_page': 0}, 'Feste Seite'), ({'split_left_percent': None}, 'Breite links'),
+            ({'transit_duration': None}, 'Vorausschau'), ({'transit_duration': 9}, 'Vorausschau'),
+            ({'transit_duration': 241}, 'Vorausschau'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': None}]}, 'Fußweg'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 61}]}, 'Fußweg'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 31}]}, 'Max. Zeilen'),

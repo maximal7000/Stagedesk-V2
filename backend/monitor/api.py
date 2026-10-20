@@ -293,8 +293,15 @@ def get_view(request, view_id: int = None):
     _require_perm(request, 'monitor.view')
     if view_id:
         # Ansichten im Papierkorb gelten als nicht vorhanden (Wiederherstellen über /trash/restore)
-        return get_object_or_404(DisplayView, id=view_id, deleted_at__isnull=True)
-    return DisplayView.get()
+        view = get_object_or_404(DisplayView, id=view_id, deleted_at__isnull=True)
+    else:
+        view = DisplayView.get()
+    # api_token schaltet On-Air und Notfall (ATEM): nur mit monitor.setup ausliefern, gespeichert wird nichts
+    try:
+        _require_perm(request, 'monitor.setup')
+    except HttpError:
+        view.api_token = ''
+    return view
 
 
 @monitor_router.get("/disruptions", auth=keycloak_auth)
@@ -314,7 +321,8 @@ def list_disruptions(request, view_id: int = None):
     return out
 
 
-_VERSION_DENY = {'id', 'api_token', 'slug', 'created_at', 'updated_at'}
+# weather_api_key: steht nicht in den Schnappschüssen (write-only) und wird beim Zurücksetzen nicht geleert
+_VERSION_DENY = {'id', 'api_token', 'slug', 'created_at', 'updated_at', 'weather_api_key', 'weather_api_key_set'}
 
 
 def _snapshot_view(view):
@@ -323,6 +331,8 @@ def _snapshot_view(view):
     try:
         data = json.loads(json.dumps(DisplayViewSchema.from_orm(view).dict(), default=str))
         data.pop('api_token', None)
+        data.pop('weather_api_key', None)
+        data.pop('weather_api_key_set', None)
         DisplayViewVersion.objects.create(view=view, data=data)
         old_ids = list(DisplayViewVersion.objects.filter(view=view).values_list('id', flat=True)[15:])
         if old_ids:
@@ -342,6 +352,8 @@ def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
     _snapshot_view(view)  # Zustand vor der Änderung sichern
 
     data = payload.dict(exclude_unset=True)
+    if not data.get('weather_api_key'):
+        data.pop('weather_api_key', None)   # write-only: leer heißt unverändert
     data = _validate_view_data(data, own_id=view.id, current_kind=view.kind)
 
     # FK-Felder separat behandeln
@@ -403,7 +415,7 @@ def regenerate_token(request, view_id: int = None):
 @monitor_router.get("/files", response=list[MediaFileSchema], auth=keycloak_auth)
 def list_files(request, kind: str = None):
     _require_perm(request, 'monitor.view')
-    qs = MediaFile.objects.filter(deleted_at__isnull=True)
+    qs = MediaFile.objects.filter(deleted_at__isnull=True).prefetch_related('pages')
     if kind:
         qs = qs.filter(kind=kind)
     return qs
@@ -431,7 +443,7 @@ def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), k
 @monitor_router.get("/files/{id}", auth=keycloak_auth)
 def get_file(request, id: int):
     _require_perm(request, 'monitor.view')
-    obj = get_object_or_404(MediaFile, id=id)
+    obj = get_object_or_404(MediaFile, id=id, deleted_at__isnull=True)
     used_in = [
         {'view_id': v.id, 'name': v.name}
         for v in DisplayView.objects.filter(deleted_at__isnull=True)
@@ -890,6 +902,7 @@ def delete_exam_template(request, id: int):
 # ═══ Admin: Globale Einstellungen (Wetter/WebUntis-Zugang) ═══════
 
 ON_AIR_SETTINGS_FIELDS = {'on_air_text', 'on_air_animation', 'on_air_show_clock'}
+SETTINGS_SECRET_FIELDS = ('webuntis_password', 'weather_api_key')
 
 
 @monitor_router.get("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
@@ -902,6 +915,12 @@ def get_settings(request):
 def update_settings(request, payload: MonitorSettingsUpdateSchema):
     # On-Air-Darstellung gehört zum Recht onair, alles andere zu setup (Spec §4.5).
     data = {k: v for k, v in payload.dict(exclude_unset=True).items() if v is not None}
+    # Zugangsdaten sind write-only: leer heißt unverändert, geleert wird nur über *_clear (Ruling R22)
+    for secret in SETTINGS_SECRET_FIELDS:
+        if not data.get(secret):
+            data.pop(secret, None)
+        if data.pop(f'{secret}_clear', False):
+            data[secret] = ''
     if not data or set(data) - ON_AIR_SETTINGS_FIELDS:
         _require_perm(request, 'monitor.setup')
     if set(data) & ON_AIR_SETTINGS_FIELDS:
