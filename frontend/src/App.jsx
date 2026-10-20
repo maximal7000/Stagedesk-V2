@@ -35,11 +35,14 @@ import RessourcenPage from './pages/kalender/RessourcenPage';
 import KategorienPage from './pages/kalender/KategorienPage';
 // Admin
 import AdminPage from './pages/admin/AdminPage';
-import MonitorAdminPage from './pages/admin/MonitorAdminPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
 import SystemAdminPage from './pages/admin/SystemAdminPage';
 import AufgabenPage from './pages/admin/AufgabenPage';
 import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
+// Monitor-Admin
+import MonitorAdminLayout, { PendingPage } from './components/monitor-admin/MonitorAdminLayout';
+import MonitorOverview from './components/monitor-admin/pages/Overview';
+import UnsavedChangesProvider from './components/monitor-admin/shared/UnsavedChangesProvider';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
 // Kompetenzen
@@ -77,39 +80,53 @@ function AppContent() {
         element={
           <ProtectedRoute>
             <UserProvider>
-              <DashboardLayout>
-                <Routes>
-                  <Route path="/" element={<DashboardPage />} />
-                  <Route path="/haushalte" element={<PermissionRoute permission="haushalte.view"><HaushaltePage /></PermissionRoute>} />
-                  <Route path="/haushalte/:id" element={<PermissionRoute permission="haushalte.view"><HaushaltDetailPage /></PermissionRoute>} />
-                  <Route path="/kalender" element={<PermissionRoute permission="kalender.view"><KalenderPage /></PermissionRoute>} />
-                  <Route path="/ressourcen" element={<PermissionRoute permission="kalender.ressourcen"><RessourcenPage /></PermissionRoute>} />
-                  <Route path="/kategorien" element={<PermissionRoute permission="kalender.view"><KategorienPage /></PermissionRoute>} />
-                  <Route path="/inventar" element={<PermissionRoute permission="inventar.view"><InventarPage /></PermissionRoute>} />
-                  <Route path="/inventar/neu" element={<PermissionRoute permission="inventar.create"><ItemDetailPage /></PermissionRoute>} />
-                  <Route path="/inventar/sets" element={<PermissionRoute permission="inventar.view"><ItemSetsPage /></PermissionRoute>} />
-                  <Route path="/inventar/:id" element={<PermissionRoute permission="inventar.view"><ItemDetailPage /></PermissionRoute>} />
-                  <Route path="/ausleihen" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
-                  <Route path="/ausleihen/dashboard" element={<PermissionRoute permission="inventar.ausleihe"><AusleiheDashboardPage /></PermissionRoute>} />
-                  <Route path="/ausleihen/:id" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
-                  <Route path="/anwesenheit" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
-                  <Route path="/anwesenheit/:id" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
-                  <Route path="/kompetenzen" element={<PermissionRoute permission="kompetenzen.view"><KompetenzenPage /></PermissionRoute>} />
-                  <Route path="/kompetenzen/user/:userId" element={<PermissionRoute permission="kompetenzen.view_all"><KompetenzenPage /></PermissionRoute>} />
-                  <Route path="/veranstaltung" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungenPage /></PermissionRoute>} />
-                  <Route path="/veranstaltung/vorlagen" element={<PermissionRoute permission="veranstaltung.view"><VorlagenPage /></PermissionRoute>} />
-                  <Route path="/veranstaltung/neu" element={<PermissionRoute permission="veranstaltung.create"><VeranstaltungDetailPage /></PermissionRoute>} />
-                  <Route path="/veranstaltung/:id" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungDetailPage /></PermissionRoute>} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="/notifications" element={<NotificationsPage />} />
-                  <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
-                  <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
-                  <Route path="/admin/system" element={<PermissionRoute adminOnly><SystemAdminPage /></PermissionRoute>} />
-                  <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
-                  <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminPage /></PermissionRoute>} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </DashboardLayout>
+              <UnsavedChangesProvider>
+                <DashboardLayout>
+                  <Routes>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/haushalte" element={<PermissionRoute permission="haushalte.view"><HaushaltePage /></PermissionRoute>} />
+                    <Route path="/haushalte/:id" element={<PermissionRoute permission="haushalte.view"><HaushaltDetailPage /></PermissionRoute>} />
+                    <Route path="/kalender" element={<PermissionRoute permission="kalender.view"><KalenderPage /></PermissionRoute>} />
+                    <Route path="/ressourcen" element={<PermissionRoute permission="kalender.ressourcen"><RessourcenPage /></PermissionRoute>} />
+                    <Route path="/kategorien" element={<PermissionRoute permission="kalender.view"><KategorienPage /></PermissionRoute>} />
+                    <Route path="/inventar" element={<PermissionRoute permission="inventar.view"><InventarPage /></PermissionRoute>} />
+                    <Route path="/inventar/neu" element={<PermissionRoute permission="inventar.create"><ItemDetailPage /></PermissionRoute>} />
+                    <Route path="/inventar/sets" element={<PermissionRoute permission="inventar.view"><ItemSetsPage /></PermissionRoute>} />
+                    <Route path="/inventar/:id" element={<PermissionRoute permission="inventar.view"><ItemDetailPage /></PermissionRoute>} />
+                    <Route path="/ausleihen" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
+                    <Route path="/ausleihen/dashboard" element={<PermissionRoute permission="inventar.ausleihe"><AusleiheDashboardPage /></PermissionRoute>} />
+                    <Route path="/ausleihen/:id" element={<PermissionRoute permission="inventar.ausleihe"><AusleihePage /></PermissionRoute>} />
+                    <Route path="/anwesenheit" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
+                    <Route path="/anwesenheit/:id" element={<PermissionRoute permission="anwesenheit.view"><AnwesenheitPage /></PermissionRoute>} />
+                    <Route path="/kompetenzen" element={<PermissionRoute permission="kompetenzen.view"><KompetenzenPage /></PermissionRoute>} />
+                    <Route path="/kompetenzen/user/:userId" element={<PermissionRoute permission="kompetenzen.view_all"><KompetenzenPage /></PermissionRoute>} />
+                    <Route path="/veranstaltung" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungenPage /></PermissionRoute>} />
+                    <Route path="/veranstaltung/vorlagen" element={<PermissionRoute permission="veranstaltung.view"><VorlagenPage /></PermissionRoute>} />
+                    <Route path="/veranstaltung/neu" element={<PermissionRoute permission="veranstaltung.create"><VeranstaltungDetailPage /></PermissionRoute>} />
+                    <Route path="/veranstaltung/:id" element={<PermissionRoute permission="veranstaltung.view"><VeranstaltungDetailPage /></PermissionRoute>} />
+                    <Route path="/settings" element={<SettingsPage />} />
+                    <Route path="/notifications" element={<NotificationsPage />} />
+                    <Route path="/admin" element={<PermissionRoute adminOnly><AdminPage /></PermissionRoute>} />
+                    <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
+                    <Route path="/admin/system" element={<PermissionRoute adminOnly><SystemAdminPage /></PermissionRoute>} />
+                    <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
+                    <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminLayout /></PermissionRoute>}>
+                      <Route index element={<MonitorOverview />} />
+                      <Route path="screens" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Bildschirme" /></PermissionRoute>} />
+                      <Route path="screens/:id" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Bildschirm" /></PermissionRoute>} />
+                      <Route path="views" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansichten" /></PermissionRoute>} />
+                      <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Neue Ansicht" /></PermissionRoute>} />
+                      <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansicht" /></PermissionRoute>} />
+                      <Route path="exams" element={<PermissionRoute permission="monitor.exams"><PendingPage title="Klausuren & Termine" /></PermissionRoute>} />
+                      <Route path="media" element={<PermissionRoute permission="monitor.media"><PendingPage title="Medien" /></PermissionRoute>} />
+                      <Route path="schedules" element={<PermissionRoute permission="monitor.power"><PendingPage title="Ferien & Zeitpläne" /></PermissionRoute>} />
+                      <Route path="settings" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Einstellungen" /></PermissionRoute>} />
+                      <Route path="*" element={<Navigate to="/monitor-admin" replace />} />
+                    </Route>
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </DashboardLayout>
+              </UnsavedChangesProvider>
             </UserProvider>
           </ProtectedRoute>
         }
