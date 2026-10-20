@@ -158,11 +158,17 @@ Die Aufteilung erlaubt es, später etwa Hausmeister (`view` + `power`) oder Sekr
 1. **Backup:** Backup-Tag setzen, Tarball und DB-Dump nach `~/stagedesk-backups/` (`pg_dump`, siehe oben).
 2. **Probelauf:** Produktions-Dump in eine Test-DB einspielen und `python manage.py migrate` ausführen. Stichprobe: Ansichten haben einen Typ (Vertretungsplan, Info, Abfahrten, Medien, Wechsel), Bildschirme zeigen auf ihre Standard-Ansicht, Gruppen mit `monitor.edit` haben jetzt `setup`, `exams`, `media` und `power`.
 3. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`. Wie in Schritt 0 können `/display`, `/onair` und die Pi-Power-Abfragen im Deploy-Fenster kurz Fehler liefern.
+Schritte 4 und 5 laufen auf dem Server im venv und als derselbe Nutzer wie `tag-backend.service`, damit die gerenderten Seiten in `media/monitor/pages` dem Dienst gehören. Laut `scripts/stagedesk-backend.service.example` ist das `root` (Gruppe `www-data`), also direkt in der `ssh root@t410.de`-Sitzung; vorher mit `systemctl show -p User -p Group tag-backend.service` gegenprüfen und bei abweichendem Nutzer mit `sudo -u <nutzer>` ausführen:
+
+```bash
+cd /opt/stagedesk/backend && source venv/bin/activate
+```
+
 4. **Medien rendern:** `python manage.py monitor_render_media`. Die Migration rendert keine Dateien; bis zu diesem Schritt zeigen Medien-Ansichten nichts. Der Befehl ist idempotent und darf erneut laufen.
 5. **WebUntis prüfen:** `python manage.py monitor_webuntis_check`. Gibt pro Weg nur "geht" oder "geht nicht" aus, keine Daten.
-6. **Sichtprüfung:** glocke und mensa im Admin über "Neu laden" neu laden (sonst geschieht das spätestens beim nächtlichen Neuladen bzw. Neustart gegen 4 Uhr) und vor Ort ansehen.
+6. **Sichtprüfung:** glocke und mensa im Admin über "Neu laden" neu laden (sonst geschieht das spätestens beim nächtlichen Neuladen bzw. Neustart gegen 4 Uhr) und vor Ort ansehen. Pis, die noch das alte Frontend geladen haben, reagieren auf das erste "Neu laden" unter Umständen nicht: dann ein zweites Mal drücken oder auf dem Pi `sudo systemctl restart kiosk.service` ausführen.
 7. **Kiosk-URL pro Pi:** Im Admin unter Bildschirme den Bildschirm öffnen, die Kiosk-URL (mit `key`) kopieren und in `kiosk.sh` auf dem Pi eintragen, dabei `?zoom=` entfernen. Ein `zoom` in der URL überstimmt die Skalierung aus dem Admin; die Admin-URL enthält deshalb kein `zoom`. Ohne Schlüssel funktioniert die alte URL weiter, der Vertretungsplan erscheint dann nur als iframe wie bisher. Details: `docs/raspberry-pi-monitor.md`.
-8. **Rückweg (Reihenfolge):** Zuerst die Migrationen zurückfahren: `python manage.py migrate monitor 0038` und `python manage.py migrate users 0015`. Erst danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
+8. **Rückweg (Reihenfolge):** Vorher im Admin Notfall und On-Air ausschalten: der Rückweg kopiert den globalen Zustand in jede Ansicht, ein aktiver Notfall stünde danach auf allen alten Ansichten. Dann die Migrationen zurückfahren (im venv wie bei Schritt 4): `python manage.py migrate monitor 0038` und `python manage.py migrate users 0015`. Erst danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
 
 ### Nach dem Deploy
 
