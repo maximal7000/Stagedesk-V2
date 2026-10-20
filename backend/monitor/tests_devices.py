@@ -123,6 +123,20 @@ class PairingStartTest(PairingTestBase):
         self.assertFalse(PairingRequest.objects.filter(code=first['code'], serial='s0').exists())
         self.assertTrue(PairingRequest.objects.filter(serial='s10').exists())
 
+    def test_start_keeps_confirmed_undelivered_after_expiry(self):
+        screen = Screen.objects.create(name='S', slug='s')
+        device = Device.objects.create(screen=screen, serial='c')
+        now = timezone.now()
+        keep = PairingRequest.objects.create(
+            code='111111', pairing_id_hash='keep', serial='c', confirmed_device=device,
+            expires_at=now - timedelta(minutes=1))
+        gone = PairingRequest.objects.create(
+            code='222222', pairing_id_hash='gone', serial='c', confirmed_device=device,
+            expires_at=now - timedelta(minutes=16))
+        self.start(serial='new')
+        self.assertTrue(PairingRequest.objects.filter(pk=keep.pk).exists())
+        self.assertFalse(PairingRequest.objects.filter(pk=gone.pk).exists())
+
     def test_start_limits_per_serial(self):
         first = self.start(serial='same')
         self.start(serial='same')
@@ -211,7 +225,8 @@ class PairingFlowTest(PairingTestBase):
         old = Device.objects.get(serial='old')
         old_raw = old.issue_token()
         second = self.start(serial='new')
-        with mock.patch('monitor.push.close_device_sockets') as close:
+        with mock.patch('monitor.push.close_device_sockets') as close, \
+                self.captureOnCommitCallbacks(execute=True):
             r = self.pair(second['code'], screen_id=self.screen.id)
         self.assertEqual(r.status_code, 200)
         old.refresh_from_db()
@@ -222,6 +237,18 @@ class PairingFlowTest(PairingTestBase):
         close.assert_called_once_with(old)
         self.screen.refresh_from_db()
         self.assertEqual(self.screen.device.serial, 'new')
+
+    def test_close_not_sent_before_commit(self):
+        first = self.start(serial='old')
+        self.pair(first['code'], screen_id=self.screen.id)
+        second = self.start(serial='new')
+        with mock.patch('monitor.push.close_device_sockets') as close:
+            with self.captureOnCommitCallbacks(execute=False) as callbacks:
+                self.pair(second['code'], screen_id=self.screen.id)
+            close.assert_not_called()
+            for cb in callbacks:
+                cb()
+        close.assert_called_once()
 
     def test_pair_requires_devices_permission(self):
         self.profile.permissions.clear()
@@ -259,16 +286,19 @@ class UnpairRevokeTest(PairingTestBase):
         self.raw = self.device.issue_token()
 
     def test_unpair(self):
-        with mock.patch('monitor.push.close_device_sockets') as close:
+        with mock.patch('monitor.push.close_device_sockets') as close, \
+                self.captureOnCommitCallbacks(execute=True):
             r = self.post(f'/devices/{self.device.id}/unpair', {})
         self.assertEqual(r.status_code, 200)
         self.device.refresh_from_db()
         self.assertIsNone(self.device.screen)
+        self.assertIsNone(Device.for_token(self.raw))
         self.assertTrue(DeviceEvent.objects.filter(kind='unpaired', device=self.device).exists())
         close.assert_called_once_with(self.device)
 
     def test_revoke(self):
-        with mock.patch('monitor.push.close_device_sockets') as close:
+        with mock.patch('monitor.push.close_device_sockets') as close, \
+                self.captureOnCommitCallbacks(execute=True):
             r = self.post(f'/devices/{self.device.id}/revoke', {})
         self.assertEqual(r.status_code, 200)
         self.assertIsNone(Device.for_token(self.raw))

@@ -45,7 +45,9 @@ def _new_code(taken: set) -> str:
 def start_pairing(serial: str, model: str):
     """Legt einen PairingRequest an. Gibt (Request, Klartext-pairing_id) zurück."""
     now = timezone.now()
-    PairingRequest.objects.filter(expires_at__lte=now).delete()
+    # Bestätigte, noch nicht ausgelieferte Requests bleiben nach Ablauf noch eine Karenzzeit erhalten.
+    PairingRequest.objects.filter(expires_at__lte=now, confirmed_device__isnull=True).delete()
+    PairingRequest.objects.filter(expires_at__lte=now - PAIRING_TTL).delete()
     open_qs = _open_requests()
     # Pro Seriennummer höchstens 3 (inklusive des neuen), insgesamt höchstens 10.
     if serial:
@@ -93,6 +95,7 @@ def poll_pairing(pairing_id: str):
 
 def confirm_pairing(code: str, screen: Screen) -> Device:
     with transaction.atomic():
+        screen = Screen.objects.select_for_update().get(pk=screen.pk)
         req = _open_requests().select_for_update().filter(code=code).order_by('-created_at').first()
         if req is None:
             raise InvalidPairingCode()
@@ -109,8 +112,8 @@ def confirm_pairing(code: str, screen: Screen) -> Device:
         req.save(update_fields=['confirmed_device'])
         DeviceEvent.objects.create(device=device, screen=screen, kind='paired',
                                    text=f'Gerät {req.serial or device.pk} mit {screen.name} gekoppelt.')
-    if replaced is not None:
-        push.close_device_sockets(replaced)
+        if replaced is not None:
+            transaction.on_commit(lambda: push.close_device_sockets(replaced))
     return device
 
 
@@ -118,10 +121,11 @@ def unpair(device: Device) -> None:
     with transaction.atomic():
         screen = device.screen
         device.screen = None
-        device.save(update_fields=['screen'])
+        device.revoked_at = timezone.now()  # der Pi koppelt danach als neues Gerät
+        device.save(update_fields=['screen', 'revoked_at'])
         DeviceEvent.objects.create(device=device, screen=screen, kind='unpaired',
                                    text='Gerät vom Bildschirm gelöst.')
-    push.close_device_sockets(device)
+        transaction.on_commit(lambda: push.close_device_sockets(device))
 
 
 def revoke_token(device: Device) -> None:
@@ -130,4 +134,4 @@ def revoke_token(device: Device) -> None:
         device.save(update_fields=['revoked_at'])
         DeviceEvent.objects.create(device=device, screen=device.screen, kind='token_revoked',
                                    text='Token zurückgezogen.')
-    push.close_device_sockets(device)
+        transaction.on_commit(lambda: push.close_device_sockets(device))
