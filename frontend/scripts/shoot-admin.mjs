@@ -6,8 +6,10 @@
 // Laden einen Testnutzer an: Er liegt im Storage-Schlüssel, den oidc-client-ts über `userStore` aus
 // src/authConfig.js liest (`oidc.user:<authority>:<client_id>`). Keycloak wird nie kontaktiert.
 // Jede Anfrage an /api/** wird aus frontend/tests/admin-fixtures/ beantwortet: GET /api/monitor/screens
-// liest monitor-screens.json (Pfad ohne /api/, "/" wird zu "-"). Fehlt eine Datei, antwortet die Route mit []
-// und das Werkzeug nennt den Pfad. Schreibende Anfragen antworten mit {"success": true}.
+// liest monitor-screens.json (Pfad ohne /api/, "/" wird zu "-"). Mit Query gilt zuerst die Datei mit "@query"
+// (GET /api/monitor/display?screen=aula → monitor-display@screen=aula.json). Eine Aufnahme mit `variant` liest
+// zuerst aus tests/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
+// nennt den Pfad. Schreibende Anfragen antworten mit {"success": true}.
 // Bilder: docs/superpowers/screenshots/2026-10-19-monitor/admin-<seite>.png.
 // Schlägt eine Seite fehl, laufen die übrigen weiter; der Exit-Code ist am Ende 1.
 // Chromium: CHROMIUM_PATH oder /opt/pw-browsers/chromium (mit --headless=new).
@@ -26,9 +28,25 @@ const VITE = join(FRONTEND, 'node_modules', '.bin', 'vite')
 const T0 = new Date('2026-10-20T10:00:00+02:00')
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'fonts.googleapis.com', 'fonts.gstatic.com'])
 
-// Seite → Pfad in der App. Weitere Seiten kommen mit den folgenden Bauschritten hinzu.
+// Aufnahme → Pfad in der App, optional mit Testdaten-Variante und einer Handlung vor dem Foto.
+// Weitere Seiten kommen mit den folgenden Bauschritten hinzu.
 const PAGES = {
-  overview: '/monitor-admin',
+  overview: { path: '/monitor-admin' },
+  'overview-emergency-dialog': {
+    path: '/monitor-admin',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Auslösen…' }).click()
+      await page.waitForSelector('[data-emergency-dialog] input[type="radio"]:checked')
+    },
+  },
+  'overview-day-off': { path: '/monitor-admin', variant: 'day-off' },
+  'overview-undo': {
+    path: '/monitor-admin',
+    action: async (page) => {
+      await page.getByRole('switch', { name: 'On-Air' }).click()
+      await page.waitForSelector('[data-undo-toast]')
+    },
+  },
 }
 
 function parseArgs(argv) {
@@ -104,26 +122,35 @@ async function startPreview(port) {
   throw new Error(`vite preview antwortet nicht:\n${log}`)
 }
 
-function fixtureFor(apiPath) {
-  return join(FIXTURES, `${apiPath.replace(/^\/+|\/+$/g, '').replace(/\//g, '-')}.json`)
+function fixtureFor(apiPath, query, variant) {
+  const base = apiPath.replace(/^\/+|\/+$/g, '').replace(/\//g, '-')
+  const names = query ? [`${base}@${query}.json`, `${base}.json`] : [`${base}.json`]
+  const dirs = variant ? [join(FIXTURES, variant), FIXTURES] : [FIXTURES]
+  for (const dir of dirs) {
+    for (const name of names) {
+      if (existsSync(join(dir, name))) return join(dir, name)
+    }
+  }
+  return null
 }
 
-async function answerApi(route, missing) {
+async function answerApi(route, missing, variant) {
   const req = route.request()
-  const { pathname } = new URL(req.url())
+  const { pathname, search } = new URL(req.url())
   const apiPath = pathname.slice(pathname.indexOf('/api/') + 5)
   if (req.method() !== 'GET') {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
   }
-  const file = fixtureFor(apiPath)
-  if (!existsSync(file)) {
-    missing.add(`GET /api/${apiPath}`)
+  const file = fixtureFor(apiPath, search.slice(1), variant)
+  if (!file) {
+    missing.add(`GET /api/${apiPath}${search}`)
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   }
   return route.fulfill({ status: 200, contentType: 'application/json', body: readFileSync(file, 'utf8') })
 }
 
 async function shoot(context, baseUrl, name, storageKey) {
+  const shot = PAGES[name]
   const page = await context.newPage()
   const errors = []
   const missing = new Set()
@@ -139,11 +166,12 @@ async function shoot(context, baseUrl, name, storageKey) {
       }
       window.WebSocket = SilentSocket
     }, [storageKey, JSON.stringify(testUser())])
-    await page.route('**/api/**', (route) => answerApi(route, missing))
+    await page.route('**/api/**', (route) => answerApi(route, missing, shot.variant))
     await page.clock.setFixedTime(T0)
 
-    await page.goto(`${baseUrl}${PAGES[name]}`)
+    await page.goto(`${baseUrl}${shot.path}`)
     await page.waitForSelector('[data-admin-page]:not([data-state="loading"])', { timeout: 15000 })
+    if (shot.action) await shot.action(page)
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(150)
     const file = join(OUT, `admin-${name}.png`)

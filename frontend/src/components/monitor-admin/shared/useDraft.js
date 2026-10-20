@@ -52,16 +52,18 @@ export function useDraft(original) {
   }, [])
 
   const snapshot = current.draft
+  const source = current.source
   const save = useCallback(async (fn) => {
     setSaving(true)
     try {
       const result = await fn(snapshot)
-      setState((s) => ({ ...s, base: snapshot }))
+      // Kam inzwischen ein neues Original (neu geladen), gilt dieses; der alte Stand wird nicht übernommen
+      setState((s) => (s.source === source ? { ...s, base: snapshot } : s))
       return result
     } finally {
       setSaving(false)
     }
-  }, [snapshot])
+  }, [snapshot, source])
 
   const changedCount = useMemo(() => countChanges(current.base, current.draft), [current.base, current.draft])
 

@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Elternsprechtag",
+    "description": "",
+    "color": "#7c3aed",
+    "is_active": false,
+    "active_from": "2026-10-20T09:00:00+02:00",
+    "active_until": "2026-10-20T14:00:00+02:00",
+    "assignments": [
+      {
+        "screen_id": 4,
+        "view_id": 3,
+        "screen_name": "Mensa",
+        "view_name": "Info Mensa"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Konzert",
+    "description": "",
+    "color": "#7c3aed",
+    "is_active": false,
+    "active_from": "2026-10-22T18:00:00+02:00",
+    "active_until": "2026-10-22T21:00:00+02:00",
+    "assignments": []
+  }
+]

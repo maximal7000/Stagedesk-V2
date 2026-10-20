@@ -1,0 +1,17 @@
+[
+  {
+    "id": 1,
+    "title": "Abitur Mathematik",
+    "text": "",
+    "active_from": "2026-10-20T08:00:00+02:00",
+    "active_until": "2026-10-20T12:30:00+02:00",
+    "color": "#1e40af",
+    "screen_ids": [
+      3
+    ],
+    "display_mode": "split",
+    "webuntis_link_id": null,
+    "split_side": "left",
+    "split_percent": 50
+  }
+]

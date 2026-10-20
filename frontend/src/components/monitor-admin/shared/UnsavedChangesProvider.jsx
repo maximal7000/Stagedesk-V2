@@ -1,7 +1,7 @@
 // Schutz vor verlorenen Entwürfen (Spec §6.2).
 // Seiten melden mit useUnsavedGuard(isDirty) ungespeicherte Änderungen an; solange eine gemeldet ist,
 // warnt der Browser beim Schließen oder Neuladen (beforeunload), und confirmLeave() fragt vor
-// App-internen Wechseln nach (Sidebar-Links rufen es vor der Navigation auf).
+// App-internen Wechseln nach (Sidebar-Links rufen es mit ihrem Ziel vor der Navigation auf).
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef } from 'react'
 
 export const LEAVE_QUESTION = 'Es gibt ungespeicherte Änderungen. Seite trotzdem verlassen?'
@@ -16,8 +16,10 @@ export default function UnsavedChangesProvider({ children }) {
     else dirtyIds.current.delete(id)
   }, [])
 
-  const confirmLeave = useCallback(() => {
+  // target: Pfad des Links. Zeigt er auf die aktuelle Seite, wird nichts verlassen: keine Frage, Meldungen bleiben.
+  const confirmLeave = useCallback((target) => {
     if (dirtyIds.current.size === 0) return true
+    if (typeof target === 'string' && target === window.location.pathname) return true
     const ok = window.confirm(LEAVE_QUESTION)
     // Die Seite wird gleich verlassen: ihre Meldung gilt nicht mehr, auch falls sie nicht abgebaut wird
     if (ok) dirtyIds.current.clear()

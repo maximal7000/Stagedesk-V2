@@ -47,6 +47,16 @@ describe('UnsavedChangesProvider', () => {
     expect(after.defaultPrevented).toBe(false)
   })
 
+  it('ein Link auf die aktuelle Seite fragt nicht und behält die Meldung', () => {
+    const ask = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    root = createRoot(document.createElement('div'))
+    render(true)
+    expect(confirmLeave(window.location.pathname)).toBe(true)
+    expect(ask).not.toHaveBeenCalled()
+    expect(confirmLeave('/anderswo')).toBe(true)
+    expect(ask).toHaveBeenCalledTimes(1)
+  })
+
   it('ohne Provider ist Verlassen immer erlaubt', () => {
     root = createRoot(document.createElement('div'))
     act(() => { root.render(createElement(Sidebar)) })

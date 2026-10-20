@@ -62,7 +62,7 @@ export default function DashboardLayout({ children }) {
 
   // Sidebar-Links: bei ungespeicherten Änderungen (Monitor-Admin) erst nachfragen
   const onNavClick = (e) => {
-    if (!confirmLeave()) {
+    if (!confirmLeave(e.currentTarget.getAttribute('href'))) {
       e.preventDefault();
       return;
     }

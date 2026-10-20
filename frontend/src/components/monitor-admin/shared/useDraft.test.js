@@ -88,3 +88,20 @@ describe('useDraft', () => {
     expect(latest.changedCount).toBe(0)
   })
 })
+
+describe('useDraft während des Speicherns', () => {
+  it('übernimmt den gespeicherten Stand nicht, wenn sich das Original inzwischen geändert hat', async () => {
+    const first = screen()
+    mount(first)
+    act(() => latest.set('name', 'Aula'))
+    let finish
+    const fn = vi.fn(() => new Promise((r) => { finish = r }))
+    let pending
+    act(() => { pending = latest.save(fn) })
+    const reloaded = { ...screen(), name: 'Mensa' }
+    act(() => { root.render(createElement(Probe, { original: reloaded })) })
+    await act(async () => { finish(); await pending })
+    expect(latest.draft).toEqual(reloaded)
+    expect(latest.changedCount).toBe(0)
+  })
+})

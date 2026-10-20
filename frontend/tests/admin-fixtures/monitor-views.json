@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "name": "Abfahrten",
+    "slug": "abfahrten",
+    "is_default": true,
+    "sort_order": 0,
+    "schedule": [],
+    "kind": "departures"
+  },
+  {
+    "id": 2,
+    "name": "Vertretungsplan",
+    "slug": "vertretungsplan",
+    "is_default": false,
+    "sort_order": 1,
+    "schedule": [],
+    "kind": "substitutions"
+  },
+  {
+    "id": 3,
+    "name": "Info Mensa",
+    "slug": "info-mensa",
+    "is_default": false,
+    "sort_order": 2,
+    "schedule": [],
+    "kind": "info"
+  }
+]
