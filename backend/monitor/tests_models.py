@@ -40,6 +40,9 @@ class RotationItemsTest(TestCase):
             validate_rotation_items([{'view_id': 999999, 'seconds': 10}])
         with self.assertRaises(ValueError):
             validate_rotation_items([{'view_id': self.view.id, 'seconds': 4}])
+        with self.assertRaisesMessage(ValueError, 'zwischen 5 und 600 Sekunden'):
+            validate_rotation_items([{'view_id': self.view.id, 'seconds': 601}])
+        self.assertEqual(len(validate_rotation_items([{'view_id': self.view.id, 'seconds': 600}])), 1)
         with self.assertRaises(ValueError):
             validate_rotation_items([])
         with self.assertRaises(ValueError):

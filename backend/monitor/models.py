@@ -338,8 +338,8 @@ def validate_rotation_items(items, own_id=None):
             raise ValueError('Ungültiger Rotationseintrag. Bitte Ansicht und Dauer neu wählen.')
         view_id = item.get('view_id')
         seconds = item.get('seconds')
-        if isinstance(seconds, bool) or not isinstance(seconds, int) or not 5 <= seconds <= 3600:
-            raise ValueError('Die Dauer pro Ansicht muss zwischen 5 und 3600 Sekunden liegen.')
+        if isinstance(seconds, bool) or not isinstance(seconds, int) or not 5 <= seconds <= 600:
+            raise ValueError('Die Dauer pro Ansicht muss zwischen 5 und 600 Sekunden liegen.')
         if isinstance(view_id, bool) or not isinstance(view_id, int):
             raise ValueError('Ungültiger Rotationseintrag. Bitte eine Ansicht wählen.')
         if own_id is not None and view_id == own_id:
