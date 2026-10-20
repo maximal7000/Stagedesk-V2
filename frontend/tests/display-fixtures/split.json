@@ -225,7 +225,8 @@
               ]
             }
           ],
-          "fallback_url": null
+          "fallback_url": null,
+          "fetched_at": "2026-10-19T08:37:00+00:00"
         }
       },
       "right": {

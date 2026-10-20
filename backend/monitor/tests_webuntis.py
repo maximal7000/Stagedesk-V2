@@ -98,6 +98,7 @@ class SubstitutionsTest(WebUntisTestBase):
             'room': 'R01', 'room_old': '', 'kind': 'substitution', 'note': 'Aufgaben im Moodle',
         }])
         self.assertEqual(MonitorSettings.load().webuntis_source, 'substitutions')
+        self.assertEqual(result['fetched_at'], MONDAY_8.isoformat())
 
     def test_timetable_fallback_on_8509(self):
         def timetable(params):
@@ -134,7 +135,7 @@ class SubstitutionsTest(WebUntisTestBase):
         with mock.patch.object(WebUntisSession, 'call') as rpc:
             result = webuntis.get_substitutions(MONDAY_8)
         rpc.assert_not_called()
-        self.assertEqual(result, {'source': 'unavailable', 'news': None, 'days': []})
+        self.assertEqual(result, {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None})
 
     def test_unavailable_on_network_error(self):
         result = self.run_with(FakeUntis(authenticate=OSError('timeout')))
@@ -207,7 +208,7 @@ class ResilienceTest(WebUntisTestBase):
         fake = FakeUntis(getSubstitutions=self.GOOD)
         self.assertEqual(self.run_with(fake), good)
         cache.delete(webuntis.LAST_GOOD_KEY)
-        self.assertEqual(self.run_with(fake), {'source': 'unavailable', 'news': None, 'days': []})
+        self.assertEqual(self.run_with(fake), {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None})
         self.assertEqual(fake.calls, [])
 
     def test_lock_released_after_refresh(self):
@@ -219,6 +220,8 @@ class ResilienceTest(WebUntisTestBase):
         tuesday = local(2026, 10, 20, 8)
         result = self.run_with(FakeUntis(authenticate=OSError('timeout')), now=tuesday)
         self.assertEqual([(d['date'], d['label']) for d in result['days']], [('2026-10-20', 'Heute')])
+        # Der Stand bleibt der des ursprünglichen Abrufs
+        self.assertEqual(result['fetched_at'], MONDAY_8.isoformat())
         cache.delete(webuntis.CACHE_KEY)
         result = self.run_with(FakeUntis(authenticate=OSError('timeout')), now=local(2026, 10, 21, 8))
         self.assertEqual(result['source'], 'unavailable')

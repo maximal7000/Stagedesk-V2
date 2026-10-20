@@ -95,3 +95,55 @@
 .d-rule-top {
   border-top: 0.125rem solid var(--d-rule);
 }
+
+/* Fußleiste in den Stilen A und C: nur sichtbar, wenn ein Eintrag (.d-footer-item) darin steht.
+   Auf Weiß bekommt die Karte die weiche Fläche, damit sie sich abhebt. */
+.d-footer:not(:has(.d-footer-item)) {
+  display: none;
+}
+
+.d-tone-light .d-footer .d-card {
+  background: var(--d-soft);
+}
+
+/* Medien: Seitenwechsel per Deckkraft (300 ms) */
+@keyframes d-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.d-fade-in {
+  animation: d-fade-in 300ms ease-out both;
+}
+
+/* On-Air-Schild: Pulsieren nur über die Deckkraft (1 bis 0,72 in 2,4 s), Blinken hart im 1-s-Takt.
+   Bei reduzierter Bewegung steht das Schild still. */
+@keyframes d-onair-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+@keyframes d-onair-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.d-onair-pulse {
+  animation: d-onair-pulse 2.4s ease-in-out infinite;
+}
+
+.d-onair-blink {
+  animation: d-onair-blink 2s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .d-onair-pulse,
+  .d-onair-blink {
+    animation: none;
+  }
+}
+
+/* Seitenbild im CI-Rahmen: feine Kante statt Schatten */
+.d-page-edge {
+  outline: 0.0625rem solid var(--d-line);
+}

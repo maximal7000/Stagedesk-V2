@@ -368,7 +368,7 @@ def _build_days(entries, timegrid, days, today, now_hhmm):
 
 
 def _unavailable():
-    return {'source': 'unavailable', 'news': None, 'days': []}
+    return {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None}
 
 
 def _load(settings, now: datetime):
@@ -390,7 +390,8 @@ def _load(settings, now: datetime):
     finally:
         _logout(session)
     now_hhmm = local_now.hour * 100 + local_now.minute
-    return {'source': source, 'news': news, 'days': _build_days(entries, timegrid, days, today, now_hhmm)}
+    return {'source': source, 'news': news, 'days': _build_days(entries, timegrid, days, today, now_hhmm),
+            'fetched_at': now.isoformat()}
 
 
 def _relevant_last_good(today: date):

@@ -146,7 +146,8 @@ async function shootPage(page, context, baseUrl, name, payload, opts) {
   await page.waitForFunction(() => [...document.images].every((img) => img.complete))
   await page.waitForTimeout(150)
   const file = join(OUT, outName(name, opts))
-  await page.screenshot({ path: file })
+  // Endlose Animationen (On-Air) stehen auf dem Ausgangszustand, Überblendungen am Ende
+  await page.screenshot({ path: file, animations: 'disabled' })
   if (errors.length) throw new Error(`${name}: Fehler im Browser:\n${errors.join('\n')}`)
   return file
 }

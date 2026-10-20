@@ -19,7 +19,7 @@ SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power'}
 VIEW_KEYS = {'id', 'kind', 'style', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
 DATA_KEYS = {
     'departures': {'stations', 'disruptions'},
-    'substitutions': {'source', 'news', 'days', 'fallback_url'},
+    'substitutions': {'source', 'news', 'days', 'fallback_url', 'fetched_at'},
     'split': {'left', 'right', 'left_percent'},
     'media': {'seconds', 'per_screen', 'pages'},
     'info': {'announcements', 'events', 'countdown'},
@@ -39,6 +39,7 @@ SUBSTITUTIONS = {
              'room': 'A12', 'room_old': '', 'kind': 'substitution', 'note': ''}]},
         {'date': '2026-10-20', 'label': 'Morgen', 'rows': []},
     ],
+    'fetched_at': '2026-10-19T08:37:00+00:00',
 }
 
 STATION = {
@@ -168,7 +169,7 @@ class ContractTest(DisplayTestBase):
         screen = Screen.objects.create(name='Halle', slug='halle', default_view=view)
         data = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()['view']['data']
         self.assertEqual(data, {'source': None, 'news': None, 'days': [],
-                                'fallback_url': 'https://example.org/untis'})
+                                'fallback_url': 'https://example.org/untis', 'fetched_at': None})
         data = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': 'falsch'}).json()
         self.assertEqual(data['view']['data']['days'], [])
         # Schlüssel eines anderen Bildschirms gilt nicht
@@ -185,6 +186,7 @@ class ContractTest(DisplayTestBase):
         self.assertEqual(data['source'], 'substitutions')
         self.assertEqual([d['label'] for d in data['days']], ['Heute', 'Morgen'])
         self.assertEqual(data['news'], SUBSTITUTIONS['news'])
+        self.assertEqual(data['fetched_at'], SUBSTITUTIONS['fetched_at'])
 
         view.substitutions_next_day = False
         view.save()

@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react'
 import { useBoxSize } from '../lib/fit'
-import { formatDayMonth, formatWeekday, parseLocalDate } from '../lib/format'
+import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../lib/format'
 import { paginate, usePager } from '../lib/pager'
 import { Heading, PageCount } from './parts'
 
@@ -23,19 +23,32 @@ export default function SubstitutionsView({ view }) {
   const live = LIVE_SOURCES.includes(data.source) && days.length > 0
   if (!live) {
     if (data.fallback_url) return <FallbackFrame url={data.fallback_url} />
+    // source null: Daten gibt es nur mit gültigem Schlüssel; sonst ist WebUntis nicht erreichbar
     return (
       <div className="d-card h-full px-[2rem] py-[1.75rem]">
         <Heading>Vertretungsplan</Heading>
         <p className="d-lato mt-[1.25rem] text-[1.5rem] text-(--d-fg-soft)">
-          Der Vertretungsplan ist derzeit nicht abrufbar. Im Admin unter Monitore die WebUntis-Verbindung prüfen.
+          {data.source == null
+            ? 'Für den Vertretungsplan fehlt der Bildschirm-Schlüssel in der Kiosk-URL.'
+            : 'Der Vertretungsplan ist derzeit nicht abrufbar. Im Admin unter Monitore die WebUntis-Verbindung prüfen.'}
         </p>
       </div>
     )
   }
+  return <DayColumns days={days} news={data.news} seconds={view.page_seconds} />
+}
+
+// Zwei Tage nebeneinander; in schmalen Flächen (Splitscreen) untereinander, damit die Spalten lesbar bleiben
+const STACK_BELOW_REM = 100
+
+function DayColumns({ days, news, seconds }) {
+  const ref = useRef(null)
+  const { width, remPx } = useBoxSize(ref)
+  const stacked = days.length > 1 && width > 0 && width / remPx < STACK_BELOW_REM
   return (
-    <div className="flex h-full gap-[1.25rem]">
+    <div ref={ref} className={`flex h-full gap-[1.25rem] ${stacked ? 'flex-col' : ''}`}>
       {days.map((day, i) => (
-        <DayCard key={day.date ?? i} day={day} news={i === 0 ? data.news : null} seconds={view.page_seconds} />
+        <DayCard key={day.date ?? i} day={day} news={i === 0 ? news : null} seconds={seconds} />
       ))}
     </div>
   )
@@ -44,6 +57,7 @@ export default function SubstitutionsView({ view }) {
 function dayTitle(day) {
   const date = parseLocalDate(day.date)
   const weekday = formatWeekday(date)
+  if (!weekday) return day.label ?? ''
   const label = day.label && day.label.toLowerCase() !== weekday.toLowerCase() ? `${day.label} · ` : ''
   return `${label}${weekday} ${formatDayMonth(date)}`
 }
@@ -58,7 +72,7 @@ function DayCard({ day, news, seconds }) {
   const page = pages[index] ?? []
 
   return (
-    <section className="d-card flex h-full min-w-0 flex-1 flex-col px-[1.5rem] pb-[1rem] pt-[1.375rem]">
+    <section className="d-card flex min-h-0 min-w-0 flex-1 flex-col px-[1.5rem] pb-[1rem] pt-[1.375rem]">
       <Heading size="text-[2rem]" aside={<PageCount index={index} count={count} />}>{dayTitle(day)}</Heading>
       {news && (
         <p className="d-lato mt-[1rem] line-clamp-3 bg-(--d-soft) px-[0.875rem] py-[0.625rem] text-[1.25rem] leading-[1.35]">
@@ -131,14 +145,15 @@ function FallbackFrame({ url }) {
   )
 }
 
-// Fußleiste links neben der Uhr: Quelle der Daten (nur bei eigenen Daten, das iframe zeigt sie selbst)
+// Fußleiste links neben der Uhr: Stand der WebUntis-Daten (nur bei eigenen Daten, das iframe zeigt ihn selbst)
 function SourceNote({ view }) {
   const data = view.data ?? {}
   if (!LIVE_SOURCES.includes(data.source) || !(data.days ?? []).length) return null
+  const fetched = formatTime(data.fetched_at)
   return (
-    <div className="d-card flex h-full items-center gap-[1.5rem] px-[1.375rem] text-[1.375rem]">
-      <span className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">Quelle</span>
-      <span className="d-lato">WebUntis</span>
+    <div className="d-card d-footer-item flex h-full items-center gap-[1.5rem] px-[1.375rem] text-[1.375rem]">
+      <span className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">{fetched ? 'Stand' : 'Quelle'}</span>
+      <span className="d-lato">{fetched ? `WebUntis · ${fetched}` : 'WebUntis'}</span>
     </div>
   )
 }

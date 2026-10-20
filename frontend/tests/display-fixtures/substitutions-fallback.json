@@ -22,7 +22,8 @@
       "source": null,
       "news": null,
       "days": [],
-      "fallback_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst"
+      "fallback_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst",
+      "fetched_at": null
     }
   }
 }

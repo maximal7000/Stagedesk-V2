@@ -24,3 +24,10 @@ export function CiWheel({ look = 'solid', triple = false }) {
 export function CiStripe({ className }) {
   return <div aria-hidden="true" className={`absolute right-0 top-0 h-full bg-(--d-red) ${className}`} />
 }
+
+// Fußleiste der Stile A und C (ohne Uhr-Box): unten über die volle Breite. Bleibt unsichtbar, solange
+// der Inhalt nichts zeigt (.d-footer in display.css), damit kein leerer Streifen Platz belegt.
+export function FrameFooter({ children }) {
+  if (!children) return null
+  return <div className="d-footer mt-[1.5rem] h-[4.75rem] shrink-0">{children}</div>
+}

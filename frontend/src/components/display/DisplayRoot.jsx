@@ -1,10 +1,12 @@
 import '@fontsource/oswald/300.css'
 import '@fontsource/oswald/400.css'
 import '@fontsource/oswald/500.css'
+import '@fontsource/oswald/600.css'
 import '@fontsource/lato/400.css'
 import '@fontsource/lato/700.css'
 import './display.css'
 import { Frame } from './frame'
+import { MODE_COMPONENTS, isSplitMode } from './modes'
 import ConnectionLost from './states/ConnectionLost'
 import IdleScreen from './states/IdleScreen'
 import Loading from './states/Loading'
@@ -15,9 +17,18 @@ function viewportOrientation() {
   return typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'
 }
 
+// Bildschirmfüllende Fläche; Rahmen und Sondermodi füllen sie (bzw. im Splitscreen ihre Hälfte).
+export default function DisplayRoot(props) {
+  return (
+    <div className="fixed inset-0 overflow-hidden">
+      <DisplayContent {...props} />
+    </div>
+  )
+}
+
 // Wählt Zustand, Sondermodus oder Ansicht. Rendert nicht sekündlich; das tun nur Uhr und Countdown.
 // slug: Bildschirm- oder Ansichts-Slug aus der URL, preview: Vorschau-Token.
-export default function DisplayRoot({ payload, state, lastOkAt, nextRetryAt, error, slug = '', preview = null }) {
+function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '', preview = null }) {
   const screen = payload?.screen ?? null
   const orientation = screen?.orientation ?? viewportOrientation()
 
@@ -31,19 +42,59 @@ export default function DisplayRoot({ payload, state, lastOkAt, nextRetryAt, err
     return <ConnectionLost screenName={screen?.name} lastOkAt={lastOkAt} nextRetryAt={nextRetryAt} orientation={orientation} />
   }
   if (screen?.power === false) return <IdleScreen orientation={orientation} />
-  if (payload.mode) return <Loading orientation={orientation} />
 
   const staleSince = state === 'stale' ? lastOkAt : null
+  const Mode = payload.mode ? MODE_COMPONENTS[payload.mode.kind] : null
+  if (Mode) {
+    if (isSplitMode(payload.mode) && payload.view) {
+      return <ModeSplit mode={payload.mode} view={payload.view} orientation={orientation} staleSince={staleSince} />
+    }
+    return <Mode mode={payload.mode} orientation={orientation} />
+  }
+  if (!payload.view) return <Loading orientation={orientation} />
   return <ViewScreen view={payload.view} orientation={orientation} staleSince={staleSince} />
 }
 
-function ViewScreen({ view, orientation, staleSince }) {
+// Sondermodus auf der Seite mode.side (Standard rechts), gegenüber die Ansicht in ihrem Rahmen.
+// CI-Rad und Streifen nur am Bildschirmrand; im Hochformat übereinander (links = oben).
+function ModeSplit({ mode, view, orientation, staleSince }) {
+  const Mode = MODE_COMPONENTS[mode.kind]
+  const side = mode.side === 'left' ? 'left' : 'right'
+  const portrait = orientation === 'portrait'
+  const modePanel = (
+    <div key="mode" className="relative shrink-0" style={{ flexBasis: '38%' }}>
+      <Mode mode={mode} orientation={orientation} panel={side} />
+    </div>
+  )
+  const viewPanel = (
+    <div key="view" className="relative min-h-0 min-w-0 flex-1">
+      <ViewScreen
+        view={view}
+        orientation={orientation}
+        staleSince={staleSince}
+        wheel={portrait || side === 'right'}
+        stripe={portrait || side === 'left'}
+      />
+    </div>
+  )
+  return (
+    <div data-mode-split={side} className={`absolute inset-0 flex ${portrait ? 'flex-col' : ''}`}>
+      {side === 'left' ? [modePanel, viewPanel] : [viewPanel, modePanel]}
+    </div>
+  )
+}
+
+// Eine Ansicht im Rahmen ihres effektiven Stils. Ansichten mit eigenem Rahmen (Medien, Wechsel) bekommen
+// die Rahmen-Angaben und ViewScreen selbst als screen (für die Unteransichten des Wechsels).
+function ViewScreen({ view, orientation, staleSince = null, wheel = true, stripe = true }) {
   const View = VIEW_COMPONENTS[view.kind]
+  if (View?.ownFrame) {
+    return <View view={view} orientation={orientation} frame={{ staleSince, wheel, stripe }} screen={ViewScreen} />
+  }
   const clock = { showWeather: view.show_weather, weather: view.weather, staleSince }
   const footer = View?.Footer ? <View.Footer view={view} /> : null
-  // Fehlende Typen (bis Task 12) zeigen "Wird geladen" im Rahmen
   return (
-    <Frame style={view.style} orientation={orientation} clock={clock} footer={footer}>
+    <Frame style={view.style} orientation={orientation} clock={clock} footer={footer} wheel={wheel} stripe={stripe}>
       <div data-display-state="view" data-view-kind={view.kind} className="h-full">
         {View ? <View view={view} /> : <Loading bare />}
       </div>

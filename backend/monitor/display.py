@@ -211,13 +211,14 @@ def _substitutions_data(view, key_ok, now, compact=False):
     full, next_day = view.get_webuntis_url(), view.get_webuntis_url_next_day()
     fallback_url = (next_day or full) if compact else (full or next_day)
     if not key_ok:
-        return {'source': None, 'news': None, 'days': [], 'fallback_url': fallback_url or None}
+        return {'source': None, 'news': None, 'days': [], 'fallback_url': fallback_url or None,
+                'fetched_at': None}
     result = webuntis.get_substitutions(now)
     days = list(result.get('days') or [])
     if not view.substitutions_next_day:
         days = days[:1]
     return {'source': result.get('source'), 'news': result.get('news'), 'days': days,
-            'fallback_url': fallback_url or None}
+            'fallback_url': fallback_url or None, 'fetched_at': result.get('fetched_at')}
 
 
 def _split_side(view, content, key_ok, now):

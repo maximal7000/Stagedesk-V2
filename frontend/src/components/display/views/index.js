@@ -1,11 +1,19 @@
 import DeparturesView from './DeparturesView'
 import InfoView from './InfoView'
+import MediaView from './MediaView'
+import RotationView from './RotationView'
+import SplitView from './SplitView'
 import SubstitutionsView from './SubstitutionsView'
 
-// Ansicht je view.kind. Eine Ansicht kann eine Fußleiste mitbringen (`View.Footer`, nur dichte Rahmen),
-// die links neben der Uhr-Box steht. media, split und rotation folgen in Task 12.
+// Ansicht je view.kind. Props: {view}.
+//   View.Footer:   Fußleiste (Störungen, Stand der Daten); im dichten Stil links neben der Uhr-Box, sonst unten
+//   View.ownFrame: die Ansicht bringt ihren Rahmen selbst mit (Medien, Wechsel) und bekommt dazu
+//                  {orientation, frame: {staleSince, wheel, stripe}, screen}
 export const VIEW_COMPONENTS = {
   departures: DeparturesView,
   substitutions: SubstitutionsView,
   info: InfoView,
+  media: MediaView,
+  split: SplitView,
+  rotation: RotationView,
 }

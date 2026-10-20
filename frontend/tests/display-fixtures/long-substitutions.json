@@ -717,7 +717,8 @@
           ]
         }
       ],
-      "fallback_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst"
+      "fallback_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst",
+      "fetched_at": "2026-10-19T08:37:00+00:00"
     }
   }
 }

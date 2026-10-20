@@ -13,6 +13,9 @@ const LINE = 1.64 // Zeilenhöhe / Zeilenschrift
 const MIN_REM = 0.95 // Mindest-Zeilenschrift (Spec §5.2)
 const PREF_REM = 1.375 // Zeilenschrift laut Entwurf
 const SUBHEAD_REM = 2.25 // Zwischenüberschrift "Züge" / "Busse"
+// Mindestbreite einer Zeile in em der Zeilenschrift, damit das Ziel lesbar bleibt. In schmalen Karten
+// (Splitscreen) wird die Schrift dafür kleiner, höchstens bis MIN_REM.
+const ROW_EM = { bus: 21, train: 26 }
 
 const hasTrains = (station) => (station.departures || []).some((d) => !isBus(d))
 
@@ -51,14 +54,17 @@ export default function DeparturesView({ view }) {
 
 function StationCard({ station }) {
   const listRef = useRef(null)
-  const { height, remPx } = useBoxSize(listRef)
+  const { width, height, remPx } = useBoxSize(listRef)
   const deps = station.departures ?? []
   const grouped = deps.some(isBus) && deps.some((d) => !isBus(d))
   const reserve = grouped ? 2 * SUBHEAD_REM * remPx : 0
-  const { rows, fontPx } = fitRows({
+  const fit = fitRows({
     height: height - reserve, remPx, count: deps.length, max: station.max_departures,
     minRem: MIN_REM, prefRem: PREF_REM, lineFactor: LINE,
   })
+  const { rows } = fit
+  const rowEm = hasTrains(station) ? ROW_EM.train : ROW_EM.bus
+  const fontPx = width > 0 ? Math.max(MIN_REM * remPx, Math.min(fit.fontPx, width / rowEm)) : fit.fontPx
   const shown = deps.slice(0, rows)
   const groups = grouped
     ? [['Züge', shown.filter((d) => !isBus(d)), true], ['Busse', shown.filter(isBus), false]].filter(([, list]) => list.length)
@@ -150,7 +156,7 @@ function DisruptionBar({ view }) {
   if (!count) return null
   const d = items[index]
   return (
-    <div className="d-card flex h-full items-center gap-[1.75rem] px-[1.375rem]">
+    <div className="d-card d-footer-item flex h-full items-center gap-[1.75rem] px-[1.375rem]">
       <span className="d-oswald shrink-0 whitespace-nowrap text-[1.5rem] uppercase tracking-[0.04em] text-(--d-red)">
         {disruptionLabel(d)}
       </span>
