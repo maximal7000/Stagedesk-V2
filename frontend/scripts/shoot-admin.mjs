@@ -28,7 +28,8 @@ const VITE = join(FRONTEND, 'node_modules', '.bin', 'vite')
 const T0 = new Date('2026-10-20T10:00:00+02:00')
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'fonts.googleapis.com', 'fonts.gstatic.com'])
 
-// Aufnahme → Pfad in der App, optional mit Testdaten-Variante und einer Handlung vor dem Foto.
+// Aufnahme → Pfad in der App, optional mit Testdaten-Variante, einer Handlung vor dem Foto und
+// eigener Fensterhöhe (height) für lange Seiten.
 // Weitere Seiten kommen mit den folgenden Bauschritten hinzu.
 const PAGES = {
   overview: { path: '/monitor-admin' },
@@ -53,6 +54,23 @@ const PAGES = {
     action: async (page) => {
       await page.getByRole('switch', { name: 'On-Air' }).click()
       await page.waitForSelector('[data-undo-toast]')
+    },
+  },
+  screens: { path: '/monitor-admin/screens' },
+  'screen-detail': { path: '/monitor-admin/screens/1', height: 1360 },
+  'screen-detail-dirty': {
+    path: '/monitor-admin/screens/1',
+    action: async (page) => {
+      await page.getByLabel('Ort').fill('Eingangshalle Nord')
+      await page.locator('[data-schedule-editor] li').nth(1).getByRole('button', { name: 'So', exact: true }).click()
+      await page.getByRole('region', { name: 'Ungespeicherte Änderungen' }).waitFor()
+    },
+  },
+  'screen-detail-key': {
+    path: '/monitor-admin/screens/1',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Neu erzeugen' }).click()
+      await page.waitForSelector('[role="alertdialog"]')
     },
   },
 }
@@ -176,6 +194,7 @@ async function shoot(context, baseUrl, name, storageKey) {
     }, [storageKey, JSON.stringify(testUser())])
     await page.route('**/api/**', (route) => answerApi(route, missing, shot.variant))
     await page.clock.setFixedTime(T0)
+    if (shot.height) await page.setViewportSize({ width: 1440, height: shot.height })
 
     await page.goto(`${baseUrl}${shot.path}`)
     await page.waitForSelector('[data-admin-page]:not([data-state="loading"])', { timeout: 15000 })
@@ -210,7 +229,9 @@ async function main() {
   try {
     browser = await chromium.launch({
       executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium',
-      args: ['--headless=new'],
+      args: ['--headless=new', '--lang=de-DE'],
+      // Datums- und Zeitfelder folgen der Sprache des Browsers: deutsch, 24 Stunden
+      env: { ...process.env, LANG: 'de_DE.UTF-8', LANGUAGE: 'de_DE:de' },
     })
     const context = await browser.newContext({
       viewport: { width: 1440, height: 900 },

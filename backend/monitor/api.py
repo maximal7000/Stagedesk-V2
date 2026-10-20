@@ -18,7 +18,7 @@ from . import push
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
-    validate_rotation_items,
+    generate_access_key, validate_rotation_items,
 )
 
 
@@ -734,6 +734,17 @@ def reload_screen(request, id: int):
     slug = screen.slug
     transaction.on_commit(lambda: push.notify_reload(slug))
     return {"success": True}
+
+
+@monitor_router.post("/screens/{int:id}/regenerate-key", response=ScreenListSchema, auth=keycloak_auth)
+def regenerate_screen_key(request, id: int):
+    """Neuer access_key; die alte Kiosk-URL bekommt danach keine Vertretungsdaten mehr."""
+    _require_perm(request, 'monitor.setup')
+    screen = get_object_or_404(Screen, id=id)
+    screen.access_key = generate_access_key()
+    screen.save(update_fields=['access_key', 'updated_at'])
+    push.notify_changed_on_commit([screen.slug])
+    return screen
 
 
 # ═══ Klausuren ════════════════════════════════════════════════════

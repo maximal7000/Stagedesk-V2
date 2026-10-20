@@ -1,6 +1,12 @@
+from unittest import mock
+
 from django.test import TestCase, override_settings
 
+from core.auth import KeycloakAuth
+from users.models import Permission, UserProfile
+
 from .models import DisplayView, MonitorSettings, Screen
+from .tests_display import SUBSTITUTIONS
 
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
@@ -94,3 +100,63 @@ class GlobalStateApiTest(TestCase):
         settings = MonitorSettings.load()
         self.assertEqual((settings.on_air_active, settings.on_air_since), (False, None))
         self.assertFalse(self.client.get('/api/monitor/clock').json()['on_air'])
+
+
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
+class RegenerateScreenKeyTest(TestCase):
+    """POST /screens/{id}/regenerate-key (Spec §4.5): neuer access_key, Recht setup."""
+
+    def setUp(self):
+        self.view = DisplayView.objects.create(name='Vertretung', slug='vertretung', kind='substitutions',
+                                               webuntis_url='https://example.org/untis')
+        self.screen = Screen.objects.create(name='Halle', slug='halle', default_view=self.view)
+        self.profile = UserProfile.objects.create(keycloak_id='tester')
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        auth.start()
+        self.addCleanup(auth.stop)
+
+    def grant(self, code):
+        perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
+        self.profile.permissions.add(perm)
+
+    def regenerate(self):
+        return self.client.post(f'/api/monitor/screens/{self.screen.id}/regenerate-key',
+                                HTTP_AUTHORIZATION='Bearer x')
+
+    def test_requires_setup(self):
+        self.grant('monitor.view')
+        self.grant('monitor.power')
+        old = self.screen.access_key
+        self.assertEqual(self.regenerate().status_code, 403)
+        self.screen.refresh_from_db()
+        self.assertEqual(self.screen.access_key, old)
+
+    def test_unknown_screen_404(self):
+        self.grant('monitor.setup')
+        r = self.client.post('/api/monitor/screens/9999/regenerate-key', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 404)
+
+    def test_key_changes_and_is_returned(self):
+        self.grant('monitor.setup')
+        old = self.screen.access_key
+        with mock.patch('monitor.api.push.notify_changed') as notify, \
+                self.captureOnCommitCallbacks(execute=True):
+            r = self.regenerate()
+        self.assertEqual(r.status_code, 200)
+        self.screen.refresh_from_db()
+        self.assertNotEqual(self.screen.access_key, old)
+        self.assertEqual(len(self.screen.access_key), 32)
+        self.assertEqual(r.json()['access_key'], self.screen.access_key)
+        self.assertEqual(r.json()['id'], self.screen.id)
+        notify.assert_called_once_with(['halle'])
+
+    def test_old_key_loses_substitutions(self):
+        self.grant('monitor.setup')
+        old = self.screen.access_key
+        self.regenerate()
+        new = Screen.objects.get(id=self.screen.id).access_key
+        with mock.patch('monitor.display.webuntis.get_substitutions', return_value=SUBSTITUTIONS):
+            stale = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': old}).json()
+            fresh = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': new}).json()
+        self.assertEqual(stale['view']['data']['days'], [])
+        self.assertEqual(len(fresh['view']['data']['days']), 2)

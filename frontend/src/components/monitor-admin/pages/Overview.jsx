@@ -8,12 +8,14 @@ import { PageHeader, EmptyState, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
 import { formatTime } from '../../display/lib/format'
 import ScreenStatus, { screenStatus } from '../shared/ScreenStatus'
+import { Cell, ScreenNameCell, ScreenRow, ScreenTable, iconButton } from '../shared/ScreenTable'
 import ConfirmDialog from '../shared/ConfirmDialog'
 import EmergencyDialog, { EMERGENCY_HINT } from '../shared/EmergencyDialog'
 import UndoToast from '../shared/UndoToast'
 import { describeShown, explainScreen, formatDayTime } from '../shared/explain'
 import { errorText } from '../shared/errorText'
 import { allOffUntil, dataSources, formatRange, nextExam, powerMenu, upcoming } from './overviewData'
+import { kioskUrl } from './screenData'
 import * as api from '../shared/api'
 
 const REFRESH_MS = 60 * 1000
@@ -48,7 +50,13 @@ function Switch({ on, onChange, disabled, label }) {
   )
 }
 
-const iconButton = 'p-2 rounded-md text-fg-muted hover:text-fg hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:text-fg-disabled disabled:pointer-events-none'
+const OVERVIEW_COLUMNS = [
+  { key: 'name', label: 'Bildschirm', className: 'w-[22%]' },
+  { key: 'status', label: 'Status', className: 'w-[16%]' },
+  { key: 'shown', label: 'Zeigt gerade' },
+  { key: 'device', label: 'Gerät', className: 'w-[17%]' },
+  { key: 'actions', label: null, srLabel: 'Aktionen', className: 'w-px' },
+]
 
 function RowMenu({ items, hint }) {
   const [open, setOpen] = useState(false)
@@ -362,69 +370,51 @@ export default function Overview() {
           <EmptyState icon={MonitorOff} title="Noch keine Bildschirme" />
         </div>
       ) : screens ? (
-        <div className="bg-surface rounded-lg">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="text-xs text-fg-subtle border-b border-line-subtle">
-                <th className="font-medium px-4 py-2.5 w-[22%]">Bildschirm</th>
-                <th className="font-medium px-4 py-2.5 w-[16%]">Status</th>
-                <th className="font-medium px-4 py-2.5">Zeigt gerade</th>
-                <th className="font-medium px-4 py-2.5 w-[17%]">Gerät</th>
-                <th className="px-4 py-2.5 w-px"><span className="sr-only">Aktionen</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              {screens.map((s) => {
-                const payload = displays?.[s.slug]
-                const known = displays && payload !== undefined
-                const reason = known ? explainScreen(s, payload, { now, events: extra.events, holidays: extra.holidays }) : ''
-                return (
-                  <tr key={s.id} className="border-b border-line-subtle last:border-0" data-screen={s.slug}>
-                    <td className="px-4 py-3 align-top">
-                      <div className="text-sm font-semibold text-fg">{s.name}</div>
-                      <div className="text-xs text-fg-muted">
-                        {[s.location, s.orientation === 'portrait' ? 'Hochformat' : null].filter(Boolean).join(' · ')}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 align-top"><ScreenStatus screen={s} now={now} /></td>
-                    <td className="px-4 py-3 align-top min-w-0">
-                      {!known ? (
-                        <div className="text-sm text-fg-subtle">Wird geladen…</div>
-                      ) : payload ? (
-                        <>
-                          <div className={`text-sm ${payload.screen?.power === false ? 'text-fg-muted' : 'text-fg'}`}>{describeShown(payload, viewNames)}</div>
-                          {reason && <div className="text-xs text-fg-muted">{reason}</div>}
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-sm text-fg-muted">Unbekannt</div>
-                          <div className="text-xs text-fg-muted">Anzeige-Daten nicht abrufbar{reason ? ` · ${reason}` : ''}</div>
-                        </>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-top text-sm text-fg-subtle">Kein Agent installiert</td>
-                    <td className="px-4 py-3 align-top">
-                      <div className="flex items-center justify-end gap-1">
-                        {can.setup && (
-                          <>
-                            <a className={iconButton} href={`/monitor?screen=${encodeURIComponent(s.slug)}&key=${encodeURIComponent(s.access_key)}`}
-                              target="_blank" rel="noreferrer" aria-label={`Vorschau ${s.name}`} title="Vorschau">
-                              <Eye className="w-4 h-4" />
-                            </a>
-                            <button type="button" className={iconButton} onClick={() => reload(s)} aria-label={`${s.name} neu laden`} title="Neu laden">
-                              <RotateCw className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                        {can.power && <RowMenu {...screenMenu(s)} />}
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ScreenTable columns={OVERVIEW_COLUMNS}>
+          {screens.map((s) => {
+            const payload = displays?.[s.slug]
+            const known = displays && payload !== undefined
+            const reason = known ? explainScreen(s, payload, { now, events: extra.events, holidays: extra.holidays }) : ''
+            return (
+              <ScreenRow key={s.id} screen={s}>
+                <ScreenNameCell screen={s} to={can.setup ? `/monitor-admin/screens/${s.id}` : undefined} />
+                <Cell><ScreenStatus screen={s} now={now} /></Cell>
+                <Cell className="min-w-0">
+                  {!known ? (
+                    <div className="text-sm text-fg-subtle">Wird geladen…</div>
+                  ) : payload ? (
+                    <>
+                      <div className={`text-sm ${payload.screen?.power === false ? 'text-fg-muted' : 'text-fg'}`}>{describeShown(payload, viewNames)}</div>
+                      {reason && <div className="text-xs text-fg-muted">{reason}</div>}
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-sm text-fg-muted">Unbekannt</div>
+                      <div className="text-xs text-fg-muted">Anzeige-Daten nicht abrufbar{reason ? ` · ${reason}` : ''}</div>
+                    </>
+                  )}
+                </Cell>
+                <Cell className="text-sm text-fg-subtle">Kein Agent installiert</Cell>
+                <Cell>
+                  <div className="flex items-center justify-end gap-1">
+                    {can.setup && (
+                      <>
+                        <a className={iconButton} href={kioskUrl('', s)}
+                          target="_blank" rel="noreferrer" aria-label={`Vorschau ${s.name}`} title="Vorschau">
+                          <Eye className="w-4 h-4" />
+                        </a>
+                        <button type="button" className={iconButton} onClick={() => reload(s)} aria-label={`${s.name} neu laden`} title="Neu laden">
+                          <RotateCw className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    {can.power && <RowMenu {...screenMenu(s)} />}
+                  </div>
+                </Cell>
+              </ScreenRow>
+            )
+          })}
+        </ScreenTable>
       ) : null}
 
       {screens && (

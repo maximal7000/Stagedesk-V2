@@ -42,6 +42,8 @@ import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
 // Monitor-Admin
 import MonitorAdminLayout, { PendingPage } from './components/monitor-admin/MonitorAdminLayout';
 import MonitorOverview from './components/monitor-admin/pages/Overview';
+import MonitorScreens from './components/monitor-admin/pages/Screens';
+import MonitorScreenDetail from './components/monitor-admin/pages/ScreenDetail';
 import UnsavedChangesProvider from './components/monitor-admin/shared/UnsavedChangesProvider';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
@@ -112,8 +114,8 @@ function AppContent() {
                     <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
                     <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminLayout /></PermissionRoute>}>
                       <Route index element={<MonitorOverview />} />
-                      <Route path="screens" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Bildschirme" /></PermissionRoute>} />
-                      <Route path="screens/:id" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Bildschirm" /></PermissionRoute>} />
+                      <Route path="screens" element={<PermissionRoute permission="monitor.setup"><MonitorScreens /></PermissionRoute>} />
+                      <Route path="screens/:id" element={<PermissionRoute permission="monitor.setup"><MonitorScreenDetail /></PermissionRoute>} />
                       <Route path="views" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansichten" /></PermissionRoute>} />
                       <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Neue Ansicht" /></PermissionRoute>} />
                       <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansicht" /></PermissionRoute>} />

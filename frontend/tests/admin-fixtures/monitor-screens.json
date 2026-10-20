@@ -32,9 +32,24 @@
         ],
         "from": "07:00",
         "until": "17:00"
+      },
+      {
+        "days": [
+          5
+        ],
+        "from": "10:00",
+        "until": "14:00"
       }
     ],
-    "power_exceptions": [],
+    "power_exceptions": [
+      {
+        "from_date": "2026-11-07",
+        "until_date": "2026-11-07",
+        "from": "09:00",
+        "until": "15:00",
+        "note": "Tag der offenen Tür"
+      }
+    ],
     "power_mode": "auto",
     "cec_status": "on",
     "cec_status_at": "2026-10-20T09:58:30+02:00",
