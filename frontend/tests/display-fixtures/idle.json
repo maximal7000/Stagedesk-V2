@@ -1,0 +1,90 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": false
+  },
+  "mode": null,
+  "view": {
+    "id": 1,
+    "kind": "info",
+    "style": "ci",
+    "page_seconds": 15,
+    "show_weather": true,
+    "weather": {
+      "temperature": 14.2,
+      "feels_like": 12.8,
+      "description": "bewölkt",
+      "icon": "04d",
+      "humidity": 76,
+      "city": "Lübeck"
+    },
+    "qr": {
+      "url": "https://stagedesk.t410.de",
+      "label": "Programm und Karten"
+    },
+    "data": {
+      "announcements": [
+        {
+          "id": 1,
+          "title": "Aula ab 16:30 gesperrt",
+          "text": "Generalprobe Theater-AG bis 21:00",
+          "priority": "urgent",
+          "active_until": "2026-10-19T19:00:00+00:00"
+        },
+        {
+          "id": 2,
+          "title": "Elternabend Jahrgang 9",
+          "text": "Mensa · Donnerstag 19:00",
+          "priority": "important",
+          "active_until": null
+        },
+        {
+          "id": 3,
+          "title": "Fundsachen bis Freitag abholen",
+          "text": "Hausmeisterloge",
+          "priority": "normal",
+          "active_until": null
+        }
+      ],
+      "events": [
+        {
+          "id": 7,
+          "name": "Herbstkonzert",
+          "location": "Aula",
+          "date_from": "2026-10-22T16:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 8,
+          "name": "Wandertag Jahrgang 7",
+          "location": "",
+          "date_from": "2026-10-22T22:00:00+00:00",
+          "date_until": "2026-10-23T21:59:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 9,
+          "name": "Beginn Herbstferien",
+          "location": "",
+          "date_from": "2026-10-25T23:00:00+00:00",
+          "date_until": "2026-10-26T22:59:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        }
+      ],
+      "countdown": {
+        "name": "Herbstkonzert",
+        "date": "2026-10-22T16:00:00+00:00"
+      }
+    }
+  }
+}

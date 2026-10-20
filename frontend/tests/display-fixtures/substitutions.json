@@ -1,0 +1,228 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true
+  },
+  "mode": null,
+  "view": {
+    "id": 3,
+    "kind": "substitutions",
+    "style": "dense",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "source": "substitutions",
+      "news": "Ab der 5. Stunde ist die Aula für die Generalprobe gesperrt. Sportunterricht Q1 findet in Halle 2 statt.",
+      "days": [
+        {
+          "date": "2026-10-19",
+          "label": "Heute",
+          "rows": [
+            {
+              "class": "5a",
+              "periods": "3",
+              "subject": "Ma",
+              "teacher": "KLM",
+              "teacher_old": "HRT",
+              "room": "104",
+              "room_old": "",
+              "kind": "substitution",
+              "note": ""
+            },
+            {
+              "class": "5a",
+              "periods": "4",
+              "subject": "Ma",
+              "teacher": "KLM",
+              "teacher_old": "HRT",
+              "room": "104",
+              "room_old": "",
+              "kind": "substitution",
+              "note": "Aufgaben im Moodle"
+            },
+            {
+              "class": "6b",
+              "periods": "5-6",
+              "subject": "Sp",
+              "teacher": "",
+              "teacher_old": "BEC",
+              "room": "",
+              "room_old": "",
+              "kind": "cancelled",
+              "note": ""
+            },
+            {
+              "class": "7c",
+              "periods": "2",
+              "subject": "En",
+              "teacher": "SNR",
+              "teacher_old": "",
+              "room": "015",
+              "room_old": "201",
+              "kind": "room_change",
+              "note": ""
+            },
+            {
+              "class": "8a",
+              "periods": "5",
+              "subject": "Bio",
+              "teacher": "LOR",
+              "teacher_old": "WAG",
+              "room": "B12",
+              "room_old": "",
+              "kind": "substitution",
+              "note": ""
+            },
+            {
+              "class": "8a",
+              "periods": "6",
+              "subject": "Bio",
+              "teacher": "",
+              "teacher_old": "WAG",
+              "room": "",
+              "room_old": "",
+              "kind": "cancelled",
+              "note": "früher Schluss"
+            },
+            {
+              "class": "9b",
+              "periods": "1",
+              "subject": "La",
+              "teacher": "PET",
+              "teacher_old": "",
+              "room": "Bib",
+              "room_old": "302",
+              "kind": "room_change",
+              "note": ""
+            },
+            {
+              "class": "10a",
+              "periods": "7-8",
+              "subject": "Mu",
+              "teacher": "",
+              "teacher_old": "FRA",
+              "room": "",
+              "room_old": "",
+              "kind": "cancelled",
+              "note": "Probe Aula"
+            },
+            {
+              "class": "E",
+              "periods": "3-4",
+              "subject": "Ge",
+              "teacher": "STR",
+              "teacher_old": "MÜL",
+              "room": "210",
+              "room_old": "",
+              "kind": "substitution",
+              "note": ""
+            },
+            {
+              "class": "Q1",
+              "periods": "5-6",
+              "subject": "Sp",
+              "teacher": "KRA",
+              "teacher_old": "",
+              "room": "Halle 2",
+              "room_old": "Halle 1",
+              "kind": "room_change",
+              "note": ""
+            },
+            {
+              "class": "Q2",
+              "periods": "1-2",
+              "subject": "Ph",
+              "teacher": "",
+              "teacher_old": "ZIM",
+              "room": "",
+              "room_old": "",
+              "kind": "cancelled",
+              "note": "Klausurvorbereitung"
+            },
+            {
+              "class": "Q2",
+              "periods": "3",
+              "subject": "De",
+              "teacher": "HAN",
+              "teacher_old": "",
+              "room": "Aula",
+              "room_old": "108",
+              "kind": "room_change",
+              "note": ""
+            }
+          ]
+        },
+        {
+          "date": "2026-10-20",
+          "label": "Morgen",
+          "rows": [
+            {
+              "class": "5c",
+              "periods": "2",
+              "subject": "De",
+              "teacher": "SCH",
+              "teacher_old": "OTT",
+              "room": "106",
+              "room_old": "",
+              "kind": "substitution",
+              "note": ""
+            },
+            {
+              "class": "6a",
+              "periods": "4",
+              "subject": "Ku",
+              "teacher": "",
+              "teacher_old": "LIN",
+              "room": "",
+              "room_old": "",
+              "kind": "cancelled",
+              "note": ""
+            },
+            {
+              "class": "8c",
+              "periods": "3",
+              "subject": "Ch",
+              "teacher": "ROS",
+              "teacher_old": "",
+              "room": "C03",
+              "room_old": "C01",
+              "kind": "room_change",
+              "note": ""
+            },
+            {
+              "class": "9a",
+              "periods": "5-6",
+              "subject": "Gr",
+              "teacher": "BRA",
+              "teacher_old": "PET",
+              "room": "305",
+              "room_old": "",
+              "kind": "substitution",
+              "note": "Klausur findet statt"
+            },
+            {
+              "class": "Q1",
+              "periods": "1-2",
+              "subject": "Ma",
+              "teacher": "",
+              "teacher_old": "HRT",
+              "room": "",
+              "room_old": "",
+              "kind": "cancelled",
+              "note": ""
+            }
+          ]
+        }
+      ],
+      "fallback_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst"
+    }
+  }
+}

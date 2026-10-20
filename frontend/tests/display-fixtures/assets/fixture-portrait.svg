@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2715" height="3840" viewBox="0 0 2715 3840">
+  <rect width="2715" height="3840" fill="#ffffff"/>
+  <rect x="220" y="260" width="2275" height="40" fill="#da1f3d"/>
+  <text x="220" y="620" font-family="Oswald, sans-serif" font-size="230" fill="#222">HERBSTKONZERT</text>
+  <text x="220" y="860" font-family="Lato, sans-serif" font-size="120" fill="#555">Donnerstag, 22. Oktober, 18:00 Uhr, Aula</text>
+  <rect x="220" y="1060" width="2275" height="1500" fill="#e8e8e8"/>
+  <g fill="#cfcfcf">
+    <rect x="220" y="2720" width="2275" height="60"/><rect x="220" y="2860" width="2000" height="60"/>
+    <rect x="220" y="3000" width="2150" height="60"/><rect x="220" y="3140" width="1600" height="60"/>
+  </g>
+  <text x="220" y="3600" font-family="Lato, sans-serif" font-size="90" fill="#777">Testseite Hochformat</text>
+</svg>

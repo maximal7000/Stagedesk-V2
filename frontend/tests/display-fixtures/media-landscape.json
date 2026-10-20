@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true
+  },
+  "mode": null,
+  "view": {
+    "id": 5,
+    "kind": "media",
+    "style": "ci",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "seconds": 10,
+      "per_screen": 1,
+      "pages": [
+        {
+          "url": "/media/monitor/pages/fixture-landscape.svg",
+          "width": 3840,
+          "height": 2160,
+          "orientation": "landscape"
+        }
+      ]
+    }
+  }
+}
