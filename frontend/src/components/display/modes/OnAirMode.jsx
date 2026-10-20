@@ -1,9 +1,9 @@
 import { ClockBox } from '../frame'
-import { formatTime } from '../lib/format'
 
 // On-Air (Entwurf mode-on-air.png): Studio-Leuchtschild, rote Fläche mit weißer Schrift auf Schwarz.
-// Darunter "seit HH:MM", im Vollbild davor die Uhr (show_clock). Im Splitscreen (panel) ohne Uhr,
-// die zeigt dort der Rahmen der Ansicht. Animation: still, pulse oder blink (display.css).
+// Darunter im Vollbild die aktuelle Uhr (show_clock), bei veralteten Daten mit "Stand HH:MM". Im
+// Splitscreen (panel) nichts darunter, die Uhr zeigt dort der Rahmen der Ansicht.
+// Animation: still, pulse oder blink (display.css).
 const ANIMATION = { pulse: 'd-onair-pulse', blink: 'd-onair-blink' }
 
 // Schriftgröße nach Textlänge, damit auch ein langer eigener Text ins Schild passt
@@ -12,9 +12,8 @@ function signFontRem(text, panel) {
   return panel ? Math.min(10.5, 68 / len) : Math.min(17, 150 / len)
 }
 
-export default function OnAirMode({ mode, panel = null }) {
+export default function OnAirMode({ mode, panel = null, staleSince = null }) {
   const text = mode.text || 'ON AIR'
-  const since = formatTime(mode.since)
   const showClock = !panel && mode.show_clock
   return (
     <div
@@ -34,15 +33,9 @@ export default function OnAirMode({ mode, panel = null }) {
           {text}
         </span>
       </div>
-      {(showClock || since) && (
-        <div
-          className={`d-oswald flex items-baseline gap-[0.75rem] whitespace-nowrap font-light leading-none text-[#cfcfcf] ${panel
-            ? 'mt-[4rem] text-[4rem]'
-            : 'absolute bottom-[7.5rem] text-[4.25rem]'}`}
-        >
-          {showClock && <ClockBox variant="compact" className="font-normal text-[#fff] [&>span]:font-normal" />}
-          {showClock && since && <span className="text-[#9a9a9a]">·</span>}
-          {since && <span>seit {since}</span>}
+      {showClock && (
+        <div className="absolute bottom-[7.5rem] text-[4.25rem] text-[#fff]">
+          <ClockBox variant="compact" staleSince={staleSince} className="[&>span:first-child]:font-normal" />
         </div>
       )}
     </div>

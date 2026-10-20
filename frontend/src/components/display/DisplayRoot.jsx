@@ -7,6 +7,7 @@ import '@fontsource/lato/700.css'
 import './display.css'
 import { Frame } from './frame'
 import { MODE_COMPONENTS, isSplitMode } from './modes'
+import EmergencyMode from './modes/EmergencyMode'
 import ConnectionLost from './states/ConnectionLost'
 import IdleScreen from './states/IdleScreen'
 import Loading from './states/Loading'
@@ -38,6 +39,11 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
     return <Loading orientation={orientation} />
   }
   if (!screen && !payload.view) return <ScreenNotFound slug={slug} orientation={orientation} />
+  // Ein zwischengespeicherter Notfall bleibt stehen, auch ohne Verbindung und bei "aus" im Zwischenspeicher
+  // (der Server schaltet bei Notfall ein); mit "Stand HH:MM" der letzten Daten.
+  if (state === 'lost' && payload.mode?.kind === 'emergency') {
+    return <EmergencyMode mode={payload.mode} orientation={orientation} staleSince={lastOkAt ?? null} />
+  }
   if (state === 'lost') {
     return <ConnectionLost screenName={screen?.name} lastOkAt={lastOkAt} nextRetryAt={nextRetryAt} orientation={orientation} />
   }
@@ -49,7 +55,7 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
     if (isSplitMode(payload.mode) && payload.view) {
       return <ModeSplit mode={payload.mode} view={payload.view} orientation={orientation} staleSince={staleSince} />
     }
-    return <Mode mode={payload.mode} orientation={orientation} />
+    return <Mode mode={payload.mode} orientation={orientation} staleSince={staleSince} />
   }
   if (!payload.view) return <Loading orientation={orientation} />
   return <ViewScreen view={payload.view} orientation={orientation} staleSince={staleSince} />

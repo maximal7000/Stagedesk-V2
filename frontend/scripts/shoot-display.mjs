@@ -139,7 +139,8 @@ async function shootPage(page, context, baseUrl, name, payload, opts) {
     await page.clock.fastForward(60000)
     await page.waitForTimeout(300)
     await page.clock.fastForward(61000)
-    await page.waitForSelector('[data-display-state="lost"]', { timeout: 15000 })
+    // Ein zwischengespeicherter Notfall bleibt auch ohne Verbindung stehen (statt "Verbindung verloren")
+    await page.waitForSelector('[data-display-state="lost"], [data-mode-kind="emergency"]', { timeout: 15000 })
   }
 
   await page.evaluate(() => document.fonts.ready)

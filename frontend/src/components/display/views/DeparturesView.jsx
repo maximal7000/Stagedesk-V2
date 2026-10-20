@@ -58,13 +58,13 @@ function StationCard({ station }) {
   const deps = station.departures ?? []
   const grouped = deps.some(isBus) && deps.some((d) => !isBus(d))
   const reserve = grouped ? 2 * SUBHEAD_REM * remPx : 0
-  const fit = fitRows({
-    height: height - reserve, remPx, count: deps.length, max: station.max_departures,
-    minRem: MIN_REM, prefRem: PREF_REM, lineFactor: LINE,
-  })
-  const { rows } = fit
+  // Breite begrenzt die Wunschgröße; fitRows rechnet Zeilen und Schrift dann mit genau dieser Größe
   const rowEm = hasTrains(station) ? ROW_EM.train : ROW_EM.bus
-  const fontPx = width > 0 ? Math.max(MIN_REM * remPx, Math.min(fit.fontPx, width / rowEm)) : fit.fontPx
+  const widthRem = width > 0 ? width / rowEm / remPx : PREF_REM
+  const { rows, fontPx } = fitRows({
+    height: height - reserve, remPx, count: deps.length, max: station.max_departures,
+    minRem: MIN_REM, prefRem: Math.max(MIN_REM, Math.min(PREF_REM, widthRem)), lineFactor: LINE,
+  })
   const shown = deps.slice(0, rows)
   const groups = grouped
     ? [['Züge', shown.filter((d) => !isBus(d)), true], ['Busse', shown.filter(isBus), false]].filter(([, list]) => list.length)

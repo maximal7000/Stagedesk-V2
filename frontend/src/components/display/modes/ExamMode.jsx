@@ -17,13 +17,13 @@ function titleFontRem(title, widthRem, maxRem, oneLine) {
   return Math.max(3.5, rem)
 }
 
-export default function ExamMode({ mode, orientation, panel = null }) {
-  if (panel) return <ExamPanel mode={mode} side={panel} />
+export default function ExamMode({ mode, orientation, panel = null, staleSince = null }) {
+  if (panel) return <ExamPanel mode={mode} side={panel} orientation={orientation} />
   const portrait = orientation === 'portrait'
   return (
     <Frame style="ci" orientation={orientation}>
       <div data-display-state="mode" data-mode-kind="exam" className="relative h-full">
-        <ClockBox variant="compact" className="absolute right-0 top-[1.75rem] text-[6.5rem]" />
+        <ClockBox variant="compact" staleSince={staleSince} className="absolute right-0 top-[1.75rem] text-[6.5rem]" />
         <div className={portrait ? 'pt-[14rem]' : 'pl-[2.5rem] pt-[9.5rem]'}>
           <ExamContent mode={mode} titleRem={titleFontRem(mode.title, portrait ? 52 : 72, 12, true)} />
         </div>
@@ -32,8 +32,9 @@ export default function ExamMode({ mode, orientation, panel = null }) {
   )
 }
 
-function ExamPanel({ mode, side }) {
-  const wheel = side === 'left'
+// Im Hochformat (übereinander) ohne Rad: dort trägt die Ansicht das Band mit drei Rädern
+function ExamPanel({ mode, side, orientation }) {
+  const wheel = side === 'left' && orientation !== 'portrait'
   return (
     <div data-display-state="mode" data-mode-kind="exam" className="d-root d-tone-light absolute inset-0 overflow-hidden">
       {wheel && <CiWheel look="solid" />}
