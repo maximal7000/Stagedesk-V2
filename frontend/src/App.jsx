@@ -44,6 +44,8 @@ import MonitorAdminLayout, { PendingPage } from './components/monitor-admin/Moni
 import MonitorOverview from './components/monitor-admin/pages/Overview';
 import MonitorScreens from './components/monitor-admin/pages/Screens';
 import MonitorScreenDetail from './components/monitor-admin/pages/ScreenDetail';
+import MonitorViews from './components/monitor-admin/pages/Views';
+import MonitorViewEdit from './components/monitor-admin/pages/ViewEdit';
 import UnsavedChangesProvider from './components/monitor-admin/shared/UnsavedChangesProvider';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
@@ -116,9 +118,9 @@ function AppContent() {
                       <Route index element={<MonitorOverview />} />
                       <Route path="screens" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power']}><MonitorScreens /></PermissionRoute>} />
                       <Route path="screens/:id" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power']}><MonitorScreenDetail /></PermissionRoute>} />
-                      <Route path="views" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansichten" /></PermissionRoute>} />
-                      <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Neue Ansicht" /></PermissionRoute>} />
-                      <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansicht" /></PermissionRoute>} />
+                      <Route path="views" element={<PermissionRoute permission="monitor.setup"><MonitorViews /></PermissionRoute>} />
+                      <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
+                      <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
                       <Route path="exams" element={<PermissionRoute permission="monitor.exams"><PendingPage title="Klausuren & Termine" /></PermissionRoute>} />
                       <Route path="media" element={<PermissionRoute permission="monitor.media"><PendingPage title="Medien" /></PermissionRoute>} />
                       <Route path="schedules" element={<PermissionRoute permission="monitor.power"><PendingPage title="Ferien & Zeitpläne" /></PermissionRoute>} />

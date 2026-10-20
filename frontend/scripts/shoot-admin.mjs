@@ -9,7 +9,10 @@
 // liest monitor-screens.json (Pfad ohne /api/, "/" wird zu "-"). Mit Query gilt zuerst die Datei mit "@query"
 // (GET /api/monitor/display?screen=aula → monitor-display@screen=aula.json). Eine Aufnahme mit `variant` liest
 // zuerst aus tests/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
-// nennt den Pfad. Schreibende Anfragen antworten mit {"success": true}.
+// nennt den Pfad. Schreibende Anfragen lesen <pfad>.<methode>.json (POST /api/monitor/views/preview →
+// monitor-views-preview.post.json), sonst antworten sie mit {"success": true}.
+// Live-Vorschau: Eine Aufnahme mit `preview` beantwortet GET /api/monitor/display?preview=… (das iframe der
+// Vorschau) mit tests/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
 // Bilder: docs/superpowers/screenshots/2026-10-19-monitor/admin-<seite>.png.
 // Schlägt eine Seite fehl, laufen die übrigen weiter; der Exit-Code ist am Ende 1.
 // Chromium: CHROMIUM_PATH oder /opt/pw-browsers/chromium (mit --headless=new).
@@ -23,13 +26,14 @@ import { loadEnv } from 'vite'
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const FIXTURES = join(FRONTEND, 'tests', 'admin-fixtures')
+const DISPLAY_FIXTURES = join(FRONTEND, 'tests', 'display-fixtures')
 const OUT = resolve(FRONTEND, '..', 'docs', 'superpowers', 'screenshots', '2026-10-19-monitor')
 const VITE = join(FRONTEND, 'node_modules', '.bin', 'vite')
 const T0 = new Date('2026-10-20T10:00:00+02:00')
 const ALLOWED_HOSTS = new Set(['127.0.0.1', 'fonts.googleapis.com', 'fonts.gstatic.com'])
 
 // Aufnahme → Pfad in der App, optional mit Testdaten-Variante, einer Handlung vor dem Foto und
-// eigener Fensterhöhe (height) für lange Seiten.
+// eigener Fensterhöhe (height) für lange Seiten; `preview` wählt die Anzeige-Testdaten der Live-Vorschau.
 // Weitere Seiten kommen mit den folgenden Bauschritten hinzu.
 const PAGES = {
   overview: { path: '/monitor-admin' },
@@ -75,6 +79,43 @@ const PAGES = {
       await page.waitForSelector('[role="alertdialog"]')
     },
   },
+  views: { path: '/monitor-admin/views' },
+  'view-new': {
+    path: '/monitor-admin/views/new',
+    action: async (page) => {
+      await page.getByRole('radio', { name: /^Abfahrten/ }).click()
+      await page.getByLabel('Name', { exact: true }).waitFor()
+    },
+  },
+  'view-edit-departures': {
+    path: '/monitor-admin/views/1', preview: 'departures', height: 1500,
+    action: async (page) => {
+      await page.getByRole('radio', { name: 'Dunkel' }).click()
+      await page.getByLabel('Max. Zeilen Kohlmarkt').fill('8')
+      await waitForPreview(page)
+    },
+  },
+  'view-edit-rotation': {
+    path: '/monitor-admin/views/4', preview: 'rotation', height: 1060,
+    action: waitForPreview,
+  },
+  'view-edit-info': { path: '/monitor-admin/views/3', preview: 'info', action: waitForPreview },
+  'view-edit-split': { path: '/monitor-admin/views/5', preview: 'split', height: 1300, action: waitForPreview },
+  'view-edit-media': { path: '/monitor-admin/views/6', preview: 'media-landscape', height: 1100, action: waitForPreview },
+  'stop-filter-dialog': {
+    path: '/monitor-admin/views/1', preview: 'departures',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Filter für Hauptbahnhof / ZOB' }).click()
+      await page.waitForSelector('[data-stop-filter-dialog]')
+    },
+  },
+}
+
+// Bis das iframe der Live-Vorschau die Anzeige gerendert hat
+async function waitForPreview(page) {
+  await page.waitForSelector('[data-live-preview][data-preview-state="ready"]', { timeout: 15000 })
+  await page.frameLocator('iframe[title="Vorschau der Ansicht"]').locator('[data-display-state="view"]').first().waitFor({ timeout: 15000 })
+  await page.waitForTimeout(400)
 }
 
 function parseArgs(argv) {
@@ -162,12 +203,19 @@ function fixtureFor(apiPath, query, variant) {
   return null
 }
 
-async function answerApi(route, missing, variant) {
+async function answerApi(route, missing, shot) {
   const req = route.request()
-  const { pathname, search } = new URL(req.url())
+  const { pathname, search, searchParams } = new URL(req.url())
   const apiPath = pathname.slice(pathname.indexOf('/api/') + 5)
+  const variant = shot.variant
   if (req.method() !== 'GET') {
-    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true}' })
+    const posted = fixtureFor(`${apiPath}.${req.method().toLowerCase()}`, '', variant)
+    const body = posted ? readFileSync(posted, 'utf8') : '{"success":true}'
+    return route.fulfill({ status: 200, contentType: 'application/json', body })
+  }
+  if (apiPath === 'monitor/display' && searchParams.has('preview') && shot.preview) {
+    const body = readFileSync(join(DISPLAY_FIXTURES, `${shot.preview}.json`), 'utf8')
+    return route.fulfill({ status: 200, contentType: 'application/json', body })
   }
   const file = fixtureFor(apiPath, search.slice(1), variant)
   if (!file) {
@@ -194,7 +242,12 @@ async function shoot(context, baseUrl, name, storageKey) {
       }
       window.WebSocket = SilentSocket
     }, [storageKey, JSON.stringify(testUser())])
-    await page.route('**/api/**', (route) => answerApi(route, missing, shot.variant))
+    await page.route('**/api/**', (route) => answerApi(route, missing, shot))
+    // Seitenbilder der Medien-Vorschau aus tests/display-fixtures/assets/
+    await page.route('**/media/monitor/**', (route) => route.fulfill({
+      status: 200, contentType: 'image/svg+xml',
+      body: readFileSync(join(DISPLAY_FIXTURES, 'assets', new URL(route.request().url()).pathname.split('/').pop())),
+    }))
     await page.clock.setFixedTime(T0)
     if (shot.height) await page.setViewportSize({ width: 1440, height: shot.height })
 

@@ -16,63 +16,18 @@ import ScheduleEditor, { ExceptionEditor } from '../shared/ScheduleEditor'
 import { useUnsavedGuard } from '../shared/UnsavedChangesProvider'
 import { exceptionProblems, scheduleProblems } from '../shared/schedule'
 import { errorText } from '../shared/errorText'
+import { Field, Section, Segmented, fieldClass } from '../shared/form'
 import {
   DISPLAY_FIELDS, ORIENTATION_OPTIONS, POWER_FIELDS, POWER_MODE_OPTIONS, SCALE_OPTIONS,
   cecLabel, kioskUrl, lastReport, pickFields, sectionPayload,
 } from './screenData'
 import * as api from '../shared/api'
 
-const fieldClass = 'w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-sm text-fg placeholder:text-fg-subtle disabled:text-fg-disabled disabled:hover:border-line'
-
 const DOT = { online: 'bg-ok', offline: 'bg-bad', unknown: 'bg-fg-subtle' }
 
 const isoToday = () => {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-function Section({ title, aside, children, ...rest }) {
-  return (
-    <section className="bg-surface rounded-lg p-5" {...rest}>
-      <div className="flex items-baseline justify-between gap-3 mb-4">
-        <h2 className="font-display text-lg font-semibold tracking-tight text-fg">{title}</h2>
-        {aside}
-      </div>
-      {children}
-    </section>
-  )
-}
-
-function Field({ label, help, htmlFor, children, className = '' }) {
-  return (
-    <div className={className}>
-      {htmlFor ? (
-        <label htmlFor={htmlFor} className="block text-sm font-medium text-fg mb-1.5">{label}</label>
-      ) : (
-        <div className="text-sm font-medium text-fg mb-1.5">{label}</div>
-      )}
-      {children}
-      {help && <p className="text-xs text-fg-subtle mt-1.5">{help}</p>}
-    </div>
-  )
-}
-
-function Segmented({ options, value, onChange, disabled, label }) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex w-full bg-raised border border-line rounded-md p-0.5">
-      {options.map((o) => {
-        const active = o.value === value
-        return (
-          <button key={o.value} type="button" role="radio" aria-checked={active} disabled={disabled} onClick={() => onChange(o.value)}
-            className={`flex-1 px-3 py-1.5 text-sm rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-              active ? `bg-hover font-medium ${disabled ? 'text-fg-muted' : 'text-fg'}` : `${disabled ? 'text-fg-disabled' : 'text-fg-muted hover:text-fg'}`
-            } disabled:pointer-events-none`}>
-            {o.label}
-          </button>
-        )
-      })}
-    </div>
-  )
 }
 
 function DisplaySection({ draft, set, views, disabled, readOnly }) {
