@@ -264,8 +264,7 @@ class ContractTest(DisplayTestBase):
                          ['screen']['slug'], 'glocke')
 
 
-@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
-class PreviewTest(DisplayTestBase):
+class PreviewTestBase(DisplayTestBase):
 
     def setUp(self):
         super().setUp()
@@ -282,6 +281,10 @@ class PreviewTest(DisplayTestBase):
     def post_preview(self, body):
         return self.client.post('/api/monitor/views/preview', body, content_type='application/json',
                                 HTTP_AUTHORIZATION='Bearer x')
+
+
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
+class PreviewTest(PreviewTestBase):
 
     def test_preview_requires_setup_and_token(self):
         body = {'view': {'id': self.saved.id, 'name': 'Entwurf', 'kind': 'departures'}}
@@ -322,3 +325,50 @@ class PreviewTest(DisplayTestBase):
         cache.clear()
         self.assertEqual(self.client.get('/api/monitor/display', {'preview': token}).status_code, 404)
         self.assertEqual(self.client.get('/api/monitor/display', {'preview': 'kurz'}).status_code, 404)
+
+
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
+class PreviewValidationTest(PreviewTestBase):
+    """Die Vorschau prüft den Entwurf wie das Speichern: Fehler sind 422 mit deutscher Meldung, nie 500."""
+
+    def setUp(self):
+        super().setUp()
+        self.grant_setup()
+
+    def assert_rejected(self, body, fragment):
+        r = self.post_preview(body)
+        self.assertEqual(r.status_code, 422, r.content)
+        detail = r.json()['detail']
+        self.assertIsInstance(detail, str)
+        self.assertIn(fragment, detail)
+
+    def test_invalid_rotation_items_rejected(self):
+        rotation = self.view('rotation', name='Wechsel')
+        self.assert_rejected({'view': {'kind': 'rotation', 'rotation_items': [{'view_id': 999999, 'seconds': 10}]}},
+                             'existiert nicht')
+        self.assert_rejected({'view': {'id': rotation.id, 'rotation_items': [{'view_id': rotation.id, 'seconds': 10}]}},
+                             'nicht selbst')
+        # gespeicherte Rotation, Entwurf leert die Liste: der gespeicherte Typ zählt
+        self.assert_rejected({'view': {'id': rotation.id, 'rotation_items': []}}, 'mindestens eine Ansicht')
+        self.assert_rejected({'view': {'kind': 'rotation', 'rotation_items': [{'view_id': self.saved.id, 'seconds': 'x'}]}},
+                             'Sekunden')
+
+    def test_invalid_choices_rejected(self):
+        self.assert_rejected({'view': {'kind': 'tabelle'}}, 'Typ')
+        self.assert_rejected({'view': {'id': self.saved.id, 'style': 'bunt'}}, 'Stil')
+        self.assert_rejected({'view': {'on_air_behavior': 'flash'}}, 'On-Air')
+        self.assert_rejected({'view': {'split_left': 'kantine'}}, 'Split')
+
+    def test_invalid_countdown_date_rejected(self):
+        self.assert_rejected({'view': {'custom_countdown_date': 'morgen früh'}}, 'Countdown')
+
+    def test_naive_countdown_date_is_local_time(self):
+        body = {'view': {'id': self.saved.id, 'show_custom_countdown': True, 'custom_countdown_name': 'Abi',
+                         'custom_countdown_date': '2099-06-01T10:00'}}
+        r = self.post_preview(body)
+        self.assertEqual(r.status_code, 200, r.content)
+        data = self.client.get('/api/monitor/display', {'preview': r.json()['token']})
+        self.assertEqual(data.status_code, 200)
+        countdown = data.json()['view']['data']['countdown']
+        self.assertEqual(countdown['name'], 'Abi')
+        self.assertTrue(countdown['date'].startswith('2099-06-01T10:00:00+02:00'), countdown['date'])

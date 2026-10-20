@@ -58,3 +58,33 @@ class UpdateViewApiTest(TestCase):
         self.assertEqual(r.status_code, 422)
         view.refresh_from_db()
         self.assertEqual(view.rotation_items, [])
+
+    def _put(self, view, body):
+        with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}), \
+                mock.patch('monitor.api._require_perm'):
+            return self.client.put(f'/api/monitor/config?view_id={view.id}', body, content_type='application/json')
+
+    def test_update_view_rejects_invalid_choices(self):
+        view = DisplayView.objects.create(name='I', slug='i', kind='info')
+        for body, fragment in [({'kind': 'tabelle'}, 'Typ'), ({'style': 'bunt'}, 'Stil'),
+                               ({'on_air_split_side': 'oben'}, 'On-Air'), ({'pdf_mode': 'zufall'}, 'Modus')]:
+            r = self._put(view, body)
+            self.assertEqual(r.status_code, 422, r.content)
+            self.assertIn(fragment, r.json()['detail'])
+        view.refresh_from_db()
+        self.assertEqual((view.kind, view.style, view.on_air_split_side, view.pdf_mode),
+                         ('info', 'auto', 'right', 'cycle'))
+
+    def test_update_view_countdown_date(self):
+        view = DisplayView.objects.create(name='I', slug='i', kind='info')
+        r = self._put(view, {'custom_countdown_date': 'kein Datum'})
+        self.assertEqual(r.status_code, 422, r.content)
+        self.assertIn('Countdown', r.json()['detail'])
+        r = self._put(view, {'custom_countdown_date': '2099-06-01T10:00'})
+        self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual(view.custom_countdown_date.isoformat(), '2099-06-01T08:00:00+00:00')
+        r = self._put(view, {'custom_countdown_date': None})
+        self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertIsNone(view.custom_countdown_date)

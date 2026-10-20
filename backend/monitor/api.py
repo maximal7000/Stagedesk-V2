@@ -18,8 +18,9 @@ from . import push
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
-    generate_access_key, validate_rotation_items,
+    generate_access_key,
 )
+from .validation import validate_view_data as _validate_view_data
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -64,34 +65,6 @@ def _clamp_int(v, lo, hi):
         return max(lo, min(hi, int(v)))
     except (TypeError, ValueError):
         return None
-
-
-def _validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
-    """Serverseitige Validierung/Sanitisierung der Ansicht-Update-Daten.
-    Klemmt Zahlenbereiche, prüft Zeitfenster und Rotationseinträge."""
-    for key, lo, hi in [
-        ('split_left_percent', 20, 80), ('split_percent', 20, 80),
-        ('webuntis_zoom', 25, 400),
-    ]:
-        if key in data and data[key] is not None:
-            c = _clamp_int(data[key], lo, hi)
-            if c is not None:
-                data[key] = c
-    # Zeitplan: Beginn < Ende erzwingen
-    if 'schedule' in data and isinstance(data['schedule'], list):
-        for e in data['schedule']:
-            if isinstance(e, dict):
-                start, end = e.get('from'), e.get('until')
-                if start and end and str(start) >= str(end):
-                    raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
-    # Leere Liste ist nur bei Rotations-Ansichten ein Fehler; andere Ansichten tragen sie mit.
-    kind = data.get('kind', current_kind)
-    if 'rotation_items' in data and (data['rotation_items'] or kind == 'rotation'):
-        try:
-            data['rotation_items'] = validate_rotation_items(data['rotation_items'], own_id=own_id)
-        except ValueError as e:
-            raise HttpError(422, str(e))
-    return data
 
 
 def _validate_exam_data(data: dict) -> dict:

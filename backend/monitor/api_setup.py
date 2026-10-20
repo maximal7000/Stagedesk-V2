@@ -14,6 +14,7 @@ from .permissions import _require_perm
 from .consumers import push_power_to_all
 from .models import DisplayView, EmergencyTemplate, HolidayPeriod, Screen
 from .power import next_on_time
+from .validation import validate_view_data
 from .schemas import (
     EmergencyTemplateCreateSchema, EmergencyTemplateSchema,
     HolidayPeriodCreateSchema, HolidayPeriodSchema, ScreenSelectionSchema, ViewPreviewSchema,
@@ -150,8 +151,14 @@ def create_view_preview(request, payload: ViewPreviewSchema):
     """Entwurf ablegen (nichts wird gespeichert) → Token für GET /display?preview= (Spec §4.5)."""
     _require_perm(request, 'monitor.setup')
     draft = payload.view.dict(exclude_unset=True)
-    if draft.get('id') and not DisplayView.objects.filter(id=draft['id'], deleted_at__isnull=True).exists():
-        raise HttpError(404, "Die Ansicht existiert nicht mehr. Bitte die Seite neu laden.")
+    saved = None
+    if draft.get('id'):
+        saved = DisplayView.objects.filter(id=draft['id'], deleted_at__isnull=True).first()
+        if saved is None:
+            raise HttpError(404, "Die Ansicht existiert nicht mehr. Bitte die Seite neu laden.")
+    # Wie beim Speichern prüfen: ein fehlerhafter Entwurf ist 422 mit Meldung, nicht 500 beim Anzeigen
+    draft = validate_view_data(draft, own_id=saved.id if saved else None,
+                               current_kind=saved.kind if saved else None)
     if payload.screen_id and not Screen.objects.filter(id=payload.screen_id).exists():
         raise HttpError(404, "Der Bildschirm existiert nicht mehr. Bitte einen anderen wählen.")
     return {'token': display.store_preview(draft, payload.screen_id)}

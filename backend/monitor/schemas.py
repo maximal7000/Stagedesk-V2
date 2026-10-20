@@ -147,7 +147,8 @@ class DisplayViewUpdateSchema(Schema):
     qr_code_label: Optional[str] = None
     show_custom_countdown: Optional[bool] = None
     custom_countdown_name: Optional[str] = None
-    custom_countdown_date: Optional[datetime] = None
+    # Text statt datetime: validation.parse_countdown_date prüft mit deutscher Meldung (ohne Zone = Ortszeit)
+    custom_countdown_date: Optional[str] = None
     show_transit: Optional[bool] = None
     transit_stops: Optional[list] = None
     transit_duration: Optional[int] = None
