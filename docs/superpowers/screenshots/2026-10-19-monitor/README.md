@@ -91,3 +91,49 @@ Namensschema: `display-<testdatei>[-<stil>][-portrait].png`. Ohne Stilangabe gil
 | `display-substitutions-fallback-dense.png` | Vertretungsplan, WebUntis-iframe als Ausweichseite, Stil dense |
 | `display-substitutions-fallback.png` | Vertretungsplan, WebUntis-iframe als Ausweichseite |
 | `display-substitutions.png` | Vertretungsplan |
+
+# Screenshots des Monitor-Admin (2026-10-19)
+
+Erzeugt mit `cd frontend && node scripts/shoot-admin.mjs` (1440x900, lange Seiten höher). Testdaten: `frontend/tests/admin-fixtures/`, Varianten in Unterordnern (`empty`, `error`, `offline`, `missing`, `view-only`, `onair-only`, `power-only`, `day-off`, `emergency`, `media-processing`, `schedules`). Zeitpunkt: Di 20.10.2026, 10:00.
+
+| Bild | Zeigt |
+|---|---|
+| `admin-overview.png` | Übersicht: On-Air, Notfall, laufende Klausur, Bildschirm-Tabelle mit „Zeigt gerade“, Datenquellen, Demnächst |
+| `admin-overview-view-only.png` | Übersicht nur lesend (nur `monitor.view`): keine Schalter, Sidebar nur mit Übersicht |
+| `admin-overview-empty.png` | Übersicht ohne Bildschirme (leerer Zustand) |
+| `admin-overview-error.png` | Übersicht, Server antwortet mit 503: Fehlertext mit Ursache und nächstem Schritt |
+| `admin-overview-emergency-dialog.png` | Dialog „Notfall auslösen“ mit Vorlagen |
+| `admin-overview-emergency-menu.png` | Notfall aktiv, Menü „Weitere Aktionen“ einer Zeile |
+| `admin-overview-day-off.png` | Bildschirme „bis Tagesende aus“ |
+| `admin-overview-undo.png` | On-Air geschaltet, Meldung mit „Rückgängig“ |
+| `admin-screens.png` | Bildschirm-Liste |
+| `admin-screens-empty.png` | Bildschirm-Liste ohne Einträge |
+| `admin-screen-detail.png` | Bildschirm-Detail: Anzeige, Ein- und Ausschalten, Gerät, Kiosk-URL |
+| `admin-screen-detail-dirty.png` | Bildschirm-Detail mit ungespeicherten Änderungen (SaveBar) |
+| `admin-screen-detail-power-only.png` | Bildschirm-Detail nur mit `monitor.power`: Anzeige lesend, keine Kiosk-URL |
+| `admin-screen-detail-key.png` | Bestätigung „Schlüssel neu erzeugen“ |
+| `admin-views.png` | Ansichten-Liste mit „Verwendet auf“ |
+| `admin-views-empty.png` | Ansichten-Liste ohne Einträge |
+| `admin-view-new.png` | Neue Ansicht: Typ-Wahl, Typ Abfahrten gewählt |
+| `admin-view-edit-departures.png` | Ansicht Abfahrten mit Live-Vorschau, Stil Dunkel, Störungsfilter |
+| `admin-view-edit-rotation.png` | Ansicht Wechsel |
+| `admin-view-edit-info.png` | Ansicht Info |
+| `admin-view-edit-split.png` | Ansicht Splitscreen |
+| `admin-view-edit-media.png` | Ansicht Medien |
+| `admin-view-edit-missing.png` | Ansicht nicht gefunden (404) |
+| `admin-view-delete-dialog.png` | Bestätigung „Ansicht löschen?“ mit Hinweis auf betroffene Bildschirme |
+| `admin-stop-filter-dialog.png` | Filter-Dialog einer Haltestelle |
+| `admin-exams.png` | Klausuren & Termine: Läuft gerade, Kommt, Vergangen, Ankündigungen |
+| `admin-exams-empty.png` | Klausuren & Termine ohne Einträge |
+| `admin-exams-offline.png` | Klausuren & Termine ohne Verbindung zum Server |
+| `admin-exam-form.png` | Seitenpanel „Klausur bearbeiten“ |
+| `admin-exam-template-menu.png` | Menü „Aus Vorlage“ |
+| `admin-event-form.png` | Seitenpanel Termin mit Zuordnung Bildschirm zu Ansicht |
+| `admin-media.png` | Medien: Kacheln mit erster Seite, Status |
+| `admin-media-empty.png` | Medien ohne Dateien |
+| `admin-media-processing.png` | Medien, eine Datei wird vorbereitet, eine fehlgeschlagen |
+| `admin-media-detail.png` | Detailpanel einer Datei: Verwendet in, alle Seiten |
+| `admin-schedules.png` | Ferien & Zeitpläne: Ferientabelle, Wochenübersicht je Bildschirm |
+| `admin-schedules-empty.png` | Ferien & Zeitpläne ohne Ferien und Bildschirme |
+| `admin-settings.png` | Einstellungen: WebUntis mit Testergebnis, Notfall-Vorlagen, On-Air, Wetter |
+| `admin-settings-onair-only.png` | Einstellungen nur mit `monitor.onair`: WebUntis lesend, On-Air bearbeitbar |

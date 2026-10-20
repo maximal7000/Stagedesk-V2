@@ -125,9 +125,9 @@ def default_files(root):
         if 'migrations' not in p.relative_to(root / 'backend/monitor').parts[:-1]
         and p.name != 'tests_migrations.py'
     ]
-    files += [root / 'frontend/src/pages/MonitorPage.jsx',
-              root / 'frontend/src/pages/admin/MonitorAdminPage.jsx']
-    files += walk(root / 'frontend/src/components/monitor')
+    files += [root / 'frontend/src/pages/MonitorPage.jsx']
+    files += walk(root / 'frontend/src/components/display')
+    files += walk(root / 'frontend/src/components/monitor-admin')
     return [p for p in files if p.exists()]
 
 

@@ -14,20 +14,31 @@ export default function ConfirmDialog({
 }) {
   const titleId = useId()
   const cancelRef = useRef(null)
-  const onCancelRef = useRef(onCancel)
-  useEffect(() => { onCancelRef.current = onCancel })
+  const dialogRef = useRef(null)
 
-  // Einmal beim Öffnen: Fokus auf "Abbrechen", Escape schließt
-  useEffect(() => {
-    cancelRef.current?.focus()
-    const onKey = (e) => { if (e.key === 'Escape') onCancelRef.current?.() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  // Beim Öffnen: Fokus auf "Abbrechen"
+  useEffect(() => { cancelRef.current?.focus() }, [])
+
+  // Escape gilt nur im Dialog und erreicht die Seite nicht (ein offenes Seitenpanel bleibt offen);
+  // Tab bleibt zwischen den Knöpfen des Dialogs
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation()
+      onCancel?.()
+    } else if (e.key === 'Tab') {
+      const items = [...dialogRef.current.querySelectorAll('button:not([disabled]), [href], input, select, textarea')]
+      if (!items.length) return
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel?.() }}>
-      <div role="alertdialog" aria-modal="true" aria-labelledby={titleId}
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onKeyDown={onKeyDown}
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel?.() }}>
+      <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby={titleId}
         className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full p-5">
         <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight text-fg">{title}</h2>
         {body && <div className="mt-2 text-sm text-fg-muted">{body}</div>}

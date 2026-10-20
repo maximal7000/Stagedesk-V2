@@ -10,7 +10,8 @@
 // (GET /api/monitor/display?screen=aula → monitor-display@screen=aula.json). Eine Aufnahme mit `variant` liest
 // zuerst aus tests/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
 // nennt den Pfad. Schreibende Anfragen lesen <pfad>.<methode>.json (POST /api/monitor/views/preview →
-// monitor-views-preview.post.json), sonst antworten sie mit {"success": true}.
+// monitor-views-preview.post.json), sonst antworten sie mit {"success": true}. Fehlerfälle beschreibt
+// fulfillFixture (Testdatei mit "__status" oder "__abort").
 // Live-Vorschau: Eine Aufnahme mit `preview` beantwortet GET /api/monitor/display?preview=… (das iframe der
 // Vorschau) mit tests/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
 // Bilder: docs/superpowers/screenshots/2026-10-19-monitor/admin-<seite>.png.
@@ -142,6 +143,26 @@ const PAGES = {
       await page.waitForSelector('[data-check-result]')
     },
   },
+  // Zustände: nur lesend, leer, Fehler, Dialoge
+  'overview-view-only': { path: '/monitor-admin', variant: 'view-only' },
+  'overview-error': { path: '/monitor-admin', variant: 'error' },
+  'overview-empty': { path: '/monitor-admin', variant: 'empty' },
+  'screens-empty': { path: '/monitor-admin/screens', variant: 'empty' },
+  'views-empty': { path: '/monitor-admin/views', variant: 'empty' },
+  'view-edit-missing': { path: '/monitor-admin/views/1', variant: 'missing' },
+  'view-delete-dialog': {
+    path: '/monitor-admin/views/1', preview: 'departures',
+    action: async (page) => {
+      await waitForPreview(page)
+      await page.getByRole('button', { name: 'Löschen', exact: true }).click()
+      await page.waitForSelector('[role="alertdialog"]')
+    },
+  },
+  'exams-empty': { path: '/monitor-admin/exams', variant: 'empty' },
+  'exams-offline': { path: '/monitor-admin/exams', variant: 'offline' },
+  'media-empty': { path: '/monitor-admin/media', variant: 'empty' },
+  'schedules-empty': { path: '/monitor-admin/schedules', variant: 'empty' },
+  'settings-onair-only': { path: '/monitor-admin/settings', variant: 'onair-only', height: 1180 },
   'stop-filter-dialog': {
     path: '/monitor-admin/views/1', preview: 'departures',
     action: async (page) => {
@@ -250,8 +271,7 @@ async function answerApi(route, missing, shot) {
   const variant = shot.variant
   if (req.method() !== 'GET') {
     const posted = fixtureFor(`${apiPath}.${req.method().toLowerCase()}`, '', variant)
-    const body = posted ? readFileSync(posted, 'utf8') : '{"success":true}'
-    return route.fulfill({ status: 200, contentType: 'application/json', body })
+    return fulfillFixture(route, posted ? readFileSync(posted, 'utf8') : '{"success":true}')
   }
   if (apiPath === 'monitor/display' && searchParams.has('preview') && shot.preview) {
     const body = readFileSync(join(DISPLAY_FIXTURES, `${shot.preview}.json`), 'utf8')
@@ -262,7 +282,20 @@ async function answerApi(route, missing, shot) {
     missing.add(`GET /api/${apiPath}${search}`)
     return route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   }
-  return route.fulfill({ status: 200, contentType: 'application/json', body: readFileSync(file, 'utf8') })
+  return fulfillFixture(route, readFileSync(file, 'utf8'))
+}
+
+// Fehlerfälle: Eine Testdatei {"__status": 503, "body": {...}} antwortet mit diesem Status,
+// {"__abort": true} bricht die Anfrage ab (Netzwerkfehler wie bei fehlender Verbindung).
+function fulfillFixture(route, text) {
+  const data = JSON.parse(text)
+  if (data && !Array.isArray(data) && typeof data === 'object') {
+    if (data.__abort) return route.abort('connectionrefused')
+    if (data.__status) {
+      return route.fulfill({ status: data.__status, contentType: 'application/json', body: JSON.stringify(data.body ?? {}) })
+    }
+  }
+  return route.fulfill({ status: 200, contentType: 'application/json', body: text })
 }
 
 async function shoot(context, baseUrl, name, storageKey) {
