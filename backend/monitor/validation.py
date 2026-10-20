@@ -40,7 +40,8 @@ BOOL_FIELDS = {
     'transit_show_via': 'Zwischenhalte anzeigen',
 }
 WALK_MINUTES = (0, 60)
-MAX_DEPARTURES = (1, 30)
+MAX_DEPARTURES = (1, 50)
+DEFAULT_MAX_DEPARTURES = 10  # wie display.DEFAULT_MAX_DEPARTURES
 
 
 def _is_int(value):
@@ -74,6 +75,8 @@ def _check_stops(stops):
         if not isinstance(stop, dict):
             raise HttpError(422, "Die Haltestellen sind ungültig. Bitte die Seite neu laden.")
         name = stop.get('name') or stop.get('id') or 'ohne Namen'
+        if _is_int(stop.get('max_departures')) and stop['max_departures'] == 0:
+            stop['max_departures'] = DEFAULT_MAX_DEPARTURES  # Altdaten: 0 hieß "ohne Grenze"
         for key, label, (lo, hi) in (('walk_minutes', 'Fußweg', WALK_MINUTES),
                                      ('max_departures', 'Max. Zeilen', MAX_DEPARTURES)):
             if key in stop and not (_is_int(stop[key]) and lo <= stop[key] <= hi):

@@ -170,7 +170,7 @@ describe('ViewEdit', () => {
     await act(async () => typeInto(container.querySelector('input[aria-label="Max. Zeilen Kohlmarkt"]'), ''))
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Haltestelle „Kohlmarkt“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 30 eintragen.')
+    expect(toast.error).toHaveBeenCalledWith('Haltestelle „Kohlmarkt“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 50 eintragen.')
   })
 
   it('zeigt den gespeicherten WebUntis-Link und löst ihn, wenn die Adresse bearbeitet wird', async () => {

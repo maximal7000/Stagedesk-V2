@@ -57,7 +57,7 @@ export const NUMBER_RULES = {
   transit_duration: { label: 'Vorausschau', min: 10, max: 240 },
 }
 export const WALK_MINUTES_LIMIT = 60
-export const MAX_DEPARTURES_LIMIT = 30
+export const MAX_DEPARTURES_LIMIT = 50
 
 const numberMessage = (label, min, max) => `${label}: bitte eine ganze Zahl von ${min} bis ${max} eintragen.`
 const inRange = (value, min, max) => value !== '' && value != null && Number.isInteger(Number(value))
@@ -187,7 +187,9 @@ export function viewProblems(draft, keys = []) {
       if (!inRange(stop.walk_minutes ?? 0, 0, WALK_MINUTES_LIMIT)) {
         problems.push(`Haltestelle „${stop.name}“: ${numberMessage('Fußweg', 0, WALK_MINUTES_LIMIT)}`)
       }
-      if (!inRange(stop.max_departures ?? DEFAULT_MAX_DEPARTURES, 1, MAX_DEPARTURES_LIMIT)) {
+      // 0 hieß im alten Admin "ohne Grenze" und wird beim Speichern zum Standard (normalizeStop)
+      const max = stop.max_departures === 0 ? DEFAULT_MAX_DEPARTURES : stop.max_departures
+      if (!inRange(max ?? DEFAULT_MAX_DEPARTURES, 1, MAX_DEPARTURES_LIMIT)) {
         problems.push(`Haltestelle „${stop.name}“: ${numberMessage('Max. Zeilen', 1, MAX_DEPARTURES_LIMIT)}`)
       }
     }

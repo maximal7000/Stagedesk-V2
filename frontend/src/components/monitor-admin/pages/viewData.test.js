@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  KIND_OPTIONS, changedKeys, draftFromView, moveItem, newStop, previewPayload, rotationChoices,
+  KIND_OPTIONS, changedKeys, draftFromView, moveItem, newStop, normalizeStop, previewPayload, rotationChoices,
   stopTransport, usedOn, viewPayload, viewProblems,
 } from './viewData'
 
@@ -161,12 +161,20 @@ describe('viewProblems: Zahlenfelder', () => {
   it('prüft Fußweg und Max. Zeilen jeder Haltestelle', () => {
     const stops = [
       { id: '1', name: 'Kohlmarkt', walk_minutes: '', max_departures: 10 },
-      { id: '2', name: 'Sandstraße', walk_minutes: 3, max_departures: 31 },
+      { id: '2', name: 'Sandstraße', walk_minutes: 3, max_departures: 51 },
     ]
     expect(viewProblems({ ...ok, transit_stops: stops }, ['transit_stops'])).toEqual([
       'Haltestelle „Kohlmarkt“: Fußweg: bitte eine ganze Zahl von 0 bis 60 eintragen.',
-      'Haltestelle „Sandstraße“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 30 eintragen.',
+      'Haltestelle „Sandstraße“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 50 eintragen.',
     ])
+  })
+  it('lässt alte Haltestellen mit 0 (ohne Grenze) oder bis 50 Zeilen speichern', () => {
+    const stops = [
+      { id: '1', name: 'Kohlmarkt', walk_minutes: 0, max_departures: 0 },
+      { id: '2', name: 'Sandstraße', walk_minutes: 3, max_departures: 50 },
+    ]
+    expect(viewProblems({ ...ok, transit_stops: stops }, ['transit_stops'])).toEqual([])
+    expect(stops.map((s) => normalizeStop(s).max_departures)).toEqual([10, 50])
   })
 })
 
