@@ -589,12 +589,51 @@ class DevicePairSchema(Schema):
 
 
 class DeviceSchema(Schema):
-    id: int
+    """Gerät mit Ampel. `id` ist leer bei Bildschirmen mit altem Skript (`legacy`).
+    serial, telemetry.network.ip/mac: nur mit monitor.devices, sonst null."""
+    id: Optional[int] = None
     screen_id: Optional[int] = None
-    serial: str
-    model: str
-    agent_version: str
+    serial: Optional[str] = None
+    model: str = ''
+    status: str
+    status_text: str
+    agent_version: str = ''
     last_seen_at: Optional[datetime] = None
     token_created_at: Optional[datetime] = None
     revoked_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    telemetry: dict = {}
+    warnings: list = []
+    last_screenshot_url: Optional[str] = None
+    last_screenshot_at: Optional[datetime] = None
+    legacy: bool = False
+
+
+DEVICE_COMMAND_KINDS = Literal['reload', 'restart_browser', 'reboot', 'power_on', 'power_off',
+                               'update_now', 'screenshot', 'test_pattern']
+
+
+class DeviceCommandCreateSchema(Schema):
+    kind: DEVICE_COMMAND_KINDS
+
+
+class DeviceCommandSchema(Schema):
+    id: int
+    kind: str
+    status: str
+    result: str = ''
     created_at: datetime
+    finished_at: Optional[datetime] = None
+    created_by_name: str = ''
+
+
+class DeviceEventSchema(Schema):
+    id: int
+    kind: str
+    text: str
+    created_at: datetime
+    person: str = ''
+
+    @staticmethod
+    def resolve_person(obj):
+        return (obj.data or {}).get('created_by_name', '') if isinstance(obj.data, dict) else ''

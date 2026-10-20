@@ -22,6 +22,7 @@ from .models import (
     generate_access_key,
 )
 from .validation import validate_view_data as _validate_view_data
+from .validation import validate_screen_device_data, validate_settings_device_data
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -692,17 +693,22 @@ def create_screen(request, payload: ScreenCreateSchema):
 # Felder, die ins `hello` des Geräte-Agenten gehören (Kiosk-URL, Power-Methode, Updates)
 AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 SCREEN_POWER_FIELDS = {'power_mode', 'power_schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
+# Geräte-Felder gehören zum Recht devices (Spec §3.4)
+SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 
 
 @monitor_router.put("/screens/{int:id}", response=ScreenListSchema, auth=keycloak_auth)
 def update_screen(request, id: int, payload: ScreenUpdateSchema):
     # Power-Felder gehören zum Recht power, alles andere zu setup (Spec §3.5).
     data = payload.dict(exclude_unset=True)
-    if not data or set(data) - SCREEN_POWER_FIELDS:
+    if not data or set(data) - SCREEN_POWER_FIELDS - SCREEN_DEVICE_FIELDS:
         _require_perm(request, 'monitor.setup')
     if set(data) & SCREEN_POWER_FIELDS:
         _require_perm(request, 'monitor.power')
+    if set(data) & SCREEN_DEVICE_FIELDS:
+        _require_perm(request, 'monitor.devices')
     screen = get_object_or_404(Screen, id=id)
+    validate_screen_device_data(data, screen.power_method, screen.power_config)
     if 'default_view_id' in data:
         val = data.pop('default_view_id')
         screen.default_view_id = val if val else None
@@ -942,6 +948,7 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
         _require_perm(request, 'monitor.setup')
     if set(data) & ON_AIR_SETTINGS_FIELDS:
         _require_perm(request, 'monitor.onair')
+    validate_settings_device_data(data)
     settings = MonitorSettings.load()
     for key, value in data.items():
         setattr(settings, key, value)

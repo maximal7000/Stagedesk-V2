@@ -198,8 +198,70 @@ def claim_command(device: Device, command_id: int):
 
 
 def finish_command(device: Device, command_id, ok: bool, text: str) -> None:
-    DeviceCommand.objects.filter(pk=command_id, device=device, status__in=['pending', 'sent']).update(
+    changed = DeviceCommand.objects.filter(
+        pk=command_id, device=device, status__in=['pending', 'sent']).update(
         status='ok' if ok else 'failed', result=str(text or '')[:2000], finished_at=timezone.now())
+    if not changed:
+        return
+    # Protokoll-Eintrag des Befehls bekommt das Ergebnis (Spec §5: Person, Zeit, Ergebnis)
+    try:
+        event = DeviceEvent.objects.filter(device=device, kind='command',
+                                           data__command_id=int(command_id)).first()
+    except (TypeError, ValueError):
+        event = None
+    if event is not None:
+        label = COMMAND_LABELS.get(event.data.get('kind'), 'Befehl')
+        outcome = str(text or '').strip() or ('ausgeführt' if ok else 'fehlgeschlagen')
+        event.text = f"{label}: {outcome}"[:300]
+        event.save(update_fields=['text'])
+
+
+COMMAND_LABELS = {
+    'reload': 'Neu laden', 'restart_browser': 'Browser neu starten', 'reboot': 'Pi neu starten',
+    'power_on': 'Bildschirm an', 'power_off': 'Bildschirm aus', 'update_now': 'Jetzt aktualisieren',
+    'screenshot': 'Screenshot', 'test_pattern': 'Testbild',
+}
+
+
+def create_command(device: Device, kind: str, user_id: str = '', user_name: str = '') -> DeviceCommand:
+    """Befehl anlegen (Status `pending`) und im Protokoll vermerken. Senden: push.push_device_command
+    nach dem Commit."""
+    with transaction.atomic():
+        command = DeviceCommand.objects.create(
+            device=device, kind=kind, created_by_id=(user_id or '')[:64], created_by_name=(user_name or '')[:150])
+        DeviceEvent.objects.create(
+            device=device, screen=device.screen, kind='command',
+            text=f"{COMMAND_LABELS.get(kind, kind)} angefordert"[:300],
+            data={'command_id': command.id, 'kind': kind, 'created_by_name': command.created_by_name})
+    return command
+
+
+# ── Ampel (Spec §7.1) ────────────────────────────────────────────────
+
+ONLINE_WINDOW = timedelta(minutes=2)
+
+
+def device_status(device, screen, settings, now) -> tuple:
+    """(status, Text) für die Ampel. `device` None oder zurückgezogen = kein Gerät; dann zeigt ein
+    Bildschirm mit jungem `cec_status_at` den Rückfall „Altes Skript“. Die Warnungen kommen aus
+    `device.active_warnings` (pflegt die Überwachung)."""
+    from . import power
+    if device is None or device.revoked_at is not None:
+        if screen is not None and screen.cec_status_at and now - screen.cec_status_at <= ONLINE_WINDOW:
+            return 'legacy', 'Altes Skript'
+        return 'unpaired', 'Kein Gerät gekoppelt'
+    seen = device.last_seen_at
+    if seen is not None and now - seen <= ONLINE_WINDOW:
+        warnings = device.active_warnings or []
+        if warnings:
+            first = warnings[0].get('text', '') if isinstance(warnings[0], dict) else str(warnings[0])
+            return 'warning', f'Warnung · {first}'
+        return 'online', 'Online'
+    since = timezone.localtime(seen).strftime('%H:%M') if seen else None
+    tail = f'zuletzt gesehen {since}' if since else 'noch nie gesehen'
+    if screen is not None and not power.compute_power_state(screen, now):
+        return 'off', f'Aus · {tail}'
+    return 'offline', f'Offline · {tail}'
 
 
 def update_gate(screen: Screen, now) -> tuple:

@@ -328,3 +328,343 @@ class CloseSocketsTest(TestCase):
         device = Device.objects.create(serial='x')
         with mock.patch('monitor.push.get_channel_layer', side_effect=RuntimeError('down')):
             push.close_device_sockets(device)
+
+
+# ── Task 4: Geräte-API für das Admin ─────────────────────────────────
+
+import io
+import shutil
+import tempfile
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from . import devices
+from .models import DeviceCommand
+
+
+def _png_bytes():
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new('RGB', (4, 4), (200, 30, 60)).save(buf, format='PNG')
+    return buf.getvalue()
+
+
+@override_settings(CHANNEL_LAYERS=IN_MEMORY)
+class DeviceApiBase(PairingTestBase):
+    def setUp(self):
+        super().setUp()
+        self.screen = Screen.objects.create(name='Halle', slug='halle')
+        self.device = Device.objects.create(
+            screen=self.screen, serial='SER-1', model='Pi 5', last_seen_at=timezone.now(),
+            last_telemetry={'network': {'kind': 'wifi', 'ip': '10.0.0.5', 'mac': 'aa:bb', 'signal_dbm': -60},
+                            'system': {'serial': 'SER-1', 'temperature_c': 51}})
+        self.token = self.device.issue_token()
+
+    def get(self, path):
+        return self.client.get(f'/api/monitor{path}', HTTP_AUTHORIZATION='Bearer x')
+
+    def put(self, path, data):
+        return self.client.put(f'/api/monitor{path}', data, content_type='application/json',
+                               HTTP_AUTHORIZATION='Bearer x')
+
+
+class DeviceListTest(DeviceApiBase):
+    def test_devices_list_redacts_serial_ip_mac_for_view_only(self):
+        self.grant('monitor.view')
+        row = self.get('/devices').json()[0]
+        self.assertIsNone(row['serial'])
+        self.assertIsNone(row['telemetry']['network']['ip'])
+        self.assertIsNone(row['telemetry']['network']['mac'])
+        self.assertIsNone(row['telemetry']['system']['serial'])
+        self.assertEqual(row['telemetry']['system']['temperature_c'], 51)
+        self.assertEqual((row['status'], row['status_text'], row['legacy']), ('online', 'Online', False))
+        self.grant('monitor.devices')
+        row = self.get('/devices').json()[0]
+        self.assertEqual(row['serial'], 'SER-1')
+        self.assertEqual(row['telemetry']['network']['ip'], '10.0.0.5')
+        self.assertEqual(row['telemetry']['network']['mac'], 'aa:bb')
+
+    def test_devices_list_needs_view(self):
+        self.assertEqual(self.get('/devices').status_code, 403)
+
+    def test_legacy_screen_listed(self):
+        self.grant('monitor.view')
+        old = Screen.objects.create(name='Mensa', slug='mensa', cec_status='an', cec_status_at=timezone.now())
+        Screen.objects.create(name='Alt', slug='alt', cec_status='an',
+                              cec_status_at=timezone.now() - timedelta(minutes=5))
+        rows = self.get('/devices').json()
+        legacy = [r for r in rows if r['legacy']]
+        self.assertEqual([(r['screen_id'], r['status'], r['status_text']) for r in legacy],
+                         [(old.id, 'legacy', 'Altes Skript')])
+        self.assertIsNone(legacy[0]['id'])
+
+    def test_revoked_device_not_listed(self):
+        self.grant('monitor.view')
+        Device.objects.filter(pk=self.device.pk).update(revoked_at=timezone.now())
+        self.assertEqual(self.get('/devices').json(), [])
+
+
+class DeviceStatusTest(TestCase):
+    def setUp(self):
+        self.now = timezone.now()
+        self.screen = Screen.objects.create(name='S', slug='s')
+        self.cfg = MonitorSettings.load()
+
+    def status(self, device):
+        return devices.device_status(device, self.screen, self.cfg, self.now)
+
+    def test_states(self):
+        dev = Device(screen=self.screen, last_seen_at=self.now - timedelta(seconds=30))
+        self.assertEqual(self.status(dev), ('online', 'Online'))
+        dev.active_warnings = [{'code': 'temp', 'text': 'CPU 85 Grad'}, {'code': 'x', 'text': 'zweite'}]
+        self.assertEqual(self.status(dev), ('warning', 'Warnung · CPU 85 Grad'))
+
+    def test_offline_and_off(self):
+        seen = self.now - timedelta(minutes=3)
+        dev = Device(screen=self.screen, last_seen_at=seen)
+        hhmm = timezone.localtime(seen).strftime('%H:%M')
+        self.assertEqual(self.status(dev), ('offline', f'Offline · zuletzt gesehen {hhmm}'))
+        self.screen.power_mode = 'manual_off'
+        self.assertEqual(self.status(dev), ('off', f'Aus · zuletzt gesehen {hhmm}'))
+
+    def test_never_seen_and_unpaired_and_legacy(self):
+        self.assertEqual(self.status(Device(screen=self.screen))[0], 'offline')
+        self.assertEqual(self.status(None), ('unpaired', 'Kein Gerät gekoppelt'))
+        self.screen.cec_status_at = self.now - timedelta(seconds=20)
+        self.assertEqual(self.status(None), ('legacy', 'Altes Skript'))
+        revoked = Device(screen=self.screen, revoked_at=self.now)
+        self.assertEqual(self.status(revoked)[0], 'legacy')
+
+
+class DeviceCommandApiTest(DeviceApiBase):
+    def cmd(self, kind, device=None):
+        return self.post(f'/devices/{(device or self.device).id}/commands', {'kind': kind})
+
+    def test_command_needs_power_for_power_off(self):
+        self.grant('monitor.devices')
+        self.assertEqual(self.cmd('power_off').status_code, 403)
+        self.assertEqual(self.cmd('power_on').status_code, 403)
+        self.assertEqual(DeviceCommand.objects.count(), 0)
+        self.assertEqual(self.cmd('restart_browser').status_code, 200)
+        self.grant('monitor.power')
+        r = self.cmd('power_off')
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        self.assertEqual((body['kind'], body['status']), ('power_off', 'pending'))
+
+    def test_command_needs_devices(self):
+        self.grant('monitor.power')
+        self.assertEqual(self.cmd('power_off').status_code, 403)
+
+    def test_command_creates_event_and_pushes(self):
+        self.grant('monitor.devices')
+        with mock.patch('monitor.push.push_device_command') as push_cmd, \
+                self.captureOnCommitCallbacks(execute=True):
+            r = self.cmd('screenshot')
+        self.assertEqual(r.status_code, 200)
+        command = DeviceCommand.objects.get()
+        push_cmd.assert_called_once_with(command)
+        event = DeviceEvent.objects.get(kind='command')
+        self.assertEqual((event.device, event.screen), (self.device, self.screen))
+        self.assertEqual(event.data['command_id'], command.id)
+
+    def test_reload_command_also_notifies_display(self):
+        self.grant('monitor.devices')
+        with mock.patch('monitor.push.notify_reload') as reload, \
+                self.captureOnCommitCallbacks(execute=True):
+            self.assertEqual(self.cmd('reload').status_code, 200)
+        reload.assert_called_once_with('halle')
+        with mock.patch('monitor.push.notify_reload') as reload, \
+                self.captureOnCommitCallbacks(execute=True):
+            self.cmd('restart_browser')
+        reload.assert_not_called()
+
+    def test_unknown_kind_and_revoked_device(self):
+        self.grant('monitor.devices')
+        self.assertEqual(self.cmd('format_disk').status_code, 422)
+        Device.objects.filter(pk=self.device.pk).update(revoked_at=timezone.now())
+        self.assertEqual(self.cmd('reload').status_code, 409)
+
+    def test_get_command_status(self):
+        self.grant('monitor.devices')
+        cid = self.cmd('reboot').json()['id']
+        DeviceCommand.objects.filter(pk=cid).update(status='ok', result='fertig')
+        body = self.get(f'/devices/{self.device.id}/commands/{cid}').json()
+        self.assertEqual((body['status'], body['result']), ('ok', 'fertig'))
+        other = Device.objects.create(serial='o')
+        self.assertEqual(self.get(f'/devices/{other.id}/commands/{cid}').status_code, 404)
+
+    def test_get_command_expires_stale_pending(self):
+        self.grant('monitor.devices')
+        cid = self.cmd('reboot').json()['id']
+        DeviceCommand.objects.filter(pk=cid).update(created_at=timezone.now() - timedelta(minutes=6))
+        self.assertEqual(self.get(f'/devices/{self.device.id}/commands/{cid}').json()['status'], 'expired')
+
+    def test_finish_command_updates_event(self):
+        self.grant('monitor.devices')
+        cid = self.cmd('restart_browser').json()['id']
+        devices.finish_command(self.device, cid, True, 'Browser neu gestartet')
+        self.assertIn('Browser neu gestartet', DeviceEvent.objects.get(kind='command').text)
+
+
+class DeviceEventsApiTest(DeviceApiBase):
+    def test_events_list_with_person_and_filter(self):
+        self.grant('monitor.devices')
+        DeviceEvent.objects.create(device=self.device, screen=self.screen, kind='command', text='A',
+                                   data={'created_by_name': 'Max'})
+        DeviceEvent.objects.create(device=self.device, screen=self.screen, kind='online', text='B')
+        rows = self.get(f'/screens/{self.screen.id}/events').json()
+        self.assertEqual({r['text'] for r in rows}, {'A', 'B'})
+        by_text = {r['text']: r for r in rows}
+        self.assertEqual(by_text['A']['person'], 'Max')
+        self.assertEqual(by_text['B']['person'], '')
+        rows = self.get(f'/screens/{self.screen.id}/events?kind=online&limit=1').json()
+        self.assertEqual([r['text'] for r in rows], ['B'])
+
+    def test_events_need_devices(self):
+        self.grant('monitor.view')
+        self.assertEqual(self.get(f'/screens/{self.screen.id}/events').status_code, 403)
+
+
+class ScreenshotUploadTest(DeviceApiBase):
+    def setUp(self):
+        super().setUp()
+        self.media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.media, True)
+        override = override_settings(MEDIA_ROOT=self.media)
+        override.enable()
+        self.addCleanup(override.disable)
+
+    def upload(self, data=None, token='default', name='shot.png'):
+        headers = {}
+        token = self.token if token == 'default' else token
+        if token:
+            headers['HTTP_AUTHORIZATION'] = f'Bearer {token}'
+        file = SimpleUploadedFile(name, _png_bytes() if data is None else data, content_type='image/png')
+        return self.client.post('/api/monitor/agent/screenshot', {'file': file}, **headers)
+
+    def test_screenshot_upload_requires_valid_token(self):
+        self.assertEqual(self.upload(token=None).status_code, 401)
+        self.assertEqual(self.upload(token='wrong').status_code, 401)
+        Device.objects.filter(pk=self.device.pk).update(revoked_at=timezone.now())
+        self.assertEqual(self.upload().status_code, 401)
+        self.device.refresh_from_db()
+        self.assertFalse(self.device.last_screenshot)
+
+    def test_screenshot_upload_stores_and_completes_command(self):
+        command = DeviceCommand.objects.create(device=self.device, kind='screenshot', status='sent')
+        r = self.upload()
+        self.assertEqual(r.status_code, 200, r.content)
+        self.device.refresh_from_db()
+        self.assertTrue(self.device.last_screenshot.name.startswith('monitor/screenshots/'))
+        self.assertIsNotNone(self.device.last_screenshot_at)
+        command.refresh_from_db()
+        self.assertEqual(command.status, 'ok')
+        self.grant('monitor.view')
+        row = self.get('/devices').json()[0]
+        self.assertTrue(row['last_screenshot_url'].endswith('.png'))
+
+    def test_screenshot_rejects_over_15mb(self):
+        r = self.upload(data=b'\x89PNG' + b'0' * (15 * 1024 * 1024))
+        self.assertEqual(r.status_code, 413)
+        self.assertIn('15 MB', r.json()['detail'])
+        self.device.refresh_from_db()
+        self.assertFalse(self.device.last_screenshot)
+
+    def test_screenshot_rejects_non_png(self):
+        r = self.upload(data=b'GIF89a not a png')
+        self.assertEqual(r.status_code, 422)
+
+    def test_screenshot_replaces_previous_file(self):
+        import os
+        self.assertEqual(self.upload().status_code, 200)
+        self.device.refresh_from_db()
+        first = self.device.last_screenshot.path
+        self.assertTrue(os.path.exists(first))
+        self.assertEqual(self.upload().status_code, 200)
+        self.device.refresh_from_db()
+        self.assertNotEqual(self.device.last_screenshot.path, first)
+        self.assertFalse(os.path.exists(first))
+        self.assertTrue(os.path.exists(self.device.last_screenshot.path))
+
+
+class ScreenDeviceFieldsApiTest(DeviceApiBase):
+    def test_screen_device_fields_need_devices_permission(self):
+        self.grant('monitor.setup')
+        for body in ({'power_method': 'hdmi'}, {'auto_updates': False}, {'daily_reboot': False},
+                     {'power_config': {}}, {'update_window': {'weekday': 1, 'from': '01:00', 'until': '02:00'}}):
+            self.assertEqual(self.put(f'/screens/{self.screen.id}', body).status_code, 403, body)
+        self.grant('monitor.devices')
+        with mock.patch('monitor.push.push_device_hello') as hello, \
+                self.captureOnCommitCallbacks(execute=True):
+            r = self.put(f'/screens/{self.screen.id}', {'power_method': 'hdmi', 'daily_reboot': False})
+        self.assertEqual(r.status_code, 200, r.content)
+        hello.assert_called_once()
+        self.screen.refresh_from_db()
+        self.assertEqual((self.screen.power_method, self.screen.daily_reboot), ('hdmi', False))
+
+    def test_devices_permission_alone_does_not_edit_other_fields(self):
+        self.grant('monitor.devices')
+        self.assertEqual(self.put(f'/screens/{self.screen.id}', {'name': 'Neu'}).status_code, 403)
+        self.assertEqual(self.put(f'/screens/{self.screen.id}', {'name': 'Neu', 'daily_reboot': True}).status_code, 403)
+
+    def test_update_window_validation(self):
+        self.grant('monitor.devices')
+        url = f'/screens/{self.screen.id}'
+        r = self.put(url, {'update_window': {'weekday': 7, 'from': '03:00', 'until': '05:00'}})
+        self.assertEqual(r.status_code, 422)
+        self.assertIn('Wochentag', r.json()['detail'])
+        for bad in ({'weekday': 1, 'from': '25:00', 'until': '26:00'},
+                    {'weekday': 1, 'from': '05:00', 'until': '03:00'},
+                    {'weekday': 1, 'from': '03:00', 'until': '03:00'},
+                    {'weekday': 1, 'from': '3:00', 'until': '05:00'},
+                    {'weekday': True, 'from': '03:00', 'until': '05:00'},
+                    {'weekday': 1, 'from': '03:00'},
+                    {'weekday': 1, 'from': '03:00', 'until': '05:00', 'x': 1}):
+            self.assertEqual(self.put(url, {'update_window': bad}).status_code, 422, bad)
+        self.screen.refresh_from_db()
+        self.assertEqual(self.screen.update_window['weekday'], 6)
+        ok = {'weekday': 0, 'from': '01:00', 'until': '02:30'}
+        self.assertEqual(self.put(url, {'update_window': ok}).status_code, 200)
+
+    def test_power_config_validation_per_method(self):
+        self.grant('monitor.devices')
+        url = f'/screens/{self.screen.id}'
+        self.assertEqual(self.put(url, {'power_method': 'ddc', 'power_config': {'vcp_on': '01', 'vcp_off': '04'}}).status_code, 200)
+        r = self.put(url, {'power_config': {'cec_device': '0'}})  # Methode bleibt ddc
+        self.assertEqual(r.status_code, 422)
+        self.assertIn('cec_device', r.json()['detail'])
+        self.assertEqual(self.put(url, {'power_method': 'hybrid',
+                                        'power_config': {'display_ip': '10.0.0.2', 'display_port': 5000,
+                                                         'monitor_id': 0, 'cec_device': '0'}}).status_code, 200)
+        self.assertEqual(self.put(url, {'power_config': {'display_port': 70000}}).status_code, 422)
+        self.assertEqual(self.put(url, {'power_config': {'display_ip': ['x']}}).status_code, 422)
+        # Methodenwechsel ohne passende Konfiguration: alte Schlüssel bleiben nicht erlaubt
+        self.assertEqual(self.put(url, {'power_method': 'cec'}).status_code, 422)
+
+    def test_screen_response_still_hides_key_without_setup(self):
+        self.grant('monitor.devices')
+        r = self.put(f'/screens/{self.screen.id}', {'daily_reboot': True})
+        self.assertEqual(r.json()['access_key'], '')
+
+
+class SettingsDeviceFieldsTest(DeviceApiBase):
+    def test_settings_device_fields_ranges(self):
+        self.grant('monitor.devices')
+        self.assertEqual(self.put('/settings', {'warn_temperature_c': 70}).status_code, 403)
+        self.grant('monitor.setup')
+        for field, low, high in (('device_offline_minutes', 2, 240), ('warn_temperature_c', 50, 95),
+                                 ('warn_disk_percent', 50, 99), ('warn_wifi_dbm', -95, -40),
+                                 ('warn_reboot_days', 1, 60)):
+            for bad in (low - 1, high + 1):
+                r = self.put('/settings', {field: bad})
+                self.assertEqual(r.status_code, 422, (field, bad))
+                self.assertIn(f'{low}', r.json()['detail'])
+            for good in (low, high):
+                self.assertEqual(self.put('/settings', {field: good}).status_code, 200, (field, good))
+        self.assertEqual(MonitorSettings.load().warn_wifi_dbm, -40)
+
+    def test_settings_device_fields_need_setup(self):
+        self.grant('monitor.onair')
+        self.assertEqual(self.put('/settings', {'warn_disk_percent': 80}).status_code, 403)
+        self.assertEqual(self.put('/settings', {'require_device_token': True}).status_code, 403)
