@@ -1,0 +1,252 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true
+  },
+  "mode": null,
+  "view": {
+    "id": 1,
+    "kind": "info",
+    "style": "ci",
+    "page_seconds": 15,
+    "show_weather": true,
+    "weather": {
+      "temperature": 14.2,
+      "feels_like": 12.8,
+      "description": "bewölkt",
+      "icon": "04d",
+      "humidity": 76,
+      "city": "Lübeck"
+    },
+    "qr": {
+      "url": "https://stagedesk.t410.de",
+      "label": "Programm und Karten"
+    },
+    "data": {
+      "announcements": [
+        {
+          "id": 1000,
+          "title": "Aula ab 16:30 gesperrt 1",
+          "text": "Generalprobe Theater-AG bis 21:00",
+          "priority": "urgent",
+          "active_until": "2026-10-19T19:00:00+00:00"
+        },
+        {
+          "id": 1001,
+          "title": "Elternabend Jahrgang 9 2",
+          "text": "Mensa · Donnerstag 19:00",
+          "priority": "important",
+          "active_until": null
+        },
+        {
+          "id": 1002,
+          "title": "Fundsachen bis Freitag abholen 3",
+          "text": "Hausmeisterloge",
+          "priority": "normal",
+          "active_until": null
+        },
+        {
+          "id": 1003,
+          "title": "Aula ab 16:30 gesperrt 4",
+          "text": "Generalprobe Theater-AG bis 21:00",
+          "priority": "urgent",
+          "active_until": "2026-10-19T19:00:00+00:00"
+        },
+        {
+          "id": 1004,
+          "title": "Elternabend Jahrgang 9 5",
+          "text": "Mensa · Donnerstag 19:00",
+          "priority": "important",
+          "active_until": null
+        },
+        {
+          "id": 1005,
+          "title": "Fundsachen bis Freitag abholen 6",
+          "text": "Hausmeisterloge",
+          "priority": "normal",
+          "active_until": null
+        },
+        {
+          "id": 1006,
+          "title": "Aula ab 16:30 gesperrt 7",
+          "text": "Generalprobe Theater-AG bis 21:00",
+          "priority": "urgent",
+          "active_until": "2026-10-19T19:00:00+00:00"
+        },
+        {
+          "id": 1007,
+          "title": "Elternabend Jahrgang 9 8",
+          "text": "Mensa · Donnerstag 19:00",
+          "priority": "important",
+          "active_until": null
+        },
+        {
+          "id": 1008,
+          "title": "Fundsachen bis Freitag abholen 9",
+          "text": "Hausmeisterloge",
+          "priority": "normal",
+          "active_until": null
+        },
+        {
+          "id": 1009,
+          "title": "Aula ab 16:30 gesperrt 10",
+          "text": "Generalprobe Theater-AG bis 21:00",
+          "priority": "urgent",
+          "active_until": "2026-10-19T19:00:00+00:00"
+        },
+        {
+          "id": 1010,
+          "title": "Elternabend Jahrgang 9 11",
+          "text": "Mensa · Donnerstag 19:00",
+          "priority": "important",
+          "active_until": null
+        },
+        {
+          "id": 1011,
+          "title": "Fundsachen bis Freitag abholen 12",
+          "text": "Hausmeisterloge",
+          "priority": "normal",
+          "active_until": null
+        }
+      ],
+      "events": [
+        {
+          "id": 100,
+          "name": "Termin 1: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-20T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 101,
+          "name": "Termin 2: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-21T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 102,
+          "name": "Termin 3: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-22T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 103,
+          "name": "Termin 4: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-23T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 104,
+          "name": "Termin 5: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-24T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 105,
+          "name": "Termin 6: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-25T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 106,
+          "name": "Termin 7: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-26T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 107,
+          "name": "Termin 8: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-27T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 108,
+          "name": "Termin 9: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-28T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 109,
+          "name": "Termin 10: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-29T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 110,
+          "name": "Termin 11: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-30T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 111,
+          "name": "Termin 12: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-10-31T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 112,
+          "name": "Termin 13: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-11-01T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        },
+        {
+          "id": 113,
+          "name": "Termin 14: Jahrgangsversammlung Aula",
+          "location": "Aula",
+          "date_from": "2026-11-02T18:00:00+00:00",
+          "date_until": "2026-10-22T19:00:00+00:00",
+          "status": "bestaetigt",
+          "is_running": false
+        }
+      ],
+      "countdown": {
+        "name": "Herbstkonzert",
+        "date": "2026-10-22T16:00:00+00:00"
+      }
+    }
+  }
+}

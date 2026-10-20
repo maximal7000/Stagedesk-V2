@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { daysUntil, eventDetail } from '../lib/events'
 import { packByHeight, useBoxSize } from '../lib/fit'
@@ -12,11 +12,31 @@ import { Heading, PageCount } from './parts'
 
 const STACK_BELOW_REM = 70
 
+// Zeilenhöhen im gestapelten Layout aus der natürlichen Höhe (alle Einträge), nie aus der gezeigten Seite:
+// passt alles, bekommt jeder Abschnitt genau seine Höhe; sonst behält ein kurzer Abschnitt seine Höhe
+// und der andere den Rest; sind beide länger als die Hälfte, teilen sie sich die Fläche gleich.
+function stackedRows({ natural, height, remPx, qr, hasA, hasB }) {
+  if (!hasA) return '0px minmax(0,1fr)'
+  if (!hasB) return 'minmax(0,1fr) auto'
+  const { a, b } = natural
+  if (a == null || b == null || !(height > 0)) return 'minmax(0,1fr) minmax(0,1fr)'
+  const avail = height - (3.75 + 2.5) * remPx
+  const bFull = b + (qr ? 10 * remPx : 0)
+  if (a + bFull <= avail) return `${a}px ${bFull}px`
+  if (a <= avail / 2) return `${a}px minmax(0,1fr)`
+  if (bFull <= avail / 2) return `minmax(0,1fr) ${bFull}px`
+  return 'minmax(0,1fr) minmax(0,1fr)'
+}
+
 export default function InfoView({ view }) {
   const { announcements = [], events = [], countdown = null } = view.data ?? {}
   const seconds = view.page_seconds
   const ref = useRef(null)
-  const { width, remPx } = useBoxSize(ref)
+  const { width, height, remPx } = useBoxSize(ref)
+  // Natürliche Höhe je Abschnitt (alle Einträge auf einer Seite), unabhängig von der gerade gezeigten Seite
+  const [natural, setNatural] = useState({ a: null, b: null })
+  const setA = useCallback((v) => setNatural((n) => (n.a === v ? n : { ...n, a: v })), [])
+  const setB = useCallback((v) => setNatural((n) => (n.b === v ? n : { ...n, b: v })), [])
   // Hochformat und schmale Flächen: Termine unter den Ankündigungen statt in einer zu schmalen Spalte
   const stacked = width > 0 && width / remPx < STACK_BELOW_REM
   if (!announcements.length && !events.length && !countdown) {
@@ -26,18 +46,19 @@ export default function InfoView({ view }) {
     <div
       ref={ref}
       className={`relative grid h-full gap-x-[5rem] pt-[3.75rem] ${stacked
-        ? 'grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,auto)_minmax(0,auto)] content-start gap-y-[2.5rem]'
+        ? 'grid-cols-[minmax(0,1fr)] content-start gap-y-[2.5rem]'
         : 'grid-cols-[minmax(0,1fr)_minmax(0,0.77fr)]'}`}
+      style={stacked ? { gridTemplateRows: stackedRows({ natural, height, remPx, qr: Boolean(view.qr), hasA: announcements.length > 0, hasB: events.length > 0 }) } : undefined}
     >
       <div className="flex min-h-0 flex-col">
         {announcements.length > 0 && (
-          <PagedSection title="Ankündigungen" items={announcements} seconds={seconds} renderItem={renderAnnouncement} />
+          <PagedSection title="Ankündigungen" items={announcements} seconds={seconds} renderItem={renderAnnouncement} onNatural={setA} />
         )}
       </div>
       <div className={`flex min-h-0 flex-col ${view.qr ? 'pb-[10rem]' : ''}`}>
         {events.length > 0 ? (
           <PagedSection
-            title="Termine" items={events} seconds={seconds} renderItem={renderEvent}
+            title="Termine" items={events} seconds={seconds} renderItem={renderEvent} onNatural={setB}
             after={countdown && <Countdown countdown={countdown} />}
           />
         ) : countdown && <Countdown countdown={countdown} first />}
@@ -50,7 +71,8 @@ export default function InfoView({ view }) {
 // Abschnitt, der so viele Einträge zeigt, wie hineinpassen, und sonst blättert. `after` folgt direkt
 // auf die Liste und bekommt seinen Platz immer. Die Höhen misst eine unsichtbare Kopie,
 // neu nur bei geänderter Breite oder geänderten Daten.
-function PagedSection({ title, items, seconds, renderItem, after = null }) {
+function PagedSection({ title, items, seconds, renderItem, after = null, onNatural = null }) {
+  const sectionRef = useRef(null)
   const bodyRef = useRef(null)
   const measureRef = useRef(null)
   const { width, height } = useBoxSize(bodyRef)
@@ -62,13 +84,20 @@ function PagedSection({ title, items, seconds, renderItem, after = null }) {
       if (!el) return
       const next = [...el.children].map((c) => c.getBoundingClientRect().height)
       setHeights((prev) => (prev.length === next.length && prev.every((h, i) => h === next[i]) ? prev : next))
+      // Kopf, Abstand und Polster des Abschnitts plus alle Einträge
+      const section = sectionRef.current
+      const body = bodyRef.current
+      if (onNatural && section && body) {
+        const overhead = section.getBoundingClientRect().height - body.getBoundingClientRect().height
+        onNatural(Math.ceil(overhead + el.getBoundingClientRect().height))
+      }
     }
     measure()
     // Nachgeladene Schriften ändern die Höhen
     const fonts = typeof document !== 'undefined' ? document.fonts : null
     fonts?.addEventListener?.('loadingdone', measure)
     return () => fonts?.removeEventListener?.('loadingdone', measure)
-  }, [items, width, hasAfter])
+  }, [items, width, hasAfter, onNatural])
   const reserve = after ? heights[items.length] ?? 0 : 0
   const pages = useMemo(
     () => (height > 0 && heights.length >= items.length ? packByHeight(heights.slice(0, items.length), height - reserve) : []),
@@ -78,7 +107,7 @@ function PagedSection({ title, items, seconds, renderItem, after = null }) {
   const page = pages[index] ?? []
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
+    <section ref={sectionRef} className="flex min-h-0 flex-1 flex-col">
       <Heading size="text-[2.125rem]" aside={<PageCount index={index} count={count} className="text-[1.5rem]" />}>{title}</Heading>
       <div ref={bodyRef} className="relative mt-[1.75rem] min-h-0 flex-1 overflow-hidden">
         <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">

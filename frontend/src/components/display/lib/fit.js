@@ -27,7 +27,11 @@ export function useBoxSize(ref) {
       watched.current.observer = observer
     }
   })
-  useLayoutEffect(() => () => watched.current.observer?.disconnect(), [])
+  // Auch in StrictMode (Mount, Cleanup, Mount) hängt der zweite Lauf den Beobachter wieder an
+  useLayoutEffect(() => () => {
+    watched.current.observer?.disconnect()
+    watched.current = { el: null, observer: null }
+  }, [])
   return size
 }
 

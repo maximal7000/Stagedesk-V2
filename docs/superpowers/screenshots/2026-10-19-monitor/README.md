@@ -25,6 +25,13 @@ Namensschema: `display-<testdatei>[-<stil>][-portrait].png`. Ohne Stilangabe gil
 | `display-long-departures-dark.png` | Abfahrten, 6 Haltestellen, Stil dark |
 | `display-long-departures-dense.png` | Abfahrten, 6 Haltestellen, Stil dense |
 | `display-long-departures.png` | Abfahrten, 6 Haltestellen |
+| `display-long-info-ci-portrait.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel), Stil ci, Hochformat |
+| `display-long-info-ci.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel), Stil ci |
+| `display-long-info-dark-portrait.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel), Stil dark, Hochformat |
+| `display-long-info-dark.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel), Stil dark |
+| `display-long-info-dense-portrait.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel), Stil dense, Hochformat |
+| `display-long-info-dense.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel), Stil dense |
+| `display-long-info.png` | Info mit 12 Ankündigungen und 14 Terminen (Seitenwechsel) |
 | `display-long-substitutions-ci.png` | Vertretungsplan, viele Zeilen (Seitenwechsel), Stil ci |
 | `display-long-substitutions-dark.png` | Vertretungsplan, viele Zeilen (Seitenwechsel), Stil dark |
 | `display-long-substitutions-dense.png` | Vertretungsplan, viele Zeilen (Seitenwechsel), Stil dense |
