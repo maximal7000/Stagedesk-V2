@@ -269,7 +269,7 @@ export default function Overview() {
   const screenMenu = (s) => {
     const isOn = displays?.[s.slug]?.screen?.power ?? s.power_mode !== 'manual_off'
     const { items, hint } = can.power ? powerMenu(s, { now, isOn, emergencyActive }) : { items: [], hint: '' }
-    if (can.setup && activeOverride(s, now)) items.push({ key: 'clear-override', label: 'Manuelle Ansicht aufheben' })
+    if (can.setup && activeOverride(s, now, extra.views)) items.push({ key: 'clear-override', label: 'Manuelle Ansicht aufheben' })
     const previousMode = s.power_mode
     const previousOverride = { override_view_id: s.override_view_id, override_until: s.override_until ?? null }
     const actions = {

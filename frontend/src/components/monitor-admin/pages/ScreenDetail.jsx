@@ -107,7 +107,7 @@ function OverrideSection({ screen, views, now, canEdit, onApply, onClear, busy }
   const ids = { view: useId(), until: useId() }
   const [viewId, setViewId] = useState('')
   const [until, setUntil] = useState('')
-  const active = activeOverride(screen, now)
+  const active = activeOverride(screen, now, views)
   const name = active ? (views.find((v) => v.id === active.viewId)?.name ?? 'Ansicht') : null
   const apply = async () => {
     const problem = overrideProblem(viewId, until, new Date())
@@ -407,7 +407,7 @@ export default function ScreenDetail() {
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
             <div className="space-y-4 min-w-0">
               <DisplaySection draft={display.draft} set={display.set} views={views} readOnly={!canSetup} disabled={!canSetup || display.saving} />
-              {(canSetup || activeOverride(screen, now)) && (
+              {(canSetup || activeOverride(screen, now, views)) && (
                 <OverrideSection screen={screen} views={views} now={now} canEdit={canSetup} busy={busy}
                   onApply={changeOverride} onClear={() => changeOverride(OVERRIDE_CLEAR)} />
               )}

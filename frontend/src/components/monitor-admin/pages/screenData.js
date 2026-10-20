@@ -70,10 +70,13 @@ export function lastReport(value, now = new Date()) {
 
 // Andere Ansicht vorübergehend (override_view_id/override_until, Recht monitor.setup).
 // Gilt wie im Backend (Screen.get_active_view) ohne Ende oder bis zu einem Zeitpunkt in der Zukunft.
-export function activeOverride(screen, now = new Date()) {
+// views (optional, Liste der Ansichten ohne Papierkorb): eine Ansicht, die dort fehlt, gilt wie im
+// Backend nicht (override_view.deleted_at). Leere Liste = noch nicht geladen, dann nichts verwerfen.
+export function activeOverride(screen, now = new Date(), views = null) {
   if (!screen?.override_view_id) return null
   const until = screen.override_until ? new Date(screen.override_until) : null
   if (until && !(until > now)) return null
+  if (views?.length && !views.some((v) => v.id === screen.override_view_id)) return null
   return { viewId: screen.override_view_id, until }
 }
 

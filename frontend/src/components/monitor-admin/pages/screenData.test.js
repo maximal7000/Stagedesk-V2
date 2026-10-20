@@ -74,6 +74,13 @@ describe('activeOverride', () => {
     expect(activeOverride({ override_view_id: 3, override_until: until.toISOString() }, now)).toEqual({ viewId: 3, until })
     expect(activeOverride({ override_view_id: 3, override_until: '2026-10-20T09:00:00' }, now)).toBeNull()
   })
+  it('wertet eine Ansicht im Papierkorb oder eine gelöschte als nicht aktiv (wie das Backend)', () => {
+    const views = [{ id: 4, name: 'Info' }]
+    expect(activeOverride({ override_view_id: 3, override_until: null }, now, views)).toBeNull()
+    expect(activeOverride({ override_view_id: 4, override_until: null }, now, views)).toEqual({ viewId: 4, until: null })
+    // Ansichten noch nicht geladen: nichts verwerfen
+    expect(activeOverride({ override_view_id: 3, override_until: null }, now, [])).toEqual({ viewId: 3, until: null })
+  })
 })
 
 describe('overridePayload / overrideProblem', () => {
