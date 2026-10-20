@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  describeSchedule, exceptionProblems, formatDays, normalizeExceptions, normalizeSchedule, scheduleProblems,
+  describeSchedule, exceptionProblems, formatDays, normalizeExceptions, normalizeSchedule, scheduleProblems, weekBars,
 } from './schedule'
 
 describe('normalizeSchedule', () => {
@@ -76,5 +76,47 @@ describe('Ausnahmen', () => {
       'Von und bis angeben oder beide leer lassen.',
       'Von und bis dürfen nicht gleich sein.',
     ])
+  })
+})
+
+describe('weekBars', () => {
+  const auto = (power_schedule) => ({ power_mode: 'auto', power_schedule })
+  const minutes = (h, m = 0) => h * 60 + m
+
+  it('ohne Zeitplan immer an, manuell an oder aus', () => {
+    expect(weekBars(auto([]))).toEqual({ mode: 'always', days: Array(7).fill([{ start: 0, end: 1440 }]) })
+    expect(weekBars({ power_mode: 'manual_on', power_schedule: [{ days: [0], from: '07:00', until: '08:00' }] }).mode).toBe('on')
+    expect(weekBars({ power_mode: 'manual_on', power_schedule: [] }).days[6]).toEqual([{ start: 0, end: 1440 }])
+    expect(weekBars({ power_mode: 'manual_off', power_schedule: [] })).toEqual({ mode: 'off', days: Array(7).fill([]) })
+  })
+
+  it('Fenster je Tag, überlappende zusammengefasst, sortiert', () => {
+    const { mode, days } = weekBars(auto([
+      { days: [0, 1, 2, 3, 4], from: '07:00', until: '16:00' },
+      { days: [0], from: '15:00', until: '18:30' },
+      { days: [0], from: '05:00', until: '06:00' },
+    ]))
+    expect(mode).toBe('schedule')
+    expect(days[0]).toEqual([{ start: minutes(5), end: minutes(6) }, { start: minutes(7), end: minutes(18, 30) }])
+    expect(days[4]).toEqual([{ start: minutes(7), end: minutes(16) }])
+    expect(days[5]).toEqual([])
+  })
+
+  it('über Mitternacht wie power.time_in_window: beide Teile am selben Wochentag', () => {
+    const { days } = weekBars(auto([{ days: [4], from: '22:00', until: '06:00' }]))
+    expect(days[4]).toEqual([{ start: 0, end: minutes(6) }, { start: minutes(22), end: 1440 }])
+    expect(days[5]).toEqual([])
+  })
+
+  it('wie das Backend: nur Zahlen als Tage, fehlende Zeiten 00:00 bzw. 23:59', () => {
+    const { days } = weekBars(auto([
+      { days: ['1'], from: '07:00', until: '08:00' },
+      { days: [2], from: '', until: '' },
+      { days: [3], from: '20:00', until: '' },
+      'kaputt',
+    ]))
+    expect(days[1]).toEqual([])
+    expect(days[2]).toEqual([{ start: 0, end: 1440 }])
+    expect(days[3]).toEqual([{ start: minutes(20), end: 1440 }])
   })
 })

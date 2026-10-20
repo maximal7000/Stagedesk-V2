@@ -40,12 +40,16 @@ import SystemAdminPage from './pages/admin/SystemAdminPage';
 import AufgabenPage from './pages/admin/AufgabenPage';
 import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
 // Monitor-Admin
-import MonitorAdminLayout, { PendingPage } from './components/monitor-admin/MonitorAdminLayout';
+import MonitorAdminLayout from './components/monitor-admin/MonitorAdminLayout';
 import MonitorOverview from './components/monitor-admin/pages/Overview';
 import MonitorScreens from './components/monitor-admin/pages/Screens';
 import MonitorScreenDetail from './components/monitor-admin/pages/ScreenDetail';
 import MonitorViews from './components/monitor-admin/pages/Views';
 import MonitorViewEdit from './components/monitor-admin/pages/ViewEdit';
+import MonitorExams from './components/monitor-admin/pages/Exams';
+import MonitorMedia from './components/monitor-admin/pages/Media';
+import MonitorSchedules from './components/monitor-admin/pages/Schedules';
+import MonitorSettings from './components/monitor-admin/pages/Settings';
 import UnsavedChangesProvider from './components/monitor-admin/shared/UnsavedChangesProvider';
 // Anwesenheit
 import AnwesenheitPage from './pages/anwesenheit/AnwesenheitPage';
@@ -121,10 +125,10 @@ function AppContent() {
                       <Route path="views" element={<PermissionRoute permission="monitor.setup"><MonitorViews /></PermissionRoute>} />
                       <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
                       <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
-                      <Route path="exams" element={<PermissionRoute permission="monitor.exams"><PendingPage title="Klausuren & Termine" /></PermissionRoute>} />
-                      <Route path="media" element={<PermissionRoute permission="monitor.media"><PendingPage title="Medien" /></PermissionRoute>} />
-                      <Route path="schedules" element={<PermissionRoute permission="monitor.power"><PendingPage title="Ferien & Zeitpläne" /></PermissionRoute>} />
-                      <Route path="settings" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Einstellungen" /></PermissionRoute>} />
+                      <Route path="exams" element={<PermissionRoute permission="monitor.exams"><MonitorExams /></PermissionRoute>} />
+                      <Route path="media" element={<PermissionRoute permission="monitor.media"><MonitorMedia /></PermissionRoute>} />
+                      <Route path="schedules" element={<PermissionRoute permission="monitor.power"><MonitorSchedules /></PermissionRoute>} />
+                      <Route path="settings" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.onair', 'monitor.emergency']}><MonitorSettings /></PermissionRoute>} />
                       <Route path="*" element={<Navigate to="/monitor-admin" replace />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

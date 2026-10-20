@@ -56,7 +56,9 @@
     "11"
   ],
   "transit_disruption_manual": [],
-  "transit_disruption_hidden": [],
+  "transit_disruption_hidden": [
+    "b2"
+  ],
   "transit_disruption_position": "bottom",
   "on_air_split_side": "right",
   "style": "dense",

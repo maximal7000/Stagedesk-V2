@@ -25,5 +25,28 @@
     "active_from": "2026-10-22T18:00:00+02:00",
     "active_until": "2026-10-22T21:00:00+02:00",
     "assignments": []
+  },
+  {
+    "id": 3,
+    "name": "Tag der offenen Tür",
+    "description": "",
+    "color": "#7c3aed",
+    "is_active": false,
+    "active_from": "2026-10-10T10:00:00+02:00",
+    "active_until": "2026-10-10T15:00:00+02:00",
+    "assignments": [
+      {
+        "screen_id": 1,
+        "view_id": 3,
+        "screen_name": "Glocke",
+        "view_name": "Info Mensa"
+      },
+      {
+        "screen_id": 3,
+        "view_id": 3,
+        "screen_name": "Aula",
+        "view_name": "Info Mensa"
+      }
+    ]
   }
 ]

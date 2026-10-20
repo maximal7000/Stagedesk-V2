@@ -71,3 +71,45 @@ export function exceptionProblems(list) {
     return null
   })
 }
+
+// ── Wochenübersicht (Ferien & Zeitpläne) ────────────────────────────
+// Ein-Zeiten je Wochentag als Minuten-Bereiche [start, end), genau wie das Backend sie wertet
+// (power.compute_power_state): leerer Zeitplan = immer an, nur Zahlen als Tage, fehlende Zeiten 00:00 bzw. 23:59,
+// über Mitternacht beide Teile am selben Wochentag. 23:59 als Ende zählt bis Mitternacht.
+export const DAY_MINUTES = 1440
+const FULL_DAY = [{ start: 0, end: DAY_MINUTES }]
+
+function toMinutes(hhmm, fallback) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '') ?? /^(\d{1,2}):(\d{2})$/.exec(fallback)
+  return Number(m[1]) * 60 + Number(m[2])
+}
+
+function mergeRanges(ranges) {
+  const sorted = [...ranges].sort((a, b) => a.start - b.start)
+  const out = []
+  for (const r of sorted) {
+    const last = out[out.length - 1]
+    if (last && r.start <= last.end) last.end = Math.max(last.end, r.end)
+    else out.push({ ...r })
+  }
+  return out
+}
+
+export function weekBars(screen) {
+  if (screen?.power_mode === 'manual_off') return { mode: 'off', days: Array(7).fill([]) }
+  if (screen?.power_mode === 'manual_on') return { mode: 'on', days: Array(7).fill(FULL_DAY) }
+  const entries = screen?.power_schedule
+  if (!Array.isArray(entries) || !entries.length) return { mode: 'always', days: Array(7).fill(FULL_DAY) }
+  const days = Array.from({ length: 7 }, () => [])
+  for (const e of entries.filter(isEntry)) {
+    if (!Array.isArray(e.days)) continue
+    const start = toMinutes(e.from, '00:00')
+    const rawEnd = toMinutes(e.until, '23:59')
+    const end = rawEnd === DAY_MINUTES - 1 ? DAY_MINUTES : rawEnd
+    const parts = start <= rawEnd ? [{ start, end }] : [{ start: 0, end }, { start, end: DAY_MINUTES }]
+    for (const d of e.days) {
+      if (Number.isInteger(d) && d >= 0 && d <= 6) days[d].push(...parts)
+    }
+  }
+  return { mode: 'schedule', days: days.map(mergeRanges) }
+}

@@ -102,6 +102,46 @@ const PAGES = {
   'view-edit-info': { path: '/monitor-admin/views/3', preview: 'info', action: waitForPreview },
   'view-edit-split': { path: '/monitor-admin/views/5', preview: 'split', height: 1300, action: waitForPreview },
   'view-edit-media': { path: '/monitor-admin/views/6', preview: 'media-landscape', height: 1100, action: waitForPreview },
+  exams: { path: '/monitor-admin/exams', height: 1240 },
+  'exam-form': {
+    path: '/monitor-admin/exams',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Abitur Mathematik bearbeiten' }).click()
+      await page.waitForSelector('[data-exam-panel="exam"]')
+    },
+  },
+  'exam-template-menu': {
+    path: '/monitor-admin/exams',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Aus Vorlage' }).click()
+      await page.waitForSelector('[role="menu"]')
+    },
+  },
+  'event-form': {
+    path: '/monitor-admin/exams',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Elternsprechtag bearbeiten' }).click()
+      await page.waitForSelector('[data-exam-panel="event"]')
+    },
+  },
+  media: { path: '/monitor-admin/media' },
+  'media-processing': { path: '/monitor-admin/media', variant: 'media-processing' },
+  'media-detail': {
+    path: '/monitor-admin/media',
+    action: async (page) => {
+      await page.locator('[data-media="11"] button').click()
+      await page.waitForSelector('[data-media-panel] img')
+    },
+  },
+  schedules: { path: '/monitor-admin/schedules', variant: 'schedules', height: 1380 },
+  settings: {
+    path: '/monitor-admin/settings', height: 2050,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Verbindung testen' }).click()
+      await page.waitForSelector('[data-check-result]')
+      await page.waitForSelector('[data-disruptions]')
+    },
+  },
   'stop-filter-dialog': {
     path: '/monitor-admin/views/1', preview: 'departures',
     action: async (page) => {

@@ -163,7 +163,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'monitor.exams' },
     { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'monitor.media' },
     { name: 'Ferien & Zeitpläne', href: '/monitor-admin/schedules', icon: CalendarRange, permission: 'monitor.power' },
-    { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, permission: 'monitor.setup' },
+    { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, anyOf: ['monitor.setup', 'monitor.onair', 'monitor.emergency'] },
   ].filter(item => (item.anyOf ? item.anyOf.some(p => hasPermission(p)) : hasPermission(item.permission))) : [];
 
   // Admin-Navigation
