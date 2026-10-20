@@ -10,11 +10,25 @@ import { Heading, PageCount } from './parts'
 // Info (Stil A, Entwurf display-info.png): Ankündigungen links, Termine und Countdown rechts,
 // QR-Code in der Ecke. Uhr, Datum und Wetter kommen aus dem Rahmen.
 
+const STACK_BELOW_REM = 70
+
 export default function InfoView({ view }) {
   const { announcements = [], events = [], countdown = null } = view.data ?? {}
   const seconds = view.page_seconds
+  const ref = useRef(null)
+  const { width, remPx } = useBoxSize(ref)
+  // Hochformat und schmale Flächen: Termine unter den Ankündigungen statt in einer zu schmalen Spalte
+  const stacked = width > 0 && width / remPx < STACK_BELOW_REM
+  if (!announcements.length && !events.length && !countdown) {
+    return <p className="d-oswald pt-[3.75rem] text-[2rem] text-(--d-muted)">Keine Ankündigungen oder Termine.</p>
+  }
   return (
-    <div className="relative grid h-full grid-cols-[minmax(0,1fr)_minmax(0,0.77fr)] gap-x-[5rem] pt-[3.75rem]">
+    <div
+      ref={ref}
+      className={`relative grid h-full gap-x-[5rem] pt-[3.75rem] ${stacked
+        ? 'grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-y-[2.5rem]'
+        : 'grid-cols-[minmax(0,1fr)_minmax(0,0.77fr)]'}`}
+    >
       <div className="flex min-h-0 flex-col">
         {announcements.length > 0 && (
           <PagedSection title="Ankündigungen" items={announcements} seconds={seconds} renderItem={renderAnnouncement} />

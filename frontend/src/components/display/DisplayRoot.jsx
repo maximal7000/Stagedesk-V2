@@ -93,6 +93,7 @@ function ModeSplit({ mode, view, orientation, staleSince }) {
 // Eine Ansicht im Rahmen ihres effektiven Stils. Ansichten mit eigenem Rahmen (Medien, Wechsel) bekommen
 // die Rahmen-Angaben und ViewScreen selbst als screen (für die Unteransichten des Wechsels).
 function ViewScreen({ view, orientation, staleSince = null, wheel = true, stripe = true }) {
+  if (!view) return <Loading orientation={orientation} />
   const View = VIEW_COMPONENTS[view.kind]
   if (View?.ownFrame) {
     return <View view={view} orientation={orientation} frame={{ staleSince, wheel, stripe }} screen={ViewScreen} />

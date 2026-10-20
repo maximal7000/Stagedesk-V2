@@ -9,7 +9,7 @@ import { Heading, PageCount } from './parts'
 
 const LIVE_SOURCES = ['substitutions', 'timetable']
 const ROW_REM = 2.1875
-const COLUMNS = '7fr 5fr 6fr 12fr 18fr 17fr 25fr'
+const COLUMNS = '7fr 5fr 6fr 14fr 15fr 20fr 23fr'
 const KIND = {
   substitution: { label: 'Vertretung', tone: '' },
   cancelled: { label: 'Entfall', tone: 'text-(--d-red)' },

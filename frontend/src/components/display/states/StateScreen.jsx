@@ -11,7 +11,7 @@ export default function StateScreen({ state, orientation, kicker, title, titleCl
           {kicker && (
             <div className="d-kicker d-oswald text-[2.25rem] uppercase leading-[1.1] tracking-[0.06em] text-(--d-red)">{kicker}</div>
           )}
-          <h1 className={`d-oswald mt-[1.25rem] text-[8.5rem] font-normal leading-[1.15] tracking-[-0.005em] ${titleClassName}`}>{title}</h1>
+          <h1 className={`d-oswald mt-[1.25rem] text-[8.5rem] font-light leading-[1.15] tracking-[-0.005em] ${titleClassName}`}>{title}</h1>
           {children}
         </div>
       </div>
