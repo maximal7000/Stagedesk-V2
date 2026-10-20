@@ -12,6 +12,9 @@ import { MaintenanceBanner } from './components/MaintenanceBanner';
 import UnsavedChangesProvider from './components/monitor-admin/shared/UnsavedChangesProvider';
 import { Toaster } from 'sonner';
 import './App.css';
+// Kiosk-Seiten der Pis direkt laden: kein nachgeladener Chunk, der beim Start ausfallen kann
+import MonitorPage from './pages/MonitorPage';
+import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
 
 // Seiten werden erst bei Bedarf geladen: die Anzeige /monitor (Raspberry Pi) lädt so kein Admin.
 const DashboardLayout = lazy(() => import('./components/DashboardLayout'));
@@ -20,7 +23,6 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const DesignTestPage = lazy(() => import('./pages/DesignTestPage'));
-const MonitorPage = lazy(() => import('./pages/MonitorPage'));
 // Inventar
 const InventarPage = lazy(() => import('./pages/inventar/InventarPage'));
 const ItemDetailPage = lazy(() => import('./pages/inventar/ItemDetailPage'));
@@ -43,7 +45,6 @@ const AdminPage = lazy(() => import('./pages/admin/AdminPage'));
 const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const SystemAdminPage = lazy(() => import('./pages/admin/SystemAdminPage'));
 const AufgabenPage = lazy(() => import('./pages/admin/AufgabenPage'));
-const AufgabenMonitorPage = lazy(() => import('./pages/AufgabenMonitorPage'));
 // Monitor-Admin
 const MonitorAdminLayout = lazy(() => import('./components/monitor-admin/MonitorAdminLayout'));
 const MonitorOverview = lazy(() => import('./components/monitor-admin/pages/Overview'));
