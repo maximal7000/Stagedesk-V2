@@ -9,9 +9,7 @@ import ConnectionLost from './states/ConnectionLost'
 import IdleScreen from './states/IdleScreen'
 import Loading from './states/Loading'
 import ScreenNotFound from './states/ScreenNotFound'
-
-// Ansichten je kind; Tasks 11/12 tragen sie ein. Fehlende Typen zeigen vorübergehend "Wird geladen" im Rahmen.
-const VIEW_COMPONENTS = {}
+import { VIEW_COMPONENTS } from './views'
 
 function viewportOrientation() {
   return typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'
@@ -42,8 +40,10 @@ export default function DisplayRoot({ payload, state, lastOkAt, nextRetryAt, err
 function ViewScreen({ view, orientation, staleSince }) {
   const View = VIEW_COMPONENTS[view.kind]
   const clock = { showWeather: view.show_weather, weather: view.weather, staleSince }
+  const footer = View?.Footer ? <View.Footer view={view} /> : null
+  // Fehlende Typen (bis Task 12) zeigen "Wird geladen" im Rahmen
   return (
-    <Frame style={view.style} orientation={orientation} clock={clock}>
+    <Frame style={view.style} orientation={orientation} clock={clock} footer={footer}>
       <div data-display-state="view" data-view-kind={view.kind} className="h-full">
         {View ? <View view={view} /> : <Loading bare />}
       </div>

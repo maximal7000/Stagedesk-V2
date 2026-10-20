@@ -28,3 +28,11 @@ const getSnapshot = () => current
 export function useClock() {
   return useSyncExternalStore(subscribe, getSnapshot)
 }
+
+// Derselbe Takt, aber nur minutengenau: der Wert ändert sich (und rendert neu) nur beim Minutenwechsel.
+// Für Minutenangaben wie "in 6 min" oder Countdown-Tage.
+const getMinute = () => Math.floor(current.getTime() / 60000)
+
+export function useClockMinute() {
+  return new Date(useSyncExternalStore(subscribe, getMinute) * 60000)
+}

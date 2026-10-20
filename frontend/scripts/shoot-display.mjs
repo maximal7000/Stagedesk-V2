@@ -8,6 +8,7 @@
 //   --state stale: nach dem Laden geht das Netz weg, die Uhr läuft 30 s weiter ("Stand HH:MM").
 //   --state lost:  die Route liefert 503, die Uhr läuft 121 s weiter ("Verbindung verloren").
 //   Ohne --only gilt bei --state die Testdatei "info", sonst werden alle Testdateien fotografiert.
+// Schlägt eine Testdatei fehl, laufen die übrigen weiter; der Exit-Code ist am Ende 1.
 // Chromium: CHROMIUM_PATH oder /opt/pw-browsers/chromium (mit --headless=new).
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs'
@@ -93,6 +94,15 @@ const ASSET_TYPES = { '.svg': 'image/svg+xml', '.html': 'text/html; charset=utf-
 async function shoot(context, baseUrl, name, opts) {
   const payload = loadFixture(name, opts)
   const page = await context.newPage()
+  try {
+    return await shootPage(page, context, baseUrl, name, payload, opts)
+  } finally {
+    if (opts.state === 'stale') await context.setOffline(false)
+    await page.close()
+  }
+}
+
+async function shootPage(page, context, baseUrl, name, payload, opts) {
   const errors = []
   page.on('pageerror', (e) => errors.push(e.message))
 
@@ -137,8 +147,6 @@ async function shoot(context, baseUrl, name, opts) {
   await page.waitForTimeout(150)
   const file = join(OUT, outName(name, opts))
   await page.screenshot({ path: file })
-  if (opts.state === 'stale') await context.setOffline(false)
-  await page.close()
   if (errors.length) throw new Error(`${name}: Fehler im Browser:\n${errors.join('\n')}`)
   return file
 }
@@ -166,6 +174,7 @@ async function main() {
   mkdirSync(OUT, { recursive: true })
 
   const { proc, url } = await startPreview(await freePort())
+  const failed = []
   let browser
   try {
     browser = await chromium.launch({
@@ -182,13 +191,22 @@ async function main() {
     })
     // Nur der Vorschau-Server ist erreichbar; alles andere (Keycloak, CDNs) wird abgewiesen
     await context.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort())
+    // Jede Testdatei für sich: ein Fehler bricht nicht den ganzen Lauf ab, setzt aber den Exit-Code
     for (const name of names) {
-      const file = await shoot(context, url, name, opts)
-      console.log(file)
+      try {
+        console.log(await shoot(context, url, name, opts))
+      } catch (e) {
+        failed.push(name)
+        console.error(`FEHLER ${name}: ${e.message || e}`)
+      }
     }
   } finally {
     if (browser) await browser.close()
     proc.kill()
+  }
+  if (failed.length) {
+    console.error(`${failed.length} von ${names.length} Testdateien fehlgeschlagen: ${failed.join(', ')}`)
+    process.exitCode = 1
   }
 }
 

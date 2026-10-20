@@ -15,3 +15,18 @@ export function formatTemperature(value) {
   const n = Number(value)
   return Number.isFinite(n) ? `${Math.round(n)} °C` : ''
 }
+
+const DAY_MONTH = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' })
+const WEEKDAY_SHORT = new Intl.DateTimeFormat('de-DE', { weekday: 'short' })
+
+// "19.10."
+export const formatDayMonth = (value) => DAY_MONTH.format(asDate(value))
+// "Do 22.10."
+export const formatShortDate = (value) =>
+  `${WEEKDAY_SHORT.format(asDate(value)).replace(/\.$/, '')} ${formatDayMonth(value)}`
+
+// "2026-10-19" als lokales Datum (ohne Zeitzonenverschiebung durch UTC-Auslegung)
+export function parseLocalDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
+  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : asDate(iso)
+}

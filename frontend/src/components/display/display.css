@@ -68,3 +68,30 @@
 .d-line-top {
   border-top: 0.0625rem solid var(--d-line);
 }
+
+/* Signalfarben neben Rot: Verspätung (Warnung) und Raumänderung (Info) */
+.d-tone-light,
+.d-tone-dense {
+  --d-warn: #b26a00;
+  --d-info: #1f5c99;
+  --d-soft: #f2f2f2;
+}
+
+.d-tone-dark {
+  --d-warn: #f0a83a;
+  --d-info: #7fb3e6;
+  --d-soft: #222222;
+}
+
+/* Flache Karte der dichten Ansichten: keine Schatten, keine Rundung */
+.d-card {
+  background: var(--d-surface);
+}
+
+.d-line-bottom {
+  border-bottom: 0.0625rem solid var(--d-line);
+}
+
+.d-rule-top {
+  border-top: 0.125rem solid var(--d-rule);
+}
