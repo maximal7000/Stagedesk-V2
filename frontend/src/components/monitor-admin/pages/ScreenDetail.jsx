@@ -65,8 +65,8 @@ function Segmented({ options, value, onChange, disabled, label }) {
         return (
           <button key={o.value} type="button" role="radio" aria-checked={active} disabled={disabled} onClick={() => onChange(o.value)}
             className={`flex-1 px-3 py-1.5 text-sm rounded transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
-              active ? 'bg-hover text-fg font-medium' : 'text-fg-muted hover:text-fg'
-            } disabled:pointer-events-none ${disabled && !active ? 'text-fg-disabled' : ''}`}>
+              active ? `bg-hover font-medium ${disabled ? 'text-fg-muted' : 'text-fg'}` : `${disabled ? 'text-fg-disabled' : 'text-fg-muted hover:text-fg'}`
+            } disabled:pointer-events-none`}>
             {o.label}
           </button>
         )
@@ -75,10 +75,11 @@ function Segmented({ options, value, onChange, disabled, label }) {
   )
 }
 
-function DisplaySection({ draft, set, views, disabled }) {
+function DisplaySection({ draft, set, views, disabled, readOnly }) {
   const ids = { name: useId(), location: useId(), view: useId(), scale: useId() }
   return (
-    <Section title="Anzeige" data-section="display">
+    <Section title="Anzeige" data-section="display"
+      aside={readOnly ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für die Einrichtung fehlt</span> : null}>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" htmlFor={ids.name}>
           <input id={ids.name} value={draft.name ?? ''} disabled={disabled} onChange={(e) => set('name', e.target.value)} className={fieldClass} />
@@ -109,12 +110,12 @@ function DisplaySection({ draft, set, views, disabled }) {
   )
 }
 
-function PowerSection({ draft, set, disabled, problems }) {
+function PowerSection({ draft, set, disabled, readOnly, problems }) {
   const holidaysId = useId()
   const auto = draft.power_mode === 'auto'
   return (
     <Section title="Ein- und Ausschalten" data-section="power"
-      aside={disabled ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für Ein- und Ausschalten fehlt</span> : null}>
+      aside={readOnly ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für Ein- und Ausschalten fehlt</span> : null}>
       <div className="space-y-5">
         <Field label="Steuerung" help={auto
           ? 'Der Bildschirm folgt dem Zeitplan, den Ferien und den Ausnahmen.'
@@ -124,7 +125,7 @@ function PowerSection({ draft, set, disabled, problems }) {
               onChange={(v) => set('power_mode', v)} />
           </div>
         </Field>
-        <Field label="Zeitplan" help="Der Bildschirm ist nur in diesen Zeiten an. Liegt bis vor von, gilt die Zeit über Mitternacht.">
+        <Field label="Zeitplan" help="Der Bildschirm ist nur in diesen Zeiten an. Ist „Bis“ früher als „Von“, ist er an den gewählten Tagen ab „Von“ bis Mitternacht und ab 0 Uhr bis „Bis“ an.">
           <ScheduleEditor value={draft.power_schedule} onChange={(v) => set('power_schedule', v)} disabled={disabled} problems={problems.schedule} />
         </Field>
         <div>
@@ -172,6 +173,7 @@ function KioskSection({ screen, onRegenerate }) {
 }
 
 function DeviceSection({ screen, now, onReload }) {
+  // onReload fehlt ohne monitor.setup (Backend: reload_screen braucht setup)
   return (
     <Section title="Gerät" data-section="device">
       <dl className="space-y-2 text-sm">
@@ -184,10 +186,12 @@ function DeviceSection({ screen, now, onReload }) {
           <dd className="text-fg tabular-nums">{lastReport(screen.cec_status_at, now)}</dd>
         </div>
       </dl>
-      <div className="mt-4">
-        <Button icon={RotateCw} onClick={onReload}>Neu laden</Button>
-        <p className="text-xs text-fg-subtle mt-1.5">Lädt die Anzeige im Browser des Bildschirms neu.</p>
-      </div>
+      {onReload && (
+        <div className="mt-4">
+          <Button icon={RotateCw} onClick={onReload}>Neu laden</Button>
+          <p className="text-xs text-fg-subtle mt-1.5">Lädt die Anzeige im Browser des Bildschirms neu.</p>
+        </div>
+      )}
       <p className="text-sm text-fg-muted mt-5 pt-4 border-t border-line-subtle">
         Kein Agent installiert. WLAN, Temperatur und Updates erscheinen hier, sobald der Geräte-Agent eingerichtet ist.
       </p>
@@ -212,6 +216,17 @@ export default function ScreenDetail() {
   const [now, setNow] = useState(() => new Date())
   const [confirmKey, setConfirmKey] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  // Anderer Bildschirm (gleiche Komponente, neue id): alten Stand sofort verwerfen, auch die Entwürfe
+  const [shownId, setShownId] = useState(screenId)
+  if (shownId !== screenId) {
+    setShownId(screenId)
+    setScreen(null)
+    setOriginals(null)
+    setError(null)
+    setMissing(false)
+    setConfirmKey(false)
+  }
 
   const adopt = useCallback((s) => {
     setScreen(s)
@@ -347,17 +362,17 @@ export default function ScreenDetail() {
                 {[status.label, status.detail].filter(Boolean).join(' · ')}
               </span>
             )}
-            actions={(
+            actions={canSetup ? (
               <Button as="a" href={kioskUrl('', screen)} target="_blank" rel="noreferrer" icon={Eye}>Vorschau</Button>
-            )}
+            ) : null}
           />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
             <div className="space-y-4 min-w-0">
-              <DisplaySection draft={display.draft} set={display.set} views={views} disabled={!canSetup || display.saving} />
-              <PowerSection draft={power.draft} set={power.set} disabled={!canPower || power.saving} problems={problems} />
+              <DisplaySection draft={display.draft} set={display.set} views={views} readOnly={!canSetup} disabled={!canSetup || display.saving} />
+              <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems} />
               {canSetup && <KioskSection screen={screen} onRegenerate={() => setConfirmKey(true)} />}
             </div>
-            <DeviceSection screen={screen} now={now} onReload={reload} />
+            <DeviceSection screen={screen} now={now} onReload={canSetup ? reload : null} />
           </div>
           <SaveBar count={dirtyCount} onSave={saveAll} onDiscard={discard} saving={display.saving || power.saving} />
         </>

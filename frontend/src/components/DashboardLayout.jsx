@@ -157,13 +157,14 @@ export default function DashboardLayout({ children }) {
   // Monitor-Navigation (Spec §6.1): alle Unterseiten setzen monitor.view voraus, dazu je ein eigenes Recht
   const monitorNavigation = hasPermission('monitor.view') ? [
     { name: 'Übersicht', href: '/monitor-admin', icon: LayoutDashboard, permission: 'monitor.view' },
-    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, permission: 'monitor.setup' },
+    // Bildschirme: setup bearbeitet die Anzeige, power nur das Ein- und Ausschalten
+    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['monitor.setup', 'monitor.power'] },
     { name: 'Ansichten', href: '/monitor-admin/views', icon: PanelsTopLeft, permission: 'monitor.setup' },
     { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'monitor.exams' },
     { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'monitor.media' },
     { name: 'Ferien & Zeitpläne', href: '/monitor-admin/schedules', icon: CalendarRange, permission: 'monitor.power' },
     { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, permission: 'monitor.setup' },
-  ].filter(item => hasPermission(item.permission)) : [];
+  ].filter(item => (item.anyOf ? item.anyOf.some(p => hasPermission(p)) : hasPermission(item.permission))) : [];
 
   // Admin-Navigation
   const adminNavigation = [

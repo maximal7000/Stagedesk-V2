@@ -1,6 +1,7 @@
 // Wochenzeitplan und Datums-Ausnahmen eines Bildschirms (Screen.power_schedule / power_exceptions).
 // Tage zählen wie im Backend (power.py, date.weekday()): 0 = Montag … 6 = Sonntag.
-// Endet ein Fenster vor seinem Beginn, läuft es über Mitternacht. Eine Ausnahme ohne Zeiten heißt: ganztags an.
+// Endet ein Fenster vor seinem Beginn, gilt es am selben Tag ab Beginn bis Mitternacht und ab 0 Uhr bis zum Ende
+// (power.time_in_window). Eine Ausnahme ohne Zeiten heißt: ganztags an.
 export const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 const text = (v) => (typeof v === 'string' ? v.trim() : '')
@@ -17,11 +18,13 @@ export function normalizeSchedule(entries) {
   }))
 }
 
+const SAME_TIMES = 'Von und bis dürfen nicht gleich sein.'
+
 export function scheduleProblems(entries) {
   return normalizeSchedule(entries).map((e) => {
     if (!e.days.length) return 'Mindestens einen Tag wählen.'
     if (!e.from || !e.until) return 'Von und bis angeben.'
-    if (e.from === e.until) return 'Von und bis dürfen nicht gleich sein.'
+    if (e.from === e.until) return SAME_TIMES
     return null
   })
 }
@@ -42,7 +45,7 @@ export function formatDays(days) {
 
 export function describeSchedule(entries) {
   const list = normalizeSchedule(entries)
-  if (!list.length) return 'Ohne Zeitplan, immer an'
+  if (!list.length) return 'Ohne Zeitplan'
   return list.map((e) => `${formatDays(e.days)} ${e.from} bis ${e.until}`).join(' · ')
 }
 
@@ -64,6 +67,7 @@ export function exceptionProblems(list) {
     if (!e.from_date) return 'Datum angeben.'
     if (e.until_date < e.from_date) return 'Das Enddatum liegt vor dem Startdatum.'
     if (!e.from !== !e.until) return 'Von und bis angeben oder beide leer lassen.'
+    if (e.from && e.from === e.until) return SAME_TIMES
     return null
   })
 }

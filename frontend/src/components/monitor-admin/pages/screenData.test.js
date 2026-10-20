@@ -42,7 +42,7 @@ describe('Abschnitte', () => {
 describe('powerSummary', () => {
   it('nennt Modus und Zeitplan', () => {
     expect(powerSummary(glocke)).toBe('Mo–Fr 07:00 bis 17:00')
-    expect(powerSummary({ ...glocke, power_schedule: [] })).toBe('Ohne Zeitplan, immer an')
+    expect(powerSummary({ ...glocke, power_schedule: [] })).toBe('Ohne Zeitplan')
     expect(powerSummary({ ...glocke, power_mode: 'manual_on' })).toBe('Manuell immer an')
     expect(powerSummary({ ...glocke, power_mode: 'manual_off' })).toBe('Manuell immer aus')
   })

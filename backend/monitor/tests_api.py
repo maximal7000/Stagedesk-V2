@@ -160,3 +160,47 @@ class RegenerateScreenKeyTest(TestCase):
             fresh = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': new}).json()
         self.assertEqual(stale['view']['data']['days'], [])
         self.assertEqual(len(fresh['view']['data']['days']), 2)
+
+
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
+class ScreenAccessKeyVisibilityTest(TestCase):
+    """access_key gibt den Vertretungsplan frei: nur mit monitor.setup in Antworten (Review T16)."""
+
+    def setUp(self):
+        self.screen = Screen.objects.create(name='Halle', slug='halle')
+        self.profile = UserProfile.objects.create(keycloak_id='tester')
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        auth.start()
+        self.addCleanup(auth.stop)
+
+    def grant(self, *codes):
+        for code in codes:
+            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
+            self.profile.permissions.add(perm)
+
+    def list_keys(self):
+        r = self.client.get('/api/monitor/screens', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200)
+        return [s['access_key'] for s in r.json()]
+
+    def update(self, body):
+        return self.client.put(f'/api/monitor/screens/{self.screen.id}', body,
+                               content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
+
+    def test_view_only_gets_no_key(self):
+        self.grant('monitor.view')
+        self.assertEqual(self.list_keys(), [''])
+
+    def test_power_only_update_response_has_no_key(self):
+        self.grant('monitor.view', 'monitor.power')
+        r = self.update({'power_mode': 'manual_off'})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['access_key'], '')
+        self.screen.refresh_from_db()
+        self.assertEqual(self.screen.power_mode, 'manual_off')
+        self.assertEqual(len(self.screen.access_key), 32)
+
+    def test_setup_gets_key(self):
+        self.grant('monitor.view', 'monitor.setup')
+        self.assertEqual(self.list_keys(), [self.screen.access_key])
+        self.assertEqual(self.update({'location': 'Foyer'}).json()['access_key'], self.screen.access_key)

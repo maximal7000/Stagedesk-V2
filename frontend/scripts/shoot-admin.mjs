@@ -66,6 +66,8 @@ const PAGES = {
       await page.getByRole('region', { name: 'Ungespeicherte Änderungen' }).waitFor()
     },
   },
+  // Nur Ein- und Ausschalten (ohne monitor.setup): Anzeige lesend, keine Kiosk-URL
+  'screen-detail-power-only': { path: '/monitor-admin/screens/1', variant: 'power-only', height: 1100 },
   'screen-detail-key': {
     path: '/monitor-admin/screens/1',
     action: async (page) => {

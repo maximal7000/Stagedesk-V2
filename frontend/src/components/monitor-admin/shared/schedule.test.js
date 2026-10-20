@@ -48,7 +48,7 @@ describe('formatDays', () => {
 
 describe('describeSchedule', () => {
   it('beschreibt den Zeitplan als Text', () => {
-    expect(describeSchedule([])).toBe('Ohne Zeitplan, immer an')
+    expect(describeSchedule([])).toBe('Ohne Zeitplan')
     expect(describeSchedule([
       { days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00' },
       { days: [5], from: '10:00', until: '14:00' },
@@ -68,11 +68,13 @@ describe('Ausnahmen', () => {
       { from_date: '', until_date: '', from: '', until: '' },
       { from_date: '2026-11-05', until_date: '2026-11-04', from: '', until: '' },
       { from_date: '2026-11-05', until_date: '2026-11-05', from: '08:00', until: '' },
+      { from_date: '2026-11-05', until_date: '2026-11-05', from: '08:00', until: '08:00' },
     ])).toEqual([
       null,
       'Datum angeben.',
       'Das Enddatum liegt vor dem Startdatum.',
       'Von und bis angeben oder beide leer lassen.',
+      'Von und bis dürfen nicht gleich sein.',
     ])
   })
 })

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { createElement, act } from 'react'
+import { createElement, act, Fragment } from 'react'
 import { createRoot } from 'react-dom/client'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
@@ -16,6 +16,7 @@ vi.mock('../shared/api', () => ({
   reloadScreen: vi.fn(),
 }))
 
+const { useNavigate } = await import('react-router-dom')
 const api = await import('../shared/api')
 const { toast } = await import('sonner')
 const { default: ScreenDetail } = await import('./ScreenDetail')
@@ -26,6 +27,12 @@ const glocke = () => ({
   power_schedule: [{ days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00' }], power_exceptions: [],
   cec_status: 'on', cec_status_at: null,
 })
+
+// Knopf neben dem Detail: wechselt wie ein Link zu Bildschirm 2, die Detail-Komponente bleibt eingehängt
+function GoToSecond() {
+  const navigate = useNavigate()
+  return createElement('button', { type: 'button', 'data-go': '', onClick: () => navigate('/monitor-admin/screens/2') }, 'weiter')
+}
 
 let root, container
 async function mount() {
@@ -84,6 +91,56 @@ describe('ScreenDetail', () => {
     expect(container.textContent).toContain('Nur lesend')
     expect(button('Zeile hinzufügen')).toBeUndefined()
     expect(button('Immer aus').disabled).toBe(true)
+  })
+
+  it('nur mit Recht für Ein- und Ausschalten: Anzeige lesend, Ein- und Ausschalten bearbeitbar, keine Setup-Aktionen', async () => {
+    perms.add('monitor.power')
+    await mount()
+    expect(byLabel('Name').disabled).toBe(true)
+    expect(byLabel('Ort').disabled).toBe(true)
+    expect(container.querySelector('[data-section="display"]').textContent).toContain('Nur lesend, Recht für die Einrichtung fehlt')
+    expect(container.querySelector('[data-section="power"]').textContent).not.toContain('Nur lesend')
+    expect(button('Zeile hinzufügen')).toBeDefined()
+    expect(byLabel('Kiosk-URL')).toBeNull()
+    expect(container.textContent).not.toContain('alt-key')
+    expect(button('Neu erzeugen')).toBeUndefined()
+    expect(button('Neu laden')).toBeUndefined()
+    expect([...container.querySelectorAll('a')].some((a) => a.textContent.includes('Vorschau'))).toBe(false)
+
+    await click(button('Immer aus'))
+    await click(button('Speichern'))
+    expect(api.updateScreen).toHaveBeenCalledTimes(1)
+    expect(Object.keys(api.updateScreen.mock.calls[0][1]).sort())
+      .toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'power_schedule'])
+    expect(api.updateScreen.mock.calls[0][1].power_mode).toBe('manual_off')
+  })
+
+  it('verwirft Stand und Entwurf beim Wechsel zu einem anderen Bildschirm', async () => {
+    perms.add('monitor.setup').add('monitor.power')
+    const aula = { ...glocke(), id: 2, name: 'Aula', slug: 'aula', location: 'Bühne' }
+    let resolveSecond
+    api.getScreens
+      .mockImplementationOnce(() => Promise.resolve([glocke(), aula]))
+      .mockImplementationOnce(() => new Promise((r) => { resolveSecond = r }))
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => {
+      root.render(createElement(MemoryRouter, { initialEntries: ['/monitor-admin/screens/1'] },
+        createElement(Routes, null, createElement(Route, {
+          path: '/monitor-admin/screens/:id',
+          element: createElement(Fragment, null, createElement(ScreenDetail), createElement(GoToSecond)),
+        }))))
+    })
+    await act(async () => { typeInto(byLabel('Ort'), 'Geändert') })
+    expect(container.textContent).toContain('1 ungespeicherte Änderung')
+    await click(container.querySelector('[data-go]'))
+    // Während Aula lädt, bleibt nichts von Glocke stehen
+    expect(container.textContent).not.toContain('Glocke')
+    expect(container.textContent).not.toContain('ungespeicherte')
+    await act(async () => { resolveSecond([glocke(), aula]) })
+    expect(byLabel('Ort').value).toBe('Bühne')
+    expect(container.textContent).not.toContain('ungespeicherte')
   })
 
   it('hält das Speichern bei unvollständigem Zeitplan an', async () => {

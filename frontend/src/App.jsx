@@ -114,8 +114,8 @@ function AppContent() {
                     <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
                     <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminLayout /></PermissionRoute>}>
                       <Route index element={<MonitorOverview />} />
-                      <Route path="screens" element={<PermissionRoute permission="monitor.setup"><MonitorScreens /></PermissionRoute>} />
-                      <Route path="screens/:id" element={<PermissionRoute permission="monitor.setup"><MonitorScreenDetail /></PermissionRoute>} />
+                      <Route path="screens" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power']}><MonitorScreens /></PermissionRoute>} />
+                      <Route path="screens/:id" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power']}><MonitorScreenDetail /></PermissionRoute>} />
                       <Route path="views" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansichten" /></PermissionRoute>} />
                       <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Neue Ansicht" /></PermissionRoute>} />
                       <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><PendingPage title="Ansicht" /></PermissionRoute>} />

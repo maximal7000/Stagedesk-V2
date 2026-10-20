@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { ChevronRight, MonitorOff, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, EmptyState, Button } from '../../ui'
+import { useUser } from '../../../contexts/UserContext'
 import ScreenStatus from '../shared/ScreenStatus'
 import { Cell, ScreenNameCell, ScreenRow, ScreenTable } from '../shared/ScreenTable'
 import { errorText } from '../shared/errorText'
@@ -64,6 +65,8 @@ function NewScreenDialog({ views, busy, onCreate, onCancel }) {
 
 export default function Screens() {
   const navigate = useNavigate()
+  // Ohne monitor.setup (nur Ein- und Ausschalten) kein Anlegen
+  const canSetup = useUser().hasPermission('monitor.setup')
   const [screens, setScreens] = useState(null)
   const [views, setViews] = useState([])
   const [error, setError] = useState(null)
@@ -105,7 +108,7 @@ export default function Screens() {
   return (
     <div data-admin-page="screens" data-state={state}>
       <PageHeader title="Bildschirme" meta={count}
-        actions={<Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>Neuer Bildschirm</Button>} />
+        actions={canSetup ? <Button variant="primary" icon={Plus} onClick={() => setCreating(true)}>Neuer Bildschirm</Button> : null} />
 
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">

@@ -661,10 +661,21 @@ def report_cec_status(request, slug: str, status: str):
 
 # ═══ Admin: Bildschirme ═══════════════════════════════════════════
 
+def _hide_key_without_setup(request, screens):
+    """access_key gibt den Vertretungsplan frei: nur mit monitor.setup ausliefern.
+    Leert nur das Attribut der Antwort-Objekte, gespeichert wird nichts."""
+    try:
+        _require_perm(request, 'monitor.setup')
+    except HttpError:
+        for screen in screens:
+            screen.access_key = ''
+    return screens
+
+
 @monitor_router.get("/screens", response=list[ScreenListSchema], auth=keycloak_auth)
 def list_screens(request):
     _require_perm(request, 'monitor.view')
-    return Screen.objects.all()
+    return _hide_key_without_setup(request, list(Screen.objects.all()))
 
 
 @monitor_router.post("/screens", auth=keycloak_auth)
@@ -712,7 +723,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
     if power_changed:
         from .consumers import push_power_to_screen
         push_power_to_screen(screen.slug)
-    return screen
+    return _hide_key_without_setup(request, [screen])[0]
 
 
 @monitor_router.delete("/screens/{int:id}", auth=keycloak_auth)
