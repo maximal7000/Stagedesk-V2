@@ -5,7 +5,8 @@ import { MemoryRouter } from 'react-router-dom'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-vi.mock('../../../contexts/UserContext', () => ({ useUser: () => ({ hasPermission: () => true }) }))
+const perms = vi.hoisted(() => ({ allow: () => true }))
+vi.mock('../../../contexts/UserContext', () => ({ useUser: () => ({ hasPermission: (p) => perms.allow(p) }) }))
 vi.mock('../shared/api', () => ({
   getScreens: vi.fn(),
   getSettings: vi.fn(() => Promise.resolve({ on_air_active: false })),
@@ -27,9 +28,20 @@ afterEach(() => {
   if (root) act(() => root.unmount())
   root = undefined
   vi.useRealTimers()
+  perms.allow = () => true
 })
 
 describe('Overview', () => {
+  it('verlinkt den Bildschirmnamen auch nur mit Strom-Recht', async () => {
+    perms.allow = (p) => p === 'monitor.view' || p === 'monitor.power'
+    api.getScreens.mockImplementation(() => Promise.resolve([screen('Glocke')]))
+    container = document.createElement('div')
+    root = createRoot(container)
+    await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
+    const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Glocke'))
+    expect(link?.getAttribute('href')).toBe('/monitor-admin/screens/1')
+  })
+
   it('verwirft eine ältere Antwort, die nach einer neueren ankommt', async () => {
     vi.useFakeTimers()
     let resolveFirst
