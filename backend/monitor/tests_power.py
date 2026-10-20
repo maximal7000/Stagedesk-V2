@@ -256,6 +256,21 @@ class PushPowerToAllTest(TestCase):
             consumers.push_power_to_all()
 
 
+class ScreenPowerPushTest(TestCase):
+
+    def test_push_failure_after_save_is_logged_not_500(self):
+        """Final-Review 4: der gespeicherte Strommodus gilt, auch wenn der Push scheitert."""
+        screen = Screen.objects.create(name='A', slug='a')
+        with _auth(), mock.patch('monitor.api._require_perm'), \
+                mock.patch('monitor.consumers.push_power_to_screen', side_effect=ConnectionError), \
+                self.assertLogs('monitor.api', 'ERROR'):
+            r = self.client.put(f'/api/monitor/screens/{screen.id}', {'power_mode': 'manual_off'},
+                                content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200, r.content)
+        screen.refresh_from_db()
+        self.assertEqual(screen.power_mode, 'manual_off')
+
+
 class _Denied(Exception):
     pass
 

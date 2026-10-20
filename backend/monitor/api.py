@@ -2,6 +2,7 @@
 Monitor API — öffentliche + Admin-Endpunkte (Multi-Profil)
 """
 import json
+import logging
 import re
 import secrets
 import uuid
@@ -52,6 +53,8 @@ from .display import _fetch_disruptions  # Admin-Störungsliste; Datenquellen li
 from .consumers import push_power_to_all
 from .permissions import _require_perm
 from .api_setup import setup_router
+
+logger = logging.getLogger(__name__)
 
 monitor_router = Router(tags=["Monitor"])
 # Ferien, Notfall-Vorlagen, "bis Tagesende aus"
@@ -709,7 +712,11 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
     push.notify_changed_on_commit()
     if power_changed:
         from .consumers import push_power_to_screen
-        push_power_to_screen(screen.slug)
+        try:
+            push_power_to_screen(screen.slug)
+        except Exception:
+            # wie push_power_to_all: gespeichert ist gespeichert, der 30-s-Tick holt den Zustand nach
+            logger.exception("Power-Push an %s fehlgeschlagen", screen.slug)
     return _hide_key_without_setup(request, [screen])[0]
 
 
