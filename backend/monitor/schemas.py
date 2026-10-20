@@ -287,6 +287,11 @@ class ScreenListSchema(Schema):
     access_key: str = ''
     off_during_holidays: bool = True
     off_until: Optional[datetime] = None
+    power_method: str = 'cec'
+    power_config: dict = {}
+    auto_updates: bool = True
+    update_window: dict = {}
+    daily_reboot: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -312,6 +317,11 @@ class ScreenUpdateSchema(Schema):
     orientation: Optional[str] = None
     off_during_holidays: Optional[bool] = None
     off_until: Optional[datetime] = None
+    power_method: Optional[Literal['cec', 'hdmi', 'hybrid', 'ddc']] = None
+    power_config: Optional[dict] = None
+    auto_updates: Optional[bool] = None
+    update_window: Optional[dict] = None
+    daily_reboot: Optional[bool] = None
 
 
 class DisplayViewVersionSchema(Schema):
@@ -514,6 +524,12 @@ class MonitorSettingsSchema(Schema):
     emergency_since: Optional[datetime] = None
     webuntis_source: str = ''
     webuntis_checked_at: Optional[datetime] = None
+    device_offline_minutes: int = 10
+    warn_temperature_c: int = 80
+    warn_disk_percent: int = 90
+    warn_wifi_dbm: int = -75
+    warn_reboot_days: int = 7
+    require_device_token: bool = False
 
     @staticmethod
     def resolve_weather_api_key(obj):
@@ -544,3 +560,9 @@ class MonitorSettingsUpdateSchema(Schema):
     on_air_text: Optional[str] = None
     on_air_animation: Optional[Literal['still', 'pulse', 'blink']] = None
     on_air_show_clock: Optional[bool] = None
+    device_offline_minutes: Optional[int] = None
+    warn_temperature_c: Optional[int] = None
+    warn_disk_percent: Optional[int] = None
+    warn_wifi_dbm: Optional[int] = None
+    warn_reboot_days: Optional[int] = None
+    require_device_token: Optional[bool] = None

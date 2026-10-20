@@ -1,6 +1,7 @@
 """
 Monitor / Public Display Models
 """
+import hashlib
 import secrets
 import uuid
 from django.db import models
@@ -356,6 +357,10 @@ def generate_access_key():
     return secrets.token_urlsafe(24)[:32]
 
 
+def default_update_window():
+    return {"weekday": 6, "from": "03:00", "until": "05:00"}
+
+
 class Screen(models.Model):
     """Ein physischer Monitor-Bildschirm mit eigenem Zeitplan"""
 
@@ -406,6 +411,16 @@ class Screen(models.Model):
         help_text="Letzter CEC-Status vom Pi (on/standby/unknown)")
     cec_status_at = models.DateTimeField(null=True, blank=True,
         help_text="Zeitpunkt der letzten CEC-Status-Meldung")
+
+    # ─── Geräte-Agent ───
+    POWER_METHOD_CHOICES = [('cec', 'CEC'), ('hdmi', 'HDMI'), ('hybrid', 'Hybrid'), ('ddc', 'DDC')]
+    power_method = models.CharField(max_length=10, choices=POWER_METHOD_CHOICES, default='cec')
+    power_config = models.JSONField(default=dict, blank=True,
+        help_text="CEC-Gerät, HDMI-Ausgang, SICP-IP/Port/Monitor-ID, DDC-VCP-Werte")
+    auto_updates = models.BooleanField(default=True)
+    update_window = models.JSONField(default=default_update_window, blank=True,
+        help_text='{"weekday": 0-6 (0=Montag), "from": "HH:MM", "until": "HH:MM"}')
+    daily_reboot = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -722,6 +737,14 @@ class MonitorSettings(models.Model):
     webuntis_source = models.CharField(max_length=20, choices=WEBUNTIS_SOURCE_CHOICES, blank=True, default='')
     webuntis_checked_at = models.DateTimeField(null=True, blank=True)
 
+    # ─── Geräte-Überwachung ───
+    device_offline_minutes = models.PositiveIntegerField(default=10)
+    warn_temperature_c = models.IntegerField(default=80)
+    warn_disk_percent = models.IntegerField(default=90)
+    warn_wifi_dbm = models.IntegerField(default=-75)
+    warn_reboot_days = models.PositiveIntegerField(default=7)
+    require_device_token = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = 'Globale Monitor-Einstellung'
         verbose_name_plural = 'Globale Monitor-Einstellungen'
@@ -746,3 +769,95 @@ class DisplayViewVersion(models.Model):
 
     def __str__(self):
         return f"Version {self.view_id} @ {self.created_at:%d.%m %H:%M}"
+
+
+def _hash_secret(raw):
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+class Device(models.Model):
+    """Ein Raspberry Pi mit Stagedesk-Agent; gehört zu höchstens einem Bildschirm."""
+    screen = models.OneToOneField(Screen, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='device')
+    token_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    token_created_at = models.DateTimeField(null=True, blank=True)
+    serial = models.CharField(max_length=64, blank=True, default='')
+    model = models.CharField(max_length=120, blank=True, default='')
+    agent_version = models.CharField(max_length=20, blank=True, default='')
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    last_telemetry = models.JSONField(default=dict, blank=True)
+    last_screenshot = models.ImageField(upload_to='monitor/screenshots/', null=True, blank=True)
+    last_screenshot_at = models.DateTimeField(null=True, blank=True)
+    active_warnings = models.JSONField(default=list, blank=True)
+    offline_notified_at = models.DateTimeField(null=True, blank=True)
+    revoked_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+
+    def __str__(self):
+        return f"Device {self.serial or self.pk}"
+
+    def issue_token(self):
+        """Neuen Token erzeugen, nur den Hash speichern, Klartext einmal zurückgeben."""
+        raw = secrets.token_urlsafe(32)
+        self.token_hash = _hash_secret(raw)
+        self.token_created_at = timezone.now()
+        self.revoked_at = None
+        self.save(update_fields=['token_hash', 'token_created_at', 'revoked_at'])
+        return raw
+
+    @classmethod
+    def for_token(cls, raw):
+        if not raw:
+            return None
+        return cls.objects.filter(token_hash=_hash_secret(raw), revoked_at__isnull=True).first()
+
+
+class PairingRequest(models.Model):
+    code = models.CharField(max_length=6)
+    pairing_id_hash = models.CharField(max_length=64, unique=True)
+    serial = models.CharField(max_length=64, blank=True, default='')
+    model = models.CharField(max_length=120, blank=True, default='')
+    expires_at = models.DateTimeField()
+    confirmed_device = models.ForeignKey(Device, on_delete=models.SET_NULL, null=True, blank=True,
+                                         related_name='pairing_requests')
+    token_delivered = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class DeviceCommand(models.Model):
+    KIND_CHOICES = [(k, k) for k in (
+        'reload', 'restart_browser', 'reboot', 'power_on', 'power_off',
+        'update_now', 'screenshot', 'test_pattern')]
+    STATUS_CHOICES = [(k, k) for k in ('pending', 'sent', 'ok', 'failed', 'expired')]
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='commands')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    params = models.JSONField(default=dict, blank=True)
+    created_by_id = models.CharField(max_length=64, blank=True, default='')
+    created_by_name = models.CharField(max_length=150, blank=True, default='')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    result = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+
+class DeviceEvent(models.Model):
+    KIND_CHOICES = [(k, k) for k in (
+        'online', 'offline', 'warning', 'warning_cleared', 'update', 'update_failed',
+        'paired', 'unpaired', 'token_revoked', 'command', 'agent_updated')]
+    device = models.ForeignKey(Device, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='events')
+    screen = models.ForeignKey(Screen, on_delete=models.CASCADE, null=True, blank=True,
+                               related_name='device_events')
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
+    text = models.CharField(max_length=300, blank=True, default='')
+    data = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
