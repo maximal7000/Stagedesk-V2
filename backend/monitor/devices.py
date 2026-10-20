@@ -4,6 +4,8 @@ Fachlogik für Geräte-Kopplung und Token-Verwaltung (Spec §3).
 pairing_id und Geräte-Token liegen nur als SHA-256-Hash in der Datenbank.
 """
 import hashlib
+import json
+import logging
 import secrets
 from datetime import timedelta
 
@@ -19,6 +21,8 @@ PAIRING_TTL = timedelta(minutes=15)
 MAX_OPEN_REQUESTS = 10
 MAX_PER_SERIAL = 3
 COMMAND_TTL = timedelta(minutes=5)
+MAX_TELEMETRY_BYTES = 64 * 1024
+logger = logging.getLogger(__name__)
 
 
 class PairingGone(Exception):
@@ -168,7 +172,7 @@ def command_message(command: DeviceCommand) -> dict:
 def expire_old_commands(device: Device) -> int:
     now = timezone.now()
     return DeviceCommand.objects.filter(
-        device=device, status='pending', created_at__lt=now - COMMAND_TTL,
+        device=device, status__in=['pending', 'sent'], created_at__lt=now - COMMAND_TTL,
     ).update(status='expired', finished_at=now)
 
 
@@ -199,21 +203,22 @@ def finish_command(device: Device, command_id, ok: bool, text: str) -> None:
 
 
 def update_gate(screen: Screen, now) -> tuple:
-    """Darf der Agent jetzt aktualisieren oder neu starten? Gleiche Vorrangfolge wie `display._mode`:
-    Notfall, Klausur, On-Air; zusätzlich laufende Termine."""
-    from veranstaltung.models import Veranstaltung
+    """Darf der Agent jetzt aktualisieren oder neu starten? Gleiche Regeln wie `display._mode`
+    (Notfall, Klausur mit Zwangsanzeige, On-Air der aktuellen Ansicht) plus ein aktiver Termin
+    (Monitor-Event), der diesem Bildschirm zugewiesen ist."""
     cfg = MonitorSettings.load()
     if cfg.emergency_active:
         return False, "Notfall aktiv"
-    exam = screen.exams.filter(active_from__lte=now, active_until__gte=now).order_by('active_from').first()
-    if exam is not None:
+    exam = screen.get_active_exam()
+    if exam is not None and exam.display_mode in ('fullscreen', 'split'):
         return False, f"Klausur „{exam.title}\" läuft"
     if cfg.on_air_active:
-        return False, "On-Air aktiv"
-    event = (Veranstaltung.objects.exclude(status='abgesagt')
-             .filter(datum_von__lte=now, datum_bis__gte=now).order_by('datum_von').first())
-    if event is not None:
-        return False, f"Termin „{event.titel}\" läuft"
+        view = screen.get_active_view()
+        if view is not None and view.on_air_behavior != 'none':
+            return False, "On-Air aktiv"
+    for assignment in screen.event_assignments.select_related('event'):
+        if assignment.event.is_active_now:
+            return False, f"Termin „{assignment.event.name}\" läuft"
     return True, ""
 
 
@@ -237,7 +242,11 @@ def record_update_result(device: Device, data: dict) -> None:
 
 
 def store_telemetry(device: Device, data: dict) -> None:
-    """Telemetrie speichern; das vom Server gesetzte `last_update` bleibt erhalten."""
+    """Telemetrie speichern; das vom Server gesetzte `last_update` bleibt erhalten.
+    Zu große Nachrichten (über 64 KB JSON) werden verworfen."""
+    if len(json.dumps(data, default=str)) > MAX_TELEMETRY_BYTES:
+        logger.warning("Telemetrie von Gerät %s verworfen: über %s Bytes", device.pk, MAX_TELEMETRY_BYTES)
+        return
     current = Device.objects.filter(pk=device.pk).values_list('last_telemetry', flat=True).first() or {}
     telemetry = dict(data)
     if "last_update" not in telemetry and "last_update" in current:

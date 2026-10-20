@@ -8,10 +8,10 @@ from channels.testing import WebsocketCommunicator
 from django.test import TransactionTestCase, override_settings
 from django.utils import timezone
 
-from veranstaltung.models import Veranstaltung
-
 from . import devices, push
-from .models import Device, DeviceCommand, DeviceEvent, Exam, MonitorSettings, Screen
+from .models import (
+    Device, DeviceCommand, DeviceEvent, DisplayEvent, DisplayEventScreen, DisplayView, Exam,
+    MonitorSettings, Screen)
 from .routing import websocket_urlpatterns
 
 LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
@@ -244,48 +244,54 @@ class DeviceConsumerTest(TransactionTestCase):
         foreign.refresh_from_db()
         self.assertEqual(foreign.status, 'sent')
 
-    def test_update_gate_denied_during_event(self):
-        now = timezone.now()
-        Veranstaltung.objects.create(titel='Elternabend', datum_von=now - timedelta(hours=1),
-                                     datum_bis=now + timedelta(hours=1))
+    def _event(self, name, assign=True, **kwargs):
+        event = DisplayEvent.objects.create(name=name, **kwargs)
+        if assign:
+            view = DisplayView.objects.create(name=f'V {name}', slug=f'v-{name.lower()}')
+            DisplayEventScreen.objects.create(event=event, screen=self.screen, view=view)
+        return event
 
+    def _ask_gate(self):
         async def run():
             comm = _communicator('glocke', self.token)
             await comm.connect()
             await _drain_until(comm, 'hello')
             await comm.send_json_to({'type': 'update_gate_request'})
             msg = await _drain_until(comm, 'update_gate')
-            self.assertFalse(msg['allowed'])
-            self.assertEqual(msg['reason'], 'Termin „Elternabend" läuft')
             await comm.disconnect()
-        async_to_sync(run)()
+            return msg
+        return async_to_sync(run)()
+
+    def test_update_gate_denied_during_event(self):
+        self._event('Elternabend', is_active=True)
+        msg = self._ask_gate()
+        self.assertFalse(msg['allowed'])
+        self.assertEqual(msg['reason'], 'Termin „Elternabend" läuft')
+
+    def test_update_gate_denied_during_timed_event(self):
+        now = timezone.now()
+        self._event('Zeitfenster', active_from=now - timedelta(hours=1), active_until=now + timedelta(hours=1))
+        self.assertFalse(self._ask_gate()['allowed'])
 
     def test_update_gate_allowed_otherwise(self):
         now = timezone.now()
-        Veranstaltung.objects.create(titel='Vorbei', datum_von=now - timedelta(hours=3),
-                                     datum_bis=now - timedelta(hours=2))
-        Veranstaltung.objects.create(titel='Abgesagt', status='abgesagt',
-                                     datum_von=now - timedelta(hours=1), datum_bis=now + timedelta(hours=1))
-
-        async def run():
-            comm = _communicator('glocke', self.token)
-            await comm.connect()
-            await _drain_until(comm, 'hello')
-            await comm.send_json_to({'type': 'update_gate_request'})
-            msg = await _drain_until(comm, 'update_gate')
-            self.assertEqual((msg['allowed'], msg['reason']), (True, ''))
-            await comm.disconnect()
-        async_to_sync(run)()
+        self._event('Aktiv, anderer Bildschirm', assign=False, is_active=True)
+        self._event('Vorbei', active_from=now - timedelta(hours=3), active_until=now - timedelta(hours=2))
+        msg = self._ask_gate()
+        self.assertEqual((msg['allowed'], msg['reason']), (True, ''))
 
     def test_update_gate_reasons_exam_emergency_on_air(self):
         now = timezone.now()
         self.assertEqual(devices.update_gate(self.screen, now), (True, ''))
         exam = Exam.objects.create(title='Mathe', active_from=now - timedelta(minutes=5),
-                                   active_until=now + timedelta(minutes=5))
+                                   active_until=now + timedelta(minutes=5), display_mode='fullscreen')
         exam.screens.add(self.screen)
         allowed, reason = devices.update_gate(self.screen, now)
         self.assertFalse(allowed)
-        self.assertIn('Klausur', reason)
+        self.assertEqual(reason, 'Klausur „Mathe" läuft')
+        exam.display_mode = 'split'
+        exam.save()
+        self.assertFalse(devices.update_gate(self.screen, now)[0])
         exam.delete()
         MonitorSettings.objects.update_or_create(pk=1, defaults={'on_air_active': True})
         allowed, reason = devices.update_gate(self.screen, now)
@@ -295,6 +301,34 @@ class DeviceConsumerTest(TransactionTestCase):
         allowed, reason = devices.update_gate(self.screen, now)
         self.assertFalse(allowed)
         self.assertIn('Notfall', reason)
+
+    def test_update_gate_exam_standard_mode_allowed(self):
+        now = timezone.now()
+        exam = Exam.objects.create(title='Mathe', active_from=now - timedelta(minutes=5),
+                                   active_until=now + timedelta(minutes=5), display_mode='standard')
+        exam.screens.add(self.screen)
+        self.assertEqual(devices.update_gate(self.screen, now), (True, ''))
+
+    def test_update_gate_on_air_behavior_none_allowed(self):
+        view = DisplayView.objects.create(name='Ohne', slug='ohne', is_default=True, on_air_behavior='none')
+        Screen.objects.filter(pk=self.screen.pk).update(default_view=view)
+        self.screen.refresh_from_db()
+        MonitorSettings.objects.update_or_create(pk=1, defaults={'on_air_active': True})
+        self.assertEqual(devices.update_gate(self.screen, timezone.now()), (True, ''))
+
+    def test_sent_command_without_result_expires_after_5_min(self):
+        stuck = DeviceCommand.objects.create(device=self.device, kind='reboot', status='sent')
+        DeviceCommand.objects.filter(pk=stuck.pk).update(created_at=timezone.now() - timedelta(minutes=6))
+        self.assertEqual(devices.send_pending_commands(self.device), [])
+        stuck.refresh_from_db()
+        self.assertEqual(stuck.status, 'expired')
+
+    def test_oversized_telemetry_ignored(self):
+        devices.store_telemetry(self.device, {'cpu_temp': 40})
+        with self.assertLogs('monitor.devices', level='WARNING'):
+            devices.store_telemetry(self.device, {'blob': 'x' * 70000})
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.last_telemetry, {'cpu_temp': 40})
 
     def test_update_failed_creates_event(self):
         async def run():
