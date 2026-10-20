@@ -1,25 +1,33 @@
-import { useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 
 const rootRemPx = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
 
-// Größe eines Elements in px plus rem-Basis. Gemessen beim Einhängen und danach nur bei
-// Größenänderung (ResizeObserver), nie im Sekundentakt.
+// Größe eines Elements in px plus rem-Basis. Gemessen, sobald das Element (neu) im Baum hängt, und danach
+// nur bei Größenänderung (ResizeObserver), nie im Sekundentakt. Das Element darf später erscheinen
+// (z.B. erst nach dem Laden der Daten statt eines Leerzustands): jeder Render prüft, ob ref.current
+// ein anderes Element ist, und hängt Messung und Beobachter dann um.
 export function useBoxSize(ref) {
   const [size, setSize] = useState({ width: 0, height: 0, remPx: 16 })
+  const watched = useRef({ el: null, observer: null })
   useLayoutEffect(() => {
     const el = ref.current
-    if (!el) return undefined
+    if (el === watched.current.el) return
+    watched.current.observer?.disconnect()
+    watched.current = { el, observer: null }
+    if (!el) return
     const measure = () => {
       const { width, height } = el.getBoundingClientRect()
       const remPx = rootRemPx()
       setSize((s) => (s.width === width && s.height === height && s.remPx === remPx ? s : { width, height, remPx }))
     }
     measure()
-    if (typeof ResizeObserver === 'undefined') return undefined
-    const observer = new ResizeObserver(measure)
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [ref])
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(measure)
+      observer.observe(el)
+      watched.current.observer = observer
+    }
+  })
+  useLayoutEffect(() => () => watched.current.observer?.disconnect(), [])
   return size
 }
 

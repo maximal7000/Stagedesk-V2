@@ -26,7 +26,7 @@ export default function InfoView({ view }) {
     <div
       ref={ref}
       className={`relative grid h-full gap-x-[5rem] pt-[3.75rem] ${stacked
-        ? 'grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-y-[2.5rem]'
+        ? 'grid-cols-[minmax(0,1fr)] grid-rows-[minmax(0,auto)_minmax(0,auto)] content-start gap-y-[2.5rem]'
         : 'grid-cols-[minmax(0,1fr)_minmax(0,0.77fr)]'}`}
     >
       <div className="flex min-h-0 flex-col">

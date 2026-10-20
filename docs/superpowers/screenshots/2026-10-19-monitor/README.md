@@ -34,13 +34,13 @@ Namensschema: `display-<testdatei>[-<stil>][-portrait].png`. Ohne Stilangabe gil
 | `display-media-landscape-dark.png` | Medien Querformat, Stil dark |
 | `display-media-landscape-dense.png` | Medien Querformat, Stil dense |
 | `display-media-landscape.png` | Medien Querformat |
-| `display-media-portrait-ci-portrait.png` | Medien Hochformat, Stil ci, Hochformat |
-| `display-media-portrait-ci.png` | Medien Hochformat, Stil ci |
-| `display-media-portrait-dark-portrait.png` | Medien Hochformat, Stil dark, Hochformat |
-| `display-media-portrait-dark.png` | Medien Hochformat, Stil dark |
-| `display-media-portrait-dense-portrait.png` | Medien Hochformat, Stil dense, Hochformat |
-| `display-media-portrait-dense.png` | Medien Hochformat, Stil dense |
-| `display-media-portrait.png` | media, Hochformat |
+| `display-media-portrait-ci-portrait.png` | Medien, Hochformat-Seiten auf Hochformat-Bildschirm, Stil ci |
+| `display-media-portrait-ci.png` | Medien, Hochformat-Seiten auf Querformat-Bildschirm, Stil ci |
+| `display-media-portrait-dark-portrait.png` | Medien, Hochformat-Seiten auf Hochformat-Bildschirm, Stil dark |
+| `display-media-portrait-dark.png` | Medien, Hochformat-Seiten auf Querformat-Bildschirm, Stil dark |
+| `display-media-portrait-dense-portrait.png` | Medien, Hochformat-Seiten auf Hochformat-Bildschirm, Stil dense |
+| `display-media-portrait-dense.png` | Medien, Hochformat-Seiten auf Querformat-Bildschirm, Stil dense |
+| `display-media-portrait.png` | Medien, Hochformat-Seiten auf Querformat-Bildschirm |
 | `display-mode-emergency-ci.png` | Sondermodus Notfall, Stil ci |
 | `display-mode-emergency-dark.png` | Sondermodus Notfall, Stil dark |
 | `display-mode-emergency-dense.png` | Sondermodus Notfall, Stil dense |

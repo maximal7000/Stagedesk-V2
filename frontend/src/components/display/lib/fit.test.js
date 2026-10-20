@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { fitRows, packByHeight } from './fit'
+import { act, createElement, useRef } from 'react'
+import { createRoot } from 'react-dom/client'
+import { afterEach, describe, it, expect, vi } from 'vitest'
+import { fitRows, packByHeight, useBoxSize } from './fit'
 
 describe('fitRows', () => {
   const base = { remPx: 16, minRem: 0.95, prefRem: 1.375, lineFactor: 1.6 }
@@ -30,5 +32,28 @@ describe('packByHeight', () => {
   it('setzt zu hohe Einträge allein auf eine Seite', () => {
     expect(packByHeight([300, 20], 100)).toEqual([[0], [1]])
     expect(packByHeight([], 100)).toEqual([])
+  })
+})
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+describe('useBoxSize', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('misst ein Element, das erst nach einem Leerzustand erscheint', () => {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({ width: 640, height: 360 })
+    let seen = null
+    function Probe({ ready }) {
+      const ref = useRef(null)
+      seen = useBoxSize(ref)
+      return ready ? createElement('div', { ref }) : createElement('p', null, 'Keine Daten')
+    }
+    const root = createRoot(document.createElement('div'))
+    act(() => root.render(createElement(Probe, { ready: false })))
+    expect(seen.width).toBe(0)
+    act(() => root.render(createElement(Probe, { ready: true })))
+    expect(seen.width).toBe(640)
+    expect(seen.height).toBe(360)
+    act(() => root.unmount())
   })
 })
