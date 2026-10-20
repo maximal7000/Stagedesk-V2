@@ -15,4 +15,22 @@ describe('errorText', () => {
     expect(errorText({ response: { status: 403, data: {} } })).toBe('Dafür fehlt die Berechtigung. Bitte eine Person mit Admin-Rechten fragen.')
     expect(errorText(new Error('boom'))).toBe('Die Aktion ist fehlgeschlagen. Bitte erneut versuchen.')
   })
+
+  it('ersetzt die englischen Standardtexte von Django Ninja durch deutsche Sätze', () => {
+    expect(errorText({ response: { status: 401, data: { detail: 'Unauthorized' } } }))
+      .toBe('Die Anmeldung ist abgelaufen. Bitte die Seite neu laden und erneut anmelden.')
+    expect(errorText({ response: { status: 403, data: { detail: 'Forbidden' } } }))
+      .toBe('Dafür fehlt die Berechtigung. Bitte eine Person mit Admin-Rechten fragen.')
+    expect(errorText({ response: { status: 404, data: { detail: 'Not Found' } } }))
+      .toBe('Der Eintrag wurde nicht gefunden. Bitte die Seite neu laden.')
+    expect(errorText({ response: { status: 500, data: { detail: 'Internal Server Error' } } }))
+      .toBe('Der Server hat einen Fehler gemeldet. Bitte später erneut versuchen.')
+    expect(errorText({ response: { status: 405, data: { detail: 'Method Not Allowed' } } }))
+      .toBe('Die Aktion ist fehlgeschlagen. Bitte erneut versuchen.')
+  })
+
+  it('eigene deutsche Meldungen des Backends bleiben auch bei 403 und 404', () => {
+    expect(errorText({ response: { status: 404, data: { detail: 'Die Vorschau ist abgelaufen. Bitte die Vorschau neu öffnen.' } } }))
+      .toBe('Die Vorschau ist abgelaufen. Bitte die Vorschau neu öffnen.')
+  })
 })

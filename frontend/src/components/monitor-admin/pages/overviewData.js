@@ -94,10 +94,30 @@ export function upcoming(holidays, events, now) {
   return items
 }
 
-// Frühestes off_until, wenn alle Bildschirme bis Tagesende aus sind; sonst null
+// Spätestes off_until, wenn alle Bildschirme bis Tagesende aus sind; sonst null
 export function allOffUntil(screens, now) {
   if (!screens?.length) return null
   const dates = screens.map((s) => asDate(s.off_until))
   if (dates.some((d) => !d || d <= now)) return null
-  return dates.reduce((a, b) => (b < a ? b : a))
+  return dates.reduce((a, b) => (b > a ? b : a))
+}
+
+export const EMERGENCY_POWER_HINT = 'Während des Notfalls sind alle Bildschirme an.'
+
+// Menü "An/aus" einer Bildschirm-Zeile. isOn: aktueller Zustand laut /display.
+// Während des Notfalls schaltet die Power-Regel alles ein, die Einträge sind dann gesperrt.
+export function powerMenu(screen, { now, isOn, emergencyActive }) {
+  const disabled = !!emergencyActive
+  const items = []
+  const until = asDate(screen.off_until)
+  if (until && until > now) {
+    items.push({ key: 'clear-off', label: 'Tagesende-Aus aufheben', previous: screen.off_until, disabled })
+  } else {
+    items.push({ key: 'off-today', label: 'Bis Tagesende aus', disabled })
+  }
+  items.push(isOn
+    ? { key: 'manual', label: 'Jetzt ausschalten', mode: 'manual_off', disabled }
+    : { key: 'manual', label: 'Jetzt einschalten', mode: 'manual_on', disabled })
+  if (screen.power_mode !== 'auto') items.push({ key: 'auto', label: 'Wieder automatisch', mode: 'auto', disabled })
+  return { items, hint: disabled ? EMERGENCY_POWER_HINT : '' }
 }

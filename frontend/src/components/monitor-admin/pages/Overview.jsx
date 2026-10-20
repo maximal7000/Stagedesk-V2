@@ -13,7 +13,7 @@ import EmergencyDialog, { EMERGENCY_HINT } from '../shared/EmergencyDialog'
 import UndoToast from '../shared/UndoToast'
 import { describeShown, explainScreen, formatDayTime } from '../shared/explain'
 import { errorText } from '../shared/errorText'
-import { allOffUntil, dataSources, formatRange, nextExam, upcoming } from './overviewData'
+import { allOffUntil, dataSources, formatRange, nextExam, powerMenu, upcoming } from './overviewData'
 import * as api from '../shared/api'
 
 const REFRESH_MS = 60 * 1000
@@ -50,7 +50,7 @@ function Switch({ on, onChange, disabled, label }) {
 
 const iconButton = 'p-2 rounded-md text-fg-muted hover:text-fg hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:text-fg-disabled disabled:pointer-events-none'
 
-function RowMenu({ items }) {
+function RowMenu({ items, hint }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   useEffect(() => {
@@ -70,11 +70,12 @@ function RowMenu({ items }) {
       {open && (
         <div role="menu" className="absolute right-0 top-full mt-1 z-20 min-w-[200px] bg-overlay border border-line rounded-lg shadow-overlay py-1">
           {items.map((item) => (
-            <button key={item.label} type="button" role="menuitem" onClick={() => { setOpen(false); item.onSelect() }}
-              className="w-full text-left px-3 py-2 text-sm text-fg hover:bg-raised focus:outline-none focus-visible:bg-raised">
+            <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => { setOpen(false); item.onSelect() }}
+              className="w-full text-left px-3 py-2 text-sm text-fg hover:bg-raised focus:outline-none focus-visible:bg-raised disabled:text-fg-disabled disabled:pointer-events-none">
               {item.label}
             </button>
           ))}
+          {hint && <p className="px-3 pt-1 pb-2 text-xs text-fg-subtle max-w-[240px]">{hint}</p>}
         </div>
       )}
     </div>
@@ -122,9 +123,19 @@ export default function Overview() {
   const [dialog, setDialog] = useState(null) // 'all-off' | 'emergency'
   const [templates, setTemplates] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [onAirBusy, setOnAirBusy] = useState(false)
+  // Nur die jüngste Ladung zählt; nach dem Abbau wird nichts mehr gesetzt
+  const loadSeq = useRef(0)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   const canPower = can.power
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current
+    const current = () => mounted.current && seq === loadSeq.current
     const [screensRes, settingsRes, viewsRes, examsRes, eventsRes, holidaysRes] = await Promise.all([
       settle(api.getScreens()),
       settle(api.getSettings()),
@@ -133,6 +144,7 @@ export default function Overview() {
       settle(api.getEvents()),
       canPower ? settle(api.getHolidays()) : Promise.resolve({ ok: false }),
     ])
+    if (!current()) return
     setNow(new Date())
     if (!screensRes.ok) {
       setError(screensRes.error)
@@ -148,15 +160,14 @@ export default function Overview() {
       holidays: holidaysRes.ok ? holidaysRes.value : null,
     })
     const results = await Promise.all(screensRes.value.map((s) => settle(api.getDisplay(s.slug))))
+    if (!current()) return
     setDisplays(Object.fromEntries(screensRes.value.map((s, i) => [s.slug, results[i].ok ? results[i].value : null])))
   }, [canPower])
 
   useEffect(() => {
-    let alive = true
-    const run = () => { if (alive) load() }
-    run()
-    const timer = setInterval(run, REFRESH_MS)
-    return () => { alive = false; clearInterval(timer) }
+    load()
+    const timer = setInterval(load, REFRESH_MS)
+    return () => clearInterval(timer)
   }, [load])
 
   // Sofortige Aktion: ausführen, neu laden, Bestätigung mit "Rückgängig" zeigen
@@ -169,7 +180,7 @@ export default function Overview() {
     } catch (e) {
       toast.error(errorText(e))
     }
-    load()
+    await load()
   }
   const runUndo = async (revert) => {
     try { await revert() } catch (e) { toast.error(errorText(e)) }
@@ -187,11 +198,18 @@ export default function Overview() {
   const soon = upcoming(extra.holidays, extra.events, now)
   const state = error ? 'error' : screens && displays ? 'ready' : 'loading'
 
-  const toggleOnAir = (value) => instant(
-    () => api.setOnAir(value),
-    value ? 'On-Air eingeschaltet' : 'On-Air ausgeschaltet',
-    () => api.setOnAir(!value),
-  )
+  const toggleOnAir = async (value) => {
+    setOnAirBusy(true)
+    try {
+      await instant(
+        () => api.setOnAir(value),
+        value ? 'On-Air eingeschaltet' : 'On-Air ausgeschaltet',
+        () => api.setOnAir(!value),
+      )
+    } finally {
+      if (mounted.current) setOnAirBusy(false)
+    }
+  }
 
   const powerOffAll = async () => {
     setBusy(true)
@@ -237,32 +255,29 @@ export default function Overview() {
     load()
   }
 
-  const menuItems = (s) => {
-    const items = []
-    const until = s.off_until ? new Date(s.off_until) : null
-    if (until && until > now) {
-      items.push({ label: 'Tagesende-Aus aufheben', onSelect: () => instant(
-        () => api.undoPowerOffToday([s.id]), `${s.name} folgt wieder dem Zeitplan`, () => api.powerOffToday([s.id])) })
-    } else {
-      items.push({ label: 'Bis Tagesende aus', onSelect: () => instant(
+  const screenMenu = (s) => {
+    const isOn = displays?.[s.slug]?.screen?.power ?? s.power_mode !== 'manual_off'
+    const { items, hint } = powerMenu(s, { now, isOn, emergencyActive })
+    const previousMode = s.power_mode
+    const actions = {
+      'off-today': () => instant(
         () => api.powerOffToday([s.id]),
         (r) => (r?.off_until?.[String(s.id)] ? `${s.name} aus bis ${formatDayTime(r.off_until[String(s.id)])}` : `${s.name} bis Tagesende aus`),
-        () => api.undoPowerOffToday([s.id])) })
-    }
-    const previous = s.power_mode
-    const isOn = displays?.[s.slug]?.screen?.power ?? previous !== 'manual_off'
-    const target = isOn ? 'manual_off' : 'manual_on'
-    items.push({ label: isOn ? 'Jetzt ausschalten' : 'Jetzt einschalten', onSelect: () => instant(
-      () => api.updateScreen(s.id, { power_mode: target }),
-      `${s.name} ${isOn ? 'ausgeschaltet' : 'eingeschaltet'}`,
-      () => api.updateScreen(s.id, { power_mode: previous })) })
-    if (previous !== 'auto') {
-      items.push({ label: 'Wieder automatisch', onSelect: () => instant(
+        () => api.undoPowerOffToday([s.id])),
+      // Rückgängig setzt genau den bisherigen Zeitpunkt wieder (off_until ist mit monitor.power schreibbar)
+      'clear-off': (item) => instant(
+        () => api.undoPowerOffToday([s.id]), `${s.name} folgt wieder dem Zeitplan`,
+        () => api.updateScreen(s.id, { off_until: item.previous })),
+      manual: (item) => instant(
+        () => api.updateScreen(s.id, { power_mode: item.mode }),
+        `${s.name} ${item.mode === 'manual_off' ? 'ausgeschaltet' : 'eingeschaltet'}`,
+        () => api.updateScreen(s.id, { power_mode: previousMode })),
+      auto: () => instant(
         () => api.updateScreen(s.id, { power_mode: 'auto' }),
         `${s.name} folgt wieder dem Zeitplan`,
-        () => api.updateScreen(s.id, { power_mode: previous })) })
+        () => api.updateScreen(s.id, { power_mode: previousMode })),
     }
-    return items
+    return { hint, items: items.map((item) => ({ ...item, onSelect: () => actions[item.key](item) })) }
   }
 
   const reload = async (s) => {
@@ -304,7 +319,7 @@ export default function Overview() {
             <BoxText title="On-Air">
               {onAir ? `An seit ${formatTime(settings.on_air_since) || 'gerade'}` : 'Aus'} · wird auch über ATEM geschaltet
             </BoxText>
-            {can.onair && <Switch on={onAir} onChange={toggleOnAir} label="On-Air" />}
+            {can.onair && <Switch on={onAir} onChange={toggleOnAir} disabled={onAirBusy} label="On-Air" />}
           </Box>
           <Box className={emergencyActive ? 'ring-1 ring-bad' : ''}>
             {emergencyActive ? (
@@ -401,7 +416,7 @@ export default function Overview() {
                             </button>
                           </>
                         )}
-                        {can.power && <RowMenu items={menuItems(s)} />}
+                        {can.power && <RowMenu {...screenMenu(s)} />}
                       </div>
                     </td>
                   </tr>

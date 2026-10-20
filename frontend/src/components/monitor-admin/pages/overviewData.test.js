@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { allOffUntil, dataSources, nextExam, upcoming } from './overviewData'
+import { allOffUntil, dataSources, nextExam, powerMenu, upcoming } from './overviewData'
 
 const now = new Date(2026, 9, 20, 10, 0)
 
@@ -62,10 +62,37 @@ describe('upcoming', () => {
 })
 
 describe('allOffUntil', () => {
-  it('frühestes Ende, wenn alle Bildschirme bis Tagesende aus sind', () => {
+  it('spätestes Ende, wenn alle Bildschirme bis Tagesende aus sind', () => {
     const screens = [{ off_until: '2026-10-21T07:00:00' }, { off_until: '2026-10-21T05:00:00' }]
-    expect(allOffUntil(screens, now).getHours()).toBe(5)
+    expect(allOffUntil(screens, now).getHours()).toBe(7)
     expect(allOffUntil([...screens, { off_until: null }], now)).toBeNull()
     expect(allOffUntil([], now)).toBeNull()
+  })
+})
+
+describe('powerMenu', () => {
+  const base = { id: 1, power_mode: 'auto', off_until: null }
+
+  it('normal: Bis Tagesende aus und Jetzt ausschalten', () => {
+    const m = powerMenu(base, { now, isOn: true, emergencyActive: false })
+    expect(m.hint).toBe('')
+    expect(m.items).toEqual([
+      { key: 'off-today', label: 'Bis Tagesende aus', disabled: false },
+      { key: 'manual', label: 'Jetzt ausschalten', mode: 'manual_off', disabled: false },
+    ])
+  })
+
+  it('Tagesende-Aus aufheben merkt sich den bisherigen Zeitpunkt, manuell bietet Wieder automatisch', () => {
+    const s = { ...base, power_mode: 'manual_off', off_until: '2026-10-21T07:00:00' }
+    const m = powerMenu(s, { now, isOn: false, emergencyActive: false })
+    expect(m.items[0]).toEqual({ key: 'clear-off', label: 'Tagesende-Aus aufheben', previous: '2026-10-21T07:00:00', disabled: false })
+    expect(m.items[1]).toMatchObject({ key: 'manual', label: 'Jetzt einschalten', mode: 'manual_on' })
+    expect(m.items[2]).toMatchObject({ key: 'auto', label: 'Wieder automatisch' })
+  })
+
+  it('während des Notfalls gesperrt mit Hinweis', () => {
+    const m = powerMenu(base, { now, isOn: true, emergencyActive: true })
+    expect(m.hint).toBe('Während des Notfalls sind alle Bildschirme an.')
+    expect(m.items.every((i) => i.disabled)).toBe(true)
   })
 })

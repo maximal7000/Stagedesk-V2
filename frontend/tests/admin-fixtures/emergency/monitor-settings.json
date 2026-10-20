@@ -1,0 +1,18 @@
+{
+  "weather_api_key": "",
+  "webuntis_server": "",
+  "webuntis_school": "",
+  "webuntis_username": "",
+  "webuntis_password": "",
+  "on_air_active": false,
+  "on_air_since": null,
+  "on_air_text": "ON AIR",
+  "on_air_animation": "pulse",
+  "on_air_show_clock": true,
+  "emergency_active": true,
+  "emergency_text": "Bitte das Gebäude sofort über die Fluchtwege verlassen.",
+  "emergency_note": "Sammelplatz: Schulhof",
+  "emergency_since": "2026-10-20T09:55:00+02:00",
+  "webuntis_source": "substitutions",
+  "webuntis_checked_at": "2026-10-20T09:52:00+02:00"
+}

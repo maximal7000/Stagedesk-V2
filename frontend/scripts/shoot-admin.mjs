@@ -40,6 +40,14 @@ const PAGES = {
     },
   },
   'overview-day-off': { path: '/monitor-admin', variant: 'day-off' },
+  'overview-emergency-menu': {
+    path: '/monitor-admin',
+    variant: 'emergency',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click()
+      await page.waitForSelector('[role="menu"]')
+    },
+  },
   'overview-undo': {
     path: '/monitor-admin',
     action: async (page) => {
