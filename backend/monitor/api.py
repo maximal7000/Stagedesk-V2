@@ -53,12 +53,15 @@ from .display import _fetch_disruptions  # Admin-Störungsliste; Datenquellen li
 from .consumers import push_power_to_all
 from .permissions import _require_perm
 from .api_setup import setup_router
+from .api_devices import devices_router
 
 logger = logging.getLogger(__name__)
 
 monitor_router = Router(tags=["Monitor"])
 # Ferien, Notfall-Vorlagen, "bis Tagesende aus"
 monitor_router.add_router("", setup_router)
+# Geräte-Kopplung und Token-Verwaltung
+monitor_router.add_router("", devices_router)
 
 _HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 

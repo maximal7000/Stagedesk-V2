@@ -47,3 +47,19 @@ def notify_reload(slug: str) -> None:
 def notify_changed_on_commit(screen_slugs=None) -> None:
     """Wie notify_changed, aber erst nach erfolgreichem Commit."""
     transaction.on_commit(lambda: notify_changed(screen_slugs))
+
+
+def device_group(device_id: int) -> str:
+    return f"device_{device_id}"
+
+
+def close_device_sockets(device) -> None:
+    """Offene WebSocket-Verbindungen des Geräts schließen lassen (Code 4003, behandelt der Consumer)."""
+    try:
+        layer = get_channel_layer()
+        if not layer:
+            return
+        async_to_sync(layer.group_send)(
+            device_group(device.id), {"type": "device_close", "code": 4003})
+    except Exception:
+        logger.exception("Schließen der Geräte-Verbindung %s fehlgeschlagen", device.id)

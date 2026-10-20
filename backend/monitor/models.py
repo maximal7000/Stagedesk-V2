@@ -804,8 +804,7 @@ class Device(models.Model):
         raw = secrets.token_urlsafe(32)
         self.token_hash = _hash_secret(raw)
         self.token_created_at = timezone.now()
-        self.revoked_at = None
-        self.save(update_fields=['token_hash', 'token_created_at', 'revoked_at'])
+        self.save(update_fields=['token_hash', 'token_created_at'])
         return raw
 
     @classmethod

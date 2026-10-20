@@ -566,3 +566,35 @@ class MonitorSettingsUpdateSchema(Schema):
     warn_wifi_dbm: Optional[int] = None
     warn_reboot_days: Optional[int] = None
     require_device_token: Optional[bool] = None
+
+
+class PairStartSchema(Schema):
+    serial: str = ''
+    model: str = ''
+
+
+class PairPollSchema(Schema):
+    pairing_id: str
+
+
+class NewScreenSchema(Schema):
+    name: str
+    location: str = ''
+
+
+class DevicePairSchema(Schema):
+    code: str
+    screen_id: Optional[int] = None
+    new_screen: Optional[NewScreenSchema] = None
+
+
+class DeviceSchema(Schema):
+    id: int
+    screen_id: Optional[int] = None
+    serial: str
+    model: str
+    agent_version: str
+    last_seen_at: Optional[datetime] = None
+    token_created_at: Optional[datetime] = None
+    revoked_at: Optional[datetime] = None
+    created_at: datetime
