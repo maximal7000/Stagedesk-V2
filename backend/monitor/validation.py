@@ -33,6 +33,12 @@ NUMBER_FIELDS = {
     'pdf_static_page': ('Feste Seite', 1, 999),
     'transit_duration': ('Vorausschau', 10, 240),
 }
+# Ja/Nein-Felder des Abfahrts-Editors (Erweitert): nie leer
+BOOL_FIELDS = {
+    'transit_source_db': 'Quelle Deutsche Bahn',
+    'transit_source_nahsh': 'Quelle NAH.SH',
+    'transit_show_via': 'Zwischenhalte anzeigen',
+}
 WALK_MINUTES = (0, 60)
 MAX_DEPARTURES = (1, 30)
 
@@ -49,6 +55,13 @@ def _check_numbers(data):
     for key, (label, lo, hi) in NUMBER_FIELDS.items():
         if key in data and not (_is_int(data[key]) and lo <= data[key] <= hi):
             raise HttpError(422, number_message(label, lo, hi))
+    for key, label in BOOL_FIELDS.items():
+        if key in data and not isinstance(data[key], bool):
+            raise HttpError(422, f"{label}: bitte ein- oder ausschalten.")
+    if 'transit_disruption_hidden' in data:
+        hidden = data['transit_disruption_hidden']
+        if not isinstance(hidden, list) or not all(isinstance(h, str) for h in hidden):
+            raise HttpError(422, "Ausgeblendete Meldungen sind ungültig. Bitte die Seite neu laden.")
     # Breite links: wie bisher in den Bereich geklemmt, aber nie leer
     if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
         raise HttpError(422, number_message('Breite links', 20, 80))

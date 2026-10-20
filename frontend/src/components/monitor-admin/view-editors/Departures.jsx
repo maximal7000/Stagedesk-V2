@@ -1,16 +1,19 @@
 // Editor für Abfahrten (Spec §6.2, Mockup admin-view-edit.png): Haltestellen-Tabelle mit Fußweg, Max. Zeilen
 // und Verkehrsmitteln, sortierbar per Ziehen (natives HTML5-Drag, mit der Tastatur über den Griff),
-// Filter im Dialog, dazu Störungsmeldungen und Streik.
-import { useState } from 'react'
-import { ChevronRight, Plus, Trash2 } from 'lucide-react'
-import { Button } from '../../ui'
+// Filter im Dialog, dazu Störungsmeldungen (mit Ausblenden einzelner Meldungen), Streik und Erweitert
+// (Vorausschau, Quellen, Zwischenhalte).
+import { useEffect, useId, useState } from 'react'
+import { ChevronRight, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { Button, StatusBadge } from '../../ui'
+import { errorText } from '../shared/errorText'
+import * as api from '../shared/api'
 import { Checkbox, Field, ListInput, Section, fieldClass } from '../shared/form'
 import StopSearch from '../shared/StopSearch'
 import StopFilterDialog from '../shared/StopFilterDialog'
 import DragHandle from '../shared/DragHandle'
 import { dragRowClass, useListDrag } from '../shared/useListDrag'
 import {
-  DEFAULT_MAX_DEPARTURES, MAX_DEPARTURES_LIMIT, WALK_MINUTES_LIMIT, moveItem, newStop, stopTransport,
+  DEFAULT_MAX_DEPARTURES, MAX_DEPARTURES_LIMIT, NUMBER_RULES, WALK_MINUTES_LIMIT, moveItem, newStop, stopTransport,
 } from '../pages/viewData'
 
 const numberClass = `${fieldClass} tabular-nums`
@@ -148,7 +151,75 @@ function ManualMessages({ value, onChange }) {
   )
 }
 
-function DisruptionsSection({ draft, set }) {
+// Aktuelle Meldungen der gespeicherten Ansicht (GET /disruptions); Ausblenden ändert transit_disruption_hidden im Entwurf
+function CurrentMessages({ viewId, hidden, onChange }) {
+  const [state, setState] = useState({ viewId: null, list: null, error: null })
+  useEffect(() => {
+    if (viewId == null) return undefined
+    let alive = true
+    api.getDisruptions(viewId)
+      .then((list) => { if (alive) setState({ viewId, list, error: null }) })
+      .catch((error) => { if (alive) setState({ viewId, list: null, error }) })
+    return () => { alive = false }
+  }, [viewId])
+  if (viewId == null || state.viewId !== viewId) return null
+  if (state.error) return <p className="text-sm text-bad">Meldungen konnten nicht geladen werden. {errorText(state.error, 'Bitte später erneut versuchen.')}</p>
+  if (!state.list.length) return <p className="text-sm text-fg-subtle">Aktuell keine Meldungen.</p>
+  const toggle = (id) => onChange(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])
+  return (
+    <ul className="divide-y divide-line-subtle border-y border-line-subtle" data-disruptions>
+      {state.list.map((d) => {
+        const isHidden = hidden.includes(d.id)
+        return (
+          <li key={d.id} className="flex items-start gap-3 py-2.5" data-disruption-hidden={isHidden ? '' : undefined}>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <StatusBadge label={d.kind === 'construction' ? 'Baumaßnahme' : 'Störung'} tone={d.kind === 'construction' ? 'warning' : 'danger'} />
+                {d.lines?.length > 0 && <span className="text-xs text-fg-muted truncate">{d.lines.join(', ')}</span>}
+              </div>
+              <div className={`text-sm mt-1 ${isHidden ? 'text-fg-subtle line-through' : 'text-fg'}`}>{d.title}</div>
+            </div>
+            <Button size="sm" variant="ghost" icon={isHidden ? Eye : EyeOff} onClick={() => toggle(d.id)}
+              aria-label={`${d.title} ${isHidden ? 'einblenden' : 'ausblenden'}`}>
+              {isHidden ? 'Einblenden' : 'Ausblenden'}
+            </Button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function AdvancedSection({ draft, set }) {
+  const durationId = useId()
+  const { min, max } = NUMBER_RULES.transit_duration
+  return (
+    <Section title="Erweitert" data-editor-section="transit-advanced">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Vorausschau" htmlFor={durationId} help="So viele Minuten im Voraus werden Abfahrten abgefragt.">
+          <div className="relative max-w-40">
+            <input id={durationId} type="number" min={min} max={max} value={draft.transit_duration ?? ''}
+              onChange={(e) => set('transit_duration', e.target.value === '' ? '' : Number(e.target.value))}
+              className={`${numberClass} pr-12`} />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-fg-subtle pointer-events-none">min</span>
+          </div>
+        </Field>
+        <Field label="Quellen" help="Abfahrten kommen aus den gewählten Auskunftssystemen.">
+          <div className="space-y-2 pt-1">
+            <Checkbox label="Deutsche Bahn" checked={draft.transit_source_db !== false} onChange={(v) => set('transit_source_db', v)} />
+            <Checkbox label="NAH.SH" checked={draft.transit_source_nahsh !== false} onChange={(v) => set('transit_source_nahsh', v)} />
+          </div>
+        </Field>
+      </div>
+      <div className="mt-4">
+        <Checkbox label="Zwischenhalte anzeigen" help="Zeigt unter dem Ziel die nächsten Halte, sofern die Quelle sie liefert."
+          checked={!!draft.transit_show_via} onChange={(v) => set('transit_show_via', v)} />
+      </div>
+    </Section>
+  )
+}
+
+function DisruptionsSection({ draft, set, viewId }) {
   return (
     <Section title="Störungsmeldungen" data-editor-section="disruptions">
       <div className="space-y-4">
@@ -172,6 +243,9 @@ function DisruptionsSection({ draft, set }) {
         </div>
         <Field label="Eigene Meldungen" help="Erscheinen vor den Meldungen der Verkehrsbetriebe in der Leiste unten.">
           <ManualMessages value={draft.transit_disruption_manual} onChange={(v) => set('transit_disruption_manual', v)} />
+        </Field>
+        <Field label="Aktuelle Meldungen" help="Ausgeblendete Meldungen erscheinen nicht auf dem Bildschirm. Endet eine Meldung beim Anbieter, fällt sie aus der Liste.">
+          <CurrentMessages viewId={viewId} hidden={draft.transit_disruption_hidden ?? []} onChange={(v) => set('transit_disruption_hidden', v)} />
         </Field>
       </div>
     </Section>
@@ -211,12 +285,13 @@ function StrikeSection({ draft, set }) {
   )
 }
 
-export default function DeparturesEditor({ draft, set }) {
+export default function DeparturesEditor({ draft, set, viewId }) {
   return (
     <>
       <StopsSection draft={draft} set={set} />
-      <DisruptionsSection draft={draft} set={set} />
+      <DisruptionsSection draft={draft} set={set} viewId={viewId} />
       <StrikeSection draft={draft} set={set} />
+      <AdvancedSection draft={draft} set={set} />
     </>
   )
 }

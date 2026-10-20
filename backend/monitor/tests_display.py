@@ -353,6 +353,11 @@ class PreviewValidationTest(PreviewTestBase):
         self.assert_rejected({'view': {'kind': 'rotation', 'rotation_items': [{'view_id': self.saved.id, 'seconds': 'x'}]}},
                              'Sekunden')
 
+    def test_invalid_transit_fields_rejected(self):
+        self.assert_rejected({'view': {'id': self.saved.id, 'transit_duration': None}}, 'Vorausschau')
+        self.assert_rejected({'view': {'id': self.saved.id, 'transit_source_db': None}}, 'Deutsche Bahn')
+        self.assert_rejected({'view': {'id': self.saved.id, 'transit_disruption_hidden': [3]}}, 'Ausgeblendete Meldungen')
+
     def test_invalid_choices_rejected(self):
         self.assert_rejected({'view': {'kind': 'tabelle'}}, 'Typ')
         self.assert_rejected({'view': {'id': self.saved.id, 'style': 'bunt'}}, 'Stil')

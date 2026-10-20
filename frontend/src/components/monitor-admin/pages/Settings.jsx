@@ -1,13 +1,13 @@
-// Einstellungen (Spec §6.2): WebUntis-Zugang mit "Verbindung testen", ÖPNV-Grundeinstellungen und Störungsfilter,
-// Notfall-Vorlagen (sortierbar), On-Air-Darstellung und Wetter-Schlüssel. Eine SaveBar für die ganze Seite; jeder
-// geänderte Teil wird mit eigener Anfrage gespeichert, weil die Rechte getrennt sind: WebUntis, ÖPNV und Wetter
-// brauchen monitor.setup, On-Air monitor.onair, Notfall-Vorlagen monitor.emergency. Ohne Recht ist ein Abschnitt
-// nur lesend (Notfall-Vorlagen und ÖPNV fehlen dann ganz, weil schon das Lesen das Recht braucht).
+// Einstellungen (Spec §6.2): WebUntis-Zugang mit "Verbindung testen", Notfall-Vorlagen (sortierbar), On-Air-Darstellung
+// und Wetter-Schlüssel. ÖPNV-Werte gehören zur Ansicht und stehen im Abfahrts-Editor (Ruling R26). Eine SaveBar für
+// die ganze Seite; jeder geänderte Teil wird mit eigener Anfrage gespeichert, weil die Rechte getrennt sind: WebUntis
+// und Wetter brauchen monitor.setup, On-Air monitor.onair, Notfall-Vorlagen monitor.emergency. Ohne Recht ist ein
+// Abschnitt nur lesend (Notfall-Vorlagen fehlen dann ganz, weil schon das Lesen das Recht braucht).
 // Zugangsdaten sind write-only (Ruling R22): ein leeres Feld behält den gespeicherten Wert.
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { Eye, EyeOff, Plug, Plus, Trash2 } from 'lucide-react'
+import { Plug, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { PageHeader, Button, StatusBadge } from '../../ui'
+import { PageHeader, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
 import { useDraft } from '../shared/useDraft'
 import SaveBar from '../shared/SaveBar'
@@ -20,9 +20,8 @@ import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
 import { formatDayTime } from '../shared/explain'
 import { moveItem } from './viewData'
 import {
-  ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SETUP_FIELDS, TRANSIT_DURATION, TRANSIT_FIELDS,
-  changedIn, checkSentence, departureViews, settingsPayload, sourceSentence, templateChangeCount, templateChanges,
-  templateProblems, transitPayload, transitProblem,
+  ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SETUP_FIELDS,
+  changedIn, checkSentence, settingsPayload, sourceSentence, templateChangeCount, templateChanges, templateProblems,
 } from './settingsData'
 import * as api from '../shared/api'
 
@@ -93,78 +92,6 @@ function WebuntisSection({ settings, draft, set, disabled, readOnly, dirty, onCl
               : sourceSentence(settings.webuntis_source)}
         </p>
       </div>
-    </Section>
-  )
-}
-
-function TransitSection({ views, viewId, onViewChange, draft, set, disruptions, disruptionsError, disabled }) {
-  const ids = { view: useId(), duration: useId() }
-  const hidden = draft?.transit_disruption_hidden ?? []
-  const toggleHidden = (id) => set('transit_disruption_hidden', hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])
-  return (
-    <Section title="ÖPNV" data-section="transit">
-      {views.length === 0 ? (
-        <p className="text-sm text-fg-subtle">Keine Ansicht zeigt Abfahrten. Abfahrts-Ansichten entstehen unter Ansichten.</p>
-      ) : (
-        <div className="space-y-5">
-          <Field label="Ansicht" htmlFor={ids.view} help="Die Werte gelten für diese Abfahrts-Ansicht. Haltestellen und Linien stehen in der Ansicht selbst.">
-            <select id={ids.view} value={viewId ?? ''} onChange={(e) => onViewChange(Number(e.target.value))} className={fieldClass}>
-              {views.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
-          </Field>
-          {draft && (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Vorausschau" htmlFor={ids.duration} help="So viele Minuten im Voraus werden Abfahrten abgefragt.">
-                  <div className="relative">
-                    <input id={ids.duration} type="number" min={TRANSIT_DURATION.min} max={TRANSIT_DURATION.max} disabled={disabled}
-                      value={draft.transit_duration ?? ''} onChange={(e) => set('transit_duration', e.target.value === '' ? '' : Number(e.target.value))}
-                      className={`${fieldClass} pr-14 tabular-nums`} />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-fg-subtle pointer-events-none">min</span>
-                  </div>
-                </Field>
-                <Field label="Quellen">
-                  <div className="space-y-2 pt-1">
-                    <Checkbox label="Deutsche Bahn" checked={draft.transit_source_db} disabled={disabled} onChange={(v) => set('transit_source_db', v)} />
-                    <Checkbox label="NAH.SH" checked={draft.transit_source_nahsh} disabled={disabled} onChange={(v) => set('transit_source_nahsh', v)} />
-                  </div>
-                </Field>
-              </div>
-              <Checkbox label="Zwischenhalte anzeigen" help="Zeigt unter dem Ziel die nächsten Halte, sofern die Quelle sie liefert."
-                checked={draft.transit_show_via} disabled={disabled} onChange={(v) => set('transit_show_via', v)} />
-              <div>
-                <div className="text-sm font-medium text-fg mb-1.5">Störungsfilter</div>
-                <p className="text-xs text-fg-subtle mb-2">Ausgeblendete Meldungen erscheinen nicht auf dem Bildschirm. Endet eine Meldung beim Anbieter, fällt sie aus der Liste.</p>
-                {disruptionsError ? (
-                  <p className="text-sm text-bad">Störungen konnten nicht geladen werden. {errorText(disruptionsError, 'Bitte später erneut versuchen.')}</p>
-                ) : disruptions == null ? null : disruptions.length === 0 ? (
-                  <p className="text-sm text-fg-subtle">Aktuell keine Störungen.</p>
-                ) : (
-                  <ul className="divide-y divide-line-subtle border-y border-line-subtle" data-disruptions>
-                    {disruptions.map((d) => {
-                      const isHidden = hidden.includes(d.id)
-                      return (
-                        <li key={d.id} className="flex items-start gap-3 py-2.5" data-disruption-hidden={isHidden ? '' : undefined}>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <StatusBadge label={d.kind === 'construction' ? 'Baumaßnahme' : 'Störung'} tone={d.kind === 'construction' ? 'warning' : 'danger'} />
-                              {d.lines?.length > 0 && <span className="text-xs text-fg-muted truncate">{d.lines.join(', ')}</span>}
-                            </div>
-                            <div className={`text-sm mt-1 ${isHidden ? 'text-fg-subtle line-through' : 'text-fg'}`}>{d.title}</div>
-                          </div>
-                          <Button size="sm" variant="ghost" icon={isHidden ? Eye : EyeOff} disabled={disabled} onClick={() => toggleHidden(d.id)}>
-                            {isHidden ? 'Einblenden' : 'Ausblenden'}
-                          </Button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
     </Section>
   )
 }
@@ -269,21 +196,15 @@ export default function Settings() {
   const [error, setError] = useState(null)
   const [templates, setTemplates] = useState(null)       // gespeichert
   const [templateList, setTemplateList] = useState([])   // Entwurf
-  const [views, setViews] = useState([])
-  const [viewId, setViewId] = useState(null)
-  const [transitView, setTransitView] = useState(null)
-  const [disruptions, setDisruptions] = useState(null)
-  const [disruptionsError, setDisruptionsError] = useState(null)
   const [clearing, setClearing] = useState(null)
   const [busy, setBusy] = useState(false)
 
   const fetchAll = useCallback(() => Promise.allSettled([
     api.getSettings(),
     canEmergency ? api.getEmergencyTemplates() : Promise.resolve(null),
-    canSetup ? api.getViews() : Promise.resolve([]),
-  ]), [canEmergency, canSetup])
+  ]), [canEmergency])
 
-  const apply = useCallback(([settingsRes, templatesRes, viewsRes]) => {
+  const apply = useCallback(([settingsRes, templatesRes]) => {
     if (settingsRes.status === 'rejected') {
       setError(settingsRes.reason)
       return
@@ -295,11 +216,6 @@ export default function Settings() {
       setTemplates(sorted)
       setTemplateList(sorted)
     }
-    if (viewsRes.status === 'fulfilled') {
-      const list = departureViews(viewsRes.value)
-      setViews(list)
-      setViewId((current) => (list.some((v) => v.id === current) ? current : list[0]?.id ?? null))
-    }
   }, [])
 
   useEffect(() => {
@@ -308,46 +224,19 @@ export default function Settings() {
     return () => { alive = false }
   }, [fetchAll, apply])
 
-  // Gewählte Abfahrts-Ansicht laden (Felder und aktuelle Störungen); beim Wechsel zählt nur die letzte Antwort
-  useEffect(() => {
-    if (viewId == null) return undefined
-    let alive = true
-    Promise.allSettled([api.getView(viewId), api.getDisruptions(viewId)]).then(([viewRes, disruptionsRes]) => {
-      if (!alive) return
-      if (viewRes.status === 'fulfilled') setTransitView(viewRes.value)
-      else toast.error(errorText(viewRes.reason))
-      setDisruptions(disruptionsRes.status === 'fulfilled' ? disruptionsRes.value : null)
-      setDisruptionsError(disruptionsRes.status === 'rejected' ? disruptionsRes.reason : null)
-    })
-    return () => { alive = false }
-  }, [viewId])
-
-  const settingsOriginal = useMemo(() => (settings ? pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS]) : null), [settings])
-  const transitOriginal = useMemo(() => (transitView ? pick(transitView, TRANSIT_FIELDS) : null), [transitView])
+  // Ausgangsstand nur neu, wenn sich die Werte ändern: ein geänderter *_set-Schalter (Entfernen) setzt den Entwurf nicht zurück
+  const originalKey = settings ? JSON.stringify(pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS])) : null
+  const settingsOriginal = useMemo(() => (originalKey ? JSON.parse(originalKey) : null), [originalKey])
   const values = useDraft(settingsOriginal)
-  const transit = useDraft(transitOriginal)
 
   const setupCount = settings ? changedIn(settingsOriginal, values.draft, SETUP_FIELDS) : 0
   const onAirCount = settings ? changedIn(settingsOriginal, values.draft, ON_AIR_FIELDS) : 0
-  const transitCount = transitOriginal ? Object.keys(transitPayload(transitOriginal, transit.draft)).length : 0
   const templateCount = templates ? templateChangeCount(templates, templateList) : 0
-  const dirtyCount = setupCount + onAirCount + transitCount + templateCount
+  const dirtyCount = setupCount + onAirCount + templateCount
   const webuntisDirty = settings ? changedIn(settingsOriginal, values.draft, WEBUNTIS_FIELDS) > 0 : false
   useUnsavedGuard(dirtyCount > 0)
 
-  const changeView = (id) => {
-    if (transitCount && !window.confirm('Die ÖPNV-Änderungen der bisherigen Ansicht gehen verloren. Trotzdem wechseln?')) return
-    setTransitView(null)
-    setDisruptions(null)
-    setDisruptionsError(null)
-    setViewId(id)
-  }
-
   const saveAll = async () => {
-    if (transitCount) {
-      const problem = transitProblem(transit.draft)
-      if (problem) { toast.error(problem); return }
-    }
     if (templateCount) {
       const problem = templateProblems(templateList)
       if (problem) { toast.error(problem); return }
@@ -374,10 +263,6 @@ export default function Settings() {
       else settingsFailed = true
     }
     if (latest && !settingsFailed) setSettings(latest)
-    if (transitCount) {
-      const updated = await run(() => api.updateView(viewId, transitPayload(transitOriginal, transit.draft)))
-      if (updated) setTransitView(updated)
-    }
     if (templateCount) {
       await run(async () => {
         const { create, update, remove } = templateChanges(templates, templateList)
@@ -400,15 +285,15 @@ export default function Settings() {
 
   const discard = () => {
     values.reset()
-    transit.reset()
     setTemplateList(templates ?? [])
   }
 
   const clearSecret = async () => {
     setBusy(true)
     try {
-      const updated = await api.updateSettings({ [`${clearing}_clear`]: true })
-      setSettings(updated)
+      await api.updateSettings({ [`${clearing}_clear`]: true })
+      // Nur den Schalter übernehmen; ungespeicherte Änderungen der übrigen Felder bleiben im Entwurf
+      setSettings((s) => ({ ...s, [`${clearing}_set`]: false }))
       setClearing(null)
       toast.success('Entfernt')
     } catch (e) {
@@ -432,10 +317,6 @@ export default function Settings() {
         <div className="space-y-4 max-w-4xl">
           <WebuntisSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             dirty={webuntisDirty} onClear={() => setClearing('webuntis_password')} />
-          {canSetup && (
-            <TransitSection views={views} viewId={viewId} onViewChange={changeView} draft={transit.draft} set={transit.set}
-              disruptions={disruptions} disruptionsError={disruptionsError} disabled={busy} />
-          )}
           {canEmergency && templates && <TemplatesSection list={templateList} setList={setTemplateList} />}
           <OnAirSection draft={values.draft} set={values.set} disabled={onAirDisabled} readOnly={!canOnAir} />
           <WeatherSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}

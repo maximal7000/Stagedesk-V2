@@ -11,7 +11,7 @@ const SIDE_CONTENT = [
 ]
 const isSubstitutions = (v) => v === 'substitutions' || v === 'webuntis'
 
-export default function SplitEditor({ draft, set }) {
+export default function SplitEditor({ draft, set, viewId }) {
   const widthId = useId()
   const left = isSubstitutions(draft.split_left) ? 'substitutions' : draft.split_left
   const right = isSubstitutions(draft.split_right) ? 'substitutions' : draft.split_right
@@ -36,7 +36,7 @@ export default function SplitEditor({ draft, set }) {
           </Field>
         </div>
       </Section>
-      {sides.includes('departures') && <DeparturesEditor draft={draft} set={set} />}
+      {sides.includes('departures') && <DeparturesEditor draft={draft} set={set} viewId={viewId} />}
       {sides.includes('substitutions') && <SubstitutionsEditor draft={draft} set={set} />}
     </>
   )

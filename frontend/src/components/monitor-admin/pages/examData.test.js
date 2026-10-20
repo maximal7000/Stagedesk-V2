@@ -142,3 +142,24 @@ describe('fromLocalInput', () => {
     expect(fromLocalInput('kaputt')).toBeNull()
   })
 })
+
+describe('Termine ohne Zeitraum (nur manuell)', () => {
+  it('Zeitraum zählt nur mit Beginn und Ende, wie DisplayEvent.is_active_now', () => {
+    const [onlyFrom, none] = scheduleItems([], [
+      { id: 5, name: 'Nur Beginn', active_from: at(20, 8), active_until: null, is_active: false, assignments: [] },
+      { id: 6, name: 'Manuell', active_from: null, active_until: null, is_active: true, assignments: [] },
+    ], screens)
+    expect([onlyFrom.from, onlyFrom.until]).toEqual([null, null])
+    expect(none.active).toBe(true)
+    const groups = groupItems([onlyFrom, none], now)
+    expect(groups.running.map((i) => i.key)).toEqual(['event-6'])
+    expect(groups.upcoming.map((i) => i.key)).toEqual(['event-5'])
+  })
+
+  it('Formular: beide Zeiten leer ist erlaubt, nur eine nicht', () => {
+    const ok = { name: 'K', active_from: '', active_until: '', assignments: [{ screen_id: 1, view_id: 7 }] }
+    expect(eventProblems(ok)).toBeNull()
+    expect(eventProblems({ ...ok, active_from: '2026-10-22T18:00' })).toBe('Beginn und Ende angeben oder beide leer lassen.')
+    expect(eventPayload(ok)).toMatchObject({ active_from: null, active_until: null })
+  })
+})

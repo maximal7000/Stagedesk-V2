@@ -1,4 +1,4 @@
-// Einstellungen (Spec §6.2): WebUntis-Test als Satz, Payloads der Abschnitte, Notfall-Vorlagen und ÖPNV.
+// Einstellungen (Spec §6.2): WebUntis-Test als Satz, Payloads der Abschnitte und Notfall-Vorlagen.
 // Zugangsdaten sind write-only (Ruling R22): der Server liefert '' plus *_set; ein leeres Feld heißt unverändert.
 import { deepEqual } from '../shared/useDraft'
 import { errorText } from '../shared/errorText'
@@ -60,7 +60,8 @@ export function settingsPayload(base, draft, fields) {
   const out = {}
   for (const key of fields) {
     if (SECRET_FIELDS.includes(key)) {
-      if (text(draft[key])) out[key] = draft[key].trim()
+      // Leer (auch nur Leerzeichen) heißt unverändert; sonst genau wie eingegeben, ohne Kürzen
+      if (text(draft[key])) out[key] = draft[key]
       continue
     }
     if (deepEqual(base?.[key], draft?.[key])) continue
@@ -102,32 +103,4 @@ export const templateChangeCount = (original, draft) => {
 export function templateProblems(list) {
   const index = (list || []).findIndex((t) => !text(t.title) || !text(t.text))
   return index < 0 ? null : `Vorlage ${index + 1}: Titel und Text eintragen.`
-}
-
-// ── ÖPNV (Felder der gewählten Abfahrts-Ansicht) ───────────────────
-
-export const TRANSIT_FIELDS = ['transit_duration', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden']
-export const TRANSIT_DURATION = { min: 10, max: 240 }
-
-export function departureViews(views) {
-  return (views || []).filter((v) => v.kind === 'departures'
-    || (v.kind === 'split' && (v.split_left === 'departures' || v.split_right === 'departures')))
-}
-
-export function transitPayload(base, draft) {
-  const out = {}
-  for (const key of TRANSIT_FIELDS) {
-    if (deepEqual(base?.[key], draft?.[key])) continue
-    out[key] = key === 'transit_duration' ? (draft[key] === '' || draft[key] == null ? null : Number(draft[key])) : draft[key]
-  }
-  return out
-}
-
-export function transitProblem(draft) {
-  const v = draft?.transit_duration
-  const n = Number(v)
-  if (v === '' || v == null || !Number.isInteger(n) || n < TRANSIT_DURATION.min || n > TRANSIT_DURATION.max) {
-    return `Vorausschau: bitte eine ganze Zahl von ${TRANSIT_DURATION.min} bis ${TRANSIT_DURATION.max} eintragen.`
-  }
-  return null
 }

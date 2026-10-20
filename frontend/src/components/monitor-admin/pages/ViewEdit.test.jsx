@@ -52,6 +52,10 @@ vi.mock('../shared/api', () => ({
     { id: 13, name: 'Schullogo', kind: 'logo' }, { id: 14, name: 'Hintergrund Aula', kind: 'background' },
   ])),
   searchStops: vi.fn(() => Promise.resolve([])),
+  getDisruptions: vi.fn(() => Promise.resolve([
+    { id: 'm1', kind: 'disruption', title: 'RE8 fällt aus', lines: ['RE8'] },
+    { id: 'm2', kind: 'construction', title: 'Linie 5 Umleitung', lines: ['5'] },
+  ])),
   getWebuntisLinks: vi.fn(() => Promise.resolve([{ id: 5, name: 'Untis zwei Tage', url: 'https://untis.example/2' }])),
 }))
 
@@ -182,5 +186,22 @@ describe('ViewEdit', () => {
     await mount('/monitor-admin/views/6')
     const select = container.querySelector('[data-editor-section="media"] select')
     expect([...select.options].map((o) => o.textContent)).toEqual(['Datei wählen', 'Speiseplan', 'Plakat'])
+  })
+
+  it('Abfahrten: blendet eine aktuelle Meldung aus und speichert die Vorausschau', async () => {
+    await mount('/monitor-admin/views/1')
+    expect(api.getDisruptions).toHaveBeenCalledWith(1)
+    await act(async () => button('RE8 fällt aus ausblenden').click())
+    await act(async () => typeInto(container.querySelector('[data-editor-section="transit-advanced"] input[type="number"]'), '90'))
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).toHaveBeenCalledWith(1, { transit_duration: 90, transit_disruption_hidden: ['m1'] })
+  })
+
+  it('Abfahrten: Vorausschau außerhalb des Bereichs wird nicht gespeichert', async () => {
+    await mount('/monitor-admin/views/1')
+    await act(async () => typeInto(container.querySelector('[data-editor-section="transit-advanced"] input[type="number"]'), '5'))
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Vorausschau: bitte eine ganze Zahl von 10 bis 240 eintragen.')
   })
 })

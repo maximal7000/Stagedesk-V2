@@ -15,6 +15,9 @@ import { errorText } from '../shared/errorText'
 import { fileMeta, mediaStatus, uploadKind, uploadProblem } from './mediaData'
 import * as api from '../shared/api'
 
+// Laufende Uploads tragen eine eigene Nummer: zwei Dateien mit gleichem Namen bleiben getrennt
+let uploadSeq = 0
+
 const STATUS_TONE = { processing: 'info', ready: 'positive', failed: 'danger' }
 
 function StatusLine({ file }) {
@@ -154,13 +157,14 @@ export default function Media() {
         toast.error(problem)
         continue
       }
-      setUploading((u) => [...u, file.name])
+      const entry = { id: ++uploadSeq, name: file.name }
+      setUploading((u) => [...u, entry])
       try {
         await api.uploadFile(file, { name: file.name.replace(/\.[^.]+$/, ''), kind: uploadKind(file) })
       } catch (e) {
         toast.error(`„${file.name}“ wurde nicht hochgeladen. ${errorText(e)}`)
       }
-      setUploading((u) => u.filter((n) => n !== file.name))
+      setUploading((u) => u.filter((x) => x.id !== entry.id))
     }
     await reload()
   }
@@ -221,7 +225,9 @@ export default function Media() {
         </p>
         <p className="text-xs text-fg-subtle mt-1">PDF oder Bild, höchstens 50 MB und 50 Seiten pro Datei. Jede Seite wird für 4K vorbereitet.</p>
         {uploading.length > 0 && (
-          <p className="text-sm text-fg-muted mt-3" role="status">Lädt hoch: {uploading.join(', ')}</p>
+          <ul className="text-sm text-fg-muted mt-3" role="status" aria-label="Lädt hoch">
+            {uploading.map((u) => <li key={u.id}>Lädt hoch: {u.name}</li>)}
+          </ul>
         )}
       </div>
 

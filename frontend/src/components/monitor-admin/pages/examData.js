@@ -61,17 +61,21 @@ export function scheduleItems(exams, events, screens) {
     screens: (e.screen_ids || []).map((id) => names.get(id)).filter(Boolean),
     record: e,
   }))
-  const eventItems = (events || []).map((e) => ({
-    key: `event-${e.id}`,
-    type: 'event',
-    id: e.id,
-    title: e.name,
-    from: asDate(e.active_from),
-    until: asDate(e.active_until),
-    active: !!e.is_active,
-    screens: (e.assignments || []).map((a) => `${a.screen_name || names.get(a.screen_id) || 'Bildschirm'} → ${a.view_name || 'Ansicht'}`),
-    record: e,
-  }))
+  // Ein Termin läuft automatisch nur mit Beginn und Ende (DisplayEvent.is_active_now); sonst nur manuell
+  const eventItems = (events || []).map((e) => {
+    const timed = asDate(e.active_from) && asDate(e.active_until)
+    return {
+      key: `event-${e.id}`,
+      type: 'event',
+      id: e.id,
+      title: e.name,
+      from: timed ? asDate(e.active_from) : null,
+      until: timed ? asDate(e.active_until) : null,
+      active: !!e.is_active,
+      screens: (e.assignments || []).map((a) => `${a.screen_name || names.get(a.screen_id) || 'Bildschirm'} → ${a.view_name || 'Ansicht'}`),
+      record: e,
+    }
+  })
   return [...examItems, ...eventItems]
 }
 
@@ -210,7 +214,9 @@ export function eventPayload(draft) {
 
 export function eventProblems(draft) {
   if (!text(draft.name)) return 'Der Name fehlt. Bitte einen Namen eintragen.'
-  const range = rangeProblem(draft.active_from, draft.active_until, true)
+  // Ohne Zeitraum wird der Termin nur von Hand aktiviert; eine einzelne Zeit hätte keine Wirkung
+  if (!draft.active_from !== !draft.active_until) return 'Beginn und Ende angeben oder beide leer lassen.'
+  const range = rangeProblem(draft.active_from, draft.active_until, false)
   if (range) return range
   const rows = draft.assignments || []
   if (!rows.length) return 'Zuordnung fehlt: mindestens einen Bildschirm mit Ansicht wählen.'

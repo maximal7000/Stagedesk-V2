@@ -16,10 +16,6 @@ vi.mock('../shared/api', () => ({
   updateEmergencyTemplate: vi.fn(),
   createEmergencyTemplate: vi.fn(),
   deleteEmergencyTemplate: vi.fn(),
-  getViews: vi.fn(() => Promise.resolve([])),
-  getView: vi.fn(),
-  getDisruptions: vi.fn(),
-  updateView: vi.fn(),
 }))
 
 const api = await import('../shared/api')
@@ -109,5 +105,24 @@ describe('Settings', () => {
       [1, { title: 'Räumung', text: 'Raus', note: '', sort_order: 1 }],
     ])
     expect(api.createEmergencyTemplate).not.toHaveBeenCalled()
+  })
+
+  it('Passwort entfernen behält ungespeicherte Änderungen der anderen Felder', async () => {
+    perms.add('monitor.setup')
+    api.updateSettings.mockResolvedValue({ ...settings(), webuntis_password_set: false })
+    await mount()
+    await act(async () => { typeInto(byLabel('Schule'), 'neu') })
+    await click(button('Gespeichertes Passwort entfernen'))
+    await click(button('Entfernen'))
+    expect(api.updateSettings).toHaveBeenCalledWith({ webuntis_password_clear: true })
+    expect(byLabel('Schule').value).toBe('neu')
+    expect(byLabel('Passwort').placeholder).toBe('Nicht gesetzt')
+    expect(container.textContent).toContain('1 ungespeicherte Änderung')
+  })
+
+  it('zeigt keinen ÖPNV-Abschnitt mehr (gehört zur Ansicht)', async () => {
+    perms.add('monitor.setup')
+    await mount()
+    expect(container.querySelector('[data-section="transit"]')).toBeNull()
   })
 })

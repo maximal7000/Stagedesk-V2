@@ -88,10 +88,11 @@ const PAGES = {
     },
   },
   'view-edit-departures': {
-    path: '/monitor-admin/views/1', preview: 'departures', height: 1500,
+    path: '/monitor-admin/views/1', preview: 'departures', height: 2250,
     action: async (page) => {
       await page.getByRole('radio', { name: 'Dunkel' }).click()
       await page.getByLabel('Max. Zeilen Kohlmarkt').fill('8')
+      await page.waitForSelector('[data-disruptions]')
       await waitForPreview(page)
     },
   },
@@ -135,11 +136,10 @@ const PAGES = {
   },
   schedules: { path: '/monitor-admin/schedules', variant: 'schedules', height: 1380 },
   settings: {
-    path: '/monitor-admin/settings', height: 2050,
+    path: '/monitor-admin/settings', height: 1500,
     action: async (page) => {
       await page.getByRole('button', { name: 'Verbindung testen' }).click()
       await page.waitForSelector('[data-check-result]')
-      await page.waitForSelector('[data-disruptions]')
     },
   },
   'stop-filter-dialog': {

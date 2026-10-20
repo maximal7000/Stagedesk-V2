@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  checkSentence, credentialsComplete, departureViews, settingsPayload, sourceSentence, SETUP_FIELDS, ON_AIR_FIELDS,
-  templateChanges, templateProblems, transitPayload,
+  checkSentence, credentialsComplete, settingsPayload, sourceSentence, SETUP_FIELDS, ON_AIR_FIELDS,
+  templateChanges, templateProblems,
 } from './settingsData'
 
 const saved = {
@@ -58,6 +58,13 @@ describe('settingsPayload', () => {
     expect(settingsPayload(base, { ...draft, webuntis_password: 'geheim', weather_api_key: 'k' }, SETUP_FIELDS))
       .toEqual({ webuntis_server: 'neu.webuntis.com', webuntis_password: 'geheim', weather_api_key: 'k' })
   })
+
+  it('Geheimnisse werden nicht gekürzt, nur Leerzeichen zählen als leer', () => {
+    const base = { ...saved }
+    expect(settingsPayload(base, { ...base, webuntis_password: ' pw mit Leerzeichen ' }, SETUP_FIELDS))
+      .toEqual({ webuntis_password: ' pw mit Leerzeichen ' })
+    expect(settingsPayload(base, { ...base, webuntis_password: '   ' }, SETUP_FIELDS)).toEqual({})
+  })
 })
 
 describe('Notfall-Vorlagen', () => {
@@ -90,23 +97,5 @@ describe('Notfall-Vorlagen', () => {
   it('Titel und Text sind Pflicht', () => {
     expect(templateProblems([{ title: 'A', text: 'B' }])).toBeNull()
     expect(templateProblems([{ title: 'A', text: 'B' }, { title: ' ', text: 'B' }])).toBe('Vorlage 2: Titel und Text eintragen.')
-  })
-})
-
-describe('ÖPNV', () => {
-  it('Ansichten mit Abfahrten, auch geteilte', () => {
-    const views = [
-      { id: 1, name: 'Abfahrten', kind: 'departures' },
-      { id: 2, name: 'Info', kind: 'info' },
-      { id: 3, name: 'Geteilt', kind: 'split', split_left: 'webuntis', split_right: 'departures' },
-      { id: 4, name: 'Geteilt ohne', kind: 'split', split_left: 'webuntis', split_right: 'exam' },
-    ]
-    expect(departureViews(views).map((v) => v.id)).toEqual([1, 3])
-  })
-
-  it('Payload nur mit geänderten Feldern, Vorausschau als Zahl', () => {
-    const base = { transit_duration: 60, transit_source_db: true, transit_source_nahsh: true, transit_show_via: false, transit_disruption_hidden: [] }
-    expect(transitPayload(base, { ...base, transit_duration: '90', transit_disruption_hidden: ['abc'] }))
-      .toEqual({ transit_duration: 90, transit_disruption_hidden: ['abc'] })
   })
 })

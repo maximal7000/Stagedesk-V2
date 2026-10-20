@@ -2,7 +2,7 @@
 // gemischt nach Zeit, darunter die Ankündigungen. Anlegen und Bearbeiten im Seitenpanel; "Aus Vorlage" übernimmt
 // eine Klausur-Vorlage. Schreiben braucht monitor.exams (Route), Lesen monitor.view.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
-import { BookmarkPlus, CalendarClock, ChevronDown, Megaphone, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { BookmarkPlus, CalendarClock, ChevronDown, Megaphone, Pencil, Plus, Power, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, Button, StatusBadge } from '../../ui'
 import SidePanel from '../shared/SidePanel'
@@ -38,17 +38,18 @@ const SAVE = {
 }
 const REMOVE = { exam: api.deleteExam, event: api.deleteEvent, announcement: api.deleteAnnouncement }
 
-function TimeRange({ draft, set, optional }) {
+function TimeRange({ draft, set, optional, help }) {
   const fromId = useId()
   const untilId = useId()
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
+    <div className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
       <Field label="Von" htmlFor={fromId} help={optional ? 'Leer lassen für sofort.' : null}>
         <input id={fromId} type="datetime-local" value={draft.active_from} onChange={(e) => set('active_from', e.target.value)} className={fieldClass} />
       </Field>
       <Field label="Bis" htmlFor={untilId} help={optional ? 'Leer lassen für unbegrenzt.' : null}>
         <input id={untilId} type="datetime-local" value={draft.active_until} onChange={(e) => set('active_until', e.target.value)} className={fieldClass} />
       </Field>
+      {help && <p className="text-xs text-fg-subtle sm:col-span-2">{help}</p>}
     </div>
   )
 }
@@ -99,7 +100,7 @@ function EventForm({ draft, set, screens, views }) {
       <Field label="Beschreibung" htmlFor={descriptionId}>
         <input id={descriptionId} value={draft.description} onChange={(e) => set('description', e.target.value)} className={fieldClass} />
       </Field>
-      <TimeRange draft={draft} set={set} />
+      <TimeRange draft={draft} set={set} help="Ohne Zeitraum wird der Termin nur von Hand in der Liste aktiviert." />
       <Field label="Zuordnung" help="Während des Termins zeigt jeder Bildschirm die gewählte Ansicht.">
         <ul className="space-y-2" data-assignments>
           {rows.map((row, i) => (
@@ -192,22 +193,31 @@ function TemplateMenu({ templates, onPick, onDelete }) {
   )
 }
 
-function ItemRow({ item, onEdit, onDelete }) {
+function ItemRow({ item, onEdit, onDelete, onToggle }) {
   const badge = TYPE_BADGE[item.type]
-  const when = item.from ? formatRange(item.from, item.until) : item.active ? 'Manuell aktiv' : 'Ohne Zeitraum'
+  const when = item.from ? formatRange(item.from, item.until) : 'Nur von Hand'
   return (
     <li className="flex items-start gap-4 px-4 py-3 border-b border-line-subtle last:border-0" data-item={item.key}>
       <div className="w-20 shrink-0 pt-0.5"><StatusBadge label={badge.label} tone={badge.tone} /></div>
       <div className="flex-1 min-w-0">
-        <button type="button" onClick={onEdit} className="text-sm font-semibold text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline text-left">
-          {item.title}
-        </button>
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onEdit} className="text-sm font-semibold text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline text-left">
+            {item.title}
+          </button>
+          {item.active && <StatusBadge label="Manuell aktiv" tone="positive" dot />}
+        </div>
         <div className="text-xs text-fg-muted mt-0.5">
           {item.screens.length ? item.screens.join(', ') : item.type === 'exam' ? 'Auf keinem Bildschirm' : 'Ohne Zuordnung'}
         </div>
       </div>
       <div className="text-sm text-fg-muted tabular-nums whitespace-nowrap pt-0.5">{when}</div>
-      <div className="flex shrink-0 -my-1">
+      <div className="flex items-center shrink-0 -my-1">
+        {item.type === 'event' && (
+          <Button size="sm" variant="ghost" icon={Power} onClick={onToggle} aria-pressed={item.active}
+            aria-label={`${item.title} ${item.active ? 'deaktivieren' : 'aktivieren'}`}>
+            {item.active ? 'Deaktivieren' : 'Aktivieren'}
+          </Button>
+        )}
         <button type="button" className={iconButton} onClick={onEdit} aria-label={`${item.title} bearbeiten`} title="Bearbeiten"><Pencil className="w-4 h-4" /></button>
         <button type="button" className={iconButton} onClick={onDelete} aria-label={`${item.title} löschen`} title="Löschen"><Trash2 className="w-4 h-4" /></button>
       </div>
@@ -229,10 +239,12 @@ function GroupShell({ title, count, action, empty, children, ...rest }) {
   )
 }
 
-function Group({ title, items, empty, onEdit, onDelete, name }) {
+function Group({ title, items, empty, onEdit, onDelete, onToggle, name }) {
   return (
     <GroupShell title={title} count={items.length} empty={empty} data-group={name}>
-      {items.map((item) => <ItemRow key={item.key} item={item} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} />)}
+      {items.map((item) => (
+        <ItemRow key={item.key} item={item} onEdit={() => onEdit(item)} onDelete={() => onDelete(item)} onToggle={() => onToggle(item)} />
+      ))}
     </GroupShell>
   )
 }
@@ -310,6 +322,17 @@ export default function Exams() {
     setSaving(false)
   }
 
+  // Termin von Hand an- oder ausschalten (wie im alten Admin); wirkt sofort
+  const toggleEvent = async (item) => {
+    try {
+      await (item.active ? api.deactivateEvent(item.id) : api.activateEvent(item.id))
+      toast.success(item.active ? `„${item.title}“ ist deaktiviert.` : `„${item.title}“ ist aktiv.`)
+      await load()
+    } catch (e) {
+      toast.error(errorText(e))
+    }
+  }
+
   const saveTemplate = async () => {
     const problem = examProblems({ ...panel.draft, screen_ids: [0] })
     if (problem) {
@@ -370,11 +393,11 @@ export default function Exams() {
       ) : groups ? (
         <div className="space-y-4">
           <Group name="running" title="Läuft gerade" items={groups.running} empty="Gerade läuft keine Klausur und kein Termin."
-            onEdit={editItem} onDelete={(i) => askDelete(i.type, i.id, i.title)} />
+            onEdit={editItem} onDelete={(i) => askDelete(i.type, i.id, i.title)} onToggle={toggleEvent} />
           <Group name="upcoming" title="Kommt" items={groups.upcoming} empty="Nichts geplant."
-            onEdit={editItem} onDelete={(i) => askDelete(i.type, i.id, i.title)} />
+            onEdit={editItem} onDelete={(i) => askDelete(i.type, i.id, i.title)} onToggle={toggleEvent} />
           <Group name="past" title="Vergangen" items={groups.past} empty="Noch nichts vergangen."
-            onEdit={editItem} onDelete={(i) => askDelete(i.type, i.id, i.title)} />
+            onEdit={editItem} onDelete={(i) => askDelete(i.type, i.id, i.title)} onToggle={toggleEvent} />
 
           <GroupShell title="Ankündigungen" count={data.announcements.length} data-section="announcements"
             empty="Keine Ankündigungen. Sie erscheinen in Info-Ansichten."

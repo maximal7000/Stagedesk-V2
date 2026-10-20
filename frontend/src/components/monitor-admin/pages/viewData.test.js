@@ -177,3 +177,26 @@ describe('gespeicherter WebUntis-Link', () => {
     expect(draftFromView({ webuntis_link_id: 3 }).webuntis_link_id).toBe(3)
   })
 })
+
+describe('Abfahrten: Erweitert', () => {
+  const view = { ...VIEW, transit_duration: 60, transit_source_db: true, transit_source_nahsh: true, transit_show_via: false,
+    transit_disruption_hidden: ['a1'] }
+  const base = draftFromView(view)
+
+  it('Vorausschau, Quellen, Zwischenhalte und ausgeblendete Meldungen sind bearbeitbar', () => {
+    expect(base).toMatchObject({ transit_duration: 60, transit_source_db: true, transit_show_via: false, transit_disruption_hidden: ['a1'] })
+    const draft = { ...base, transit_duration: '90', transit_source_nahsh: false, transit_show_via: true, transit_disruption_hidden: ['a1', 'b2'] }
+    const keys = changedKeys(base, draft)
+    expect(keys).toEqual(['transit_duration', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden'])
+    expect(viewPayload(draft, keys)).toEqual({
+      transit_duration: 90, transit_source_nahsh: false, transit_show_via: true, transit_disruption_hidden: ['a1', 'b2'],
+    })
+  })
+
+  it('Vorausschau wie im Backend: 10 bis 240 Minuten', () => {
+    const problems = (v) => viewProblems({ ...base, transit_duration: v }, ['transit_duration'])
+    expect(problems(240)).toEqual([])
+    expect(problems('')).toEqual(['Vorausschau: bitte eine ganze Zahl von 10 bis 240 eintragen.'])
+    expect(problems(9)).toHaveLength(1)
+  })
+})
