@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-10-20T09:59:40+02:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "aula",
+    "name": "Aula",
+    "location": "Bühne links",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": false
+  },
+  "mode": null,
+  "view": {
+    "id": 2,
+    "kind": "substitutions",
+    "style": "dense",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "source": "substitutions",
+      "news": null,
+      "days": [],
+      "fallback_url": null,
+      "fetched_at": "2026-10-20T09:57:00+02:00"
+    }
+  }
+}

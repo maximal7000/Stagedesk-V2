@@ -27,6 +27,12 @@ import {
   ScanLine,
   Activity,
   Eye,
+  LayoutDashboard,
+  PanelsTopLeft,
+  CalendarClock,
+  Image,
+  CalendarRange,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import apiClient from '../lib/api';
@@ -36,6 +42,7 @@ import { useUser } from '../contexts/UserContext';
 import GlobalSearchModal from './GlobalSearchModal';
 import NotificationBell from './NotificationBell';
 import ShortcutsModal from './ShortcutsModal';
+import { useConfirmLeave } from './monitor-admin/shared/UnsavedChangesProvider';
 import { LogoMark } from './ui';
 import { lazy, Suspense } from 'react';
 const QRScanner = lazy(() => import('./QRScanner'));
@@ -51,6 +58,16 @@ export default function DashboardLayout({ children }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  const confirmLeave = useConfirmLeave();
+
+  // Sidebar-Links: bei ungespeicherten Änderungen (Monitor-Admin) erst nachfragen
+  const onNavClick = (e) => {
+    if (!confirmLeave(e.currentTarget.getAttribute('href'))) {
+      e.preventDefault();
+      return;
+    }
+    setSidebarOpen(false);
+  };
 
   const handleQRScan = async (code) => {
     setScanOpen(false);
@@ -137,12 +154,23 @@ export default function DashboardLayout({ children }) {
   // Inventar-Unternavigation (aktuell leer; bei Bedarf hier ergänzen)
   const inventarSubNav = [];
 
+  // Monitor-Navigation (Spec §6.1): alle Unterseiten setzen monitor.view voraus, dazu je ein eigenes Recht
+  const monitorNavigation = hasPermission('monitor.view') ? [
+    { name: 'Übersicht', href: '/monitor-admin', icon: LayoutDashboard, permission: 'monitor.view' },
+    // Bildschirme: setup bearbeitet die Anzeige, power nur das Ein- und Ausschalten
+    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['monitor.setup', 'monitor.power'] },
+    { name: 'Ansichten', href: '/monitor-admin/views', icon: PanelsTopLeft, permission: 'monitor.setup' },
+    { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'monitor.exams' },
+    { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'monitor.media' },
+    { name: 'Ferien & Zeitpläne', href: '/monitor-admin/schedules', icon: CalendarRange, permission: 'monitor.power' },
+    { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, anyOf: ['monitor.setup', 'monitor.onair', 'monitor.emergency'] },
+  ].filter(item => (item.anyOf ? item.anyOf.some(p => hasPermission(p)) : hasPermission(item.permission))) : [];
+
   // Admin-Navigation
   const adminNavigation = [
     ...(isAdmin ? [{ name: 'Admin', href: '/admin', icon: Shield }] : []),
     ...(isAdmin ? [{ name: 'System', href: '/admin/system', icon: Activity }] : []),
     ...(isAdmin ? [{ name: 'Audit-Log', href: '/admin/audit', icon: ScrollText }] : []),
-    ...(isAdmin || hasPermission('monitor.view') ? [{ name: 'Monitor', href: '/monitor-admin', icon: Monitor }] : []),
   ];
 
   // Aktiven Nav-Eintrag über alle Sektionen ermitteln (longest-prefix-wins),
@@ -151,6 +179,7 @@ export default function DashboardLayout({ children }) {
   const allNavHrefs = [
     ...navigation.map(n => n.href),
     ...inventarSubNav.map(n => n.href),
+    ...monitorNavigation.map(n => n.href),
     ...adminNavigation.map(n => n.href),
   ];
   const activeHref = (() => {
@@ -167,6 +196,7 @@ export default function DashboardLayout({ children }) {
   };
 
   const getPageTitle = () => {
+    if (location.pathname === '/monitor-admin' || location.pathname.startsWith('/monitor-admin/')) return 'Monitore';
     const allNav = [
       ...navigation, 
       ...inventarSubNav,
@@ -230,7 +260,7 @@ export default function DashboardLayout({ children }) {
               <div key={item.name} className="space-y-1">
                 <Link
                   to={item.href}
-                  onClick={() => setSidebarOpen(false)}
+                  onClick={onNavClick}
                   className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${
                     isActive
                       ? 'bg-raised text-fg shadow-[inset_2px_0_0_0_var(--color-accent)]'
@@ -250,7 +280,7 @@ export default function DashboardLayout({ children }) {
                         <Link
                           key={sub.name}
                           to={sub.href}
-                          onClick={() => setSidebarOpen(false)}
+                          onClick={onNavClick}
                           className={`flex items-center gap-3 px-4 py-2 rounded-md text-sm transition-colors ${
                             subActive ? 'bg-raised text-fg shadow-[inset_2px_0_0_0_var(--color-accent)]' : 'text-fg-subtle hover:text-fg hover:bg-raised'
                           }`}
@@ -271,6 +301,38 @@ export default function DashboardLayout({ children }) {
             );
           })}
 
+          {/* Monitor Section */}
+          {monitorNavigation.length > 0 && (
+            <>
+              <div className="pt-4 mt-2 pb-2 border-t border-line-subtle">
+                <p className="px-4 pt-2 text-xs font-semibold text-fg-subtle uppercase tracking-wider">
+                  Monitore
+                </p>
+              </div>
+              {monitorNavigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = item.href === activeHref;
+
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    onClick={onNavClick}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-md text-sm transition-colors ${
+                      isActive
+                        ? 'bg-raised text-fg shadow-[inset_2px_0_0_0_var(--color-accent)]'
+                        : 'text-fg-muted hover:text-fg hover:bg-raised'
+                    }`}
+                  >
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-accent-fg' : ''}`} />
+                    <span className="font-medium">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </>
+          )}
+
           {/* Admin Section */}
           {adminNavigation.length > 0 && (
             <>
@@ -287,7 +349,7 @@ export default function DashboardLayout({ children }) {
                   <Link
                     key={item.name}
                     to={item.href}
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={onNavClick}
                     className={`flex items-center gap-3 px-4 py-3 rounded-md transition-colors ${
                       isActive
                         ? 'bg-raised text-fg shadow-[inset_2px_0_0_0_var(--color-accent)]'
@@ -308,7 +370,7 @@ export default function DashboardLayout({ children }) {
           {/* Settings Link */}
           <Link
             to="/settings"
-            onClick={() => setSidebarOpen(false)}
+            onClick={onNavClick}
             className={`flex items-center gap-3 px-4 py-3 mx-4 mt-4 rounded-md transition-colors ${
               location.pathname === '/settings'
                 ? 'bg-raised text-fg shadow-[inset_2px_0_0_0_var(--color-accent)]'

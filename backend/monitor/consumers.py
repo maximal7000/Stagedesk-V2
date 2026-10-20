@@ -19,6 +19,7 @@ Der Consumer:
 
 import asyncio
 import json
+import logging
 import time
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
@@ -26,6 +27,8 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.utils import timezone
 
+
+logger = logging.getLogger(__name__)
 
 TICK_INTERVAL = 30   # Power-Status alle 30s neu auswerten
 PING_INTERVAL = 60   # Heartbeat-ping alle 60s
@@ -48,6 +51,17 @@ def push_power_to_screen(slug: str, power: bool = None) -> None:
         "type": "power_command",
         "power": power,  # None → Consumer fragt DB neu
     })
+
+
+def push_power_to_all() -> None:
+    """Alle Bildschirme neu auswerten lassen (Notfall, Ferien, "bis Tagesende aus")."""
+    from .models import Screen
+    for slug in Screen.objects.values_list('slug', flat=True):
+        try:
+            push_power_to_screen(slug)
+        except Exception:
+            # Der gespeicherte Zustand gilt trotzdem; der 30-s-Tick des Consumers holt ihn nach.
+            logger.exception("Power-Push an %s fehlgeschlagen", slug)
 
 
 class ScreenPiConsumer(AsyncWebsocketConsumer):
@@ -173,3 +187,31 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             screen.save(update_fields=["cec_status", "cec_status_at", "updated_at"])
         except Screen.DoesNotExist:
             pass
+
+
+class DisplayConsumer(AsyncWebsocketConsumer):
+    """WebSocket-Endpunkt der Anzeige (öffentlich, nur Hinweise).  URL: /ws/monitor/display/<slug>/
+
+    Sendet nur {"type":"changed"} bzw. {"type":"reload"}; Daten holt die Anzeige per HTTP.
+    Eingehende Nachrichten werden ignoriert."""
+
+    async def connect(self):
+        from . import push
+        slug = self.scope["url_route"]["kwargs"]["slug"]
+        self.groups_joined = [push.group_name(slug), push.ALL_GROUP]
+        for group in self.groups_joined:
+            await self.channel_layer.group_add(group, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        for group in getattr(self, "groups_joined", []):
+            await self.channel_layer.group_discard(group, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        return
+
+    async def display_changed(self, event):
+        await self.send(json.dumps({"type": "changed"}))
+
+    async def display_reload(self, event):
+        await self.send(json.dumps({"type": "reload"}))

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Abitur schriftlich",
+    "duration_minutes": 300,
+    "title": "Abitur",
+    "text": "Bitte leise sein.",
+    "color": "#1e40af",
+    "display_mode": "fullscreen",
+    "webuntis_link_id": null,
+    "split_side": "right",
+    "split_percent": 50
+  },
+  {
+    "id": 2,
+    "name": "Klausur Doppelstunde",
+    "duration_minutes": 90,
+    "title": "Klausur",
+    "text": "",
+    "color": "#1e40af",
+    "display_mode": "split",
+    "webuntis_link_id": null,
+    "split_side": "right",
+    "split_percent": 50
+  }
+]

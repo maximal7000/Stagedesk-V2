@@ -1,0 +1,26 @@
+[
+  {
+    "id": 2,
+    "name": "Sommerferien",
+    "start_date": "2026-07-09",
+    "end_date": "2026-08-19"
+  },
+  {
+    "id": 1,
+    "name": "Herbstferien",
+    "start_date": "2026-10-26",
+    "end_date": "2026-11-06"
+  },
+  {
+    "id": 3,
+    "name": "Brückentag",
+    "start_date": "2026-11-20",
+    "end_date": "2026-11-20"
+  },
+  {
+    "id": 4,
+    "name": "Weihnachtsferien",
+    "start_date": "2026-12-21",
+    "end_date": "2027-01-06"
+  }
+]

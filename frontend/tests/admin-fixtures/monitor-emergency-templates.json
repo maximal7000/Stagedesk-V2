@@ -1,0 +1,16 @@
+[
+  {
+    "id": 1,
+    "title": "Räumung",
+    "text": "Bitte das Gebäude sofort über die Fluchtwege verlassen.",
+    "note": "Sammelplatz: Schulhof",
+    "sort_order": 0
+  },
+  {
+    "id": 2,
+    "title": "Unwetter",
+    "text": "Bitte im Gebäude bleiben und von den Fenstern fernhalten.",
+    "note": "",
+    "sort_order": 1
+  }
+]

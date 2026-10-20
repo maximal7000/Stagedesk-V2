@@ -46,12 +46,16 @@ test('legacy-gray-Block in index.css wird übersprungen', () => {
 
 test('EXCLUDE enthält die Ausnahmen', () => {
   for (const p of [
-    'src/pages/admin/MonitorAdminPage.jsx',
     'src/pages/MonitorPage.jsx',
     'src/pages/AufgabenMonitorPage.jsx',
-    'src/components/monitor/',
+    'src/components/display/',
     'src/pages/DesignTestPage.jsx',
   ]) assert.ok(EXCLUDE.includes(p), p)
+})
+
+test('Monitor-Admin wird geprüft', () => {
+  assert.ok(!EXCLUDE.some((p) => 'src/components/monitor-admin/x.jsx'.startsWith(p)))
+  assert.ok(!EXCLUDE.includes('src/pages/admin/MonitorAdminPage.jsx'))
 })
 
 test('Block-Kommentar mit Code dahinter wird geprüft', () => {

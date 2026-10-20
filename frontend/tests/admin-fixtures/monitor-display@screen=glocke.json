@@ -1,0 +1,33 @@
+{
+  "generated_at": "2026-10-20T09:59:40+02:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Eingangshalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true
+  },
+  "mode": null,
+  "view": {
+    "id": 1,
+    "kind": "departures",
+    "style": "dense",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "stations": [
+        {
+          "station_id": "8000237",
+          "station_name": "Lübeck Hbf",
+          "departures": [],
+          "max_departures": 10
+        }
+      ],
+      "disruptions": []
+    }
+  }
+}

@@ -68,13 +68,12 @@ class ViewValidationTest(TestCase):
         self.assertEqual(_validate_view_data({'split_left_percent': 95})['split_left_percent'], 80)
         self.assertEqual(_validate_view_data({'split_left_percent': 5})['split_left_percent'], 20)
 
-    def test_image_focus_clamped(self):
-        self.assertEqual(_validate_view_data({'image_focus_x': 150})['image_focus_x'], 100)
-        self.assertEqual(_validate_view_data({'image_focus_y': -10})['image_focus_y'], 0)
+    def test_webuntis_zoom_clamped(self):
+        self.assertEqual(_validate_view_data({'webuntis_zoom': 1000})['webuntis_zoom'], 400)
 
-    def test_invalid_hex_color_dropped(self):
-        self.assertNotIn('accent_color', _validate_view_data({'accent_color': 'rot'}))
-        self.assertEqual(_validate_view_data({'accent_color': '#aabbcc'})['accent_color'], '#aabbcc')
+    def test_invalid_exam_hex_color_dropped(self):
+        self.assertNotIn('color', _validate_exam_data({'color': 'rot'}))
+        self.assertEqual(_validate_exam_data({'color': '#aabbcc'})['color'], '#aabbcc')
 
     def test_schedule_from_after_until_raises(self):
         with self.assertRaises(HttpError):
@@ -143,7 +142,7 @@ class ManualDisruptionTest(TestCase):
 
     def test_manual_disruption_uses_english_keys_and_stable_id(self):
         view = DisplayView.objects.create(
-            name='V', slug='v', layout='departures', transit_disruption_rail=False, transit_disruption_bus=False,
+            name='V', slug='v', kind='departures', transit_disruption_rail=False, transit_disruption_bus=False,
             transit_disruption_manual=[{'title': 'Titel', 'text': 'Text', 'image': 'k.png', 'highlighted': True}])
         [d] = _fetch_disruptions(view)
         self.assertEqual(d['id'], oepnv._disruption_id('manuell', 'Titel', 'Text'))
@@ -161,7 +160,7 @@ class PowerStateTest(TestCase):
 
     def test_exception_with_english_keys(self):
         today = timezone.localdate().isoformat()
-        screen = Screen.objects.create(name='S', slug='s', holiday_mode=True, power_exceptions=[
+        screen = Screen.objects.create(name='S', slug='s', power_schedule=[{'days': [], 'from': '07:00', 'until': '08:00'}], power_exceptions=[
             {'from_date': today, 'until_date': today, 'from': '00:00', 'until': '23:59', 'note': 'x'}])
         self.assertTrue(screen.get_power_state())
 
@@ -195,7 +194,7 @@ class DisruptionHiddenPruneTest(TestCase):
 
     def _view(self):
         return DisplayView.objects.create(
-            name='D', slug='d', layout='departures',
+            name='D', slug='d', kind='departures',
             transit_disruption_rail=True, transit_disruption_bus=True,
             transit_disruption_hidden=['rail1', 'bus1', 'gone'])
 

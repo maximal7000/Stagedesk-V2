@@ -1,0 +1,44 @@
+[
+  {
+    "id": "a1",
+    "source": "nahsh",
+    "kind": "disruption",
+    "title": "RE8: Ausfälle zwischen Lübeck und Bad Oldesloe",
+    "text": "",
+    "lines": [
+      "RE8"
+    ],
+    "from": "",
+    "until": "",
+    "has_image": false,
+    "hidden": false
+  },
+  {
+    "id": "b2",
+    "source": "swl",
+    "kind": "construction",
+    "title": "Linie 5: Umleitung Kohlmarkt wegen Bauarbeiten",
+    "text": "",
+    "lines": [
+      "5"
+    ],
+    "from": "",
+    "until": "",
+    "has_image": false,
+    "hidden": true
+  },
+  {
+    "id": "c3",
+    "source": "swl",
+    "kind": "disruption",
+    "title": "Linie 11: Verspätungen im Berufsverkehr",
+    "text": "",
+    "lines": [
+      "11"
+    ],
+    "from": "",
+    "until": "",
+    "has_image": false,
+    "hidden": false
+  }
+]

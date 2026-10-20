@@ -1,8 +1,8 @@
 """
 Monitor Schemas
 """
-from typing import Optional, List
-from datetime import datetime
+from typing import Literal, Optional, List
+from datetime import date, datetime
 from ninja import Schema
 
 
@@ -13,10 +13,31 @@ class MediaFileSchema(Schema):
     kind: str
     sort_order: int
     created_at: datetime
+    status: str = 'ready'
+    page_count: int = 0
+    error: str = ''
+    # Kachel im Admin: erste Seite (leer, solange keine Seite vorbereitet ist)
+    first_page_url: str = ''
+    orientation: str = ''
 
     @staticmethod
     def resolve_file_url(obj):
         return obj.file.url if obj.file else ''
+
+    @staticmethod
+    def _first_page(obj):
+        pages = list(obj.pages.all())   # nutzt prefetch_related('pages')
+        return min(pages, key=lambda p: p.index) if pages else None
+
+    @staticmethod
+    def resolve_first_page_url(obj):
+        page = MediaFileSchema._first_page(obj)
+        return page.image.url if page else ''
+
+    @staticmethod
+    def resolve_orientation(obj):
+        page = MediaFileSchema._first_page(obj)
+        return page.orientation if page else ''
 
 
 class WebUntisLinkSchema(Schema):
@@ -41,9 +62,7 @@ class DisplayViewListSchema(Schema):
     is_default: bool
     sort_order: int = 0
     schedule: list = []
-    layout: str
-    is_on_air: bool
-    emergency_active: bool
+    kind: str
 
 
 class DisplayViewSchema(Schema):
@@ -54,63 +73,33 @@ class DisplayViewSchema(Schema):
     is_default: bool
     sort_order: int = 0
     schedule: list = []
-    layout: str
-    title: str
-    subtitle: str
-    background_color: str
-    accent_color: str
-    show_logo: bool
-    logo_url: str
-    active_logo_id: Optional[int] = None
     show_clock: bool
     show_events: bool
     show_announcements: bool
-    show_on_air: bool
     show_countdown: bool
-    emergency_active: bool
-    emergency_text: str
     show_weather: bool
     weather_city: str
-    weather_api_key: str
-    show_slideshow: bool
-    slideshow_interval: int
-    show_pdf: bool
-    active_pdf_id: Optional[int] = None
-    fullscreen_header: bool = False
+    # Alter Wetter-Schlüssel pro Ansicht: write-only (Ruling R22), der globale hat Vorrang
+    weather_api_key: str = ''
+    weather_api_key_set: bool = False
     pdf_mode: str = 'cycle'
-    pdf_interval: int = 10
     pdf_per_screen: int = 1
     pdf_pages: str = ''
     pdf_static_page: int = 1
-    active_image_id: Optional[int] = None
-    image_fit: str = 'contain'
-    image_focus_x: int = 50
-    image_focus_y: int = 50
     split_left: str = 'exam'
     split_right: str = 'webuntis'
     split_left_percent: int = 50
-    theme_preset: str
-    show_webuntis: bool
     webuntis_url: str
     webuntis_url_next_day: str = ''
     webuntis_link_id: Optional[int] = None
     webuntis_link_next_day_id: Optional[int] = None
     webuntis_zoom: int
-    webuntis_dark_mode: bool
-    show_background_image: bool
-    active_background_image_id: Optional[int] = None
     show_qr_code: bool
     qr_code_url: str
     qr_code_label: str
-    show_free_text: bool
-    free_text_title: str
-    free_text_content: str
     show_custom_countdown: bool
     custom_countdown_name: str
     custom_countdown_date: Optional[datetime] = None
-    show_page_rotation: bool
-    page_rotation_interval: int
-    page_rotation_pages: list = []
     show_transit: bool
     transit_stops: list = []
     transit_duration: int
@@ -139,18 +128,24 @@ class DisplayViewSchema(Schema):
     transit_disruption_manual: list = []
     transit_disruption_hidden: list = []
     transit_disruption_position: str = 'bottom'
-    is_on_air: bool
-    on_air_text: str
-    on_air_since: Optional[datetime] = None
-    on_air_size: str
-    on_air_position: str
-    on_air_blink: bool
-    on_air_color: str
-    on_air_fullscreen: bool
-    on_air_split: bool = False
     on_air_split_side: str = 'right'
+    kind: str = 'info'
+    style: str = 'auto'
+    on_air_behavior: str = 'fullscreen'
+    rotation_items: list = []
+    media_items: list = []
+    media_seconds: int = 10
+    substitutions_next_day: bool = True
+    page_seconds: int = 15
     api_token: str
-    refresh_interval: int
+
+    @staticmethod
+    def resolve_weather_api_key(obj):
+        return ''
+
+    @staticmethod
+    def resolve_weather_api_key_set(obj):
+        return bool(obj.weather_api_key)
 
 
 class DisplayViewUpdateSchema(Schema):
@@ -159,63 +154,32 @@ class DisplayViewUpdateSchema(Schema):
     is_default: Optional[bool] = None
     sort_order: Optional[int] = None
     schedule: Optional[list] = None
-    layout: Optional[str] = None
-    title: Optional[str] = None
-    subtitle: Optional[str] = None
-    background_color: Optional[str] = None
-    accent_color: Optional[str] = None
-    show_logo: Optional[bool] = None
-    logo_url: Optional[str] = None
-    active_logo_id: Optional[int] = None
     show_clock: Optional[bool] = None
     show_events: Optional[bool] = None
     show_announcements: Optional[bool] = None
-    show_on_air: Optional[bool] = None
     show_countdown: Optional[bool] = None
-    emergency_active: Optional[bool] = None
-    emergency_text: Optional[str] = None
     show_weather: Optional[bool] = None
     weather_city: Optional[str] = None
     weather_api_key: Optional[str] = None
-    show_slideshow: Optional[bool] = None
-    slideshow_interval: Optional[int] = None
-    show_pdf: Optional[bool] = None
-    active_pdf_id: Optional[int] = None
-    fullscreen_header: Optional[bool] = None
     pdf_mode: Optional[str] = None
-    pdf_interval: Optional[int] = None
     pdf_per_screen: Optional[int] = None
     pdf_pages: Optional[str] = None
     pdf_static_page: Optional[int] = None
-    active_image_id: Optional[int] = None
-    image_fit: Optional[str] = None
-    image_focus_x: Optional[int] = None
-    image_focus_y: Optional[int] = None
     split_left: Optional[str] = None
     split_right: Optional[str] = None
     split_left_percent: Optional[int] = None
-    theme_preset: Optional[str] = None
-    show_webuntis: Optional[bool] = None
     webuntis_url: Optional[str] = None
     webuntis_url_next_day: Optional[str] = None
     webuntis_link_id: Optional[int] = None
     webuntis_link_next_day_id: Optional[int] = None
     webuntis_zoom: Optional[int] = None
-    webuntis_dark_mode: Optional[bool] = None
-    show_background_image: Optional[bool] = None
-    active_background_image_id: Optional[int] = None
     show_qr_code: Optional[bool] = None
     qr_code_url: Optional[str] = None
     qr_code_label: Optional[str] = None
-    show_free_text: Optional[bool] = None
-    free_text_title: Optional[str] = None
-    free_text_content: Optional[str] = None
     show_custom_countdown: Optional[bool] = None
     custom_countdown_name: Optional[str] = None
-    custom_countdown_date: Optional[datetime] = None
-    show_page_rotation: Optional[bool] = None
-    page_rotation_interval: Optional[int] = None
-    page_rotation_pages: Optional[list] = None
+    # Text statt datetime: validation.parse_countdown_date prüft mit deutscher Meldung (ohne Zone = Ortszeit)
+    custom_countdown_date: Optional[str] = None
     show_transit: Optional[bool] = None
     transit_stops: Optional[list] = None
     transit_duration: Optional[int] = None
@@ -244,22 +208,32 @@ class DisplayViewUpdateSchema(Schema):
     transit_disruption_manual: Optional[list] = None
     transit_disruption_hidden: Optional[list] = None
     transit_disruption_position: Optional[str] = None
-    on_air_text: Optional[str] = None
-    on_air_size: Optional[str] = None
-    on_air_position: Optional[str] = None
-    on_air_blink: Optional[bool] = None
-    on_air_color: Optional[str] = None
-    on_air_fullscreen: Optional[bool] = None
-    on_air_split: Optional[bool] = None
     on_air_split_side: Optional[str] = None
-    refresh_interval: Optional[int] = None
+    kind: Optional[str] = None
+    style: Optional[str] = None
+    on_air_behavior: Optional[str] = None
+    rotation_items: Optional[list] = None
+    media_items: Optional[list] = None
+    media_seconds: Optional[int] = None
+    substitutions_next_day: Optional[bool] = None
+    page_seconds: Optional[int] = None
+
+
+class DisplayViewDraftSchema(DisplayViewUpdateSchema):
+    """Entwurf für die Vorschau: Felder wie beim Speichern, `id` = gespeicherte Ansicht als Basis."""
+    id: Optional[int] = None
+
+
+class ViewPreviewSchema(Schema):
+    view: DisplayViewDraftSchema
+    screen_id: Optional[int] = None
 
 
 class DisplayViewCreateSchema(Schema):
     """Neues Profil erstellen"""
     name: str
     slug: str = ''
-    layout: str = 'standard'
+    kind: str = 'info'
     clone_from_id: Optional[int] = None
 
 
@@ -303,11 +277,16 @@ class ScreenListSchema(Schema):
     override_until: Optional[datetime] = None
     schedule: list = []
     power_schedule: list = []
-    holiday_mode: bool = False
     power_exceptions: list = []
     power_mode: str = 'auto'
     cec_status: str = ''
     cec_status_at: Optional[datetime] = None
+    location: str = ''
+    scale: str = 'auto'
+    orientation: str = 'landscape'
+    access_key: str = ''
+    off_during_holidays: bool = True
+    off_until: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
@@ -326,9 +305,13 @@ class ScreenUpdateSchema(Schema):
     override_until: Optional[datetime] = None
     schedule: Optional[list] = None
     power_schedule: Optional[list] = None
-    holiday_mode: Optional[bool] = None
     power_exceptions: Optional[list] = None
     power_mode: Optional[str] = None
+    location: Optional[str] = None
+    scale: Optional[str] = None
+    orientation: Optional[str] = None
+    off_during_holidays: Optional[bool] = None
+    off_until: Optional[datetime] = None
 
 
 class DisplayViewVersionSchema(Schema):
@@ -349,6 +332,40 @@ class LegacyEmergencySchema(Schema):
 class EmergencySchema(Schema):
     active: bool
     text: str = ''
+    note: str = ''
+
+
+class HolidayPeriodSchema(Schema):
+    id: int
+    name: str
+    start_date: date
+    end_date: date
+
+
+class HolidayPeriodCreateSchema(Schema):
+    name: str
+    start_date: date
+    end_date: date
+
+
+class EmergencyTemplateSchema(Schema):
+    id: int
+    title: str
+    text: str
+    note: str
+    sort_order: int
+
+
+class EmergencyTemplateCreateSchema(Schema):
+    title: str
+    text: str
+    note: str = ''
+    sort_order: int = 0
+
+
+class ScreenSelectionSchema(Schema):
+    """Leer oder fehlend = alle Bildschirme."""
+    screen_ids: Optional[List[int]] = None
 
 
 class ExamSchema(Schema):
@@ -378,7 +395,7 @@ class ExamCreateSchema(Schema):
     screen_ids: List[int] = []
     display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'left'
+    split_side: str = 'right'
     split_percent: int = 50
 
 
@@ -472,17 +489,47 @@ class ExamTemplateCreateSchema(Schema):
     color: str = '#1e40af'
     display_mode: str = 'fullscreen'
     webuntis_link_id: Optional[int] = None
-    split_side: str = 'left'
+    split_side: str = 'right'
     split_percent: int = 50
 
 
 # ─── Globale Einstellungen ───────────────────────────────────
 class MonitorSettingsSchema(Schema):
+    # Zugangsdaten sind write-only: immer '' plus *_set (Ruling R22)
     weather_api_key: str = ''
+    weather_api_key_set: bool = False
     webuntis_server: str = ''
     webuntis_school: str = ''
     webuntis_username: str = ''
     webuntis_password: str = ''
+    webuntis_password_set: bool = False
+    on_air_active: bool = False
+    on_air_since: Optional[datetime] = None
+    on_air_text: str = 'ON AIR'
+    on_air_animation: str = 'pulse'
+    on_air_show_clock: bool = True
+    emergency_active: bool = False
+    emergency_text: str = ''
+    emergency_note: str = ''
+    emergency_since: Optional[datetime] = None
+    webuntis_source: str = ''
+    webuntis_checked_at: Optional[datetime] = None
+
+    @staticmethod
+    def resolve_weather_api_key(obj):
+        return ''
+
+    @staticmethod
+    def resolve_webuntis_password(obj):
+        return ''
+
+    @staticmethod
+    def resolve_weather_api_key_set(obj):
+        return bool(obj.weather_api_key)
+
+    @staticmethod
+    def resolve_webuntis_password_set(obj):
+        return bool(obj.webuntis_password)
 
 
 class MonitorSettingsUpdateSchema(Schema):
@@ -491,3 +538,9 @@ class MonitorSettingsUpdateSchema(Schema):
     webuntis_school: Optional[str] = None
     webuntis_username: Optional[str] = None
     webuntis_password: Optional[str] = None
+    # Leere Zugangsdaten bleiben unverändert; geleert wird nur über diese Schalter
+    webuntis_password_clear: Optional[bool] = None
+    weather_api_key_clear: Optional[bool] = None
+    on_air_text: Optional[str] = None
+    on_air_animation: Optional[Literal['still', 'pulse', 'blink']] = None
+    on_air_show_clock: Optional[bool] = None

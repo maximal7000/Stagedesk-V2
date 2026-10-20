@@ -1,0 +1,493 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true
+  },
+  "mode": null,
+  "view": {
+    "id": 4,
+    "kind": "split",
+    "style": "dense",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "left": {
+        "kind": "substitutions",
+        "data": {
+          "source": "substitutions",
+          "news": "Ab der 5. Stunde ist die Aula für die Generalprobe gesperrt. Sportunterricht Q1 findet in Halle 2 statt.",
+          "days": [
+            {
+              "date": "2026-10-19",
+              "label": "Heute",
+              "rows": [
+                {
+                  "class": "5a",
+                  "periods": "3",
+                  "subject": "Ma",
+                  "teacher": "KLM",
+                  "teacher_old": "HRT",
+                  "room": "104",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "note": ""
+                },
+                {
+                  "class": "5a",
+                  "periods": "4",
+                  "subject": "Ma",
+                  "teacher": "KLM",
+                  "teacher_old": "HRT",
+                  "room": "104",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "note": "Aufgaben im Moodle"
+                },
+                {
+                  "class": "6b",
+                  "periods": "5-6",
+                  "subject": "Sp",
+                  "teacher": "",
+                  "teacher_old": "BEC",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "note": ""
+                },
+                {
+                  "class": "7c",
+                  "periods": "2",
+                  "subject": "En",
+                  "teacher": "SNR",
+                  "teacher_old": "",
+                  "room": "015",
+                  "room_old": "201",
+                  "kind": "room_change",
+                  "note": ""
+                },
+                {
+                  "class": "8a",
+                  "periods": "5",
+                  "subject": "Bio",
+                  "teacher": "LOR",
+                  "teacher_old": "WAG",
+                  "room": "B12",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "note": ""
+                },
+                {
+                  "class": "8a",
+                  "periods": "6",
+                  "subject": "Bio",
+                  "teacher": "",
+                  "teacher_old": "WAG",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "note": "früher Schluss"
+                },
+                {
+                  "class": "9b",
+                  "periods": "1",
+                  "subject": "La",
+                  "teacher": "PET",
+                  "teacher_old": "",
+                  "room": "Bib",
+                  "room_old": "302",
+                  "kind": "room_change",
+                  "note": ""
+                },
+                {
+                  "class": "10a",
+                  "periods": "7-8",
+                  "subject": "Mu",
+                  "teacher": "",
+                  "teacher_old": "FRA",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "note": "Probe Aula"
+                },
+                {
+                  "class": "E",
+                  "periods": "3-4",
+                  "subject": "Ge",
+                  "teacher": "STR",
+                  "teacher_old": "MÜL",
+                  "room": "210",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "note": ""
+                },
+                {
+                  "class": "Q1",
+                  "periods": "5-6",
+                  "subject": "Sp",
+                  "teacher": "KRA",
+                  "teacher_old": "",
+                  "room": "Halle 2",
+                  "room_old": "Halle 1",
+                  "kind": "room_change",
+                  "note": ""
+                },
+                {
+                  "class": "Q2",
+                  "periods": "1-2",
+                  "subject": "Ph",
+                  "teacher": "",
+                  "teacher_old": "ZIM",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "note": "Klausurvorbereitung"
+                },
+                {
+                  "class": "Q2",
+                  "periods": "3",
+                  "subject": "De",
+                  "teacher": "HAN",
+                  "teacher_old": "",
+                  "room": "Aula",
+                  "room_old": "108",
+                  "kind": "room_change",
+                  "note": ""
+                }
+              ]
+            },
+            {
+              "date": "2026-10-20",
+              "label": "Morgen",
+              "rows": [
+                {
+                  "class": "5c",
+                  "periods": "2",
+                  "subject": "De",
+                  "teacher": "SCH",
+                  "teacher_old": "OTT",
+                  "room": "106",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "note": ""
+                },
+                {
+                  "class": "6a",
+                  "periods": "4",
+                  "subject": "Ku",
+                  "teacher": "",
+                  "teacher_old": "LIN",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "note": ""
+                },
+                {
+                  "class": "8c",
+                  "periods": "3",
+                  "subject": "Ch",
+                  "teacher": "ROS",
+                  "teacher_old": "",
+                  "room": "C03",
+                  "room_old": "C01",
+                  "kind": "room_change",
+                  "note": ""
+                },
+                {
+                  "class": "9a",
+                  "periods": "5-6",
+                  "subject": "Gr",
+                  "teacher": "BRA",
+                  "teacher_old": "PET",
+                  "room": "305",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "note": "Klausur findet statt"
+                },
+                {
+                  "class": "Q1",
+                  "periods": "1-2",
+                  "subject": "Ma",
+                  "teacher": "",
+                  "teacher_old": "HRT",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "note": ""
+                }
+              ]
+            }
+          ],
+          "fallback_url": null,
+          "fetched_at": "2026-10-19T08:37:00+00:00"
+        }
+      },
+      "right": {
+        "kind": "departures",
+        "data": {
+          "stations": [
+            {
+              "station_name": "Katharineum",
+              "station_id": "8000999",
+              "departures": [
+                {
+                  "line": "5",
+                  "direction": "Travemünde Strandbahnhof",
+                  "departure": "10:44",
+                  "departure_actual": "10:44",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Dornbreite",
+                  "departure": "10:48",
+                  "departure_actual": "10:48",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "5",
+                  "direction": "Moisling",
+                  "departure": "10:52",
+                  "departure_actual": "10:52",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": true,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Bornkamp",
+                  "departure": "10:56",
+                  "departure_actual": "10:56",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "31",
+                  "direction": "Bad Schwartau",
+                  "departure": "11:00",
+                  "departure_actual": "11:00",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "5",
+                  "direction": "Travemünde Strandbahnhof",
+                  "departure": "11:04",
+                  "departure_actual": "11:04",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Dornbreite",
+                  "departure": "11:08",
+                  "departure_actual": "11:10",
+                  "delay": 2,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "5",
+                  "direction": "Moisling",
+                  "departure": "11:12",
+                  "departure_actual": "11:12",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "31",
+                  "direction": "Stockelsdorf",
+                  "departure": "11:16",
+                  "departure_actual": "11:16",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Bornkamp",
+                  "departure": "11:20",
+                  "departure_actual": "11:20",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                }
+              ],
+              "max_departures": 10,
+              "walk_minutes": 1
+            },
+            {
+              "station_name": "Lübeck Hbf",
+              "station_id": "8000237",
+              "departures": [
+                {
+                  "line": "RE8",
+                  "direction": "Hamburg Hbf",
+                  "departure": "11:00",
+                  "departure_actual": "11:00",
+                  "delay": 0,
+                  "platform": "5",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB85",
+                  "direction": "Puttgarden",
+                  "departure": "11:04",
+                  "departure_actual": "11:08",
+                  "delay": 4,
+                  "platform": "7",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RE83",
+                  "direction": "Kiel Hbf",
+                  "departure": "11:08",
+                  "departure_actual": "11:08",
+                  "delay": 0,
+                  "platform": "3",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB86",
+                  "direction": "Travemünde Strand",
+                  "departure": "11:12",
+                  "departure_actual": "11:12",
+                  "delay": 0,
+                  "platform": "9",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RE8",
+                  "direction": "Hamburg Hbf",
+                  "departure": "11:16",
+                  "departure_actual": "11:16",
+                  "delay": 0,
+                  "platform": "5",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB84",
+                  "direction": "Kiel Hbf",
+                  "departure": "11:20",
+                  "departure_actual": "11:20",
+                  "delay": 0,
+                  "platform": "4",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RE83",
+                  "direction": "Lüneburg",
+                  "departure": "11:24",
+                  "departure_actual": "11:24",
+                  "delay": 0,
+                  "platform": "2",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB81",
+                  "direction": "Bad Oldesloe",
+                  "departure": "11:28",
+                  "departure_actual": "11:28",
+                  "delay": 0,
+                  "platform": "6",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                }
+              ],
+              "max_departures": 10,
+              "walk_minutes": 14
+            }
+          ],
+          "disruptions": [
+            {
+              "id": "swl-1a2b3c",
+              "source": "swl",
+              "kind": "disruption",
+              "title": "Umleitung Moislinger Allee",
+              "text": "Haltestellen Lindenplatz bis Holstentor entfallen, Ersatzhalt Possehlstraße.",
+              "lines": [
+                "5"
+              ],
+              "from": "2026-10-12T05:00:00+02:00",
+              "until": "2026-10-30T23:59:00+01:00",
+              "all_lines": false,
+              "image": null,
+              "stops": [],
+              "suggestion": "",
+              "highlighted": true
+            }
+          ]
+        }
+      },
+      "left_percent": 60
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "id": 11,
+  "name": "Speiseplan KW 43",
+  "kind": "pdf",
+  "file_url": "/media/monitor/speiseplan.pdf",
+  "sort_order": 0,
+  "created_at": "2026-10-19T07:00:00+00:00",
+  "status": "ready",
+  "page_count": 3,
+  "error": "",
+  "pages": [
+    {
+      "index": 0,
+      "url": "/media/monitor/pages/fixture-portrait.svg",
+      "width": 2716,
+      "height": 3840,
+      "orientation": "portrait"
+    },
+    {
+      "index": 1,
+      "url": "/media/monitor/pages/fixture-portrait.svg",
+      "width": 2716,
+      "height": 3840,
+      "orientation": "portrait"
+    },
+    {
+      "index": 2,
+      "url": "/media/monitor/pages/fixture-portrait.svg",
+      "width": 2716,
+      "height": 3840,
+      "orientation": "portrait"
+    }
+  ],
+  "used_in": [
+    {
+      "view_id": 6,
+      "name": "Aushänge"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": 1,
+  "username": "testnutzer",
+  "first_name": "Test",
+  "last_name": "Nutzer",
+  "email": "test@example.org",
+  "is_admin": false,
+  "keycloak_roles": [],
+  "permissions": [
+    "veranstaltung.view",
+    "inventar.view",
+    "monitor.view",
+    "monitor.onair",
+    "monitor.emergency",
+    "monitor.setup",
+    "monitor.exams",
+    "monitor.media",
+    "monitor.power",
+    "monitor.devices"
+  ],
+  "theme": "dark",
+  "theme_locked": false,
+  "forced_theme": null,
+  "avatar_url": null
+}

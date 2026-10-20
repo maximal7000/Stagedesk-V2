@@ -136,9 +136,11 @@ class DefaultScopeTests(CheckerTestCase):
             "backend/monitor/api.py",
             "backend/monitor/migrations/0001_initial.py",
             "backend/monitor/tests_migrations.py",
+            "backend/monitor/migrations/0042_mediapage.py",
             "frontend/src/pages/MonitorPage.jsx",
-            "frontend/src/pages/admin/MonitorAdminPage.jsx",
-            "frontend/src/components/monitor/PdfFullscreen.jsx",
+            "frontend/src/components/display/views/InfoView.jsx",
+            "frontend/src/components/monitor-admin/pages/Settings.jsx",
+            "frontend/src/components/other/Unrelated.jsx",
         ):
             self.write(f"repo/{rel}", "x = 1\n")
         found = sorted(p.relative_to(root).as_posix() for p in mod.default_files(root))
@@ -146,9 +148,9 @@ class DefaultScopeTests(CheckerTestCase):
             found,
             [
                 "backend/monitor/api.py",
-                "frontend/src/components/monitor/PdfFullscreen.jsx",
+                "frontend/src/components/display/views/InfoView.jsx",
+                "frontend/src/components/monitor-admin/pages/Settings.jsx",
                 "frontend/src/pages/MonitorPage.jsx",
-                "frontend/src/pages/admin/MonitorAdminPage.jsx",
             ],
         )
 

@@ -1,0 +1,67 @@
+[
+  {
+    "id": 15,
+    "name": "Speiseplan KW 44",
+    "file_url": "/media/monitor/speiseplan-44.pdf",
+    "kind": "pdf",
+    "sort_order": 4,
+    "created_at": "2026-10-20T07:59:00+00:00",
+    "status": "processing",
+    "page_count": 0,
+    "error": "",
+    "orientation": "",
+    "first_page_url": ""
+  },
+  {
+    "id": 11,
+    "name": "Speiseplan KW 43",
+    "file_url": "/media/monitor/speiseplan.pdf",
+    "kind": "pdf",
+    "sort_order": 0,
+    "created_at": "2026-10-19T07:00:00+00:00",
+    "status": "ready",
+    "page_count": 3,
+    "error": "",
+    "orientation": "portrait",
+    "first_page_url": "/media/monitor/pages/fixture-portrait.svg"
+  },
+  {
+    "id": 12,
+    "name": "Plakat Herbstkonzert",
+    "file_url": "/media/monitor/plakat.jpg",
+    "kind": "image",
+    "sort_order": 1,
+    "created_at": "2026-10-18T07:00:00+00:00",
+    "status": "ready",
+    "page_count": 1,
+    "error": "",
+    "orientation": "landscape",
+    "first_page_url": "/media/monitor/pages/fixture-landscape.svg"
+  },
+  {
+    "id": 13,
+    "name": "Hausordnung",
+    "file_url": "/media/monitor/hausordnung.pdf",
+    "kind": "pdf",
+    "sort_order": 2,
+    "created_at": "2026-10-10T07:00:00+00:00",
+    "status": "failed",
+    "page_count": 0,
+    "error": "PDF hat 64 Seiten, erlaubt sind höchstens 50.",
+    "orientation": "",
+    "first_page_url": ""
+  },
+  {
+    "id": 14,
+    "name": "Wegeplan Erdgeschoss",
+    "file_url": "/media/monitor/wegeplan.png",
+    "kind": "image",
+    "sort_order": 3,
+    "created_at": "2026-10-09T07:00:00+00:00",
+    "status": "ready",
+    "page_count": 1,
+    "error": "",
+    "orientation": "landscape",
+    "first_page_url": "/media/monitor/pages/fixture-landscape.svg"
+  }
+]

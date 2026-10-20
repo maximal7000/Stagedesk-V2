@@ -1,0 +1,56 @@
+[
+  {
+    "id": 1,
+    "name": "Abfahrten",
+    "slug": "abfahrten",
+    "is_default": true,
+    "sort_order": 0,
+    "schedule": [],
+    "kind": "departures"
+  },
+  {
+    "id": 2,
+    "name": "Vertretungsplan",
+    "slug": "vertretungsplan",
+    "is_default": false,
+    "sort_order": 1,
+    "schedule": [],
+    "kind": "substitutions"
+  },
+  {
+    "id": 3,
+    "name": "Info Mensa",
+    "slug": "info-mensa",
+    "is_default": false,
+    "sort_order": 2,
+    "schedule": [],
+    "kind": "info"
+  },
+  {
+    "id": 4,
+    "name": "Wechsel Pausenhalle",
+    "slug": "wechsel-pausenhalle",
+    "is_default": false,
+    "sort_order": 3,
+    "schedule": [],
+    "kind": "rotation"
+  },
+  {
+    "id": 5,
+    "name": "Vertretung und Bus",
+    "slug": "vertretung-und-bus",
+    "is_default": false,
+    "sort_order": 4,
+    "schedule": [],
+    "kind": "split"
+  },
+  {
+    "id": 6,
+    "name": "Aushänge",
+    "slug": "aushaenge",
+    "is_default": false,
+    "sort_order": 5,
+    "schedule": [],
+    "kind": "media"
+  }
+]

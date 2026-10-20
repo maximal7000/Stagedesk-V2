@@ -42,8 +42,12 @@ ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"
 - **Design-Manifest** (Nutzer-Vorgabe): keine Lila-Verläufe, keine Pill-Buttons (rounded-lg, nicht rounded-full), keine Emoji-Icons (lucide-react nutzen), keine Em-Dashes im sichtbaren Text, keine vagen Floskeln/KI-Slop-Copy, keine Fake-Metriken.
 
 ## Monitor / Raspberry-Pi-Displays
-- Öffentliche Anzeige-Seiten (kein Login): `/monitor?bildschirm=<slug>` und `/aufgaben-monitor`. 4K → URL-Param `?zoom=2`.
-- Monitor-Admin: Profile, Bildschirme (mit Reload-Knopf), Störungen (eigenes Menü), ÖPNV-Abfahrten.
+- Öffentliche Anzeige-Seiten (kein Login): `/monitor?screen=<slug>&key=<key>` (Kiosk-URL aus dem Admin; alt `?bildschirm=` geht weiter) und `/aufgaben-monitor`. Skalierung pro Bildschirm im Admin; `?zoom=` nur Notbehelf, überstimmt das Admin.
+- Monitor-Admin `/monitor-admin` (Übersicht) mit `/screens[/:id]`, `/views[/:id|/new]`, `/exams`, `/media`, `/schedules`, `/settings`. Rechte `monitor.view/setup/exams/media/power/onair/emergency/devices`.
+- Code: Anzeige `frontend/src/components/display/` (Einstieg `pages/MonitorPage.jsx`), Admin `frontend/src/components/monitor-admin/` (`pages/`, `view-editors/`, `shared/`). Backend-Vertrag `/display` in `backend/monitor/display.py`.
+- Screenshots: `node frontend/scripts/shoot-display.mjs` bzw. `shoot-admin.mjs` (headless Chromium mit `--headless=new`, Testdaten in `frontend/tests/display-fixtures/` bzw. `admin-fixtures/`).
+- Bezeichner-Guard: `python3 -I scripts/check-monitor-identifiers.py <pfade>` (Code englisch, Exit 0 nötig).
+- Management: `monitor_render_media` (fehlende Medien-Seitenbilder rendern, idempotent), `monitor_webuntis_check` (WebUntis-Verbindung). Rollout und Rückweg: `DEPLOY.md`.
 - Pi-Setup-Anleitung: `docs/raspberry-pi-monitor.md` (cage + chromium Kiosk, systemd, CEC/Power).
 - Bekannter Pi: **glocke** (`172.22.0.229`, mDNS `rpi-monitor-glocke.local`) — iiyama LH4341UHS-B2, 4K, CEC (schaltet an+aus). Power-Dienst via `wss://.../ws/monitor/pi/glocke/`.
 

@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -97,6 +98,9 @@ CHANNEL_LAYERS = {
         },
     },
 }
+# Tests laufen ohne Redis (sonst wartet jeder Push auf Verbindungs-Retries)
+if len(sys.argv) > 1 and sys.argv[1] == 'test':
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

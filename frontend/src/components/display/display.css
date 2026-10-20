@@ -1,0 +1,149 @@
+/* Anzeige (öffentliche Monitore): eigene Palette je Ton, alle Maße in rem (Basis aus computeRootPx). */
+
+.d-root {
+  --d-red: #da1f3d;
+  font-family: 'Lato', sans-serif;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  background: var(--d-bg);
+  color: var(--d-fg);
+}
+
+.d-tone-light {
+  --d-bg: #ffffff;
+  --d-surface: #ffffff;
+  --d-fg: #222222;
+  --d-fg-soft: #444444;
+  --d-muted: #6f6f6f;
+  --d-rule: #222222;
+  --d-line: #e3e3e3;
+  --d-chip: #2b2b2b;
+  --d-chip-fg: #ffffff;
+}
+
+.d-tone-dense {
+  --d-bg: #f2f2f2;
+  --d-surface: #ffffff;
+  --d-fg: #222222;
+  --d-fg-soft: #444444;
+  --d-muted: #6f6f6f;
+  --d-rule: #222222;
+  --d-line: #e3e3e3;
+  --d-chip: #2b2b2b;
+  --d-chip-fg: #ffffff;
+}
+
+.d-tone-dark {
+  --d-bg: #111111;
+  --d-surface: #181818;
+  --d-fg: #f2f2f2;
+  --d-fg-soft: #cfcfcf;
+  --d-muted: #9a9a9a;
+  --d-rule: #e6e6e6;
+  --d-line: #2c2c2c;
+  --d-chip: #f2f2f2;
+  --d-chip-fg: #111111;
+}
+
+.d-oswald {
+  font-family: 'Oswald', sans-serif;
+}
+
+.d-lato {
+  font-family: 'Lato', sans-serif;
+}
+
+/* Kurzer roter Balken vor Überschriften (CI-Element) */
+.d-kicker {
+  border-left: 0.375rem solid var(--d-red);
+  padding-left: 1rem;
+}
+
+/* Linien als eigene Klassen: die globale Regel "* { border-color }" in index.css liegt außerhalb der
+   Tailwind-Layer und würde border-(--d-…) überdecken. */
+.d-rule-bottom {
+  border-bottom: 0.125rem solid var(--d-rule);
+}
+
+.d-line-top {
+  border-top: 0.0625rem solid var(--d-line);
+}
+
+/* Signalfarben neben Rot: Verspätung (Warnung) und Raumänderung (Info) */
+.d-tone-light,
+.d-tone-dense {
+  --d-warn: #b26a00;
+  --d-info: #1f5c99;
+  --d-soft: #f2f2f2;
+}
+
+.d-tone-dark {
+  --d-warn: #f0a83a;
+  --d-info: #7fb3e6;
+  --d-soft: #222222;
+}
+
+/* Flache Karte der dichten Ansichten: keine Schatten, keine Rundung */
+.d-card {
+  background: var(--d-surface);
+}
+
+.d-line-bottom {
+  border-bottom: 0.0625rem solid var(--d-line);
+}
+
+.d-rule-top {
+  border-top: 0.125rem solid var(--d-rule);
+}
+
+/* Fußleiste in den Stilen A und C: nur sichtbar, wenn ein Eintrag (.d-footer-item) darin steht.
+   Auf Weiß bekommt die Karte die weiche Fläche, damit sie sich abhebt. */
+.d-footer:not(:has(.d-footer-item)) {
+  display: none;
+}
+
+.d-tone-light .d-footer .d-card {
+  background: var(--d-soft);
+}
+
+/* Medien: Seitenwechsel per Deckkraft (300 ms) */
+@keyframes d-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.d-fade-in {
+  animation: d-fade-in 300ms ease-out both;
+}
+
+/* On-Air-Schild: Pulsieren nur über die Deckkraft (1 bis 0,72 in 2,4 s), Blinken hart im 1-s-Takt.
+   Bei reduzierter Bewegung steht das Schild still. */
+@keyframes d-onair-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.72; }
+}
+
+@keyframes d-onair-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.d-onair-pulse {
+  animation: d-onair-pulse 2.4s ease-in-out infinite;
+}
+
+.d-onair-blink {
+  animation: d-onair-blink 2s step-end infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .d-onair-pulse,
+  .d-onair-blink {
+    animation: none;
+  }
+}
+
+/* Seitenbild im CI-Rahmen: feine Kante statt Schatten */
+.d-page-edge {
+  outline: 0.0625rem solid var(--d-line);
+}

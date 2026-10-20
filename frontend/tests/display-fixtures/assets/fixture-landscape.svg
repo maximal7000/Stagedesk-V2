@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160">
+  <rect width="3840" height="2160" fill="#f4f4f4"/>
+  <rect x="240" y="240" width="1700" height="1680" fill="#dcdcdc"/>
+  <rect x="2140" y="300" width="60" height="300" fill="#da1f3d"/>
+  <text x="2260" y="560" font-family="Oswald, sans-serif" font-size="200" fill="#222">TAG DER</text>
+  <text x="2260" y="860" font-family="Oswald, sans-serif" font-size="200" fill="#222">OFFENEN TÜR</text>
+  <text x="2260" y="1100" font-family="Lato, sans-serif" font-size="110" fill="#555">Samstag, 7. November</text>
+  <g fill="#cfcfcf">
+    <rect x="2260" y="1300" width="1300" height="50"/><rect x="2260" y="1420" width="1150" height="50"/>
+    <rect x="2260" y="1540" width="1250" height="50"/>
+  </g>
+  <text x="2260" y="1840" font-family="Lato, sans-serif" font-size="80" fill="#777">Testseite Querformat</text>
+</svg>
