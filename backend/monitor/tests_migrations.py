@@ -601,3 +601,45 @@ class DisplayAdminSettingsRowMigrationTest(MigrationTestCase):
         self.assertEqual((s.emergency_active, s.emergency_text, s.on_air_active), (True, 'Alarm', True))
         other = Settings.objects.get(pk=5)
         self.assertEqual((other.emergency_active, other.on_air_active), (False, False))
+
+
+class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
+    """Final-Review 1: 0042 -> 0038 in EINEM Lauf zurück, mit Rotations-Ansichten samt Verweisen."""
+    migrate_from = DISPLAY_DATA_FROM
+    migrate_to = ('monitor', '0042_media_page_upload_dir')
+
+    def setUpBeforeMigration(self, apps):
+        _make_view(apps.get_model('monitor', 'DisplayView'), 'v', name='V', layout='standard',
+                   is_default=True, show_page_rotation=True, page_rotation_pages=['main', 'events'])
+
+    def test_rollback_to_0038_in_one_run_and_forward_again(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        Screen = self.apps.get_model('monitor', 'Screen')
+        Event = self.apps.get_model('monitor', 'DisplayEvent')
+        Assignment = self.apps.get_model('monitor', 'DisplayEventScreen')
+        Version = self.apps.get_model('monitor', 'DisplayViewVersion')
+        rotation = View.objects.get(kind='rotation')
+        # Rotation ohne gültige Einträge: Verweise lassen sich nicht umhängen und müssen weg
+        empty = View.objects.create(name='Leer', slug='leer', api_token='t-leer', kind='rotation',
+                                    rotation_items=[])
+        screen = Screen.objects.create(name='Halle', slug='halle', default_view=rotation, override_view=empty)
+        event = Event.objects.create(name='Fest')
+        Assignment.objects.create(event=event, screen=screen, view=rotation)
+        Assignment.objects.create(event=Event.objects.create(name='Feier'), screen=screen, view=empty)
+        Version.objects.create(view=rotation, data={'kind': 'rotation'})
+        Version.objects.create(view=empty, data={'kind': 'rotation'})
+
+        executor = MigrationExecutor(connection)
+        executor.migrate([('monitor', '0038_explicit_ordering')])
+        apps = executor.loader.project_state([('monitor', '0038_explicit_ordering')]).apps
+        OldView = apps.get_model('monitor', 'DisplayView')
+        source = OldView.objects.get(slug='v')
+        self.assertEqual(list(OldView.objects.values_list('slug', flat=True)), ['v'])
+        halle = apps.get_model('monitor', 'Screen').objects.get(slug='halle')
+        self.assertEqual((halle.default_view_id, halle.override_view_id), (source.pk, None))
+        self.assertEqual(list(apps.get_model('monitor', 'DisplayEventScreen').objects
+                              .values_list('view_id', flat=True)), [source.pk])
+        self.assertFalse(apps.get_model('monitor', 'DisplayViewVersion').objects.exists())
+
+        executor = MigrationExecutor(connection)
+        executor.migrate(executor.loader.graph.leaf_nodes())

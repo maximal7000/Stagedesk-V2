@@ -324,6 +324,24 @@ def _repoint_rotation_references(apps, rotation_views):
             Assignment.objects.filter(view_id=old_id).update(view_id=new_id)
 
 
+def _delete_rotation_views(apps, schema_editor, ids):
+    """Rotations-Ansichten ohne ORM-Kaskade löschen.
+
+    `.delete()` sammelt die Kaskade über die globale App-Registry; wird 0042 -> 0038 in einem
+    Lauf zurückgerollt, passen die dort gecachten Modellklassen nicht zu den historischen
+    ("Must be DisplayView instance"). Deshalb alle Verweise (Stand 0040) von Hand auflösen.
+    """
+    if not ids:
+        return
+    alias = schema_editor.connection.alias
+    Screen = apps.get_model('monitor', 'Screen')
+    Screen.objects.using(alias).filter(default_view_id__in=ids).update(default_view_id=None)
+    Screen.objects.using(alias).filter(override_view_id__in=ids).update(override_view_id=None)
+    for model in ('DisplayEventScreen', 'DisplayViewVersion'):
+        apps.get_model('monitor', model).objects.using(alias).filter(view_id__in=ids)._raw_delete(alias)
+    apps.get_model('monitor', 'DisplayView').objects.using(alias).filter(pk__in=ids)._raw_delete(alias)
+
+
 def backward(apps, schema_editor):
     View = apps.get_model('monitor', 'DisplayView')
     Version = apps.get_model('monitor', 'DisplayViewVersion')
@@ -333,7 +351,7 @@ def backward(apps, schema_editor):
 
     rotation_views = list(View.objects.filter(kind='rotation'))
     _repoint_rotation_references(apps, rotation_views)
-    View.objects.filter(pk__in=[v.pk for v in rotation_views]).delete()
+    _delete_rotation_views(apps, schema_editor, [v.pk for v in rotation_views])
 
     for view in View.objects.all():
         data = translate_snapshot_b(
