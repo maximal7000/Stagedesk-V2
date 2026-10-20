@@ -125,4 +125,18 @@ describe('Settings', () => {
     await mount()
     expect(container.querySelector('[data-section="transit"]')).toBeNull()
   })
+
+  it('nach dem Speichern nur eines neuen Passworts ist der Entwurf sauber und der Test wieder möglich', async () => {
+    perms.add('monitor.setup')
+    api.updateSettings.mockResolvedValue(settings())
+    await mount()
+    await act(async () => { typeInto(byLabel('Passwort'), 'neu') })
+    expect(container.textContent).toContain('1 ungespeicherte Änderung')
+    expect(button('Verbindung testen').disabled).toBe(true)
+    await click(button('Speichern'))
+    expect(api.updateSettings).toHaveBeenCalledWith({ webuntis_password: 'neu' })
+    expect(container.textContent).not.toContain('ungespeicherte Änderung')
+    expect(byLabel('Passwort').value).toBe('')
+    expect(button('Verbindung testen').disabled).toBe(false)
+  })
 })

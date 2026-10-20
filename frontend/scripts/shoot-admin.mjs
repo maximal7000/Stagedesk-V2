@@ -88,7 +88,7 @@ const PAGES = {
     },
   },
   'view-edit-departures': {
-    path: '/monitor-admin/views/1', preview: 'departures', height: 2250,
+    path: '/monitor-admin/views/1', preview: 'departures', height: 2450,
     action: async (page) => {
       await page.getByRole('radio', { name: 'Dunkel' }).click()
       await page.getByLabel('Max. Zeilen Kohlmarkt').fill('8')

@@ -198,6 +198,9 @@ export default function Settings() {
   const [templateList, setTemplateList] = useState([])   // Entwurf
   const [clearing, setClearing] = useState(null)
   const [busy, setBusy] = useState(false)
+  // Zählt erfolgreiche Speichervorgänge: auch wenn nur ein Geheimnis gespeichert wurde (Werte bleiben ''), beginnt
+  // der Entwurf danach neu
+  const [savedRound, setSavedRound] = useState(0)
 
   const fetchAll = useCallback(() => Promise.allSettled([
     api.getSettings(),
@@ -224,9 +227,10 @@ export default function Settings() {
     return () => { alive = false }
   }, [fetchAll, apply])
 
-  // Ausgangsstand nur neu, wenn sich die Werte ändern: ein geänderter *_set-Schalter (Entfernen) setzt den Entwurf nicht zurück
-  const originalKey = settings ? JSON.stringify(pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS])) : null
-  const settingsOriginal = useMemo(() => (originalKey ? JSON.parse(originalKey) : null), [originalKey])
+  // Ausgangsstand neu, wenn sich die Werte ändern oder gespeichert wurde; ein geänderter *_set-Schalter (Entfernen)
+  // setzt den Entwurf nicht zurück
+  const originalKey = settings ? JSON.stringify([savedRound, pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS])]) : null
+  const settingsOriginal = useMemo(() => (originalKey ? JSON.parse(originalKey)[1] : null), [originalKey])
   const values = useDraft(settingsOriginal)
 
   const setupCount = settings ? changedIn(settingsOriginal, values.draft, SETUP_FIELDS) : 0
@@ -262,7 +266,10 @@ export default function Settings() {
       if (result) latest = result
       else settingsFailed = true
     }
-    if (latest && !settingsFailed) setSettings(latest)
+    if (latest && !settingsFailed) {
+      setSettings(latest)
+      setSavedRound((n) => n + 1)
+    }
     if (templateCount) {
       await run(async () => {
         const { create, update, remove } = templateChanges(templates, templateList)
