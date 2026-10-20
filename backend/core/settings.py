@@ -164,6 +164,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = os.getenv('DJANGO_STATIC_URL', 'static/')
+
+# Öffentliche Basis-URL (Kiosk-URL der Geräte-Agenten, Installationsskript)
+PUBLIC_BASE_URL = os.getenv('PUBLIC_BASE_URL', 'https://stagedesk.t410.de').rstrip('/')
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Media files (Uploads)

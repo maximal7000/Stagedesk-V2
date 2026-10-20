@@ -63,3 +63,31 @@ def close_device_sockets(device) -> None:
             device_group(device.id), {"type": "device_close", "code": 4003})
     except Exception:
         logger.exception("Schließen der Geräte-Verbindung %s fehlgeschlagen", device.id)
+
+
+def push_device_hello(screen) -> None:
+    """Das Gerät des Bildschirms soll sein `hello` (Konfiguration) neu bekommen."""
+    from .models import Device
+    device_id = Device.objects.filter(screen=screen).values_list('id', flat=True).first()
+    if device_id is None:
+        return
+    try:
+        layer = get_channel_layer()
+        if not layer:
+            return
+        async_to_sync(layer.group_send)(device_group(device_id), {"type": "device_hello"})
+    except Exception:
+        logger.exception("Hello-Push an Gerät %s fehlgeschlagen", device_id)
+
+
+def push_device_command(command) -> None:
+    """Neuen Befehl sofort an das verbundene Gerät schicken (nach dem Commit aufrufen).
+    Ohne Verbindung bleibt er `pending` und geht beim Verbinden raus."""
+    try:
+        layer = get_channel_layer()
+        if not layer:
+            return
+        async_to_sync(layer.group_send)(
+            device_group(command.device_id), {"type": "device_command", "id": command.id})
+    except Exception:
+        logger.exception("Befehls-Push an Gerät %s fehlgeschlagen", command.device_id)

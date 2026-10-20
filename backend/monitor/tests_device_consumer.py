@@ -1,0 +1,330 @@
+"""Pi-WebSocket mit Geräte-Token und Agent-Protokoll (Spec §3.3, §4.2, §5, §6)."""
+from datetime import timedelta
+from unittest import mock
+
+from asgiref.sync import async_to_sync, sync_to_async
+from channels.routing import URLRouter
+from channels.testing import WebsocketCommunicator
+from django.test import TransactionTestCase, override_settings
+from django.utils import timezone
+
+from veranstaltung.models import Veranstaltung
+
+from . import devices, push
+from .models import Device, DeviceCommand, DeviceEvent, Exam, MonitorSettings, Screen
+from .routing import websocket_urlpatterns
+
+LAYERS = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
+application = URLRouter(websocket_urlpatterns)
+
+
+def _communicator(slug, token=None):
+    headers = [(b'authorization', f'Bearer {token}'.encode())] if token else []
+    return WebsocketCommunicator(application, f'/ws/monitor/pi/{slug}/', headers=headers)
+
+
+async def _sync_point(comm):
+    """Alles bis hierher wurde verarbeitet (Nachrichten laufen der Reihe nach)."""
+    await comm.send_json_to({'type': 'ping'})
+    while True:
+        msg = await comm.receive_json_from()
+        if msg == {'type': 'pong'}:
+            return
+
+
+async def _drain_until(comm, wanted):
+    for _ in range(10):
+        msg = await comm.receive_json_from()
+        if msg.get('type') == wanted:
+            return msg
+    raise AssertionError(f'{wanted} nicht empfangen')
+
+
+@override_settings(CHANNEL_LAYERS=LAYERS, PUBLIC_BASE_URL='https://example.test')
+class DeviceConsumerTest(TransactionTestCase):
+    def setUp(self):
+        self.screen = Screen.objects.create(name='Glocke', slug='glocke')
+        self.device = Device.objects.create(screen=self.screen, serial='abc')
+        self.token = self.device.issue_token()
+
+    def test_valid_token_receives_hello(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            connected, _ = await comm.connect()
+            self.assertTrue(connected)
+            hello = await _drain_until(comm, 'hello')
+            self.assertEqual(hello['slug'], 'glocke')
+            self.assertEqual(hello['key'], self.screen.access_key)
+            self.assertEqual(
+                hello['kiosk_url'],
+                f'https://example.test/monitor?screen=glocke&key={self.screen.access_key}')
+            self.assertEqual(hello['power_method'], 'cec')
+            for field in ('power_config', 'update_window', 'auto_updates', 'daily_reboot',
+                          'agent_version', 'agent_sha256'):
+                self.assertIn(field, hello)
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_invalid_token_closed_4003(self):
+        async def run():
+            comm = _communicator('glocke', 'falsch')
+            await comm.connect()
+            self.assertEqual((await comm.receive_output())['code'], 4003)
+        async_to_sync(run)()
+
+    def test_slug_mismatch_closed_4003(self):
+        async def run():
+            await sync_to_async(Screen.objects.create)(name='Andere', slug='andere')
+            comm = _communicator('andere', self.token)
+            await comm.connect()
+            self.assertEqual((await comm.receive_output())['code'], 4003)
+        async_to_sync(run)()
+
+    def test_device_without_screen_closed_4003(self):
+        Device.objects.filter(pk=self.device.pk).update(screen=None)
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            self.assertEqual((await comm.receive_output())['code'], 4003)
+        async_to_sync(run)()
+
+    def test_legacy_without_token_gets_power_command(self):
+        async def run():
+            comm = _communicator('glocke')
+            connected, _ = await comm.connect()
+            self.assertTrue(connected)
+            self.assertEqual(await comm.receive_json_from(), {'type': 'power_command', 'power': True})
+            await comm.send_json_to({'type': 'cec_status', 'status': 'on'})
+            self.assertEqual(await comm.receive_json_from(), {'type': 'ack', 'cec_status': 'on'})
+            await comm.disconnect()
+        async_to_sync(run)()
+        self.screen.refresh_from_db()
+        self.assertEqual(self.screen.cec_status, 'on')
+
+    def test_require_token_rejects_legacy_4001(self):
+        MonitorSettings.objects.update_or_create(pk=1, defaults={'require_device_token': True})
+
+        async def run():
+            comm = _communicator('glocke')
+            await comm.connect()
+            self.assertEqual((await comm.receive_output())['code'], 4001)
+        async_to_sync(run)()
+
+    def test_revoke_closes_open_socket_4003(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await sync_to_async(devices.revoke_token)(self.device)
+            for _ in range(10):
+                out = await comm.receive_output()
+                if out['type'] == 'websocket.close':
+                    self.assertEqual(out['code'], 4003)
+                    return
+            self.fail('keine Close-Nachricht')
+        async_to_sync(run)()
+
+    def test_telemetry_throttled_but_last_seen_updated(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'telemetry', 'data': {'cpu_temp': 40, 'agent_version': '1.2.3'}})
+            await _sync_point(comm)
+            first = await sync_to_async(Device.objects.get)(pk=self.device.pk)
+            self.assertEqual(first.last_telemetry['cpu_temp'], 40)
+            self.assertEqual(first.agent_version, '1.2.3')
+            await comm.send_json_to({'type': 'telemetry', 'data': {'cpu_temp': 99}})
+            await _sync_point(comm)
+            second = await sync_to_async(Device.objects.get)(pk=self.device.pk)
+            self.assertEqual(second.last_telemetry['cpu_temp'], 40)  # gedrosselt
+            self.assertGreater(second.last_seen_at, first.last_seen_at)
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_telemetry_saved_again_after_30_seconds(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            with mock.patch('monitor.consumers._monotonic', side_effect=[100.0, 131.0]):
+                await comm.send_json_to({'type': 'telemetry', 'data': {'cpu_temp': 1}})
+                await comm.send_json_to({'type': 'telemetry', 'data': {'cpu_temp': 2}})
+                await _sync_point(comm)
+            dev = await sync_to_async(Device.objects.get)(pk=self.device.pk)
+            self.assertEqual(dev.last_telemetry['cpu_temp'], 2)
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_pending_command_sent_on_connect(self):
+        command = DeviceCommand.objects.create(device=self.device, kind='restart_browser', params={'a': 1})
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            msg = await _drain_until(comm, 'command')
+            self.assertEqual(msg, {'type': 'command', 'id': command.id, 'kind': 'restart_browser',
+                                   'params': {'a': 1}})
+            await comm.disconnect()
+        async_to_sync(run)()
+        command.refresh_from_db()
+        self.assertEqual(command.status, 'sent')
+
+    def test_command_older_than_5_min_expired(self):
+        command = DeviceCommand.objects.create(device=self.device, kind='reboot')
+        DeviceCommand.objects.filter(pk=command.pk).update(created_at=timezone.now() - timedelta(minutes=6))
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await _sync_point(comm)
+            self.assertTrue(await comm.receive_nothing())
+            await comm.disconnect()
+        async_to_sync(run)()
+        command.refresh_from_db()
+        self.assertEqual(command.status, 'expired')
+        self.assertIsNotNone(command.finished_at)
+
+    def test_push_device_command_reaches_open_socket(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            command = await sync_to_async(DeviceCommand.objects.create)(device=self.device, kind='screenshot')
+            await sync_to_async(push.push_device_command)(command)
+            msg = await _drain_until(comm, 'command')
+            self.assertEqual(msg['id'], command.id)
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_push_device_hello_resends_current_config(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await sync_to_async(Screen.objects.filter(pk=self.screen.pk).update)(power_method='hdmi')
+            await sync_to_async(push.push_device_hello)(self.screen)
+            self.assertEqual((await _drain_until(comm, 'hello'))['power_method'], 'hdmi')
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_command_result_sets_status(self):
+        ok_cmd = DeviceCommand.objects.create(device=self.device, kind='restart_browser', status='sent')
+        bad_cmd = DeviceCommand.objects.create(device=self.device, kind='reboot', status='sent')
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'command_result', 'id': ok_cmd.id, 'ok': True, 'text': 'fertig'})
+            await comm.send_json_to({'type': 'command_result', 'id': bad_cmd.id, 'ok': False, 'text': 'kaputt'})
+            await _sync_point(comm)
+            await comm.disconnect()
+        async_to_sync(run)()
+        ok_cmd.refresh_from_db()
+        bad_cmd.refresh_from_db()
+        self.assertEqual((ok_cmd.status, ok_cmd.result), ('ok', 'fertig'))
+        self.assertEqual((bad_cmd.status, bad_cmd.result), ('failed', 'kaputt'))
+        self.assertIsNotNone(ok_cmd.finished_at)
+
+    def test_command_result_of_other_device_ignored(self):
+        other = Device.objects.create(serial='x')
+        foreign = DeviceCommand.objects.create(device=other, kind='reboot', status='sent')
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'command_result', 'id': foreign.id, 'ok': True, 'text': ''})
+            await _sync_point(comm)
+            await comm.disconnect()
+        async_to_sync(run)()
+        foreign.refresh_from_db()
+        self.assertEqual(foreign.status, 'sent')
+
+    def test_update_gate_denied_during_event(self):
+        now = timezone.now()
+        Veranstaltung.objects.create(titel='Elternabend', datum_von=now - timedelta(hours=1),
+                                     datum_bis=now + timedelta(hours=1))
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'update_gate_request'})
+            msg = await _drain_until(comm, 'update_gate')
+            self.assertFalse(msg['allowed'])
+            self.assertEqual(msg['reason'], 'Termin „Elternabend" läuft')
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_update_gate_allowed_otherwise(self):
+        now = timezone.now()
+        Veranstaltung.objects.create(titel='Vorbei', datum_von=now - timedelta(hours=3),
+                                     datum_bis=now - timedelta(hours=2))
+        Veranstaltung.objects.create(titel='Abgesagt', status='abgesagt',
+                                     datum_von=now - timedelta(hours=1), datum_bis=now + timedelta(hours=1))
+
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'update_gate_request'})
+            msg = await _drain_until(comm, 'update_gate')
+            self.assertEqual((msg['allowed'], msg['reason']), (True, ''))
+            await comm.disconnect()
+        async_to_sync(run)()
+
+    def test_update_gate_reasons_exam_emergency_on_air(self):
+        now = timezone.now()
+        self.assertEqual(devices.update_gate(self.screen, now), (True, ''))
+        exam = Exam.objects.create(title='Mathe', active_from=now - timedelta(minutes=5),
+                                   active_until=now + timedelta(minutes=5))
+        exam.screens.add(self.screen)
+        allowed, reason = devices.update_gate(self.screen, now)
+        self.assertFalse(allowed)
+        self.assertIn('Klausur', reason)
+        exam.delete()
+        MonitorSettings.objects.update_or_create(pk=1, defaults={'on_air_active': True})
+        allowed, reason = devices.update_gate(self.screen, now)
+        self.assertFalse(allowed)
+        self.assertIn('On-Air', reason)
+        MonitorSettings.objects.filter(pk=1).update(emergency_active=True)
+        allowed, reason = devices.update_gate(self.screen, now)
+        self.assertFalse(allowed)
+        self.assertIn('Notfall', reason)
+
+    def test_update_failed_creates_event(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'update_result', 'at': '2026-10-20T03:10:00+02:00',
+                                     'packages': 3, 'rebooted': False, 'error': 'apt: Paketquelle nicht erreichbar'})
+            await comm.send_json_to({'type': 'update_result', 'at': '2026-10-27T03:10:00+01:00',
+                                     'packages': 5, 'rebooted': True, 'error': None})
+            await _sync_point(comm)
+            await comm.disconnect()
+        async_to_sync(run)()
+        failed = DeviceEvent.objects.get(device=self.device, kind='update_failed')
+        self.assertIn('Paketquelle', failed.text)
+        self.assertEqual(failed.data['packages'], 3)
+        done = DeviceEvent.objects.get(device=self.device, kind='update')
+        self.assertEqual(done.data['rebooted'], True)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.last_telemetry['last_update']['ok'], True)
+
+    def test_power_status_writes_cec_status(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'power_status', 'status': 'standby'})
+            await _sync_point(comm)
+            await comm.disconnect()
+        async_to_sync(run)()
+        self.screen.refresh_from_db()
+        self.assertEqual(self.screen.cec_status, 'standby')
+        self.assertIsNotNone(self.screen.cec_status_at)

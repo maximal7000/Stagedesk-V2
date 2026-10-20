@@ -689,6 +689,8 @@ def create_screen(request, payload: ScreenCreateSchema):
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
+# Felder, die ins `hello` des Geräte-Agenten gehören (Kiosk-URL, Power-Methode, Updates)
+AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 SCREEN_POWER_FIELDS = {'power_mode', 'power_schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
 
 
@@ -709,10 +711,13 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         screen.override_view_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
     power_changed = bool(SCREEN_POWER_FIELDS & set(data.keys()))
+    hello_changed = bool(AGENT_HELLO_FIELDS & set(data.keys()))
     for key, value in data.items():
         setattr(screen, key, value)
     screen.save()
     push.notify_changed_on_commit()
+    if hello_changed:
+        transaction.on_commit(lambda: push.push_device_hello(screen))
     if power_changed:
         from .consumers import push_power_to_screen
         try:
@@ -752,6 +757,7 @@ def regenerate_screen_key(request, id: int):
     screen.access_key = generate_access_key()
     screen.save(update_fields=['access_key', 'updated_at'])
     push.notify_changed_on_commit([screen.slug])
+    transaction.on_commit(lambda: push.push_device_hello(screen))
     return screen
 
 
