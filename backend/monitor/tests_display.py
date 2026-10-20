@@ -314,6 +314,25 @@ class PreviewTest(PreviewTestBase):
         self.assertEqual(len(data['view']['data']['days']), 2)
         self.assertEqual(DisplayView.objects.count(), count)
 
+    def test_preview_ignores_power_and_special_modes(self):
+        """Final-Review 2: die Vorschau zeigt immer den Entwurf, auch wenn der Bildschirm aus ist
+        oder dort gerade Notfall, Klausur oder On-Air läuft."""
+        self.grant_setup()
+        screen = Screen.objects.create(name='Halle', slug='halle', power_mode='manual_off')
+        settings = MonitorSettings.load()
+        settings.on_air_active = True
+        settings.save()
+        token = self.post_preview({'view': {'kind': 'info'}, 'screen_id': screen.id}).json()['token']
+        data = self.client.get('/api/monitor/display', {'preview': token}).json()
+        self.assertTrue(data['screen']['power'])
+        self.assertIsNone(data['mode'])
+        settings.emergency_active = True
+        settings.save()
+        self.assertIsNone(self.client.get('/api/monitor/display', {'preview': token}).json()['mode'])
+        # normaler Abruf bleibt unverändert
+        live = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()
+        self.assertEqual(live['mode']['kind'], 'emergency')
+
     def test_preview_unknown_screen_is_404(self):
         self.grant_setup()
         self.assertEqual(self.post_preview({'view': {'kind': 'info'}, 'screen_id': 999}).status_code, 404)

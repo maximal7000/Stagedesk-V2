@@ -404,13 +404,20 @@ def _screen_object(screen, now):
             'power': compute_power_state(screen, now)}
 
 
-def build_payload(screen, view, *, key_ok, now):
-    """Antwort von GET /display. `screen=None, view=None` steht für einen unbekannten Bildschirm."""
+def build_payload(screen, view, *, key_ok, now, preview=False):
+    """Antwort von GET /display. `screen=None, view=None` steht für einen unbekannten Bildschirm.
+
+    `preview=True`: der Entwurf ist immer zu sehen, unabhängig vom Strom des Bildschirms und von
+    Notfall, Klausur oder On-Air.
+    """
+    screen_data = _screen_object(screen, now) if screen else None
+    if screen_data and preview:
+        screen_data['power'] = True
     return {
         'generated_at': now.isoformat(),
         'reload_requested_at': _iso(screen.reload_requested_at) if screen else None,
-        'screen': _screen_object(screen, now) if screen else None,
-        'mode': _mode(screen, view, MonitorSettings.load()) if view else None,
+        'screen': screen_data,
+        'mode': _mode(screen, view, MonitorSettings.load()) if view and not preview else None,
         'view': _view_object(view, key_ok, now) if view else None,
     }
 

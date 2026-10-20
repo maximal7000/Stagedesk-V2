@@ -113,7 +113,8 @@ def get_display_data(request, view: str = None, screen: str = None,
         if entry is None:
             raise HttpError(404, "Die Vorschau ist abgelaufen. Bitte die Vorschau neu öffnen.")
         screen_obj = Screen.objects.filter(id=entry['screen_id']).first() if entry.get('screen_id') else None
-        return display.build_payload(screen_obj, display.draft_view(entry['view']), key_ok=True, now=now)
+        return display.build_payload(screen_obj, display.draft_view(entry['view']), key_ok=True, now=now,
+                                     preview=True)
 
     screen_slug = screen or bildschirm
     screen_obj = None
