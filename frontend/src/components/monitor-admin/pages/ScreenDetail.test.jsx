@@ -14,6 +14,7 @@ vi.mock('../shared/api', () => ({
   updateScreen: vi.fn(),
   regenerateScreenKey: vi.fn(),
   reloadScreen: vi.fn(),
+  deleteScreen: vi.fn(() => Promise.resolve({ success: true })),
 }))
 
 const { useNavigate } = await import('react-router-dom')
@@ -41,7 +42,9 @@ async function mount() {
   root = createRoot(container)
   await act(async () => {
     root.render(createElement(MemoryRouter, { initialEntries: ['/monitor-admin/screens/1'] },
-      createElement(Routes, null, createElement(Route, { path: '/monitor-admin/screens/:id', element: createElement(ScreenDetail) }))))
+      createElement(Routes, null,
+        createElement(Route, { path: '/monitor-admin/screens/:id', element: createElement(ScreenDetail) }),
+        createElement(Route, { path: '/monitor-admin/screens', element: createElement('p', { 'data-list': '' }, 'Liste') }))))
   })
 }
 
@@ -59,6 +62,7 @@ beforeEach(() => {
   perms.clear()
   vi.clearAllMocks()
   api.getScreens.mockImplementation(() => Promise.resolve([glocke()]))
+  api.getViews.mockImplementation(() => Promise.resolve([{ id: 1, name: 'Abfahrten' }]))
   api.updateScreen.mockImplementation((id, body) => Promise.resolve({ ...glocke(), ...body }))
 })
 afterEach(() => {
@@ -166,5 +170,52 @@ describe('ScreenDetail', () => {
     expect(api.regenerateScreenKey).toHaveBeenCalledWith(1)
     expect(byLabel('Kiosk-URL').value).toContain('key=neu-key')
     expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+  })
+
+  it('setzt eine andere Ansicht vorübergehend und hebt sie wieder auf', async () => {
+    perms.add('monitor.setup')
+    api.getViews.mockImplementation(() => Promise.resolve([{ id: 1, name: 'Abfahrten' }, { id: 2, name: 'Info' }]))
+    await mount()
+    const section = container.querySelector('[data-section="override"]')
+    expect(section.textContent).toContain('Zeigt die Standard-Ansicht')
+    await click(button('Anwenden', section))
+    expect(api.updateScreen).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Bitte eine Ansicht wählen.')
+
+    const select = section.querySelector('select')
+    await act(async () => {
+      select.value = '2'
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await click(button('Anwenden', section))
+    expect(api.updateScreen).toHaveBeenCalledWith(1, { override_view_id: 2, override_until: null })
+    expect(container.querySelector('[data-section="override"]').textContent).toContain('Zeigt „Info“ bis auf Weiteres')
+
+    await click(button('Aufheben', container.querySelector('[data-section="override"]')))
+    expect(api.updateScreen).toHaveBeenLastCalledWith(1, { override_view_id: null, override_until: null })
+    expect(container.querySelector('[data-section="override"]').textContent).toContain('Zeigt die Standard-Ansicht')
+  })
+
+  it('löscht den Bildschirm nach Bestätigung endgültig und wechselt zur Liste', async () => {
+    perms.add('monitor.setup')
+    await mount()
+    await click(button('Löschen'))
+    const dialog = container.querySelector('[role="alertdialog"]')
+    expect(dialog.textContent).toContain('„Glocke“ löschen?')
+    expect(dialog.textContent).toContain('endgültig')
+    await click(button('Endgültig löschen', dialog))
+    expect(api.deleteScreen).toHaveBeenCalledWith(1)
+    expect(container.querySelector('[data-list]')).not.toBeNull()
+  })
+
+  it('ohne Recht für die Einrichtung: kein Löschen, vorübergehende Ansicht nur lesend', async () => {
+    perms.add('monitor.power')
+    api.getScreens.mockImplementation(() => Promise.resolve([{ ...glocke(), override_view_id: 1, override_until: null }]))
+    await mount()
+    expect(button('Löschen')).toBeUndefined()
+    const section = container.querySelector('[data-section="override"]')
+    expect(section.textContent).toContain('Zeigt „Abfahrten“ bis auf Weiteres')
+    expect(button('Aufheben', section)).toBeUndefined()
+    expect(section.querySelector('select')).toBeNull()
   })
 })

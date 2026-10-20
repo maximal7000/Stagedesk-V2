@@ -62,7 +62,7 @@ const PAGES = {
     },
   },
   screens: { path: '/monitor-admin/screens' },
-  'screen-detail': { path: '/monitor-admin/screens/1', height: 1360 },
+  'screen-detail': { path: '/monitor-admin/screens/1', height: 1600 },
   'screen-detail-dirty': {
     path: '/monitor-admin/screens/1',
     action: async (page) => {
@@ -154,6 +154,22 @@ const PAGES = {
     path: '/monitor-admin/views/1', preview: 'departures',
     action: async (page) => {
       await waitForPreview(page)
+      await page.getByRole('button', { name: 'Löschen', exact: true }).click()
+      await page.waitForSelector('[role="alertdialog"]')
+    },
+  },
+  'overview-override-menu': {
+    path: '/monitor-admin',
+    variant: 'override',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click()
+      await page.waitForSelector('[role="menu"]')
+    },
+  },
+  'screen-detail-override': { path: '/monitor-admin/screens/1', variant: 'override' },
+  'screen-delete-dialog': {
+    path: '/monitor-admin/screens/1',
+    action: async (page) => {
       await page.getByRole('button', { name: 'Löschen', exact: true }).click()
       await page.waitForSelector('[role="alertdialog"]')
     },

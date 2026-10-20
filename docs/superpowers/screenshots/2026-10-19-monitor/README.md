@@ -94,21 +94,24 @@ Namensschema: `display-<testdatei>[-<stil>][-portrait].png`. Ohne Stilangabe gil
 
 # Screenshots des Monitor-Admin (2026-10-19)
 
-Erzeugt mit `cd frontend && node scripts/shoot-admin.mjs` (1440x900, lange Seiten höher). Testdaten: `frontend/tests/admin-fixtures/`, Varianten in Unterordnern (`empty`, `error`, `offline`, `missing`, `view-only`, `onair-only`, `power-only`, `day-off`, `emergency`, `media-processing`, `schedules`). Zeitpunkt: Di 20.10.2026, 10:00.
+Erzeugt mit `cd frontend && node scripts/shoot-admin.mjs` (1440x900, lange Seiten höher). Testdaten: `frontend/tests/admin-fixtures/`, Varianten in Unterordnern (`override`, `empty`, `error`, `offline`, `missing`, `view-only`, `onair-only`, `power-only`, `day-off`, `emergency`, `media-processing`, `schedules`). Zeitpunkt: Di 20.10.2026, 10:00.
 
 | Bild | Zeigt |
 |---|---|
 | `admin-overview.png` | Übersicht: On-Air, Notfall, laufende Klausur, Bildschirm-Tabelle mit „Zeigt gerade“, Datenquellen, Demnächst |
 | `admin-overview-view-only.png` | Übersicht nur lesend (nur `monitor.view`): keine Schalter, Sidebar nur mit Übersicht |
 | `admin-overview-empty.png` | Übersicht ohne Bildschirme (leerer Zustand) |
-| `admin-overview-error.png` | Übersicht, Server antwortet mit 503: Fehlertext mit Ursache und nächstem Schritt |
+| `admin-overview-error.png` | Übersicht, Bildschirm-Liste antwortet mit 503: Fehlertext mit Ursache und nächstem Schritt, On-Air und Notfall bleiben schaltbar |
 | `admin-overview-emergency-dialog.png` | Dialog „Notfall auslösen“ mit Vorlagen |
 | `admin-overview-emergency-menu.png` | Notfall aktiv, Menü „Weitere Aktionen“ einer Zeile |
 | `admin-overview-day-off.png` | Bildschirme „bis Tagesende aus“ |
+| `admin-overview-override-menu.png` | Glocke mit manueller Ansicht bis 14:00, Zeilenmenü mit „Manuelle Ansicht aufheben“ |
 | `admin-overview-undo.png` | On-Air geschaltet, Meldung mit „Rückgängig“ |
 | `admin-screens.png` | Bildschirm-Liste |
 | `admin-screens-empty.png` | Bildschirm-Liste ohne Einträge |
-| `admin-screen-detail.png` | Bildschirm-Detail: Anzeige, Ein- und Ausschalten, Gerät, Kiosk-URL |
+| `admin-screen-detail.png` | Bildschirm-Detail: Anzeige, Andere Ansicht vorübergehend, Ein- und Ausschalten, Gerät, Kiosk-URL, Löschen |
+| `admin-screen-detail-override.png` | Bildschirm-Detail mit aktiver vorübergehender Ansicht („Zeigt „Abfahrten“ bis …“, Aufheben) |
+| `admin-screen-delete-dialog.png` | Bestätigung „Glocke löschen?“ (endgültig, ohne Papierkorb) |
 | `admin-screen-detail-dirty.png` | Bildschirm-Detail mit ungespeicherten Änderungen (SaveBar) |
 | `admin-screen-detail-power-only.png` | Bildschirm-Detail nur mit `monitor.power`: Anzeige lesend, keine Kiosk-URL |
 | `admin-screen-detail-key.png` | Bestätigung „Schlüssel neu erzeugen“ |

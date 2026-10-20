@@ -57,4 +57,15 @@ describe('ConfirmDialog', () => {
     expect(back.defaultPrevented).toBe(true)
     expect(document.activeElement).toBe(confirm)
   })
+
+  it('ein Klick auf den Text lässt den Fokus im Dialog, Escape wirkt weiter', () => {
+    const onCancel = vi.fn()
+    mount({ onCancel, onConfirm: vi.fn(), body: 'Text' })
+    const dialog = host.querySelector('[role="alertdialog"]')
+    expect(dialog.getAttribute('tabindex')).toBe('-1')
+    dialog.focus()
+    expect(document.activeElement).toBe(dialog)
+    key(dialog, 'Escape')
+    expect(onCancel).toHaveBeenCalledTimes(1)
+  })
 })

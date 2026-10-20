@@ -67,3 +67,31 @@ export function lastReport(value, now = new Date()) {
   if (at.toDateString() === now.toDateString()) return `heute ${formatTime(at)}`
   return formatDayTime(at)
 }
+
+// Andere Ansicht vorübergehend (override_view_id/override_until, Recht monitor.setup).
+// Gilt wie im Backend (Screen.get_active_view) ohne Ende oder bis zu einem Zeitpunkt in der Zukunft.
+export function activeOverride(screen, now = new Date()) {
+  if (!screen?.override_view_id) return null
+  const until = screen.override_until ? new Date(screen.override_until) : null
+  if (until && !(until > now)) return null
+  return { viewId: screen.override_view_id, until }
+}
+
+export const OVERRIDE_CLEAR = { override_view_id: null, override_until: null }
+
+// untilLocal: Wert eines datetime-local-Felds ("2026-10-20T14:00", Ortszeit), leer = bis auf Weiteres
+export function overridePayload(viewId, untilLocal) {
+  return {
+    override_view_id: Number(viewId),
+    override_until: untilLocal ? new Date(untilLocal).toISOString() : null,
+  }
+}
+
+export function overrideProblem(viewId, untilLocal, now = new Date()) {
+  if (!viewId) return 'Bitte eine Ansicht wählen.'
+  if (untilLocal) {
+    const until = new Date(untilLocal)
+    if (Number.isNaN(until.getTime()) || until <= now) return '„Bis“ muss in der Zukunft liegen. Bitte einen späteren Zeitpunkt wählen oder das Feld leeren.'
+  }
+  return ''
+}

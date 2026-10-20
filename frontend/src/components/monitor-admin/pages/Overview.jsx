@@ -15,7 +15,7 @@ import UndoToast from '../shared/UndoToast'
 import { describeShown, explainScreen, formatDayTime } from '../shared/explain'
 import { errorText } from '../shared/errorText'
 import { allOffUntil, dataSources, formatRange, nextExam, powerMenu, upcoming } from './overviewData'
-import { kioskUrl } from './screenData'
+import { OVERRIDE_CLEAR, activeOverride, kioskUrl } from './screenData'
 import * as api from '../shared/api'
 
 const REFRESH_MS = 60 * 1000
@@ -76,7 +76,7 @@ function RowMenu({ items, hint }) {
         <MoreVertical className="w-4 h-4" />
       </button>
       {open && (
-        <div role="menu" className="absolute right-0 top-full mt-1 z-20 min-w-[200px] bg-overlay border border-line rounded-lg shadow-overlay py-1">
+        <div role="menu" className="absolute right-0 top-full mt-1 z-20 min-w-[230px] bg-overlay border border-line rounded-lg shadow-overlay py-1">
           {items.map((item) => (
             <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => { setOpen(false); item.onSelect() }}
               className="w-full text-left px-3 py-2 text-sm text-fg hover:bg-raised focus:outline-none focus-visible:bg-raised disabled:text-fg-disabled disabled:pointer-events-none">
@@ -154,12 +154,7 @@ export default function Overview() {
     ])
     if (!current()) return
     setNow(new Date())
-    if (!screensRes.ok) {
-      setError(screensRes.error)
-      return
-    }
-    setError(null)
-    setScreens(screensRes.value)
+    // Sondermodi unabhängig von den Bildschirmen: On-Air und Notfall bleiben auch ohne Bildschirm-Liste schaltbar
     setExtra({
       settings: settingsRes.ok ? settingsRes.value : null,
       views: viewsRes.ok ? viewsRes.value : [],
@@ -167,6 +162,12 @@ export default function Overview() {
       events: eventsRes.ok ? eventsRes.value : [],
       holidays: holidaysRes.ok ? holidaysRes.value : null,
     })
+    if (!screensRes.ok) {
+      setError(screensRes.error)
+      return
+    }
+    setError(null)
+    setScreens(screensRes.value)
     const results = await Promise.all(screensRes.value.map((s) => settle(api.getDisplay(s.slug))))
     if (!current()) return
     setDisplays(Object.fromEntries(screensRes.value.map((s, i) => [s.slug, results[i].ok ? results[i].value : null])))
@@ -202,6 +203,7 @@ export default function Overview() {
   const offUntil = screens ? allOffUntil(screens, now) : null
   const exam = nextExam(extra.exams, now)
   const screenNames = Object.fromEntries((screens || []).map((s) => [s.id, s.name]))
+  const examScreens = (exam?.screen_ids || []).map((id) => screenNames[id]).filter(Boolean)
   const sources = dataSources(displays ? Object.values(displays).filter(Boolean) : [], settings)
   const soon = upcoming(extra.holidays, extra.events, now)
   const state = error ? 'error' : screens && displays ? 'ready' : 'loading'
@@ -263,11 +265,17 @@ export default function Overview() {
     load()
   }
 
+  // Zeilenmenü: Ein- und Ausschalten mit monitor.power, "Manuelle Ansicht aufheben" mit monitor.setup
   const screenMenu = (s) => {
     const isOn = displays?.[s.slug]?.screen?.power ?? s.power_mode !== 'manual_off'
-    const { items, hint } = powerMenu(s, { now, isOn, emergencyActive })
+    const { items, hint } = can.power ? powerMenu(s, { now, isOn, emergencyActive }) : { items: [], hint: '' }
+    if (can.setup && activeOverride(s, now)) items.push({ key: 'clear-override', label: 'Manuelle Ansicht aufheben' })
     const previousMode = s.power_mode
+    const previousOverride = { override_view_id: s.override_view_id, override_until: s.override_until ?? null }
     const actions = {
+      'clear-override': () => instant(
+        () => api.updateScreen(s.id, OVERRIDE_CLEAR), `${s.name} zeigt wieder die geplante Ansicht`,
+        () => api.updateScreen(s.id, previousOverride)),
       'off-today': () => instant(
         () => api.powerOffToday([s.id]),
         (r) => (r?.off_until?.[String(s.id)] ? `${s.name} aus bis ${formatDayTime(r.off_until[String(s.id)])}` : `${s.name} bis Tagesende aus`),
@@ -348,7 +356,7 @@ export default function Overview() {
               {exam ? (
                 <>
                   {exam.title} · {formatRange(exam.active_from, exam.active_until)}
-                  {exam.screen_ids?.length > 0 && ` · ${exam.screen_ids.map((id) => screenNames[id]).filter(Boolean).join(', ')}`}
+                  {examScreens.length > 0 && ` · ${examScreens.join(', ')}`}
                 </>
               ) : 'Keine Klausur geplant'}
             </BoxText>
@@ -375,6 +383,7 @@ export default function Overview() {
             const payload = displays?.[s.slug]
             const known = displays && payload !== undefined
             const reason = known ? explainScreen(s, payload, { now, events: extra.events, holidays: extra.holidays }) : ''
+            const menu = screenMenu(s)
             return (
               <ScreenRow key={s.id} screen={s}>
                 <ScreenNameCell screen={s} to={can.setup ? `/monitor-admin/screens/${s.id}` : undefined} />
@@ -408,7 +417,7 @@ export default function Overview() {
                         </button>
                       </>
                     )}
-                    {can.power && <RowMenu {...screenMenu(s)} />}
+                    {menu.items.length > 0 && <RowMenu {...menu} />}
                   </div>
                 </Cell>
               </ScreenRow>

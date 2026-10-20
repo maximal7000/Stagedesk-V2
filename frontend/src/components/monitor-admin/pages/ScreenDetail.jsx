@@ -2,9 +2,10 @@
 // und rechts das Gerät. Anzeige und Ein- und Ausschalten haben je einen Entwurf (useDraft); die gemeinsame
 // SaveBar speichert jeden geänderten Abschnitt mit einer eigenen Anfrage, die nur dessen Felder enthält.
 // Anzeige braucht monitor.setup, Ein- und Ausschalten monitor.power (ohne Recht nur lesend).
+// "Andere Ansicht vorübergehend" und "Löschen" wirken sofort (ohne Entwurf) und brauchen monitor.setup.
 import { useCallback, useEffect, useId, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { Copy, Eye, KeyRound, MonitorOff, RotateCw } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Copy, Eye, KeyRound, MonitorOff, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, EmptyState, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
@@ -16,10 +17,11 @@ import ScheduleEditor, { ExceptionEditor } from '../shared/ScheduleEditor'
 import { useUnsavedGuard } from '../shared/UnsavedChangesProvider'
 import { exceptionProblems, scheduleProblems } from '../shared/schedule'
 import { errorText } from '../shared/errorText'
+import { formatDayTime } from '../shared/explain'
 import { Field, Section, Segmented, fieldClass } from '../shared/form'
 import {
-  DISPLAY_FIELDS, ORIENTATION_OPTIONS, POWER_FIELDS, POWER_MODE_OPTIONS, SCALE_OPTIONS,
-  cecLabel, kioskUrl, lastReport, pickFields, sectionPayload,
+  DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_MODE_OPTIONS, SCALE_OPTIONS,
+  activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem, pickFields, sectionPayload,
 } from './screenData'
 import * as api from '../shared/api'
 
@@ -100,6 +102,52 @@ function PowerSection({ draft, set, disabled, readOnly, problems }) {
   )
 }
 
+// Andere Ansicht vorübergehend: gilt sofort, ohne Speichern-Leiste. Ohne monitor.setup nur die Anzeige des Stands.
+function OverrideSection({ screen, views, now, canEdit, onApply, onClear, busy }) {
+  const ids = { view: useId(), until: useId() }
+  const [viewId, setViewId] = useState('')
+  const [until, setUntil] = useState('')
+  const active = activeOverride(screen, now)
+  const name = active ? (views.find((v) => v.id === active.viewId)?.name ?? 'Ansicht') : null
+  const apply = async () => {
+    const problem = overrideProblem(viewId, until, new Date())
+    if (problem) { toast.error(problem); return }
+    if (await onApply(overridePayload(viewId, until))) { setViewId(''); setUntil('') }
+  }
+  return (
+    <Section title="Andere Ansicht vorübergehend" data-section="override"
+      aside={!canEdit ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für die Einrichtung fehlt</span> : null}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <p className="text-sm text-fg flex-1 min-w-0">
+          {active
+            ? `Zeigt „${name}“ ${active.until ? `bis ${formatDayTime(active.until)}` : 'bis auf Weiteres'}`
+            : 'Zeigt die Standard-Ansicht, den Zeitplan und Termine.'}
+        </p>
+        {active && canEdit && <Button size="sm" variant="secondary" onClick={onClear} disabled={busy}>Aufheben</Button>}
+      </div>
+      {canEdit && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-end mt-4">
+            <Field label="Ansicht" htmlFor={ids.view}>
+              <select id={ids.view} value={viewId} onChange={(e) => setViewId(e.target.value)} className={fieldClass}>
+                <option value="">Ansicht wählen</option>
+                {views.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </Field>
+            <Field label="Bis" htmlFor={ids.until}>
+              <input id={ids.until} type="datetime-local" value={until} onChange={(e) => setUntil(e.target.value)} className={fieldClass} />
+            </Field>
+            <Button onClick={apply} disabled={busy}>Anwenden</Button>
+          </div>
+          <p className="text-xs text-fg-subtle mt-1.5">
+            Hat Vorrang vor Zeitplan und Terminen, nicht vor Notfall, Klausur und On-Air. Ohne „Bis“ gilt sie bis zum Aufheben.
+          </p>
+        </>
+      )}
+    </Section>
+  )
+}
+
 function KioskSection({ screen, onRegenerate }) {
   const inputId = useId()
   const url = kioskUrl(window.location.origin, screen)
@@ -156,6 +204,7 @@ function DeviceSection({ screen, now, onReload }) {
 
 export default function ScreenDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const screenId = Number(id)
   const { hasPermission } = useUser()
   const canSetup = hasPermission('monitor.setup')
@@ -170,6 +219,7 @@ export default function ScreenDetail() {
   const [missing, setMissing] = useState(false)
   const [now, setNow] = useState(() => new Date())
   const [confirmKey, setConfirmKey] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
 
   // Anderer Bildschirm (gleiche Komponente, neue id): alten Stand sofort verwerfen, auch die Entwürfe
@@ -181,6 +231,7 @@ export default function ScreenDetail() {
     setError(null)
     setMissing(false)
     setConfirmKey(false)
+    setConfirmDelete(false)
   }
 
   const adopt = useCallback((s) => {
@@ -263,6 +314,35 @@ export default function ScreenDetail() {
     setBusy(false)
   }
 
+  // Nur die Override-Felder übernehmen: Entwürfe der Abschnitte bleiben unberührt
+  const changeOverride = async (body) => {
+    setBusy(true)
+    try {
+      const updated = await api.updateScreen(screenId, body)
+      setScreen((s) => ({ ...s, override_view_id: updated.override_view_id ?? null, override_until: updated.override_until ?? null }))
+      setNow(new Date())
+      toast.success(body.override_view_id ? 'Ansicht gesetzt' : 'Manuelle Ansicht aufgehoben')
+      return true
+    } catch (e) {
+      toast.error(errorText(e))
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async () => {
+    setBusy(true)
+    try {
+      await api.deleteScreen(screenId)
+      toast.success(`„${screen.name}“ ist gelöscht.`)
+      navigate('/monitor-admin/screens')
+    } catch (e) {
+      toast.error(errorText(e))
+      setBusy(false)
+    }
+  }
+
   const reload = async () => {
     try {
       await api.reloadScreen(screenId)
@@ -318,12 +398,19 @@ export default function ScreenDetail() {
               </span>
             )}
             actions={canSetup ? (
-              <Button as="a" href={kioskUrl('', screen)} target="_blank" rel="noreferrer" icon={Eye}>Vorschau</Button>
+              <>
+                <Button as="a" href={kioskUrl('', screen)} target="_blank" rel="noreferrer" icon={Eye}>Vorschau</Button>
+                <Button variant="danger" icon={Trash2} onClick={() => setConfirmDelete(true)} disabled={busy}>Löschen</Button>
+              </>
             ) : null}
           />
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] items-start">
             <div className="space-y-4 min-w-0">
               <DisplaySection draft={display.draft} set={display.set} views={views} readOnly={!canSetup} disabled={!canSetup || display.saving} />
+              {(canSetup || activeOverride(screen, now)) && (
+                <OverrideSection screen={screen} views={views} now={now} canEdit={canSetup} busy={busy}
+                  onApply={changeOverride} onClear={() => changeOverride(OVERRIDE_CLEAR)} />
+              )}
               <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems} />
               {canSetup && <KioskSection screen={screen} onRegenerate={() => setConfirmKey(true)} />}
             </div>
@@ -331,6 +418,17 @@ export default function ScreenDetail() {
           </div>
           <SaveBar count={dirtyCount} onSave={saveAll} onDiscard={discard} saving={display.saving || power.saving} />
         </>
+      )}
+      {confirmDelete && screen && (
+        <ConfirmDialog
+          title={`„${screen.name}“ löschen?`}
+          body={`Der Bildschirm wird endgültig gelöscht, es gibt keinen Papierkorb. Zeitplan, Ausnahmen und Termin-Zuordnungen gehen verloren, Klausuren gelten nur noch für die übrigen Bildschirme. Die Kiosk-URL zeigt danach „Bildschirm nicht gefunden“.`}
+          confirmLabel="Endgültig löschen"
+          tone="danger"
+          busy={busy}
+          onConfirm={remove}
+          onCancel={() => setConfirmDelete(false)}
+        />
       )}
       {confirmKey && (
         <ConfirmDialog

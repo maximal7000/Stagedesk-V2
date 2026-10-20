@@ -30,7 +30,7 @@ export default function ConfirmDialog({
       if (!items.length) return
       const first = items[0]
       const last = items[items.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      if (e.shiftKey && (document.activeElement === first || document.activeElement === dialogRef.current)) { e.preventDefault(); last.focus() }
       else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
     }
   }
@@ -38,8 +38,8 @@ export default function ConfirmDialog({
   return (
     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onKeyDown={onKeyDown}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel?.() }}>
-      <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby={titleId}
-        className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full p-5">
+      <div ref={dialogRef} role="alertdialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
+        className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full p-5 focus:outline-none">
         <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight text-fg">{title}</h2>
         {body && <div className="mt-2 text-sm text-fg-muted">{body}</div>}
         <div className="mt-5 flex justify-end gap-2">

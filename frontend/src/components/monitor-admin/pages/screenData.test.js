@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { DISPLAY_FIELDS, POWER_FIELDS, cecLabel, kioskUrl, lastReport, pickFields, powerSummary, sectionPayload } from './screenData'
+import {
+  DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
+  pickFields, powerSummary, sectionPayload,
+} from './screenData'
 
 const glocke = {
   id: 1, name: 'Glocke', slug: 'glocke', location: 'Eingangshalle', default_view_id: 1, scale: 'auto',
@@ -59,5 +62,35 @@ describe('Gerät', () => {
     expect(cecLabel('on')).toBe('an')
     expect(cecLabel('standby')).toBe('Standby')
     expect(cecLabel('')).toBe('unbekannt')
+  })
+})
+
+describe('activeOverride', () => {
+  const now = new Date('2026-10-20T10:00:00')
+  it('liefert die Ansicht nur, solange sie gilt', () => {
+    expect(activeOverride({ override_view_id: null }, now)).toBeNull()
+    expect(activeOverride({ override_view_id: 3, override_until: null }, now)).toEqual({ viewId: 3, until: null })
+    const until = new Date('2026-10-20T14:00:00')
+    expect(activeOverride({ override_view_id: 3, override_until: until.toISOString() }, now)).toEqual({ viewId: 3, until })
+    expect(activeOverride({ override_view_id: 3, override_until: '2026-10-20T09:00:00' }, now)).toBeNull()
+  })
+})
+
+describe('overridePayload / overrideProblem', () => {
+  const now = new Date('2026-10-20T10:00:00')
+  it('sendet die Ansicht und den Zeitpunkt, leer heißt bis auf Weiteres', () => {
+    expect(overridePayload('4', '')).toEqual({ override_view_id: 4, override_until: null })
+    expect(overridePayload(4, '2026-10-20T14:00')).toEqual({
+      override_view_id: 4, override_until: new Date('2026-10-20T14:00').toISOString(),
+    })
+  })
+  it('Aufheben leert beide Felder', () => {
+    expect(OVERRIDE_CLEAR).toEqual({ override_view_id: null, override_until: null })
+  })
+  it('meldet fehlende Ansicht und vergangene Zeit', () => {
+    expect(overrideProblem('', '', now)).toMatch(/Ansicht/)
+    expect(overrideProblem(4, '2026-10-20T09:00', now)).toMatch(/Zukunft/)
+    expect(overrideProblem(4, '2026-10-20T14:00', now)).toBe('')
+    expect(overrideProblem(4, '', now)).toBe('')
   })
 })

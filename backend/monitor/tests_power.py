@@ -315,3 +315,8 @@ class ScreenUpdatePermissionSplitTest(SimpleTestCase):
 
     def test_mixed_needs_both(self):
         self.assertEqual(self.required(name='Halle', power_mode='auto'), ['monitor.setup', 'monitor.power'])
+
+    def test_override_needs_setup(self):
+        # Andere Ansicht vorübergehend gehört zu Bildschirme (setup), nicht zu Ein- und Ausschalten
+        self.assertEqual(self.required(override_view_id=3, override_until=None), ['monitor.setup'])
+        self.assertEqual(self.required(override_view_id=None, override_until=None), ['monitor.setup'])
