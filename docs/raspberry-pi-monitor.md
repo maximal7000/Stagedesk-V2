@@ -17,7 +17,12 @@ Neuladen bei WLAN-Aussetzern und optionaler TV-An/Aus-Steuerung per HDMI-CEC.
 - HDMI-Monitor/TV, der **eingeschaltet** ist (sonst findet `cage` keinen Ausgang)
 - Die öffentliche Stagedesk-URL, z. B. `https://stagedesk.t410.de`
   - Aufgaben-Monitor: `…/aufgaben-monitor`
-  - Allgemeiner Monitor: `…/monitor?screen=<slug>` (optional `&view=<slug>`)
+  - Allgemeiner Monitor: `…/monitor?screen=<slug>&key=<key>`. Die fertige
+    URL steht im Monitor-Admin unter Bildschirme → Bildschirm → **Kiosk-URL**
+    (Knopf „Kopieren"). Der Schlüssel gibt den Vertretungsplan frei; ohne ihn
+    erscheint der Vertretungsplan nur als iframe wie bisher.
+  - „Neu erzeugen" im Admin macht den alten Schlüssel ungültig, danach die
+    neue URL in `kiosk.sh` eintragen.
   - Die alten Parameter `?bildschirm=` und `?profil=` funktionieren weiter.
 
 ---
@@ -67,7 +72,7 @@ nano /home/pi/kiosk.sh
 
 ```bash
 #!/bin/bash
-URL="https://stagedesk.t410.de/aufgaben-monitor"   # <-- eigene URL (4K? siehe Abschnitt 5a: ?zoom=2)
+URL="https://stagedesk.t410.de/aufgaben-monitor"   # <-- eigene URL, für /monitor die Kiosk-URL aus dem Admin
 
 # Auf Netzwerk warten (max ~60s), damit Chromium nicht die Fehlerseite lädt
 for i in $(seq 1 30); do
@@ -234,20 +239,24 @@ wird winzig. `cage 0.2.0` kann die Anzeige **nicht skalieren**, und
 `--force-device-scale-factor` verarbeitet das falsch (es zeigt dann nur das
 obere linke Viertel und wird mit höherem Faktor immer kleiner).
 
-**Lösung: Seiten-Zoom per URL-Parameter `?zoom=`** (in die Stagedesk-Monitor­-
-seiten eingebaut). Der bricht die Seite sauber um und füllt den Schirm.
+**`/monitor`: Skalierung im Admin.** Die Anzeige rechnet ihre Größe aus der
+Bildschirmbreite (Basis 1920 px quer, 1080 px hoch) und füllt damit auch einen
+4K-Schirm richtig. Feinjustiert wird im Monitor-Admin unter Bildschirme →
+Bildschirm → **Skalierung** (Automatisch oder 75 bis 200 %), dort auch die
+**Ausrichtung** (Quer/Hoch). Die Änderung wirkt nach dem Speichern ohne Eingriff
+am Pi. Die Kiosk-URL aus dem Admin enthält deshalb **kein** `zoom`.
 
-In `kiosk.sh` die URL um `?zoom=` ergänzen:
+**Notbehelf: URL-Parameter `?zoom=`.** Ein `zoom` in der URL ist ein fester
+Faktor und **überstimmt** die Skalierung aus dem Admin. Nur nutzen, wenn das
+Admin nicht reicht, und danach wieder entfernen:
 
 ```bash
-URL="https://stagedesk.t410.de/aufgaben-monitor?zoom=2"
+URL="https://stagedesk.t410.de/monitor?screen=mensa&key=<key>&zoom=2"
 ```
 
-- `zoom=2` ist ein guter Startwert für 4K (entspricht ~Full-HD-Größe)
-- beliebig feinjustierbar (`1.75`, `2.25`, `2.5` …) – **kein Deploy nötig**,
-  wirkt sofort nach `sudo systemctl restart kiosk.service`
-- gilt für **beide** Seiten: `…/aufgaben-monitor?zoom=2` und `…/monitor?zoom=2`
-- weitere Parameter mit `&` anhängen, z. B. `…/monitor?view=mensa&zoom=2` (alt: `?profil=mensa`)
+- `zoom=2` entspricht auf 4K etwa der Full-HD-Größe
+- wirkt nach `sudo systemctl restart kiosk.service`
+- `…/aufgaben-monitor` hat keine Admin-Skalierung, dort bleibt `?zoom=2` der Weg für 4K
 
 > **Alternativ** kannst du den Pi auch fest auf 1080p ausgeben lassen (dann
 > ist alles normal groß ohne Zoom): in `/boot/firmware/cmdline.txt` (eine
@@ -596,7 +605,8 @@ nmap -sn 192.168.1.0/24 | grep -i -B2 raspberry
 | Schwarzer Bildschirm, `Failed to spawn client: Permission denied` | `chmod +x /home/pi/kiosk.sh` |
 | Mauszeiger sichtbar | `default`-Cursor-Theme blank machen (Abschnitt 5b) + Service neu starten |
 | Seite hängt nach WLAN-Ausfall | `netwatch.sh` (Abschnitt 8) |
-| Alles winzig auf 4K-TV | URL-Param `?zoom=2` nutzen (Abschnitt 5a), **nicht** `--force-device-scale-factor` |
+| Alles winzig oder zu groß | `/monitor`: Skalierung im Admin einstellen und `?zoom=` aus der URL entfernen (Abschnitt 5a); Aufgaben-Monitor: `?zoom=2`. **Nicht** `--force-device-scale-factor` |
+| Vertretungsplan nur als iframe | Kiosk-URL ohne oder mit veraltetem `key` → URL aus dem Admin neu eintragen |
 | Neue IP nach WLAN-Wechsel unbekannt | über `pi@<hostname>.local` verbinden (Abschnitt 11) |
 | CEC schaltet TV **ein** aber nicht **aus** | Panel unterstützt CEC-Standby nicht → LAN→RS232 / SICP nutzen (Abschnitt 9a) |
 | `cec-client` → `errno=16` (busy) | `stagedesk-power.service` belegt `/dev/cec0` → vorher `sudo systemctl stop stagedesk-power.service` |

@@ -119,7 +119,7 @@ Nach dem ersten Deploy mit frischer DB:
 
 ## Monitor Schritt 0 (englische Umbenennung)
 
-Migrationen: `monitor` 0035 bis 0038, `users` 0015. Alte Pi-Displays laden sich über den Übergangsschlüssel `neu_laden_zeit` innerhalb von ca. 2 Minuten selbst neu. `/bildschirm/power`, `/onair` und `/notfall` bleiben als Aliase bestehen.
+Migrationen: `monitor` 0035 bis 0038, `users` 0015. Alte Pi-Displays luden sich damals über den Übergangsschlüssel `neu_laden_zeit` selbst neu; der Schlüssel ist mit "Monitor Anzeige und Admin" entfallen. Neu laden geht jetzt über "Neu laden" im Monitor-Admin (WebSocket `ws/monitor/display/<slug>/`, ältere Anzeigen über `reload_requested_at` in `/display`). `/bildschirm/power`, `/onair` und `/notfall` bleiben als Aliase bestehen.
 
 1. **Backup:** Backup-Tag setzen, Tarball und DB-Dump nach `~/stagedesk-backups/` (`pg_dump`, siehe oben).
 2. **`.env`:** In `/opt/stagedesk/backend/.env` die Variablen `NAHSH_HAFAS_AID` und `SWHL_STORYBLOK_TOKEN` eintragen (Werte nie committen).
@@ -129,6 +129,46 @@ Migrationen: `monitor` 0035 bis 0038, `users` 0015. Alte Pi-Displays laden sich 
 5. **Prüfen:** `/api/monitor/display?screen=glocke` und `?screen=mensa` laden, ATEM On-Air einmal ein- und ausschalten. Sichtprüfung: glocke und mensa haben sich innerhalb von ca. 2 Minuten in die neue Oberfläche neu geladen.
    Das alte `GET /bildschirm/power` behält seine Schlüssel der obersten Ebene, die Zeitplan-Einträge darin nutzen aber jetzt `days`/`from`/`until`. Die Pi-Skripte im Repo nutzen den WebSocket; relevant nur für eigene Cron-Skripte.
 6. **Rollback (Reihenfolge):** Zuerst beide Migrationen zurückfahren, bevor der Code zurückgesetzt wird: `python manage.py migrate monitor 0034` und `python manage.py migrate users 0014`. Erst danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
+
+---
+
+## Monitor Anzeige und Admin
+
+Neue Anzeige unter `/monitor` und neues Admin unter `/monitor-admin`. Migrationen: `monitor` 0039 bis 0042, `users` 0016. Neue Python-Abhängigkeit `pypdfium2` (PDF-Seiten rendern); `deploy.sh` installiert sie über `pip install -r requirements.txt`.
+
+### Rechte
+
+`monitor.edit` wird durch Migration `users` 0016 aufgeteilt. Gruppen und Nutzer, die `monitor.edit` hatten, bekommen `monitor.setup`, `monitor.exams`, `monitor.media` und `monitor.power`; danach entfällt `monitor.edit`. `monitor.view`, `monitor.onair` und `monitor.emergency` bleiben unverändert.
+
+| Recht | Erlaubt |
+|---|---|
+| `monitor.view` | Übersicht ansehen (Voraussetzung für alle Admin-Seiten) |
+| `monitor.setup` | Ansichten, Bildschirme, Einstellungen, Vorschau, Neu laden |
+| `monitor.exams` | Klausuren, Klausur-Vorlagen, Termine, Ankündigungen |
+| `monitor.media` | Medien hochladen und löschen |
+| `monitor.power` | An/aus, "bis Tagesende aus", Ferien, Zeitpläne |
+| `monitor.onair` | On-Air |
+| `monitor.emergency` | Notfall und Notfall-Vorlagen |
+| `monitor.devices` | noch ohne Funktion (Geräte-Agent, Teilprojekt C) |
+
+Die Aufteilung erlaubt es, später etwa Hausmeister (`view` + `power`) oder Sekretariat (`view` + `exams`) einzelne Teile zu geben, ohne Zugriff auf die Einrichtung. Nach der Migration ändert sich für Bestandsnutzer nichts.
+
+### Ablauf
+
+1. **Backup:** Backup-Tag setzen, Tarball und DB-Dump nach `~/stagedesk-backups/` (`pg_dump`, siehe oben).
+2. **Probelauf:** Produktions-Dump in eine Test-DB einspielen und `python manage.py migrate` ausführen. Stichprobe: Ansichten haben einen Typ (Vertretungsplan, Info, Abfahrten, Medien, Wechsel), Bildschirme zeigen auf ihre Standard-Ansicht, Gruppen mit `monitor.edit` haben jetzt `setup`, `exams`, `media` und `power`.
+3. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`. Wie in Schritt 0 können `/display`, `/onair` und die Pi-Power-Abfragen im Deploy-Fenster kurz Fehler liefern.
+4. **Medien rendern:** `python manage.py monitor_render_media`. Die Migration rendert keine Dateien; bis zu diesem Schritt zeigen Medien-Ansichten nichts. Der Befehl ist idempotent und darf erneut laufen.
+5. **WebUntis prüfen:** `python manage.py monitor_webuntis_check`. Gibt pro Weg nur "geht" oder "geht nicht" aus, keine Daten.
+6. **Sichtprüfung:** glocke und mensa im Admin über "Neu laden" neu laden (sonst geschieht das spätestens beim nächtlichen Neuladen bzw. Neustart gegen 4 Uhr) und vor Ort ansehen.
+7. **Kiosk-URL pro Pi:** Im Admin unter Bildschirme den Bildschirm öffnen, die Kiosk-URL (mit `key`) kopieren und in `kiosk.sh` auf dem Pi eintragen, dabei `?zoom=` entfernen. Ein `zoom` in der URL überstimmt die Skalierung aus dem Admin; die Admin-URL enthält deshalb kein `zoom`. Ohne Schlüssel funktioniert die alte URL weiter, der Vertretungsplan erscheint dann nur als iframe wie bisher. Details: `docs/raspberry-pi-monitor.md`.
+8. **Rückweg (Reihenfolge):** Zuerst die Migrationen zurückfahren: `python manage.py migrate monitor 0038` und `python manage.py migrate users 0015`. Erst danach Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten.
+
+### Nach dem Deploy
+
+- **Geheime Werte:** WebUntis-Passwort und Wetter-Schlüssel lassen sich in den Einstellungen nur noch setzen, nicht auslesen. Das Admin zeigt "Gespeichert" statt des Werts.
+- **Notfall:** Wird manuell im Admin ausgelöst und ist nicht mit der Brandmeldeanlage verbunden.
+- **Kopplung:** Das Eintragen der Kiosk-URL von Hand entfällt mit Teilprojekt C (Geräte-Agent und Kopplung).
 
 ---
 
