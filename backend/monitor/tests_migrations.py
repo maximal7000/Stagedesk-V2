@@ -16,8 +16,13 @@ class MigrationTestCase(TransactionTestCase):
     """
     migrate_from = None
     migrate_to = None
+    # PostgreSQL gibt Spalten-Slots gelöschter Spalten nicht frei; viele Hin- und Rückwege über
+    # die alten Breit-Tabellen sprengen die Grenze von 1600 Spalten. Dort nur ausgewählte Tests.
+    run_on_postgresql = False
 
     def setUp(self):
+        if connection.vendor == 'postgresql' and not self.run_on_postgresql:
+            self.skipTest('Migrations-Rundweg nur auf SQLite (PostgreSQL: max. 1600 Spalten je Tabelle)')
         super().setUp()
         assert self.migrate_from and self.migrate_to, "migrate_from und migrate_to setzen"
         executor = MigrationExecutor(connection)
@@ -607,6 +612,7 @@ class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
     """Final-Review 1: 0042 -> 0038 in EINEM Lauf zurück, mit Rotations-Ansichten samt Verweisen."""
     migrate_from = DISPLAY_DATA_FROM
     migrate_to = ('monitor', '0042_media_page_upload_dir')
+    run_on_postgresql = True
 
     def setUpBeforeMigration(self, apps):
         _make_view(apps.get_model('monitor', 'DisplayView'), 'v', name='V', layout='standard',
