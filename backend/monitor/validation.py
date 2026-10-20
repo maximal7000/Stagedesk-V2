@@ -25,6 +25,47 @@ CHOICE_FIELDS = {
 }
 
 
+# Zahlenfelder → (Bezeichnung, kleinster, größter Wert); Bereiche wie in den Editoren des Admin
+NUMBER_FIELDS = {
+    'page_seconds': ('Blättertakt', 5, 120),
+    'media_seconds': ('Sekunden pro Seite', 3, 600),
+    'pdf_per_screen': ('Seiten nebeneinander', 1, 3),
+    'pdf_static_page': ('Feste Seite', 1, 999),
+}
+WALK_MINUTES = (0, 60)
+MAX_DEPARTURES = (1, 30)
+
+
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
+
+
+def number_message(label, lo, hi):
+    return f"{label}: bitte eine ganze Zahl von {lo} bis {hi} eintragen."
+
+
+def _check_numbers(data):
+    for key, (label, lo, hi) in NUMBER_FIELDS.items():
+        if key in data and not (_is_int(data[key]) and lo <= data[key] <= hi):
+            raise HttpError(422, number_message(label, lo, hi))
+    # Breite links: wie bisher in den Bereich geklemmt, aber nie leer
+    if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
+        raise HttpError(422, number_message('Breite links', 20, 80))
+
+
+def _check_stops(stops):
+    if not isinstance(stops, list):
+        raise HttpError(422, "Die Haltestellen sind ungültig. Bitte die Seite neu laden.")
+    for stop in stops:
+        if not isinstance(stop, dict):
+            raise HttpError(422, "Die Haltestellen sind ungültig. Bitte die Seite neu laden.")
+        name = stop.get('name') or stop.get('id') or 'ohne Namen'
+        for key, label, (lo, hi) in (('walk_minutes', 'Fußweg', WALK_MINUTES),
+                                     ('max_departures', 'Max. Zeilen', MAX_DEPARTURES)):
+            if key in stop and not (_is_int(stop[key]) and lo <= stop[key] <= hi):
+                raise HttpError(422, f"Haltestelle „{name}“: {number_message(label, lo, hi)}")
+
+
 def _clamp_int(v, lo, hi):
     try:
         return max(lo, min(hi, int(v)))
@@ -37,6 +78,8 @@ def _check_choices(data):
         if key not in data:
             continue
         valid = {value for value, _ in DisplayView._meta.get_field(key).choices}
+        if data[key] in (None, ''):
+            raise HttpError(422, f"Für {label} fehlt die Auswahl. Bitte einen der angebotenen Werte wählen.")
         if data[key] not in valid:
             raise HttpError(422, f"Ungültiger Wert für {label}: „{data[key]}“. Bitte einen der angebotenen Werte wählen.")
 
@@ -65,6 +108,9 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     """Serverseitige Validierung/Sanitisierung der Ansicht-Daten.
     Prüft Auswahlwerte, klemmt Zahlenbereiche, prüft Zeitfenster, Countdown und Rotationseinträge."""
     _check_choices(data)
+    _check_numbers(data)
+    if 'transit_stops' in data:
+        _check_stops(data['transit_stops'])
     for key, lo, hi in [
         ('split_left_percent', 20, 80), ('split_percent', 20, 80),
         ('webuntis_zoom', 25, 400),

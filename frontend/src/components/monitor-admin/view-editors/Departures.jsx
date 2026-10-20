@@ -9,7 +9,9 @@ import StopSearch from '../shared/StopSearch'
 import StopFilterDialog from '../shared/StopFilterDialog'
 import DragHandle from '../shared/DragHandle'
 import { dragRowClass, useListDrag } from '../shared/useListDrag'
-import { DEFAULT_MAX_DEPARTURES, moveItem, newStop, stopTransport } from '../pages/viewData'
+import {
+  DEFAULT_MAX_DEPARTURES, MAX_DEPARTURES_LIMIT, WALK_MINUTES_LIMIT, moveItem, newStop, stopTransport,
+} from '../pages/viewData'
 
 const numberClass = `${fieldClass} tabular-nums`
 
@@ -44,13 +46,13 @@ function StopRow({ stop, index, drag, onChange, onFilter }) {
       </td>
       <td className="py-2 pr-2 align-middle">
         <div className="relative">
-          <input type="number" min="0" max="60" aria-label={`Fußweg ${stop.name} in Minuten`} value={stop.walk_minutes ?? 0}
+          <input type="number" min="0" max={WALK_MINUTES_LIMIT} aria-label={`Fußweg ${stop.name} in Minuten`} value={stop.walk_minutes ?? 0}
             onChange={(e) => onChange({ walk_minutes: e.target.value === '' ? '' : Number(e.target.value) })} className={`${numberClass} pr-9`} />
           <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-fg-subtle pointer-events-none">min</span>
         </div>
       </td>
       <td className="py-2 pr-3 align-middle">
-        <input type="number" min="1" max="50" aria-label={`Max. Zeilen ${stop.name}`} value={stop.max_departures ?? DEFAULT_MAX_DEPARTURES}
+        <input type="number" min="1" max={MAX_DEPARTURES_LIMIT} aria-label={`Max. Zeilen ${stop.name}`} value={stop.max_departures ?? DEFAULT_MAX_DEPARTURES}
           onChange={(e) => onChange({ max_departures: e.target.value === '' ? '' : Number(e.target.value) })} className={numberClass} />
       </td>
       <td className="py-2 pr-2 align-middle text-sm text-fg-muted">{stopTransport(stop)}</td>

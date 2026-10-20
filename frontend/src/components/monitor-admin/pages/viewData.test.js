@@ -141,3 +141,39 @@ describe('Haltestellen', () => {
     expect(stopTransport({ show_bus: false, show_rail: false, show_long_distance: false })).toBe('Keine')
   })
 })
+
+describe('viewProblems: Zahlenfelder', () => {
+  const ok = { name: 'A', kind: 'departures' }
+  it('meldet leere und zu große Zahlen der geänderten Felder', () => {
+    expect(viewProblems({ ...ok, page_seconds: '' }, ['page_seconds']))
+      .toEqual(['Blättertakt: bitte eine ganze Zahl von 5 bis 120 eintragen.'])
+    expect(viewProblems({ ...ok, media_seconds: 601 }, ['media_seconds']))
+      .toEqual(['Sekunden pro Seite: bitte eine ganze Zahl von 3 bis 600 eintragen.'])
+    expect(viewProblems({ ...ok, pdf_per_screen: 4, split_left_percent: '' }, ['pdf_per_screen', 'split_left_percent'])).toEqual([
+      'Seiten nebeneinander: bitte eine ganze Zahl von 1 bis 3 eintragen.',
+      'Breite links: bitte eine ganze Zahl von 20 bis 80 eintragen.',
+    ])
+    expect(viewProblems({ ...ok, page_seconds: 20, media_seconds: 3 }, ['page_seconds', 'media_seconds'])).toEqual([])
+  })
+  it('lässt ungeänderte Felder in Ruhe (alte Werte blockieren nichts)', () => {
+    expect(viewProblems({ ...ok, page_seconds: 2 }, ['name'])).toEqual([])
+  })
+  it('prüft Fußweg und Max. Zeilen jeder Haltestelle', () => {
+    const stops = [
+      { id: '1', name: 'Kohlmarkt', walk_minutes: '', max_departures: 10 },
+      { id: '2', name: 'Sandstraße', walk_minutes: 3, max_departures: 31 },
+    ]
+    expect(viewProblems({ ...ok, transit_stops: stops }, ['transit_stops'])).toEqual([
+      'Haltestelle „Kohlmarkt“: Fußweg: bitte eine ganze Zahl von 0 bis 60 eintragen.',
+      'Haltestelle „Sandstraße“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 30 eintragen.',
+    ])
+  })
+})
+
+describe('gespeicherter WebUntis-Link', () => {
+  it('schickt einen gelösten Link als null mit', () => {
+    expect(viewPayload({ webuntis_url: ' https://a ', webuntis_link_id: null }, ['webuntis_url', 'webuntis_link_id']))
+      .toEqual({ webuntis_url: 'https://a', webuntis_link_id: null })
+    expect(draftFromView({ webuntis_link_id: 3 }).webuntis_link_id).toBe(3)
+  })
+})

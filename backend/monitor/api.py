@@ -292,7 +292,8 @@ def delete_view(request, id: int):
 def get_view(request, view_id: int = None):
     _require_perm(request, 'monitor.view')
     if view_id:
-        return get_object_or_404(DisplayView, id=view_id)
+        # Ansichten im Papierkorb gelten als nicht vorhanden (Wiederherstellen über /trash/restore)
+        return get_object_or_404(DisplayView, id=view_id, deleted_at__isnull=True)
     return DisplayView.get()
 
 

@@ -245,7 +245,7 @@ function EditView({ viewId }) {
   const used = useMemo(() => usedOn(viewId, screens), [viewId, screens])
 
   const save = async () => {
-    const problems = viewProblems({ ...draft.draft, kind: view.kind })
+    const problems = viewProblems({ ...draft.draft, kind: view.kind }, changedKeys(base, draft.draft))
     if (problems.length) {
       toast.error(problems[0])
       return

@@ -83,8 +83,8 @@ export default function Views() {
             const used = usedOn(v.id, screens)
             return (
               <tr key={v.id} className="border-b border-line-subtle last:border-0" data-view={v.slug}>
-                <Cell>
-                  <Link to={to} className="text-sm font-semibold text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline">
+                <Cell className="text-sm">
+                  <Link to={to} className="font-semibold text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline">
                     {v.name}
                   </Link>
                 </Cell>

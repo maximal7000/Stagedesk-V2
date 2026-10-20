@@ -372,3 +372,6 @@ class PreviewValidationTest(PreviewTestBase):
         countdown = data.json()['view']['data']['countdown']
         self.assertEqual(countdown['name'], 'Abi')
         self.assertTrue(countdown['date'].startswith('2099-06-01T10:00:00+02:00'), countdown['date'])
+
+    def test_empty_number_rejected(self):
+        self.assert_rejected({'view': {'id': self.saved.id, 'page_seconds': None}}, 'Blättertakt')

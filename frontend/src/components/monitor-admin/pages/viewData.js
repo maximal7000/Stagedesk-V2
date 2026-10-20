@@ -47,6 +47,21 @@ export const MIN_ROTATION_SECONDS = 5
 export const MAX_ROTATION_SECONDS = 600
 export const DEFAULT_MAX_DEPARTURES = 10
 
+// Zahlenfelder mit Bereich, wie das Backend sie prüft (monitor/validation.py)
+export const NUMBER_RULES = {
+  page_seconds: { label: 'Blättertakt', min: 5, max: 120 },
+  media_seconds: { label: 'Sekunden pro Seite', min: 3, max: 600 },
+  pdf_per_screen: { label: 'Seiten nebeneinander', min: 1, max: 3 },
+  pdf_static_page: { label: 'Feste Seite', min: 1, max: 999 },
+  split_left_percent: { label: 'Breite links', min: 20, max: 80 },
+}
+export const WALK_MINUTES_LIMIT = 60
+export const MAX_DEPARTURES_LIMIT = 30
+
+const numberMessage = (label, min, max) => `${label}: bitte eine ganze Zahl von ${min} bis ${max} eintragen.`
+const inRange = (value, min, max) => value !== '' && value != null && Number.isInteger(Number(value))
+  && Number(value) >= min && Number(value) <= max
+
 // Felder, die das Admin bearbeitet (Teilmenge von DisplayViewUpdateSchema)
 export const EDITABLE_FIELDS = [
   'name', 'style', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
@@ -54,7 +69,7 @@ export const EDITABLE_FIELDS = [
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
   'transit_strike_active', 'transit_strike_text', 'transit_strike_lines', 'transit_strike_types',
-  'substitutions_next_day', 'webuntis_url', 'webuntis_url_next_day',
+  'substitutions_next_day', 'webuntis_url', 'webuntis_url_next_day', 'webuntis_link_id', 'webuntis_link_next_day_id',
   'media_items', 'media_seconds', 'pdf_per_screen', 'pdf_mode', 'pdf_pages', 'pdf_static_page',
   'show_announcements', 'show_events', 'show_countdown',
   'show_custom_countdown', 'custom_countdown_name', 'custom_countdown_date',
@@ -65,6 +80,7 @@ export const EDITABLE_FIELDS = [
 const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent'])
 const TEXT_FIELDS = new Set(['name', 'weather_city', 'qr_code_url', 'qr_code_label', 'transit_strike_text',
   'webuntis_url', 'webuntis_url_next_day', 'pdf_pages', 'custom_countdown_name'])
+const LINK_FIELDS = new Set(['webuntis_link_id', 'webuntis_link_next_day_id'])
 const LIST_FIELDS = new Set(['transit_disruption_rail_lines', 'transit_disruption_bus_lines', 'transit_strike_lines', 'transit_strike_types'])
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -99,7 +115,7 @@ export function normalizeStop(stop) {
     ...stop,
     name: String(stop.name ?? '').trim(),
     walk_minutes: Math.max(0, toInt(stop.walk_minutes, 0)),
-    max_departures: max >= 1 ? Math.min(max, 50) : DEFAULT_MAX_DEPARTURES,
+    max_departures: max >= 1 ? Math.min(max, MAX_DEPARTURES_LIMIT) : DEFAULT_MAX_DEPARTURES,
     filter_lines: trimList(stop.filter_lines),
     filter_direction: String(stop.filter_direction ?? '').trim(),
     filter_via: String(stop.filter_via ?? '').trim(),
@@ -113,6 +129,7 @@ function normalizeField(key, value) {
   if (INT_FIELDS.has(key)) return toInt(value, null)
   if (TEXT_FIELDS.has(key)) return String(value ?? '').trim()
   if (LIST_FIELDS.has(key)) return trimList(value)
+  if (LINK_FIELDS.has(key)) return value ? Number(value) : null
   if (key === 'custom_countdown_date') return value || null
   if (key === 'transit_stops') return (value ?? []).map(normalizeStop)
   if (key === 'rotation_items') {
@@ -154,10 +171,24 @@ export function rotationProblems(items) {
   return problems
 }
 
-export function viewProblems(draft) {
+// keys: geänderte Felder; nur deren Zahlen werden geprüft (alte, ungeänderte Werte blockieren nichts)
+export function viewProblems(draft, keys = []) {
   const problems = []
   if (!String(draft.name ?? '').trim()) problems.push('Der Name fehlt. Bitte einen Namen eintragen.')
   if (draft.kind === 'rotation') problems.push(...rotationProblems(draft.rotation_items))
+  for (const [key, { label, min, max }] of Object.entries(NUMBER_RULES)) {
+    if (keys.includes(key) && !inRange(draft[key], min, max)) problems.push(numberMessage(label, min, max))
+  }
+  if (keys.includes('transit_stops')) {
+    for (const stop of draft.transit_stops ?? []) {
+      if (!inRange(stop.walk_minutes ?? 0, 0, WALK_MINUTES_LIMIT)) {
+        problems.push(`Haltestelle „${stop.name}“: ${numberMessage('Fußweg', 0, WALK_MINUTES_LIMIT)}`)
+      }
+      if (!inRange(stop.max_departures ?? DEFAULT_MAX_DEPARTURES, 1, MAX_DEPARTURES_LIMIT)) {
+        problems.push(`Haltestelle „${stop.name}“: ${numberMessage('Max. Zeilen', 1, MAX_DEPARTURES_LIMIT)}`)
+      }
+    }
+  }
   return problems
 }
 

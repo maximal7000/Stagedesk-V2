@@ -3,7 +3,9 @@ from unittest import mock
 from django.test import TestCase
 
 from core.auth import KeycloakAuth
-from .models import DisplayView, Screen, validate_rotation_items
+from django.utils import timezone
+
+from .models import DisplayView, Screen, WebUntisLink, validate_rotation_items
 
 
 class ScreenAccessKeyTest(TestCase):
@@ -88,3 +90,56 @@ class UpdateViewApiTest(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         view.refresh_from_db()
         self.assertIsNone(view.custom_countdown_date)
+
+    def test_update_view_rejects_empty_or_out_of_range_numbers(self):
+        view = DisplayView.objects.create(name='I', slug='i', kind='departures')
+        cases = [
+            ({'page_seconds': None}, 'Blättertakt'), ({'page_seconds': 4}, 'Blättertakt'),
+            ({'page_seconds': 121}, 'Blättertakt'), ({'media_seconds': None}, 'Sekunden pro Seite'),
+            ({'media_seconds': 2}, 'Sekunden pro Seite'), ({'pdf_per_screen': 4}, 'Seiten nebeneinander'),
+            ({'pdf_static_page': 0}, 'Feste Seite'), ({'split_left_percent': None}, 'Breite links'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': None}]}, 'Fußweg'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 61}]}, 'Fußweg'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 31}]}, 'Max. Zeilen'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 'viele'}]}, 'Max. Zeilen'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': True}]}, 'Max. Zeilen'),
+        ]
+        for body, fragment in cases:
+            r = self._put(view, body)
+            self.assertEqual(r.status_code, 422, (body, r.content))
+            detail = r.json()['detail']
+            self.assertIsInstance(detail, str)
+            self.assertIn(fragment, detail)
+        view.refresh_from_db()
+        self.assertEqual((view.page_seconds, view.media_seconds, view.transit_stops), (15, 10, []))
+        stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30}]
+        r = self._put(view, {'page_seconds': 120, 'media_seconds': 3, 'pdf_per_screen': 3, 'transit_stops': stops})
+        self.assertEqual(r.status_code, 200, r.content)
+        # Breite links wird wie bisher geklemmt
+        self.assertEqual(self._put(view, {'split_left_percent': 95}).json()['split_left_percent'], 80)
+
+    def test_update_view_missing_choice_wording(self):
+        view = DisplayView.objects.create(name='I', slug='i', kind='info')
+        r = self._put(view, {'style': None})
+        self.assertEqual(r.status_code, 422, r.content)
+        self.assertEqual(r.json()['detail'], 'Für Stil fehlt die Auswahl. Bitte einen der angebotenen Werte wählen.')
+
+    def test_update_view_own_url_replaces_saved_link(self):
+        link = WebUntisLink.objects.create(name='Bibliothek', url='https://bibliothek.example/untis')
+        view = DisplayView.objects.create(name='S', slug='s', kind='substitutions', webuntis_link=link)
+        self.assertEqual(view.get_webuntis_url(), 'https://bibliothek.example/untis')
+        r = self._put(view, {'webuntis_url': 'https://eigen.example/untis', 'webuntis_link_id': None})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertIsNone(r.json()['webuntis_link_id'])
+        view.refresh_from_db()
+        self.assertIsNone(view.webuntis_link_id)
+        self.assertEqual(view.get_webuntis_url(), 'https://eigen.example/untis')
+
+    def test_get_trashed_view_is_404(self):
+        view = DisplayView.objects.create(name='T', slug='t', kind='info', deleted_at=timezone.now())
+        with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}), \
+                mock.patch('monitor.api._require_perm'):
+            self.assertEqual(self.client.get(f'/api/monitor/config?view_id={view.id}').status_code, 404)
+            view.deleted_at = None
+            view.save()
+            self.assertEqual(self.client.get(f'/api/monitor/config?view_id={view.id}').status_code, 200)

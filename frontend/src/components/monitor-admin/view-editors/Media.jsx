@@ -10,6 +10,7 @@ import { errorText } from '../shared/errorText'
 import { getFiles } from '../shared/api'
 import { moveItem } from '../pages/viewData'
 
+const MEDIA_KINDS = new Set(['pdf', 'image'])
 const PER_SCREEN_OPTIONS = [1, 2, 3].map((n) => ({ value: n, label: String(n) }))
 const PDF_MODE_OPTIONS = [
   { value: 'cycle', label: 'Alle Seiten' },
@@ -62,7 +63,8 @@ export default function MediaEditor({ draft, set }) {
     return () => { alive = false }
   }, [])
 
-  const available = (files ?? []).filter((f) => !items.includes(f.id))
+  // Nur PDFs und Bilder; Logos und Hintergründe gehören nicht in die Medien-Ansicht
+  const available = (files ?? []).filter((f) => MEDIA_KINDS.has(f.kind) && !items.includes(f.id))
   const add = () => {
     if (!pick) return
     set('media_items', [...items, Number(pick)])
@@ -111,7 +113,7 @@ export default function MediaEditor({ draft, set }) {
           )}
           {mode === 'static' && (
             <Field label="Seite" htmlFor={ids.page}>
-              <input id={ids.page} type="number" min="1" value={draft.pdf_static_page ?? 1}
+              <input id={ids.page} type="number" min="1" max="999" value={draft.pdf_static_page ?? 1}
                 onChange={(e) => set('pdf_static_page', e.target.value === '' ? '' : Number(e.target.value))} className={`${fieldClass} tabular-nums max-w-32`} />
             </Field>
           )}

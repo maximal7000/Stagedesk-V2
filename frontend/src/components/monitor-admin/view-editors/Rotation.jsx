@@ -1,5 +1,6 @@
 // Editor für den Wechsel (Spec §3.1): Liste aus Ansicht und Sekunden, sortierbar per Ziehen.
 // Wechsel-Ansichten und die eigene Ansicht sind nicht wählbar (Backend: validate_rotation_items).
+import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../ui'
 import { Section, fieldClass } from '../shared/form'
@@ -8,6 +9,26 @@ import { dragRowClass, useListDrag } from '../shared/useListDrag'
 import {
   MAX_ROTATION_SECONDS, MIN_ROTATION_SECONDS, kindLabel, moveItem, rotationChoices, rotationProblems,
 } from '../pages/viewData'
+
+// Stabile Schlüssel je Zeile (Einträge haben keine id): Verschieben, Entfernen und Hinzufügen führen sie
+// mit, damit React die Zeile samt Fokus mitnimmt. Passt die Anzahl nicht (Verwerfen, neu geladen), neu vergeben.
+let nextRowKey = 0
+const freshKey = () => `row-${++nextRowKey}`
+
+function useRowKeys(count) {
+  const [keys, setKeys] = useState(() => Array.from({ length: count }, freshKey))
+  let current = keys
+  if (keys.length !== count) {
+    current = Array.from({ length: count }, freshKey)
+    setKeys(current)
+  }
+  return {
+    keys: current,
+    move: (a, b) => setKeys((k) => moveItem(k, a, b)),
+    remove: (i) => setKeys((k) => k.filter((_, j) => j !== i)),
+    add: () => setKeys((k) => [...k, freshKey()]),
+  }
+}
 
 // Typ nur nennen, wenn der Name ihn nicht schon enthält ("Abfahrten (Abfahrten)" vermeiden)
 function optionLabel(view) {
@@ -23,7 +44,10 @@ export default function RotationEditor({ draft, set, views, viewId }) {
   const names = Object.fromEntries((views ?? []).map((v) => [v.id, v.name]))
   const setItems = (next) => set('rotation_items', next)
   const update = (i, patch) => setItems(items.map((item, j) => (j === i ? { ...item, ...patch } : item)))
-  const drag = useListDrag(items.length, (a, b) => setItems(moveItem(items, a, b)))
+  const rowKeys = useRowKeys(items.length)
+  const drag = useListDrag(items.length, (a, b) => { rowKeys.move(a, b); setItems(moveItem(items, a, b)) })
+  const remove = (i) => { rowKeys.remove(i); setItems(items.filter((_, j) => j !== i)) }
+  const add = () => { rowKeys.add(); setItems([...items, { view_id: null, seconds: 15 }]) }
 
   return (
     <Section title="Ansichten im Wechsel" data-editor-section="rotation"
@@ -34,7 +58,7 @@ export default function RotationEditor({ draft, set, views, viewId }) {
             const label = names[item.view_id] ?? `Zeile ${i + 1}`
             const known = choices.some((v) => v.id === item.view_id)
             return (
-              <li key={i} {...drag.rowProps(i)} className={`flex items-center gap-2 py-2 ${dragRowClass}`}>
+              <li key={rowKeys.keys[i]} {...drag.rowProps(i)} className={`flex items-center gap-2 py-2 ${dragRowClass}`}>
                 <DragHandle label={`${label} verschieben`} onKeyDown={drag.handleKeyDown(i)} />
                 <span className="w-5 text-right text-sm text-fg-subtle tabular-nums">{i + 1}</span>
                 <label className="sr-only" htmlFor={`rotation-view-${i}`}>Ansicht in Zeile {i + 1}</label>
@@ -50,7 +74,7 @@ export default function RotationEditor({ draft, set, views, viewId }) {
                     className={`${fieldClass} pr-8 tabular-nums`} />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-fg-subtle pointer-events-none">s</span>
                 </div>
-                <button type="button" onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label={`${label} entfernen`} title={`${label} entfernen`}
+                <button type="button" onClick={() => remove(i)} aria-label={`${label} entfernen`} title={`${label} entfernen`}
                   className="p-1.5 rounded-md text-fg-subtle hover:text-bad hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -68,7 +92,7 @@ export default function RotationEditor({ draft, set, views, viewId }) {
       )}
       <div className="mt-4">
         {choices.length ? (
-          <Button icon={Plus} onClick={() => setItems([...items, { view_id: null, seconds: 15 }])}>Ansicht hinzufügen</Button>
+          <Button icon={Plus} onClick={add}>Ansicht hinzufügen</Button>
         ) : (
           <p className="text-sm text-fg-muted">Es gibt noch keine andere Ansicht. Erst eine Ansicht anlegen, dann hier hinzufügen.</p>
         )}

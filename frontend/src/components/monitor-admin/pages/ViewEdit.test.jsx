@@ -18,9 +18,18 @@ const VIEWS = {
     ],
     transit_disruption_rail: true, transit_disruption_bus: true, rotation_items: [], media_items: [],
   },
+  2: {
+    id: 2, name: 'Vertretungsplan', slug: 'substitutions-plan', kind: 'substitutions', style: 'auto', is_default: false,
+    on_air_behavior: 'fullscreen', webuntis_url: '', webuntis_url_next_day: '', webuntis_link_id: 5,
+    webuntis_link_next_day_id: null, page_seconds: 15, substitutions_next_day: true, transit_stops: [], rotation_items: [], media_items: [],
+  },
+  6: {
+    id: 6, name: 'Aushänge', slug: 'notices', kind: 'media', style: 'auto', is_default: false, on_air_behavior: 'fullscreen',
+    media_items: [], media_seconds: 10, pdf_per_screen: 1, pdf_mode: 'cycle', transit_stops: [], rotation_items: [],
+  },
   4: {
     id: 4, name: 'Wechsel Mensa', slug: 'rotation-canteen', kind: 'rotation', style: 'auto', is_default: false,
-    on_air_behavior: 'fullscreen', rotation_items: [{ view_id: 1, seconds: 20 }], transit_stops: [], media_items: [],
+    on_air_behavior: 'fullscreen', rotation_items: [{ view_id: 1, seconds: 20 }, { view_id: 2, seconds: 30 }], transit_stops: [], media_items: [],
   },
 }
 const LIST = [
@@ -38,8 +47,12 @@ vi.mock('../shared/api', () => ({
   previewView: vi.fn(() => new Promise(() => {})),
   createView: vi.fn(),
   deleteView: vi.fn(),
-  getFiles: vi.fn(() => Promise.resolve([])),
+  getFiles: vi.fn(() => Promise.resolve([
+    { id: 11, name: 'Speiseplan', kind: 'pdf' }, { id: 12, name: 'Plakat', kind: 'image' },
+    { id: 13, name: 'Schullogo', kind: 'logo' }, { id: 14, name: 'Hintergrund Aula', kind: 'background' },
+  ])),
   searchStops: vi.fn(() => Promise.resolve([])),
+  getWebuntisLinks: vi.fn(() => Promise.resolve([{ id: 5, name: 'Untis zwei Tage', url: 'https://untis.example/2' }])),
 }))
 
 const api = await import('../shared/api')
@@ -57,6 +70,11 @@ async function mount(path) {
         createElement(Route, { path: '/monitor-admin/views/new', element: createElement(ViewEdit) }),
         createElement(Route, { path: '/monitor-admin/views/:id', element: createElement(ViewEdit) }))))
   })
+}
+function typeInto(input, value) {
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+  setter.call(input, value)
+  input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 const button = (name) => [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === name || b.getAttribute('aria-label') === name)
 const stopNames = () => [...container.querySelectorAll('[data-stop-row]')].map((r) => r.getAttribute('data-stop-row'))
@@ -132,5 +150,37 @@ describe('ViewEdit', () => {
     expect(container.textContent).not.toContain('Anlegen')
     await act(async () => tiles[5].click())
     expect(container.textContent).toContain('Anlegen')
+  })
+
+  it('nimmt beim Verschieben im Wechsel den Fokus mit der Zeile mit', async () => {
+    await mount('/monitor-admin/views/4')
+    const handle = button('Abfahrten Halle verschieben')
+    handle.focus()
+    await act(async () => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
+    expect(document.activeElement?.getAttribute('aria-label')).toBe('Abfahrten Halle verschieben')
+    expect(container.querySelector('#rotation-view-1').value).toBe('1')
+  })
+
+  it('speichert nicht mit leerer Zahl und nennt den Bereich', async () => {
+    await mount('/monitor-admin/views/1')
+    await act(async () => typeInto(container.querySelector('input[aria-label="Max. Zeilen Kohlmarkt"]'), ''))
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Haltestelle „Kohlmarkt“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 30 eintragen.')
+  })
+
+  it('zeigt den gespeicherten WebUntis-Link und löst ihn, wenn die Adresse bearbeitet wird', async () => {
+    await mount('/monitor-admin/views/2')
+    expect(container.textContent).toContain('Aktiv ist der gespeicherte Link „Untis zwei Tage“')
+    await act(async () => typeInto(container.querySelector('input[type="url"]'), 'https://eigen.example'))
+    expect(container.textContent).not.toContain('Aktiv ist der gespeicherte Link')
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).toHaveBeenCalledWith(2, { webuntis_url: 'https://eigen.example', webuntis_link_id: null })
+  })
+
+  it('bietet in der Medien-Ansicht nur PDFs und Bilder an', async () => {
+    await mount('/monitor-admin/views/6')
+    const select = container.querySelector('[data-editor-section="media"] select')
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Datei wählen', 'Speiseplan', 'Plakat'])
   })
 })
