@@ -8,7 +8,7 @@
 - **Etappe 1, Backend** (Tasks 1–6): neue, reine Module `untis_monitor.py` (Client), `substitution_rows.py` (Sortierung und Klassenlisten), `screen_schedule.py` (gemeinsamer Zeitplan), `sun.py` und `color_scheme.py`; drei Migrationen 0044–0046 mit Rückweg; `display.py` setzt alles zum Payload zusammen.
 - **Etappe 2, Anzeige** (Tasks 7–8): Rahmen `NormalFrame`/`WideFrame` mit Farbschema als CSS-Klasse, neue `SubstitutionsView`.
 - **Etappe 3, Admin** (Tasks 9–12): Vertretungsplan-Editor, Typwahl, Zeitplan-Abschnitt, Farbschema in den Einstellungen.
-- **Abschluss** (Tasks 13–14): Zeilen-Parser gegen echte Schultagsdaten (Gate), Screenshots und Doku.
+- **Abschluss** (Task 13): Screenshots, Doku, Endkontrolle.
 
 **Tech Stack:** Django 5 + Ninja 1.1, `requests`, Django-Cache (Tests LocMem); React 19, Tailwind v4, vitest, playwright-core.
 
@@ -21,11 +21,10 @@
 - Admin: Bühnenschwarz-Tokens, Bausteine aus `frontend/src/components/ui/` und `monitor-admin/shared/` (`Section`, `Field`, `Segmented`, `Checkbox`, `fieldClass`, `DragHandle`, `useListDrag`, `ConfirmDialog`), `rounded-lg`, lucide-react, `npm run check:tokens` grün.
 - Anzeige: Farben nur über `--d-*`-Variablen in `display.css`; Akzent `--d-red: #da1f3d`.
 - Ninja-Routen `""` statt `"/"`; Rechte über `_require_perm` (`backend/monitor/permissions.py`).
-- Keine Zugangsdaten im Repo. Aufgezeichnete WebUntis-Antworten als Fixtures nur **anonymisiert**: Lehrkraft-Kürzel durch erfundene Kürzel (`AAA`, `BBB` …) ersetzen, Nachrichtentexte durch Beispieltext.
+- Keine Zugangsdaten im Repo. Aufgezeichnete WebUntis-Antworten als Fixtures nur **anonymisiert**: Lehrkraft-Kürzel durch erfundene Kürzel (`YAK`, `PUL` …) ersetzen, Nachrichtentexte durch Beispieltext.
 - Jede Migration hat eine Rückwärts-Funktion; `migrate monitor 0043` stellt den alten Stand samt Daten wieder her (Power-Zeitplan, Ansichten-Zeitplan, Stil).
 - Monitor-Schnittstelle: Format-Cache 1 h, Daten-Cache wie bisher (`CACHE_SECONDS = 300`), Single-Flight-Sperre, Frist `DEADLINE_SECONDS = 20` für die ganze Kette inklusive Ausweichen, letzte gültige Daten bis 24 h pro Quelle.
 - Klassen-Reihenfolge fest: `5, 6, 7, 8, 9, 10, E, Q1, Q2`, danach alles Unbekannte alphabetisch; Buchstaben natürlich sortiert.
-- **Gate vor dem Merge nach `main`:** Task 13 (Zeilen-Parser gegen echte Schultagsdaten) ist erledigt. Ohne ihn zeigt die Hauptquelle keine Zeilen.
 - **Abweichungen von der Spec (bewusst):**
   - Klassenlisten werden im Backend formatiert (eine Stelle für beide Quellen). vitest prüft die Darstellung der fertigen Zeilen, nicht die Formatierung.
   - Geteilte Ansichten verweisen auf Inhaltsarten, nicht auf Ansichten. Die Schutzregel aus §2.1 betrifft daher nur den Wechsel: Eine Ansicht, die in einem Wechsel steckt, kann nicht selbst zum Wechsel werden.
@@ -50,7 +49,7 @@
 **Files:**
 - Create: `backend/monitor/untis_monitor.py`
 - Create: `backend/monitor/management/commands/monitor_webuntis_record.py`
-- Create: `backend/monitor/fixtures_untis/format-vplan-schueler.json`, `format-vplan-lehrer.json`, `data-holiday.json` (anonymisierte Aufzeichnung vom 21.10.2026: `rows` leer, `date` 20261026, `absentElements` mit einer ganztägigen Abwesenheit)
+- Create: `backend/monitor/fixtures_untis/format-vplan-schueler.json`, `format-vplan-lehrer.json`, `data-holiday.json` (Abfrage für 26.10.2026: `rows` leer), `data-schueler-20261027.json` (12 Zeilen), `data-lehrer-20261027.json` (8 Zeilen) — anonymisiert aus den Rohaufnahmen vom 21.10.2026 unter `/tmp/claude-0/-home-user-Stagedesk-V2/d4261319-0d32-55a2-be62-78262df7d327/scratchpad/untis-rec2/` (`fmt-*.json`, `data-*-2026102{6,7}.json`). Die Rohdateien nie committen. Kürzel durchgehend durch erfundene Kürzel ersetzt (ein Kürzel mit Umlaut und eines mit Bindestrich bleiben als Testfall).
 - Test: `backend/monitor/tests_untis_monitor.py`
 
 **Interfaces:**
@@ -61,7 +60,13 @@
   - `fetch_format(server: str, school: str, format_name: str, deadline: float) -> dict` (Feld `payload` der Antwort; Cache-Schlüssel `monitor:untis-monitor:format:<format_name>`, 3600 s)
   - `fetch_day(server, school, format_name, options: dict, day: date, deadline: float) -> dict` (rohes `payload`)
   - `parse_header(payload: dict, show_absences: bool) -> dict` mit Schlüsseln `date` (ISO), `next_date` (ISO oder None), `absent` (Liste `{'name', 'kind': 'teacher'|'class', 'periods': '' | '3.–4.'}`), `affected` (`{'classes': [...], 'teachers': [...]}`), `messages` (Liste `{'subject', 'body'}`, Text ohne HTML), `updated_at` (ISO aus `lastUpdate` „19.10.2026 11:41:02“, lokal)
-  - `parse_rows(payload: dict, options: dict) -> list[dict]` — in diesem Task Stub, der `[]` liefert; Task 13 ersetzt ihn.
+  - `parse_rows(payload: dict, options: dict) -> list[dict]` in der Zeilenform aus Task 2. Festgestelltes Format (Aufnahme 27.10.2026):
+    - `row['data']` ist eine Liste von HTML-Zellen; Spalten in fester Reihenfolge, je vorhanden laut Format-Option: `showHour` → Stunden („1“, „1 - 2“ → `periods` „1.“ bzw. „1.–2.“), `showTime` → Uhrzeit (verwerfen), `showClass` → Klassen („Q1c, Q1d, Q2a“ an „, “ trennen), `showSubject` → Fach, `showRoom` → Raum, `showTeacher` → Lehrkraft, `showSubstText` → Art, `showInfo` → Hinweis. Die Spaltenzuordnung steht in einer Konstante und ist gegen beide Fixtures getestet.
+    - Geänderte Lehrkraft: `<span class="substMonitorSubstElem">ROT</span> (<span class="cancelStyle">ÖLZ</span>)` → `teacher` „ROT“, `teacher_old` „ÖLZ“. Geänderter Raum: `<span class="substMonitorSubstElem">204</span> (209)` → `room` „204“, `room_old` „209“. Allgemein: Wert in `substMonitorSubstElem` (oder ganzer Text ohne Klammerteil) ist neu, Klammerteil ist alt.
+    - HTML-Entities auflösen („Raum&auml;nderung“ → „Raumänderung“), Tags entfernen.
+    - `kind_label`: Art-Text aus WebUntis unverändert („Raumänderung“, „Prüfung“, „Text“), leer → „Vertretung“. `kind`: enthält die Art „Entfall“ oder „Ausfall“ oder `cssClasses` „cancelStyle“ → `cancelled`; „Raumänderung“ → `room_change`; leer → `substitution`; sonst `other`.
+    - `group` = `row['group']`.
+    - WebUntis wiederholt einen Eintrag je Gruppe (Schülerformat: je Klasse, Lehrkräfteformat: je Lehrkraft, z. B. ROT und ÖLZ). `parse_rows` liefert die Zeilen wie geliefert; das Entdoppeln macht Task 3.
   - `load_days(server, school, format_name, *, start: date, count: int, overrides: dict, show_absences: bool, deadline: float) -> dict` mit `{'group_by': 'class'|'teacher', 'columns': {...}, 'days': [header + {'rows': [...]}], 'updated_at'}`; der zweite Tag wird mit `next_date` des ersten angefragt. `group_by` aus Format-Option `groupBy` (1 = class, 2 = teacher). `columns` aus den Format-Optionen: `{'class': showClass, 'subject': showSubject, 'teacher': showTeacher, 'room': showRoom, 'note': showInfo or showSubstText}`; Stunde, Art und bei `teacher` das Kürzel sind immer da. Die Konto-Abfrage liefert alle Spalten `True`.
 - Elementtypen in `absentElements`/`affectedElements`: `1` = Klasse, `2` = Lehrkraft.
 
@@ -76,16 +81,30 @@ class ParseHeaderTests(SimpleTestCase):
     def test_holiday_payload(self):
         h = untis_monitor.parse_header(load('data-holiday.json')['payload'], show_absences=True)
         self.assertEqual(h['date'], '2026-10-26')
-        self.assertEqual(h['absent'], [{'name': 'AAA', 'kind': 'teacher', 'periods': ''}])
-        self.assertEqual(h['affected']['teachers'], ['BBB', 'CCC', 'DDD'])
+        self.assertEqual(h['absent'], [{'name': 'YAK', 'kind': 'teacher', 'periods': ''}])
+        self.assertEqual(h['affected']['teachers'], ['PUL', 'IMO', 'OXE'])
         self.assertEqual(h['updated_at'], '2026-10-19T11:41:02+02:00')
 
     def test_partial_absence_periods(self):
         # absences[{startUnit: 3, endUnit: 4}] -> "3.–4."; nur eine Stunde -> "3."
+        # Fixture 27.10.: ÖLZ mit type TO, startUnit '1', endUnit '1' -> periods '1.'; ALL_DAY mit '0' -> ''
     def test_absences_hidden(self):
         # show_absences=False -> absent == [], affected == {'classes': [], 'teachers': []}
     def test_messages_html_stripped(self):
         # messageData.messages[{subject, body: "<b>Text</b>"}] -> body "Text"
+
+class ParseRowsTests(SimpleTestCase):
+    def test_students_fixture(self):
+        rows = parse_rows(load('data-schueler-20261027.json')['payload'], load('format-vplan-schueler.json')['payload'])
+        self.assertEqual(len(rows), 12)
+        first = rows[0]
+        self.assertEqual((first['periods'], first['classes'], first['subject'], first['room'],
+                          first['teacher'], first['teacher_old'], first['kind'], first['kind_label']),
+                         ('1.', ['5c'], 'De', '179', 'ROT', 'ÖLZ', 'substitution', 'Vertretung'))
+    def test_room_change(self):      # 7a: room '204', room_old '209', kind 'room_change', periods '1.–2.'
+    def test_class_list_split(self): # Griechisch: classes ['Q1c', 'Q1d', 'Q2a', 'Q2b', 'Q2d'], note 'Klausur'
+    def test_teachers_fixture(self): # 8 Zeilen, group 'ROT' und 'ÖLZ' für denselben Eintrag, 'Prüfung' als kind_label
+    def test_entities_and_tags(self):
 
 class FetchTests(TestCase):
     def test_format_cached_one_hour(self):  # zweiter Aufruf ohne HTTP; nach 3601 s erneut
@@ -124,7 +143,7 @@ git commit -m "feat(monitor): Client der WebUntis-Monitor-Schnittstelle (Format,
 
 **Interfaces:**
 - Produces:
-  - Zeilenform beider Quellen (gemeinsam, Konstante `ROW_KEYS` in `webuntis.py`): `{'classes': list[str], 'group': str, 'periods', 'subject', 'teacher', 'teacher_old', 'room', 'room_old', 'kind', 'note'}`; `group` ist bei der Konto-Abfrage `''`. Das bisherige `class` entfällt.
+  - Zeilenform beider Quellen (gemeinsam, Konstante `ROW_KEYS` in `webuntis.py`): `{'classes': list[str], 'group': str, 'periods', 'subject', 'teacher', 'teacher_old', 'room', 'room_old', 'kind', 'kind_label', 'note'}`; `group` ist bei der Konto-Abfrage `''`, `kind_label` dort die deutsche Bezeichnung zu `kind` („Vertretung“, „Entfall“, „Raumänderung“, „Änderung“). Das bisherige `class` entfällt.
   - `get_substitutions(now, *, start: date | None = None, count: int = 2) -> dict` mit zusätzlichem `updated_at: None`.
   - Ferien: `_untis_holidays(session) -> list[tuple[date, date]]` (JSON-RPC `getHolidays`, Ergebnis 24 h gecacht unter `monitor:webuntis:holidays`); `school_days(start, count, holidays)` überspringt eigene `HolidayPeriod`, WebUntis-Ferien und Wochenenden.
 
@@ -157,6 +176,7 @@ def test_start_and_count(self):
   - `split_class(name: str) -> tuple[str, str] | None` — `'Q2a'` → `('Q2', 'a')`, `'10b'` → `('10', 'b')`, `'E'` → `('E', '')`; sonst `None` (Muster `^(10|[5-9]|E|Q[12])([a-z]?)$`, Groß/Klein egal, Ausgabe Buchstabe klein).
   - `class_sort_key(name: str) -> tuple`
   - `format_classes(names: list[str]) -> str` — je Stufe „Q2a, c, d“; drei oder mehr lückenlose Buchstaben als Bereich mit „–“ („Q2a–d“, „Q2a–c, e“); zwei bleiben einzeln („Q1c, d“); Stufen in fester Reihenfolge mit „, “ getrennt; unbekannte Namen unverändert am Ende.
+  - Entdoppeln vorab (beide Funktionen): Zeilen, die bis auf `group` gleich sind, gelten in der Schüleransicht als ein Eintrag; in der Lehrkräfte-Ansicht bleiben Zeilen mit verschiedener `group` getrennt (vertretende und abwesende Lehrkraft), gleiche `group` doppelt wird eins.
   - `student_rows(rows: list[dict]) -> list[dict]` — je betroffener Stufe genau eine Kopie mit `classes_label` der Klassen dieser Stufe und `grade`; unbekannte Namen bilden je Name eine eigene Gruppe am Ende; Sortierung nach Stufe, erster Klasse, Stundenbeginn.
   - `teacher_rows(rows: list[dict]) -> list[dict]` — Zeile einmal, `classes_label = format_classes(alle)`, sortiert nach `group` (natürlich), dann Stundenbeginn.
 
@@ -180,6 +200,9 @@ def test_unknown_names_kept_and_last(self):
     # ['DaZ', '5a', 'Q2 Ku', ''] -> '5a' zuerst, 'DaZ' und 'Q2 Ku' unverändert danach, '' ignoriert
 def test_duplicates_once_per_grade(self):
     # ['5a', '5a', '5b'] -> eine Zeile, '5a, b'
+def test_untis_repeats_collapsed(self):
+    # Fixture data-schueler-20261027.json über parse_rows: Griechisch kommt 5x (je Klasse), Informatik 3x
+    # -> Griechisch je einmal unter Q1 ('Q1c, d') und Q2 ('Q2a, b, d'), Informatik einmal unter Q2 ('Q2b–d')
 def test_teacher_rows_single_line(self):
     # gleiche Zeile mit 3 Stufen -> eine Zeile, group-Sortierung 'ABC' < 'BEC' < 'ZZZ'
 ```
@@ -400,6 +423,7 @@ it('Uhr-Kasten nutzt die Kastenfarbe', () => { /* ClockBox variant="box" hat Kla
 - Spalten:
   - `group_by: 'class'`: Klasse · Std. · Fach · Lehrkraft · Raum · Art · Hinweis
   - `group_by: 'teacher'`: Kürzel · Std. · Klasse · Fach · Lehrkraft · Raum · Art · Hinweis
+  - Art zeigt `kind_label`, Farbe nach `kind` (Entfall rot, Raumänderung blau).
   - Spalten mit `columns[x] === false` entfallen (Format-Optionen aus WebUntis).
   - Lehrkraft und Raum mit Altwert: `<s>HRT</s> KLM`. Hinweis und Klasse brechen um (`whitespace-normal`, kein `truncate`).
 - Kopf je Tag (nur wenn Einträge da sind): „Abwesend“ mit Lehrkräften und Klassen (Stunden in Klammern, „BEC (3.–4.)“), „Betroffen“ mit Klassen und Lehrkräften; Nachrichten darunter.
@@ -531,26 +555,7 @@ it('speichert schedule mit view_id null für Standard-Ansicht', () => {})
 
 ## Abschluss
 
-### Task 13: Zeilen der Monitor-Schnittstelle (Gate, ab dem ersten Schultag)
-
-Erst ausführbar, wenn WebUntis Zeilen liefert (nach den Herbstferien, ab Montag 26.10.2026). Liefert die Aufzeichnung keine Zeilen: Status BLOCKED, nicht raten.
-
-**Files:**
-- Modify: `backend/monitor/untis_monitor.py` (`parse_rows`)
-- Create: `backend/monitor/fixtures_untis/data-schoolday-students.json`, `data-schoolday-teachers.json` (anonymisiert)
-- Test: `backend/monitor/tests_untis_monitor.py`
-
-**Interfaces:**
-- Produces: `parse_rows(payload, options) -> list[dict]` in der Zeilenform aus Task 2 (`classes` als Liste, `group` = Gruppenwert der Zeile, Altwerte aus durchgestrichenen Zellen in `teacher_old`/`room_old`, `kind` aus der Zeilen-CSS-Klasse auf `substitution | cancelled | room_change | other`, `note` = Info und Vertretungstext ohne HTML).
-
-- [ ] **Step 1: Aufzeichnen** — `python manage.py monitor_webuntis_record --format vplan-schueler --date <heute>` und `--format vplan-lehrer`; Zellformat (Reihenfolge, HTML für Durchstreichung, Zeilenklassen) im Testkopf dokumentieren; anonymisieren.
-- [ ] **Step 2: Failing tests** — je eine Zeile pro Art (Vertretung, Entfall, Raumänderung), Zeile mit mehreren Klassen, durchgestrichene Lehrkraft und Raum, Lehrkräfte-Format mit `group`, Hinweis mit HTML.
-- [ ] **Step 3: Fehlschlag** — `python manage.py test monitor.tests_untis_monitor` → FAIL.
-- [ ] **Step 4: Implementieren.**
-- [ ] **Step 5: Grün und Gegenprobe** — lokal `npm run dev` + Backend gegen echte Daten, Anzeige mit der WebUntis-Seite `vplan-schueler` vergleichen (gleiche Zeilen, gleiche Altwerte).
-- [ ] **Step 6: Commit** — `feat(monitor): Zeilen der WebUntis-Monitor-Schnittstelle`
-
-### Task 14: Screenshots, Doku, Endkontrolle
+### Task 13: Screenshots, Doku, Endkontrolle
 
 **Files:**
 - Modify: `CLAUDE.md` (Monitor-Abschnitt: Datenquellen, Zeitplan, Aufteilung, Farbschema, `monitor_webuntis_record`), `DEPLOY.md` (Rollout der Migrationen 0044–0046, Rückweg `migrate monitor 0043`, Kontrolle nach Deploy: Vertretungsplan zeigt „Stand WebUntis“, Zeitplan der Bildschirme glocke und mensa ansehen)
