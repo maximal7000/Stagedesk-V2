@@ -291,26 +291,75 @@ class FirstSendTests(unittest.TestCase):
     setUp = WiringTests.setUp
     wait_for = WiringTests.wait_for
     run_agent = WiringTests.run_agent
+    agent = WiringTests.agent
 
     def test_telemetry_sent_right_after_hello_not_after_a_minute(self):
         done = threading.Event()
         self.done = done
         conns = self.conns
         agent = Agent(self.cfg, FakePages(), power_factory=lambda m, c, r: FakePower(m, c), runner=object(),
-                      telemetry_interval=60, telemetry_retry=60, collect=lambda *a, **k: {"system": {}},
+                      telemetry_interval=60, collect=lambda *a, **k: {"system": {}},
                       connection_factory=lambda c, om, af: conns.append(
                           HelloGatedConn(c, om, af, [{"type": "hello", "power_method": "cec"}], done)) or conns[-1])
         self.run_agent(agent, lambda: conns and conns[0].of_type("telemetry") and conns[0].of_type("power_status"))
 
-    def test_failed_send_is_retried_quickly(self):
+    def test_no_collecting_while_offline_and_immediate_send_after_reconnect(self):
         done = threading.Event()
         self.done = done
+        calls = []
         conns = self.conns
+
+        class Conn(RecordingConn):
+            connected = True
+
+            def is_connected(self):
+                return self.connected
+
         agent = Agent(self.cfg, FakePages(), power_factory=lambda m, c, r: FakePower(m, c), runner=object(),
-                      telemetry_interval=60, telemetry_retry=0.01, collect=lambda *a, **k: {"system": {}},
-                      connection_factory=lambda c, om, af: conns.append(
-                          HelloGatedConn(c, om, af, [], done)) or conns[-1])
-        self.run_agent(agent, lambda: conns and conns[0].of_type("telemetry"))
+                      telemetry_interval=0.01, collect=lambda *a, **k: calls.append(1) or {"system": {}},
+                      connection_factory=lambda c, om, af: conns.append(Conn(c, om, af, [], done)) or conns[-1])
+        thread = threading.Thread(target=agent.run_once)
+        thread.start()
+        self.assertTrue(self.wait_for(lambda: conns and conns[0].of_type("telemetry")))
+        conns[0].connected = False  # outage: no transport, backoff running
+        threading.Event().wait(0.05)
+        baseline = len(calls)
+        threading.Event().wait(0.3)
+        self.assertLessEqual(len(calls) - baseline, 1)
+        conns[0].connected = True
+        before = len(conns[0].of_type("telemetry"))
+        agent.on_message({"type": "hello", "power_method": "cec"})
+        self.assertTrue(self.wait_for(lambda: len(conns[0].of_type("telemetry")) > before))
+        done.set()
+        thread.join(5)
+
+    def test_hello_that_rebuilds_reports_status_of_new_controller(self):
+        agent = self.agent([{"type": "hello", "power_method": "ddc", "power_config": {}}], interval=60)
+        self.run_agent(agent, lambda: self.made and self.made[-1].method == "ddc"
+                       and self.conns and self.conns[0].of_type("telemetry"))
+        self.assertEqual([p.method for p in self.made], ["ddc"])  # no stale controller built first
+        self.assertEqual(self.conns[0].of_type("telemetry")[0]["power"], "standby")
+
+    def test_wake_events_are_per_run(self):
+        agent = self.agent([], interval=60)
+        self.run_agent(agent, lambda: True)
+        first = agent._telemetry_wake
+        agent.run_once()
+        self.assertIsNot(agent._telemetry_wake, first)
+
+    def test_stop_ends_power_worker_and_drops_queue(self):
+        gate = threading.Event()
+        agent = Agent(self.cfg, FakePages(), runner=object())
+        ran = []
+        agent._enqueue_power(lambda: gate.wait(5))
+        agent._enqueue_power(lambda: ran.append(1))
+        threading.Event().wait(0.05)
+        worker = agent._power_worker
+        agent.stop()
+        gate.set()
+        worker.join(2)
+        self.assertFalse(worker.is_alive())
+        self.assertEqual(ran, [])
 
     def test_power_command_does_not_block_the_reader(self):
         gate = threading.Event()

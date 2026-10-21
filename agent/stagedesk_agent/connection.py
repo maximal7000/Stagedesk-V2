@@ -84,6 +84,10 @@ class Connection:
         if transport:
             transport.close()
 
+    def is_connected(self):
+        with self._lock:
+            return self._transport is not None
+
     def send(self, msg):
         with self._lock:
             transport = self._transport
