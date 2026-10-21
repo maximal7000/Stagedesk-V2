@@ -1,10 +1,11 @@
 import { useClock } from '../lib/useClock'
-import { formatLongDate, formatTemperature, formatTime, formatWeekday } from '../lib/format'
+import { formatLongDate, formatTemperature, formatTime, formatTimeSeconds, formatWeekday } from '../lib/format'
 
 // Uhr der Anzeige. Einzige sekündlich rendernde Stelle neben useClock-Nutzern wie dem Wiederholungs-Countdown.
 //   variant "header":  große Uhr links, Datum (und Wetter) rechts, Linie darunter (Stil A und C);
 //                      stacked stapelt Datum und Wetter (Hochformat)
-//   variant "box":     dunkle Box unten rechts (Stil B, dichte Ansichten)
+//   variant "box":     Box unten rechts (Stil B, dichte Ansichten); Farben folgen dem Ton (--d-box-*): hell im hellen Stil, dunkel im dunklen
+// Alle Varianten zeigen HH:MM:SS; "Stand HH:MM" bleibt ohne Sekunden.
 //   variant "compact": nur die Uhrzeit (Zustandsbildschirme, Ruhemodus)
 // staleSince setzt den Hinweis "Stand HH:MM" (letzte gültige Daten).
 export default function ClockBox({ now, weather, staleSince, variant = 'header', stacked = false, className = '' }) {
@@ -28,7 +29,7 @@ function HeaderClock({ time, weather, staleSince, stacked, className }) {
   return (
     <header className={`flex items-end justify-between gap-[3rem] d-rule-bottom pb-[1.125rem] ${className}`}>
       <div className="flex items-baseline gap-[2.25rem]">
-        <span className="d-oswald text-[8.25rem] font-light leading-[0.9] tracking-[-0.01em]">{formatTime(time)}</span>
+        <span className="d-oswald text-[8.25rem] font-light leading-[0.9] tracking-[-0.01em] tabular-nums whitespace-nowrap">{formatTimeSeconds(time)}</span>
         {staleSince != null && <StaleHint since={staleSince} className="text-[1.75rem] text-(--d-fg-soft)" />}
       </div>
       <div className={`flex pb-[0.5rem] ${stacked ? 'flex-col items-end gap-[1.25rem]' : 'items-end gap-[3.5rem]'}`}>
@@ -54,24 +55,24 @@ function WeatherBlock({ weather }) {
 function BoxClock({ time, weather, staleSince, className }) {
   const side = weather || staleSince != null
   return (
-    <div className={`flex min-w-[15rem] items-center justify-center gap-[1.75rem] bg-[#2b2b2b] px-[1.75rem] text-[#fff] ${className}`}>
+    <div className={`flex min-w-[18rem] items-center justify-center gap-[1.75rem] border border-(--d-box-line) bg-(--d-box-bg) px-[1.75rem] text-(--d-box-fg) ${className}`}>
       {side && (
         <div className="flex flex-col items-end text-[1.25rem] leading-[1.35]">
           {weather && (
             <span className="d-lato whitespace-nowrap">
               {formatTemperature(weather.temperature)}
-              {weather.description && <span className="text-[#ffffffb3]"> {weather.description}</span>}
+              {weather.description && <span className="text-(--d-box-soft)"> {weather.description}</span>}
             </span>
           )}
           {staleSince != null && (
             <span className="whitespace-nowrap">
-              <span className="d-oswald uppercase tracking-[0.06em] text-[#ffffffb3]">Stand</span>{' '}
+              <span className="d-oswald uppercase tracking-[0.06em] text-(--d-box-soft)">Stand</span>{' '}
               <span className="d-lato">{formatTime(staleSince)}</span>
             </span>
           )}
         </div>
       )}
-      <span className="d-oswald text-[3.75rem] font-light leading-none">{formatTime(time)}</span>
+      <span className="d-oswald text-[3.5rem] font-light leading-none tabular-nums whitespace-nowrap">{formatTimeSeconds(time)}</span>
     </div>
   )
 }
@@ -79,7 +80,7 @@ function BoxClock({ time, weather, staleSince, className }) {
 function CompactClock({ time, staleSince, className }) {
   return (
     <div className={`flex flex-col items-end ${className}`}>
-      <span className="d-oswald font-light leading-[0.9]">{formatTime(time)}</span>
+      <span className="d-oswald font-light leading-[0.9] tabular-nums whitespace-nowrap">{formatTimeSeconds(time)}</span>
       {staleSince != null && <StaleHint since={staleSince} className="mt-[0.75rem] text-[1.5rem] text-(--d-fg-soft)" />}
     </div>
   )
