@@ -66,6 +66,7 @@ class DisplayViewListSchema(Schema):
     sort_order: int = 0
     schedule: list = []
     kind: str
+    rotation_items: list = []
 
 
 class DisplayViewSchema(Schema):

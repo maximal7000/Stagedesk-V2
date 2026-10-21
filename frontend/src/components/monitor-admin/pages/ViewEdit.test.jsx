@@ -36,7 +36,7 @@ const LIST = [
   { id: 1, name: 'Abfahrten Halle', kind: 'departures' },
   { id: 2, name: 'Vertretungsplan', kind: 'substitutions' },
   { id: 3, name: 'Alter Wechsel', kind: 'rotation' },
-  { id: 4, name: 'Wechsel Mensa', kind: 'rotation' },
+  { id: 4, name: 'Wechsel Mensa', kind: 'rotation', rotation_items: [{ view_id: 1, seconds: 20 }, { view_id: 2, seconds: 30 }] },
 ]
 
 vi.mock('../shared/api', () => ({
@@ -99,7 +99,7 @@ afterEach(() => {
 describe('ViewEdit', () => {
   it('speichert nur das geänderte Feld und blendet die SaveBar danach aus', async () => {
     await mount('/monitor-admin/views/1')
-    expect(container.textContent).toContain('Typ: Abfahrten')
+    expect(container.textContent).not.toContain('Typ: Abfahrten')
     expect(container.textContent).toContain('Glocke')
     await act(async () => button('Breit').click())
     expect(container.textContent).toContain('1 ungespeicherte Änderung')
@@ -203,5 +203,76 @@ describe('ViewEdit', () => {
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalledWith('Vorausschau: bitte eine ganze Zahl von 10 bis 240 eintragen.')
+  })
+
+  describe('Typ ändern', () => {
+    const kindSelect = () => container.querySelector('select[aria-label="Typ"]')
+    async function pick(value) {
+      const select = kindSelect()
+      const setter = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
+      await act(async () => {
+        setter.call(select, value)
+        select.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+    }
+
+    it('tauscht beim Wechsel sofort den Editor und die Vorschau, Zurückwechseln zeigt die alten Werte', async () => {
+      await mount('/monitor-admin/views/6')
+      expect(kindSelect().value).toBe('media')
+      expect([...kindSelect().options].map((o) => o.textContent))
+        .toEqual(['Abfahrten', 'Vertretungsplan', 'Geteilt', 'Medien', 'Info', 'Wechsel'])
+      expect(container.querySelector('[data-editor-section="media"]')).not.toBeNull()
+      await pick('info')
+      expect(container.querySelector('[data-editor-section="media"]')).toBeNull()
+      expect(container.querySelector('[data-view-kind]').getAttribute('data-view-kind')).toBe('info')
+      await pick('media')
+      expect(container.querySelector('[data-editor-section="media"]')).not.toBeNull()
+      expect(container.textContent).not.toContain('ungespeicherte Änderung')
+    })
+
+    it('speichert den neuen Typ ohne Nachfrage, wenn die Ansicht auf keinem Bildschirm läuft', async () => {
+      await mount('/monitor-admin/views/6')
+      await pick('info')
+      await act(async () => button('Speichern').click())
+      expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+      expect(api.updateView).toHaveBeenCalledWith(6, { kind: 'info' })
+    })
+
+    it('fragt bei einem Bildschirm vor dem Speichern nach', async () => {
+      await mount('/monitor-admin/views/1')
+      await pick('info')
+      await act(async () => button('Speichern').click())
+      expect(api.updateView).not.toHaveBeenCalled()
+      const dialog = container.querySelector('[role="alertdialog"]')
+      expect(dialog.textContent).toContain('Die Ansicht läuft auf einem Bildschirm. Nach dem Speichern zeigt er den neuen Typ.')
+      await act(async () => [...dialog.querySelectorAll('button')].find((b) => b.textContent === 'Abbrechen').click())
+      expect(api.updateView).not.toHaveBeenCalled()
+      await act(async () => button('Speichern').click())
+      await act(async () => [...container.querySelectorAll('[role="alertdialog"] button')].find((b) => b.textContent === 'Typ ändern').click())
+      expect(api.updateView).toHaveBeenCalledWith(1, { kind: 'info' })
+      expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+    })
+
+    it('nennt bei mehreren Bildschirmen die Zahl', async () => {
+      api.getScreens.mockImplementationOnce(() => Promise.resolve([
+        { id: 9, name: 'Glocke', default_view_id: 1, orientation: 'landscape', schedule: [] },
+        { id: 10, name: 'Aula', default_view_id: 1, orientation: 'landscape', schedule: [] },
+      ]))
+      await mount('/monitor-admin/views/1')
+      await pick('info')
+      await act(async () => button('Speichern').click())
+      expect(container.querySelector('[role="alertdialog"]').textContent)
+        .toContain('Die Ansicht läuft auf 2 Bildschirmen. Nach dem Speichern zeigen sie den neuen Typ.')
+    })
+
+    it('sperrt Wechsel für ein Mitglied eines Wechsels mit Meldung und speichert nicht', async () => {
+      await mount('/monitor-admin/views/1')
+      await pick('rotation')
+      expect(container.textContent).toContain('Diese Ansicht ist Teil des Wechsels „Wechsel Mensa“. Erst dort entfernen.')
+      await act(async () => button('Speichern').click())
+      expect(api.updateView).not.toHaveBeenCalled()
+      expect(container.querySelector('[role="alertdialog"]')).toBeNull()
+      expect(toast.error).toHaveBeenCalledWith('Diese Ansicht ist Teil des Wechsels „Wechsel Mensa“. Erst dort entfernen.')
+    })
   })
 })

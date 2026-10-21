@@ -59,7 +59,7 @@ const inRange = (value, min, max) => value !== '' && value != null && Number.isI
 
 // Felder, die das Admin bearbeitet (Teilmenge von DisplayViewUpdateSchema)
 export const EDITABLE_FIELDS = [
-  'name', 'layout', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
+  'name', 'kind', 'layout', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
@@ -203,6 +203,15 @@ export function moveItem(list, from, to) {
   const [item] = next.splice(from, 1)
   next.splice(to, 0, item)
   return next
+}
+
+// Eine Ansicht in einem Wechsel kann nicht selbst zum Wechsel werden (Backend: validation._check_not_in_rotation).
+// Gelöschte Wechsel zählen nicht. Geteilte Ansichten verweisen auf Inhalte, nicht auf Ansichten.
+export function kindChangeProblem(viewId, nextKind, views) {
+  if (nextKind !== 'rotation') return null
+  const rotation = (views ?? []).find((v) => v.kind === 'rotation' && !v.deleted_at
+    && (v.rotation_items ?? []).some((item) => item?.view_id === viewId))
+  return rotation ? `Diese Ansicht ist Teil des Wechsels „${rotation.name}“. Erst dort entfernen.` : null
 }
 
 // Bildschirme, auf denen die Ansicht eingestellt ist, mit der Rolle (Standard, vorübergehend, Zeitplan)

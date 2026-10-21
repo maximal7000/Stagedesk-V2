@@ -147,6 +147,15 @@ def parse_countdown_date(value):
     return parsed
 
 
+def _check_not_in_rotation(view_id):
+    """Eine Ansicht, die in einem Wechsel steckt, kann nicht selbst zum Wechsel werden."""
+    rotations = DisplayView.objects.filter(kind='rotation', deleted_at__isnull=True).order_by('id')
+    for rotation in rotations:
+        items = rotation.rotation_items if isinstance(rotation.rotation_items, list) else []
+        if any(isinstance(i, dict) and i.get('view_id') == view_id for i in items):
+            raise HttpError(422, f"Diese Ansicht ist Teil des Wechsels „{rotation.name}“. Erst dort entfernen.")
+
+
 def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     """Serverseitige Validierung/Sanitisierung der Ansicht-Daten.
     Prüft Auswahlwerte, klemmt Zahlenbereiche, prüft Zeitfenster, Countdown und Rotationseinträge."""
@@ -175,6 +184,8 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
                     raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
     # Leere Liste ist nur bei Rotations-Ansichten ein Fehler; andere Ansichten tragen sie mit.
     kind = data.get('kind', current_kind)
+    if kind == 'rotation' and kind != current_kind and own_id is not None:
+        _check_not_in_rotation(own_id)
     if 'rotation_items' in data and (data['rotation_items'] or kind == 'rotation'):
         try:
             data['rotation_items'] = validate_rotation_items(data['rotation_items'], own_id=own_id)

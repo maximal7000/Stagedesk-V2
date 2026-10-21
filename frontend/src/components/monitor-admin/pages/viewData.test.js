@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   EDITABLE_FIELDS, KIND_OPTIONS, LAYOUT_OPTIONS, layoutHelp, changedKeys, draftFromView, moveItem, newStop, normalizeStop, previewPayload, rotationChoices,
-  stopTransport, usedOn, viewPayload, viewProblems,
+  kindChangeProblem, stopTransport, usedOn, viewPayload, viewProblems,
 } from './viewData'
 
 const VIEW = {
@@ -229,5 +229,34 @@ describe('Aufteilung', () => {
     expect(out).not.toHaveProperty('style')
     expect(out).toMatchObject({ layout: 'wide', substitutions_source: 'account', substitutions_show_exams: null,
       substitutions_custom_format: 'vplan-x', substitutions_next_day_from: '' })
+  })
+})
+
+describe('kindChangeProblem', () => {
+  const views = [
+    { id: 1, name: 'Abfahrten', kind: 'departures' },
+    { id: 4, name: 'Wechsel Mensa', kind: 'rotation', rotation_items: [{ view_id: 1, seconds: 20 }] },
+    { id: 5, name: 'Alter Wechsel', kind: 'rotation', deleted_at: '2026-01-01T00:00:00Z', rotation_items: [{ view_id: 2, seconds: 20 }] },
+  ]
+
+  it('sperrt den Wechsel-Typ für ein Mitglied eines Wechsels und nennt dessen Namen', () => {
+    expect(kindChangeProblem(1, 'rotation', views)).toBe('Diese Ansicht ist Teil des Wechsels „Wechsel Mensa“. Erst dort entfernen.')
+  })
+
+  it('lässt andere Typen, Nicht-Mitglieder und gelöschte Wechsel zu', () => {
+    expect(kindChangeProblem(1, 'info', views)).toBeNull()
+    expect(kindChangeProblem(2, 'rotation', views)).toBeNull()
+    expect(kindChangeProblem(3, 'rotation', undefined)).toBeNull()
+  })
+})
+
+describe('Typ im Entwurf', () => {
+  it('ist bearbeitbar und wird nur bei Änderung gesendet', () => {
+    const base = draftFromView(VIEW)
+    expect(base.kind).toBe('departures')
+    const draft = { ...base, kind: 'info' }
+    expect(changedKeys(base, draft)).toEqual(['kind'])
+    expect(viewPayload(draft, ['kind'])).toEqual({ kind: 'info' })
+    expect(previewPayload(7, base, draft)).toEqual({ id: 7, kind: 'info' })
   })
 })

@@ -344,6 +344,65 @@ class ViewSecretsTest(TestCase):
 
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
+class ChangeViewKindTest(TestCase):
+    """PUT /config mit neuem Typ: Einstellungen des alten Typs bleiben, Wechsel-Mitglieder werden geschützt."""
+
+    def setUp(self):
+        self.view = DisplayView.objects.create(name='Halle', slug='halle', kind='departures', page_seconds=33)
+        self.profile = UserProfile.objects.create(keycloak_id='tester')
+        perm, _ = Permission.objects.get_or_create(code='monitor.setup', defaults={'name': 'monitor.setup'})
+        self.profile.permissions.add(perm)
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        auth.start()
+        self.addCleanup(auth.stop)
+
+    def put(self, body, view=None):
+        view = view or self.view
+        return self.client.put(f'/api/monitor/config?view_id={view.id}', body,
+                               content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
+
+    def test_kind_change_keeps_settings_of_old_kind(self):
+        r = self.put({'kind': 'info'})
+        self.assertEqual(r.status_code, 200)
+        self.view.refresh_from_db()
+        self.assertEqual((self.view.kind, self.view.page_seconds), ('info', 33))
+        self.assertEqual(self.put({'kind': 'departures'}).status_code, 200)
+        self.view.refresh_from_db()
+        self.assertEqual((self.view.kind, self.view.page_seconds), ('departures', 33))
+
+    def test_member_of_rotation_cannot_become_rotation(self):
+        DisplayView.objects.create(name='Wechsel Mensa', slug='mensa', kind='rotation',
+                                   rotation_items=[{'view_id': self.view.id, 'seconds': 20}])
+        r = self.put({'kind': 'rotation'})
+        self.assertEqual(r.status_code, 422)
+        self.assertIn('Diese Ansicht ist Teil des Wechsels „Wechsel Mensa“. Erst dort entfernen.', str(r.json()))
+        self.view.refresh_from_db()
+        self.assertEqual(self.view.kind, 'departures')
+
+    def test_member_may_change_to_other_kinds(self):
+        DisplayView.objects.create(name='Wechsel Mensa', slug='mensa', kind='rotation',
+                                   rotation_items=[{'view_id': self.view.id, 'seconds': 20}])
+        self.assertEqual(self.put({'kind': 'media'}).status_code, 200)
+
+    def test_deleted_rotation_does_not_block(self):
+        from django.utils import timezone
+        DisplayView.objects.create(name='Alt', slug='alt', kind='rotation', deleted_at=timezone.now(),
+                                   rotation_items=[{'view_id': self.view.id, 'seconds': 20}])
+        r = self.put({'kind': 'rotation', 'rotation_items': [{'view_id': DisplayView.objects.create(
+            name='Info', slug='info', kind='info').id, 'seconds': 15}]})
+        self.assertEqual(r.status_code, 200)
+
+    def test_list_carries_rotation_items(self):
+        rot = DisplayView.objects.create(name='W', slug='w', kind='rotation',
+                                         rotation_items=[{'view_id': self.view.id, 'seconds': 20}])
+        perm, _ = Permission.objects.get_or_create(code='monitor.view', defaults={'name': 'monitor.view'})
+        self.profile.permissions.add(perm)
+        rows = self.client.get('/api/monitor/views', HTTP_AUTHORIZATION='Bearer x').json()
+        row = next(x for x in rows if x['id'] == rot.id)
+        self.assertEqual(row['rotation_items'], [{'view_id': self.view.id, 'seconds': 20}])
+
+
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ExamDefaultSideTest(TestCase):
     """Klausur und Vorlage stehen im geteilten Bild standardmäßig rechts (Modell und Spec)."""
 
