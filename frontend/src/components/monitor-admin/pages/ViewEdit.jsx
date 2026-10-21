@@ -23,8 +23,8 @@ import MediaEditor from '../view-editors/Media'
 import InfoEditor from '../view-editors/Info'
 import RotationEditor from '../view-editors/Rotation'
 import {
-  KIND_OPTIONS, ON_AIR_OPTIONS, SIDE_OPTIONS, STYLE_OPTIONS, changedKeys, draftFromView, kindLabel, previewPayload,
-  styleHelp, usedOn, viewPayload, viewProblems,
+  KIND_OPTIONS, ON_AIR_OPTIONS, SIDE_OPTIONS, LAYOUT_OPTIONS, changedKeys, draftFromView, kindLabel, previewPayload,
+  layoutHelp, usedOn, viewPayload, viewProblems,
 } from './viewData'
 import * as api from '../shared/api'
 
@@ -122,7 +122,7 @@ function NewView() {
 
 // ── Ansicht bearbeiten ─────────────────────────────────────────────
 
-function GeneralSection({ draft, set, kind }) {
+function GeneralSection({ draft, set }) {
   const ids = { name: useId(), city: useId(), qrUrl: useId(), qrLabel: useId() }
   const nameMissing = !String(draft.name ?? '').trim()
   return (
@@ -136,9 +136,9 @@ function GeneralSection({ draft, set, kind }) {
             {nameMissing ? 'Der Name fehlt. Bitte einen Namen eintragen.' : 'Nur im Admin sichtbar.'}
           </p>
         </div>
-        <Field label="Stil" className="sm:col-span-2" help={styleHelp(draft.style, kind)}>
+        <Field label="Aufteilung" className="sm:col-span-2" help={layoutHelp(draft.layout)}>
           <div className="max-w-md">
-            <Segmented label="Stil" options={STYLE_OPTIONS} value={draft.style ?? 'auto'} onChange={(v) => set('style', v)} />
+            <Segmented label="Aufteilung" options={LAYOUT_OPTIONS} value={draft.layout ?? 'auto'} onChange={(v) => set('layout', v)} />
           </div>
         </Field>
         <div className="sm:col-span-2 space-y-3">
@@ -327,7 +327,7 @@ function EditView({ viewId }) {
           />
           <div className="grid gap-4 lg:grid-cols-2 items-start">
             <div className="space-y-4 min-w-0">
-              <GeneralSection draft={draft.draft} set={draft.set} kind={view.kind} />
+              <GeneralSection draft={draft.draft} set={draft.set} />
               {Editor && <Editor draft={draft.draft} set={draft.set} views={views} viewId={view.id} />}
             </div>
             <div className="space-y-4 min-w-0 lg:sticky lg:top-4">

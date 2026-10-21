@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
-  KIND_OPTIONS, changedKeys, draftFromView, moveItem, newStop, normalizeStop, previewPayload, rotationChoices,
+  EDITABLE_FIELDS, KIND_OPTIONS, LAYOUT_OPTIONS, layoutHelp, changedKeys, draftFromView, moveItem, newStop, normalizeStop, previewPayload, rotationChoices,
   stopTransport, usedOn, viewPayload, viewProblems,
 } from './viewData'
 
 const VIEW = {
-  id: 7, name: ' Abfahrten Halle ', kind: 'departures', style: 'auto', api_token: 'geheim', slug: 'departures-hall',
+  id: 7, name: ' Abfahrten Halle ', kind: 'departures', layout: 'auto', api_token: 'geheim', slug: 'departures-hall',
   show_weather: false, weather_city: '', show_qr_code: false, qr_code_url: '', qr_code_label: '',
   transit_stops: [{ id: '1', name: 'Katharineum', walk_minutes: 1 }],
   rotation_items: [], media_items: [], custom_countdown_date: '2026-11-01T09:00:00+00:00',
@@ -36,8 +36,8 @@ describe('changedKeys / viewPayload / previewPayload', () => {
 
   it('meldet nur geänderte Felder', () => {
     expect(changedKeys(base, base)).toEqual([])
-    const draft = { ...base, style: 'dense', transit_stops: [...base.transit_stops] }
-    expect(changedKeys(base, draft)).toEqual(['style'])
+    const draft = { ...base, layout: 'wide', transit_stops: [...base.transit_stops] }
+    expect(changedKeys(base, draft)).toEqual(['layout'])
   })
 
   it('bildet den Entwurf auf die Anfrage ab: getrimmt, Zahlen, Haltestellen normalisiert', () => {
@@ -72,8 +72,8 @@ describe('changedKeys / viewPayload / previewPayload', () => {
   })
 
   it('schickt der Vorschau die id und nur die Änderungen', () => {
-    const draft = { ...base, style: 'dark' }
-    expect(previewPayload(7, base, draft)).toEqual({ id: 7, style: 'dark' })
+    const draft = { ...base, layout: 'wide' }
+    expect(previewPayload(7, base, draft)).toEqual({ id: 7, layout: 'wide' })
     expect(previewPayload(7, base, base)).toEqual({ id: 7 })
   })
 })
@@ -206,5 +206,28 @@ describe('Abfahrten: Erweitert', () => {
     expect(problems(240)).toEqual([])
     expect(problems('')).toEqual(['Vorausschau: bitte eine ganze Zahl von 10 bis 240 eintragen.'])
     expect(problems(9)).toHaveLength(1)
+  })
+})
+
+describe('Aufteilung', () => {
+  it('bietet Automatisch, Normal und Breit mit den Hilfetexten der Vorgabe', () => {
+    expect(LAYOUT_OPTIONS).toEqual([
+      { value: 'auto', label: 'Automatisch' }, { value: 'normal', label: 'Normal' }, { value: 'wide', label: 'Breit' },
+    ])
+    expect(layoutHelp('normal', 'info')).toBe('Inhalt rechts neben dem Schullogo.')
+    expect(layoutHelp('wide', 'info')).toBe('Inhalt über die ganze Breite, das Schullogo liegt dahinter.')
+    expect(layoutHelp('auto', 'info')).toBe('Info und Medien: Normal. Abfahrten, Vertretungsplan, Geteilt und Wechsel: Breit.')
+  })
+
+  it('sendet layout und nie style, dazu die Felder des Vertretungsplans', () => {
+    expect(EDITABLE_FIELDS).toContain('layout')
+    expect(EDITABLE_FIELDS).not.toContain('style')
+    expect(EDITABLE_FIELDS).not.toContain('substitutions_next_day')
+    const draft = draftFromView({ ...VIEW, style: 'ci', layout: 'wide', substitutions_source: 'account', substitutions_show_exams: null })
+    expect(draft).not.toHaveProperty('style')
+    const out = viewPayload({ ...draft, substitutions_custom_format: ' vplan-x ', substitutions_next_day_from: '' }, EDITABLE_FIELDS)
+    expect(out).not.toHaveProperty('style')
+    expect(out).toMatchObject({ layout: 'wide', substitutions_source: 'account', substitutions_show_exams: null,
+      substitutions_custom_format: 'vplan-x', substitutions_next_day_from: '' })
   })
 })

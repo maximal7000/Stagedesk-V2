@@ -14,22 +14,16 @@ export const KIND_OPTIONS = [
 
 export const kindLabel = (kind) => KIND_OPTIONS.find((k) => k.value === kind)?.label ?? kind
 
-export const STYLE_OPTIONS = [
+export const LAYOUT_OPTIONS = [
   { value: 'auto', label: 'Automatisch' },
-  { value: 'ci', label: 'CI' },
-  { value: 'dense', label: 'Dicht' },
-  { value: 'dark', label: 'Dunkel' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'wide', label: 'Breit' },
 ]
 
-const DENSE_KINDS = new Set(['departures', 'substitutions', 'split'])
-
-export function styleHelp(style, kind) {
-  if (style === 'ci') return 'CI: Schulfarben mit Rad und Streifen, große Schrift.'
-  if (style === 'dense') return 'Dicht: mehr Zeilen pro Bildschirm, ohne Titelzeile.'
-  if (style === 'dark') return 'Dunkel: dunkler Hintergrund für Räume mit wenig Licht.'
-  return DENSE_KINDS.has(kind)
-    ? 'Automatisch: diese Ansicht erscheint dicht, mit mehr Zeilen pro Bildschirm.'
-    : 'Automatisch: diese Ansicht erscheint im CI-Stil mit Schulfarben.'
+export function layoutHelp(layout) {
+  if (layout === 'normal') return 'Inhalt rechts neben dem Schullogo.'
+  if (layout === 'wide') return 'Inhalt über die ganze Breite, das Schullogo liegt dahinter.'
+  return 'Info und Medien: Normal. Abfahrten, Vertretungsplan, Geteilt und Wechsel: Breit.'
 }
 
 export const ON_AIR_OPTIONS = [
@@ -65,13 +59,14 @@ const inRange = (value, min, max) => value !== '' && value != null && Number.isI
 
 // Felder, die das Admin bearbeitet (Teilmenge von DisplayViewUpdateSchema)
 export const EDITABLE_FIELDS = [
-  'name', 'style', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
+  'name', 'layout', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
   'transit_duration', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
   'transit_strike_active', 'transit_strike_text', 'transit_strike_lines', 'transit_strike_types',
-  'substitutions_next_day', 'webuntis_url', 'webuntis_url_next_day', 'webuntis_link_id', 'webuntis_link_next_day_id',
+  'substitutions_source', 'substitutions_format', 'substitutions_custom_format', 'substitutions_show_absences',
+  'substitutions_show_exams', 'substitutions_next_day_from', 'webuntis_url', 'webuntis_url_next_day', 'webuntis_link_id', 'webuntis_link_next_day_id',
   'media_items', 'media_seconds', 'pdf_per_screen', 'pdf_mode', 'pdf_pages', 'pdf_static_page',
   'show_announcements', 'show_events', 'show_countdown',
   'show_custom_countdown', 'custom_countdown_name', 'custom_countdown_date',
@@ -80,7 +75,7 @@ export const EDITABLE_FIELDS = [
 ]
 
 const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'transit_duration'])
-const TEXT_FIELDS = new Set(['name', 'weather_city', 'qr_code_url', 'qr_code_label', 'transit_strike_text',
+const TEXT_FIELDS = new Set(['name', 'substitutions_custom_format', 'weather_city', 'qr_code_url', 'qr_code_label', 'transit_strike_text',
   'webuntis_url', 'webuntis_url_next_day', 'pdf_pages', 'custom_countdown_name'])
 const LINK_FIELDS = new Set(['webuntis_link_id', 'webuntis_link_next_day_id'])
 const LIST_FIELDS = new Set(['transit_disruption_rail_lines', 'transit_disruption_bus_lines', 'transit_strike_lines', 'transit_strike_types'])

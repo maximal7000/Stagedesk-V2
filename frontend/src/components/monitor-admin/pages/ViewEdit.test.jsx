@@ -9,7 +9,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 const VIEWS = {
   1: {
-    id: 1, name: 'Abfahrten Halle', slug: 'departures-hall', kind: 'departures', style: 'auto', is_default: false,
+    id: 1, name: 'Abfahrten Halle', slug: 'departures-hall', kind: 'departures', layout: 'auto', is_default: false,
     on_air_behavior: 'fullscreen', on_air_split_side: 'right', show_weather: false, show_qr_code: false,
     transit_stops: [
       { id: 'a', name: 'Katharineum', walk_minutes: 1, max_departures: 10 },
@@ -19,16 +19,16 @@ const VIEWS = {
     transit_disruption_rail: true, transit_disruption_bus: true, rotation_items: [], media_items: [],
   },
   2: {
-    id: 2, name: 'Vertretungsplan', slug: 'substitutions-plan', kind: 'substitutions', style: 'auto', is_default: false,
+    id: 2, name: 'Vertretungsplan', slug: 'substitutions-plan', kind: 'substitutions', layout: 'auto', is_default: false,
     on_air_behavior: 'fullscreen', webuntis_url: '', webuntis_url_next_day: '', webuntis_link_id: 5,
-    webuntis_link_next_day_id: null, page_seconds: 15, substitutions_next_day: true, transit_stops: [], rotation_items: [], media_items: [],
+    webuntis_link_next_day_id: null, page_seconds: 15, substitutions_source: 'embed', substitutions_next_day_from: '16:00', transit_stops: [], rotation_items: [], media_items: [],
   },
   6: {
-    id: 6, name: 'Aushänge', slug: 'notices', kind: 'media', style: 'auto', is_default: false, on_air_behavior: 'fullscreen',
+    id: 6, name: 'Aushänge', slug: 'notices', kind: 'media', layout: 'auto', is_default: false, on_air_behavior: 'fullscreen',
     media_items: [], media_seconds: 10, pdf_per_screen: 1, pdf_mode: 'cycle', transit_stops: [], rotation_items: [],
   },
   4: {
-    id: 4, name: 'Wechsel Mensa', slug: 'rotation-canteen', kind: 'rotation', style: 'auto', is_default: false,
+    id: 4, name: 'Wechsel Mensa', slug: 'rotation-canteen', kind: 'rotation', layout: 'auto', is_default: false,
     on_air_behavior: 'fullscreen', rotation_items: [{ view_id: 1, seconds: 20 }, { view_id: 2, seconds: 30 }], transit_stops: [], media_items: [],
   },
 }
@@ -101,10 +101,10 @@ describe('ViewEdit', () => {
     await mount('/monitor-admin/views/1')
     expect(container.textContent).toContain('Typ: Abfahrten')
     expect(container.textContent).toContain('Glocke')
-    await act(async () => button('Dunkel').click())
+    await act(async () => button('Breit').click())
     expect(container.textContent).toContain('1 ungespeicherte Änderung')
     await act(async () => button('Speichern').click())
-    expect(api.updateView).toHaveBeenCalledWith(1, { style: 'dark' })
+    expect(api.updateView).toHaveBeenCalledWith(1, { layout: 'wide' })
     expect(container.textContent).not.toContain('ungespeicherte Änderung')
   })
 
