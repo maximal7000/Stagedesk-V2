@@ -1,6 +1,6 @@
 import { VIEW_COMPONENTS } from './index'
 
-// Geteilte Ansicht (Stil B): links und rechts je eine Unteransicht ({kind, data}) aus VIEW_COMPONENTS,
+// Geteilte Ansicht (Aufteilung "Breit"): links und rechts je eine Unteransicht ({kind, data}) aus VIEW_COMPONENTS,
 // die linke Breite ist left_percent. Alte Seitenwerte ohne Daten (exam, clock, empty) bleiben leer.
 
 const clampPercent = (value) => Math.min(80, Math.max(20, Number(value) || 50))

@@ -1,9 +1,9 @@
 import { ClockBox, Frame } from '../frame'
-import { CiStripe, CiWheel } from '../frame/parts'
+import { CiStripe, CiWheel, frameRootClass } from '../frame/parts'
 import { formatTime } from '../lib/format'
 import { useClockMinute } from '../lib/useClock'
 
-// Klausur (Entwurf mode-exam.png, Stil A): Kicker "Klausur", Titel, Text, Beginn, Ende und Restzeit.
+// Klausur (Entwurf mode-exam.png, "Normal" und hell): Kicker "Klausur", Titel, Text, Beginn, Ende und Restzeit.
 // Vollbild im CI-Rahmen mit Uhr oben rechts; im Splitscreen (panel 'left'/'right', split-exam.png)
 // eine schmale CI-Fläche ohne Uhr, Rad nur links und Streifen nur rechts am Bildschirmrand.
 
@@ -21,7 +21,7 @@ export default function ExamMode({ mode, orientation, panel = null, staleSince =
   if (panel) return <ExamPanel mode={mode} side={panel} orientation={orientation} />
   const portrait = orientation === 'portrait'
   return (
-    <Frame style="ci" orientation={orientation}>
+    <Frame orientation={orientation}>
       <div data-display-state="mode" data-mode-kind="exam" className="relative h-full">
         <ClockBox variant="compact" staleSince={staleSince} className="absolute right-0 top-[1.75rem] text-[6.5rem]" />
         <div className={portrait ? 'pt-[14rem]' : 'pl-[2.5rem] pt-[9.5rem]'}>
@@ -36,10 +36,10 @@ export default function ExamMode({ mode, orientation, panel = null, staleSince =
 function ExamPanel({ mode, side, orientation }) {
   const wheel = side === 'left' && orientation !== 'portrait'
   return (
-    <div data-display-state="mode" data-mode-kind="exam" className="d-root d-tone-light absolute inset-0 overflow-hidden">
-      {wheel && <CiWheel look="solid" />}
+    <div data-display-state="mode" data-mode-kind="exam" className={frameRootClass('light', 'normal')}>
+      {wheel && <CiWheel />}
       {!wheel && <CiStripe className="w-[4rem]" />}
-      <div className={`absolute inset-y-0 flex flex-col justify-center ${wheel ? 'left-[21.25rem] right-[3rem]' : 'left-[4rem] right-[8rem]'}`}>
+      <div className={`absolute inset-y-0 z-10 flex flex-col justify-center ${wheel ? 'left-[21.25rem] right-[3rem]' : 'left-[4rem] right-[8rem]'}`}>
         <ExamContent mode={mode} titleRem={titleFontRem(mode.title, 21, 6.25, false)} compact />
       </div>
     </div>

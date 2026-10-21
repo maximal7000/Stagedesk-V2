@@ -2,9 +2,9 @@ import { useClock } from '../lib/useClock'
 import { formatLongDate, formatTemperature, formatTime, formatTimeSeconds, formatWeekday } from '../lib/format'
 
 // Uhr der Anzeige. Einzige sekündlich rendernde Stelle neben useClock-Nutzern wie dem Wiederholungs-Countdown.
-//   variant "header":  große Uhr links, Datum (und Wetter) rechts, Linie darunter (Stil A und C);
+//   variant "header":  große Uhr links, Datum (und Wetter) rechts, Linie darunter (Aufteilung "Normal");
 //                      stacked stapelt Datum und Wetter (Hochformat)
-//   variant "box":     Box unten rechts (Stil B, dichte Ansichten); Farben folgen dem Ton (--d-box-*): hell im hellen Stil, dunkel im dunklen
+//   variant "box":     Kasten unten rechts (Aufteilung "Breit"); dieselbe Kastenfarbe wie alle Kästen (.d-card)
 // Alle Varianten zeigen HH:MM:SS; "Stand HH:MM" bleibt ohne Sekunden.
 //   variant "compact": nur die Uhrzeit (Zustandsbildschirme, Ruhemodus)
 // staleSince setzt den Hinweis "Stand HH:MM" (letzte gültige Daten).
@@ -55,18 +55,18 @@ function WeatherBlock({ weather }) {
 function BoxClock({ time, weather, staleSince, className }) {
   const side = weather || staleSince != null
   return (
-    <div className={`flex min-w-[18rem] items-center justify-center gap-[1.75rem] border border-(--d-box-line) bg-(--d-box-bg) px-[1.75rem] text-(--d-box-fg) ${className}`}>
+    <div data-clock="box" className={`d-card flex min-w-[18rem] items-center justify-center gap-[1.75rem] px-[1.75rem] text-(--d-fg) ${className}`}>
       {side && (
         <div className="flex flex-col items-end text-[1.25rem] leading-[1.35]">
           {weather && (
             <span className="d-lato whitespace-nowrap">
               {formatTemperature(weather.temperature)}
-              {weather.description && <span className="text-(--d-box-soft)"> {weather.description}</span>}
+              {weather.description && <span className="text-(--d-muted)"> {weather.description}</span>}
             </span>
           )}
           {staleSince != null && (
             <span className="whitespace-nowrap">
-              <span className="d-oswald uppercase tracking-[0.06em] text-(--d-box-soft)">Stand</span>{' '}
+              <span className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">Stand</span>{' '}
               <span className="d-lato">{formatTime(staleSince)}</span>
             </span>
           )}

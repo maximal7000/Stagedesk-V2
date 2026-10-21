@@ -1,10 +1,10 @@
 import { ClockBox, Frame } from '../frame'
 
-// Gemeinsamer Aufbau der Zustandsbildschirme (immer Stil A): Uhr oben rechts, Kicker, großer Titel, Text.
+// Gemeinsamer Aufbau der Zustandsbildschirme (immer "Normal" und hell): Uhr oben rechts, Kicker, großer Titel, Text.
 export default function StateScreen({ state, orientation, kicker, title, titleClassName = '', children }) {
   const portrait = orientation === 'portrait'
   return (
-    <Frame style="ci" orientation={orientation}>
+    <Frame orientation={orientation}>
       <div data-display-state={state} className="relative h-full">
         <ClockBox variant="compact" className="absolute right-0 top-[1.75rem] text-[6.5rem]" />
         <div className={portrait ? 'pt-[14rem]' : 'pl-[2.5rem] pt-[9.5rem]'}>

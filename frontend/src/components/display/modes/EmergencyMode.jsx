@@ -17,7 +17,7 @@ function textFontRem(text) {
 export default function EmergencyMode({ mode, staleSince = null }) {
   const since = formatTime(mode.since)
   return (
-    <div data-display-state="mode" data-mode-kind="emergency" className="d-root d-tone-light absolute inset-0 flex flex-col overflow-hidden">
+    <div data-display-state="mode" data-mode-kind="emergency" className="d-root d-scheme-light absolute inset-0 flex flex-col overflow-hidden">
       <header
         className="flex h-[12.5rem] shrink-0 items-center justify-between bg-(--d-red) px-[6.25rem] text-[#fff]"
         style={{ '--d-fg-soft': '#ffffff', '--d-muted': '#ffffffcc' }}

@@ -1,6 +1,5 @@
 export { default as Frame } from './Frame'
 export { default as ClockBox } from './ClockBox'
-export { default as CiFrame } from './CiFrame'
-export { default as DenseFrame } from './DenseFrame'
-export { default as DarkFrame } from './DarkFrame'
+export { default as NormalFrame } from './NormalFrame'
+export { default as WideFrame } from './WideFrame'
 export { default as PortraitFrame } from './PortraitFrame'

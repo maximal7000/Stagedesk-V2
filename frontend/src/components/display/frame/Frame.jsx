@@ -1,17 +1,16 @@
-import CiFrame from './CiFrame'
-import DarkFrame from './DarkFrame'
-import DenseFrame from './DenseFrame'
+import NormalFrame from './NormalFrame'
 import PortraitFrame from './PortraitFrame'
+import WideFrame from './WideFrame'
 
-// Wählt den Rahmen nach Stil und Ausrichtung. Der Rahmen füllt sein Elternelement (absolute inset-0);
+// Wählt den Rahmen nach Aufteilung und Ausrichtung. Der Rahmen füllt sein Elternelement (absolute inset-0);
 // DisplayRoot stellt die bildschirmfüllende Fläche, der Splitscreen der Sondermodi eine Hälfte.
+//   layout: 'normal' | 'wide' (vom Server aufgelöst); scheme: 'light' | 'dark' (CSS-Klasse d-scheme-*)
 //   clock:  {showWeather, weather, staleSince} oder null (ohne Uhr)
-//   footer: Fußleiste (Störungen, Stand der Daten); im dichten Stil links neben der Uhr-Box, sonst unten
+//   footer: Fußleiste (Störungen, Stand der Daten); bei "Breit" links neben dem Uhr-Kasten, sonst unten
 //   wheel, stripe: CI-Rad links und Streifen rechts; im Splitscreen nur am Bildschirmrand
-export default function Frame({ style = 'ci', orientation = 'landscape', clock = null, footer, wheel = true, stripe = true, children }) {
-  const props = { clock, footer, wheel, stripe }
-  if (orientation === 'portrait') return <PortraitFrame style={style} {...props}>{children}</PortraitFrame>
-  if (style === 'dense') return <DenseFrame {...props}>{children}</DenseFrame>
-  if (style === 'dark') return <DarkFrame {...props}>{children}</DarkFrame>
-  return <CiFrame {...props}>{children}</CiFrame>
+export default function Frame({ layout = 'normal', scheme = 'light', orientation = 'landscape', clock = null, footer, wheel = true, stripe = true, children }) {
+  const props = { scheme, clock, footer, wheel, stripe }
+  if (orientation === 'portrait') return <PortraitFrame layout={layout === 'wide' ? 'wide' : 'normal'} {...props}>{children}</PortraitFrame>
+  if (layout === 'wide') return <WideFrame {...props}>{children}</WideFrame>
+  return <NormalFrame {...props}>{children}</NormalFrame>
 }

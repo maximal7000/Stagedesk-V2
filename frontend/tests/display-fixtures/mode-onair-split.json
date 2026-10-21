@@ -7,8 +7,10 @@
     "location": "Pausenhalle",
     "scale": "auto",
     "orientation": "landscape",
-    "power": true
+    "power": true,
+    "scheme": "light"
   },
+  "scheme": "light",
   "mode": {
     "kind": "on_air",
     "display": "split",
@@ -21,7 +23,7 @@
   "view": {
     "id": 2,
     "kind": "departures",
-    "style": "dense",
+    "layout": "wide",
     "page_seconds": 15,
     "show_weather": false,
     "weather": null,

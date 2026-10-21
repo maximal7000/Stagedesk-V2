@@ -31,6 +31,7 @@ export default function DisplayRoot(props) {
 // slug: Bildschirm- oder Ansichts-Slug aus der URL, preview: Vorschau-Token.
 function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '', preview = null }) {
   const screen = payload?.screen ?? null
+  const scheme = payload?.scheme === 'dark' ? 'dark' : 'light'
   const orientation = screen?.orientation ?? viewportOrientation()
 
   if (preview && error?.status === 404) return <ScreenNotFound previewExpired orientation={orientation} />
@@ -53,17 +54,17 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
   const Mode = payload.mode ? MODE_COMPONENTS[payload.mode.kind] : null
   if (Mode) {
     if (isSplitMode(payload.mode) && payload.view) {
-      return <ModeSplit mode={payload.mode} view={payload.view} orientation={orientation} staleSince={staleSince} />
+      return <ModeSplit mode={payload.mode} view={payload.view} scheme={scheme} orientation={orientation} staleSince={staleSince} />
     }
     return <Mode mode={payload.mode} orientation={orientation} staleSince={staleSince} />
   }
   if (!payload.view) return <Loading orientation={orientation} />
-  return <ViewScreen view={payload.view} orientation={orientation} staleSince={staleSince} />
+  return <ViewScreen view={payload.view} scheme={scheme} orientation={orientation} staleSince={staleSince} />
 }
 
 // Sondermodus auf der Seite mode.side (Standard rechts), gegenüber die Ansicht in ihrem Rahmen.
 // CI-Rad und Streifen nur am Bildschirmrand; im Hochformat übereinander (links = oben).
-function ModeSplit({ mode, view, orientation, staleSince }) {
+function ModeSplit({ mode, view, scheme, orientation, staleSince }) {
   const Mode = MODE_COMPONENTS[mode.kind]
   const side = mode.side === 'left' ? 'left' : 'right'
   const portrait = orientation === 'portrait'
@@ -76,6 +77,7 @@ function ModeSplit({ mode, view, orientation, staleSince }) {
     <div key="view" className="relative min-h-0 min-w-0 flex-1">
       <ViewScreen
         view={view}
+        scheme={scheme}
         orientation={orientation}
         staleSince={staleSince}
         wheel={portrait || side === 'right'}
@@ -90,18 +92,19 @@ function ModeSplit({ mode, view, orientation, staleSince }) {
   )
 }
 
-// Eine Ansicht im Rahmen ihres effektiven Stils. Ansichten mit eigenem Rahmen (Medien, Wechsel) bekommen
-// die Rahmen-Angaben und ViewScreen selbst als screen (für die Unteransichten des Wechsels).
-function ViewScreen({ view, orientation, staleSince = null, wheel = true, stripe = true }) {
+// Eine Ansicht im Rahmen ihrer Aufteilung (view.layout) und im Farbschema des Bildschirms. Ansichten mit
+// eigenem Rahmen (Medien, Wechsel) bekommen die Rahmen-Angaben und ViewScreen selbst als screen (für die
+// Unteransichten des Wechsels).
+function ViewScreen({ view, scheme = 'light', orientation, staleSince = null, wheel = true, stripe = true }) {
   if (!view) return <Loading orientation={orientation} />
   const View = VIEW_COMPONENTS[view.kind]
   if (View?.ownFrame) {
-    return <View view={view} orientation={orientation} frame={{ staleSince, wheel, stripe }} screen={ViewScreen} />
+    return <View view={view} orientation={orientation} frame={{ scheme, staleSince, wheel, stripe }} screen={ViewScreen} />
   }
   const clock = { showWeather: view.show_weather, weather: view.weather, staleSince }
   const footer = View?.Footer ? <View.Footer view={view} /> : null
   return (
-    <Frame style={view.style} orientation={orientation} clock={clock} footer={footer} wheel={wheel} stripe={stripe}>
+    <Frame layout={view.layout} scheme={scheme} orientation={orientation} clock={clock} footer={footer} wheel={wheel} stripe={stripe}>
       <div data-display-state="view" data-view-kind={view.kind} className="h-full">
         {View ? <View view={view} /> : <Loading bare />}
       </div>

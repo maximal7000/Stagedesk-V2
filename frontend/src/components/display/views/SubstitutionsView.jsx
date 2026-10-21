@@ -4,7 +4,7 @@ import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../li
 import { paginate, usePager } from '../lib/pager'
 import { Heading, PageCount } from './parts'
 
-// Vertretungsplan (Stil B, Entwurf substitutions.png): Heute und Morgen nebeneinander, die Nachricht
+// Vertretungsplan (Aufteilung "Breit", Entwurf substitutions.png): Heute und Morgen nebeneinander, die Nachricht
 // zum Tag als Kasten. Ohne eigene Daten (kein Schlüssel, WebUntis nicht erreichbar) das WebUntis-iframe.
 
 const LIVE_SOURCES = ['substitutions', 'timetable']

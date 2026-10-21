@@ -28,4 +28,10 @@ describe('ClockBox', () => {
     expect(text).toContain('Stand 09:01')
     expect(text).not.toContain('09:01:')
   })
+
+  it('Uhr-Kasten nutzt die Kastenfarbe', () => {
+    const box = render({ now, variant: 'box' }).querySelector('[data-clock="box"]')
+    expect(box.classList.contains('d-card')).toBe(true)
+    expect(box.className).not.toMatch(/--d-box-/)
+  })
 })

@@ -5,9 +5,9 @@ import { paginate } from '../lib/pager'
 // Medien (PDF-Seiten und Bilder als fertige Seitenbilder): alle `seconds` die nächsten `per_screen`
 // Seiten (1 bis 3 nebeneinander), Wechsel per Deckkraft (300 ms).
 // Passen alle Seiten zur Ausrichtung des Bildschirms (Querformat auf Querformat), laufen sie randlos
-// mit object-fit: contain auf Weiß bzw. im Stil dark auf Schwarz. Sonst (Hochformat-Seite auf
+// mit object-fit: contain auf Weiß bzw. im dunklen Schema auf Schwarz. Sonst (Hochformat-Seite auf
 // Querformat-Bildschirm) stehen sie mittig im CI-Rahmen mit Uhr.
-// Bringt den Rahmen selbst mit (ownFrame): frame = {staleSince, wheel, stripe} aus ViewScreen.
+// Bringt den Rahmen selbst mit (ownFrame): frame = {scheme, staleSince, wheel, stripe} aus ViewScreen.
 
 const FADE_MS = 300
 
@@ -49,7 +49,7 @@ export default function MediaView({ view, orientation = 'landscape', frame = {} 
 
   if (!slides.length) {
     return (
-      <Frame style={view.style} orientation={orientation} clock={{ staleSince: frame.staleSince }} wheel={frame.wheel} stripe={frame.stripe}>
+      <Frame layout={view.layout} scheme={frame.scheme} orientation={orientation} clock={{ staleSince: frame.staleSince }} wheel={frame.wheel} stripe={frame.stripe}>
         <div data-display-state="view" data-view-kind="media" className="flex h-full items-center">
           <p className="d-lato max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
             Keine Medien zum Anzeigen. Im Admin unter Monitore → Medien die Dateien der Ansicht prüfen.
@@ -62,25 +62,25 @@ export default function MediaView({ view, orientation = 'landscape', frame = {} 
   return (
     <div data-display-state="view" data-view-kind="media" className="absolute inset-0">
       {shown.map((i) => (
-        <Slide key={i} pages={slides[i]} style={view.style} orientation={orientation} frame={frame} fadeIn={i === index && previous != null} />
+        <Slide key={i} pages={slides[i]} layout={view.layout} orientation={orientation} frame={frame} fadeIn={i === index && previous != null} />
       ))}
     </div>
   )
 }
 
-function Slide({ pages, style, orientation, frame, fadeIn }) {
+function Slide({ pages, layout, orientation, frame, fadeIn }) {
   const borderless = pages.every((p) => p.orientation === orientation)
   const fade = fadeIn ? 'd-fade-in' : ''
   if (borderless) {
     return (
-      <div className={`absolute inset-0 flex ${style === 'dark' ? 'bg-[#000]' : 'bg-[#fff]'} ${fade}`}>
+      <div className={`absolute inset-0 flex ${frame.scheme === 'dark' ? 'bg-[#000]' : 'bg-[#fff]'} ${fade}`}>
         {pages.map((p, i) => <Page key={`${p.url}-${i}`} page={p} />)}
       </div>
     )
   }
   return (
     <div className={`absolute inset-0 ${fade}`}>
-      <Frame style={style} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
+      <Frame layout={layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
         <div className="flex h-full gap-[2.5rem]">
           <div className="flex min-w-0 flex-1 gap-[1.5rem]">
             {pages.map((p, i) => <Page key={`${p.url}-${i}`} page={p} framed />)}

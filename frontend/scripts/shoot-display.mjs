@@ -1,10 +1,13 @@
 // Screenshot-Werkzeug der Anzeige: fotografiert /monitor mit Testdaten in 3840×2160 (bzw. 2160×3840).
 //
-//   node scripts/shoot-display.mjs [--only <name>] [--portrait] [--state lost|stale] [--style ci|dense|dark] [--no-build]
+//   node scripts/shoot-display.mjs [--only <name>[,<name>…]] [--portrait] [--state lost|stale]
+//                                  [--layout normal|wide] [--scheme light|dark] [--out <dir>] [--no-build]
 //
 // Baut die App (außer mit --no-build), startet `vite preview` auf einem freien Port und beantwortet
 // /api/monitor/display aus frontend/tests/display-fixtures/<name>.json. Bilder landen in
-// docs/superpowers/screenshots/2026-10-19-monitor/display-<name>[-<state>][-<style>][-portrait].png.
+// docs/superpowers/screenshots/2026-10-19-monitor/ (oder --out <dir>) als
+// display-<name>[-<state>][-<layout>][-<scheme>][-portrait].png.
+//   --layout überschreibt view.layout (auch in den Unteransichten des Wechsels), --scheme das Farbschema.
 //   --state stale: nach dem Laden geht das Netz weg, die Uhr läuft 30 s weiter ("Stand HH:MM").
 //   --state lost:  die Route liefert 503, die Uhr läuft 121 s weiter ("Verbindung verloren").
 //   Ohne --only gilt bei --state die Testdatei "info", sonst werden alle Testdateien fotografiert.
@@ -26,18 +29,21 @@ const T0 = new Date('2026-10-19T10:41:40+02:00')
 const NOT_FOUND_SLUG = 'foyer-2'
 
 function parseArgs(argv) {
-  const opts = { only: null, portrait: false, state: null, style: null, build: true }
+  const opts = { only: null, portrait: false, state: null, layout: null, scheme: null, out: OUT, build: true }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
-    if (a === '--only') opts.only = argv[++i]
+    if (a === '--only') opts.only = argv[++i].split(',').filter(Boolean)
     else if (a === '--portrait') opts.portrait = true
     else if (a === '--state') opts.state = argv[++i]
-    else if (a === '--style') opts.style = argv[++i]
+    else if (a === '--layout') opts.layout = argv[++i]
+    else if (a === '--scheme') opts.scheme = argv[++i]
+    else if (a === '--out') opts.out = resolve(argv[++i])
     else if (a === '--no-build') opts.build = false
     else throw new Error(`Unbekanntes Argument: ${a}`)
   }
   if (opts.state && !['lost', 'stale'].includes(opts.state)) throw new Error('--state erwartet lost oder stale')
-  if (opts.style && !['ci', 'dense', 'dark'].includes(opts.style)) throw new Error('--style erwartet ci, dense oder dark')
+  if (opts.layout && !['normal', 'wide'].includes(opts.layout)) throw new Error('--layout erwartet normal oder wide')
+  if (opts.scheme && !['light', 'dark'].includes(opts.scheme)) throw new Error('--scheme erwartet light oder dark')
   return opts
 }
 
@@ -76,15 +82,25 @@ function loadFixture(name, opts) {
   const file = join(FIXTURES, `${name}.json`)
   if (!existsSync(file)) throw new Error(`Testdatei fehlt: ${file}`)
   const payload = JSON.parse(readFileSync(file, 'utf8'))
-  if (opts.style && payload.view) payload.view.style = opts.style
+  if (opts.layout && payload.view) setLayout(payload.view, opts.layout)
+  if (opts.scheme) {
+    payload.scheme = opts.scheme
+    if (payload.screen) payload.screen.scheme = opts.scheme
+  }
   if (opts.portrait && payload.screen) payload.screen.orientation = 'portrait'
   return payload
+}
+
+function setLayout(view, layout) {
+  view.layout = layout
+  for (const item of view.data?.items ?? []) if (item.view) setLayout(item.view, layout)
 }
 
 function outName(name, opts) {
   const parts = [`display-${opts.state && !opts.only ? opts.state : name}`]
   if (opts.state && opts.only) parts.push(opts.state)
-  if (opts.style) parts.push(opts.style)
+  if (opts.layout) parts.push(opts.layout)
+  if (opts.scheme) parts.push(opts.scheme)
   if (opts.portrait) parts.push('portrait')
   return `${parts.join('-')}.png`
 }
@@ -146,7 +162,7 @@ async function shootPage(page, context, baseUrl, name, payload, opts) {
   await page.evaluate(() => document.fonts.ready)
   await page.waitForFunction(() => [...document.images].every((img) => img.complete))
   await page.waitForTimeout(150)
-  const file = join(OUT, outName(name, opts))
+  const file = join(opts.out, outName(name, opts))
   // Endlose Animationen (On-Air) stehen auf dem Ausgangszustand, Überblendungen am Ende
   await page.screenshot({ path: file, animations: 'disabled' })
   if (errors.length) throw new Error(`${name}: Fehler im Browser:\n${errors.join('\n')}`)
@@ -163,7 +179,7 @@ async function serveAsset(route, fixed) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
   const names = opts.only
-    ? [opts.only]
+    ? opts.only
     : opts.state
       ? ['info']
       : readdirSync(FIXTURES).filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -5)).sort()
@@ -173,7 +189,7 @@ async function main() {
     if (res.status !== 0) process.exit(res.status ?? 1)
   }
   if (!existsSync(join(FRONTEND, 'dist', 'index.html'))) throw new Error('dist/ fehlt, erst bauen (ohne --no-build)')
-  mkdirSync(OUT, { recursive: true })
+  mkdirSync(opts.out, { recursive: true })
 
   const { proc, url } = await startPreview(await freePort())
   const failed = []
