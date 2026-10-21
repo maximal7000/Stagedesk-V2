@@ -49,6 +49,8 @@ describe('commandResult', () => {
       .toBe('Pi neu starten ist fehlgeschlagen: systemctl: Zugriff verweigert')
     expect(commandResult('screenshot', { status: 'expired', result: '' }).text)
       .toBe('Screenshot aufnehmen wurde nicht ausgeführt, weil das Gerät 5 Minuten nicht verbunden war. Bitte Netzwerk und Strom des Pi prüfen und den Befehl erneut senden.')
+    expect(commandResult('update_now', { status: 'expired', result: 'Keine Rückmeldung vom Gerät.' }).text)
+      .toBe('Jetzt aktualisieren: Keine Rückmeldung vom Gerät. Ob der Befehl lief, steht im Protokoll. Bitte Netzwerk und Strom des Pi prüfen und den Befehl bei Bedarf erneut senden.')
   })
 })
 

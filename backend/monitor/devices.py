@@ -23,7 +23,10 @@ from .models import Device, DeviceCommand, DeviceEvent, MonitorSettings, Pairing
 PAIRING_TTL = timedelta(minutes=15)
 MAX_OPEN_REQUESTS = 10
 MAX_PER_SERIAL = 3
-COMMAND_TTL = timedelta(minutes=5)
+COMMAND_TTL = timedelta(minutes=5)  # `pending`: so lange wartet ein Befehl auf ein offline Gerät
+SENT_COMMAND_TTL = timedelta(minutes=75)  # `sent`: über dem apt-Limit von 60 Minuten (update_now)
+EXPIRED_PENDING_TEXT = 'Das Gerät war 5 Minuten nicht verbunden.'
+EXPIRED_SENT_TEXT = 'Keine Rückmeldung vom Gerät.'
 MAX_TELEMETRY_BYTES = 64 * 1024
 logger = logging.getLogger(__name__)
 
@@ -174,9 +177,13 @@ def command_message(command: DeviceCommand) -> dict:
 
 def expire_old_commands(device: Device) -> int:
     now = timezone.now()
-    return DeviceCommand.objects.filter(
-        device=device, status__in=['pending', 'sent'], created_at__lt=now - COMMAND_TTL,
-    ).update(status='expired', finished_at=now)
+    pending = DeviceCommand.objects.filter(
+        device=device, status='pending', created_at__lt=now - COMMAND_TTL,
+    ).update(status='expired', result=EXPIRED_PENDING_TEXT, finished_at=now)
+    sent = DeviceCommand.objects.filter(
+        device=device, status='sent', created_at__lt=now - SENT_COMMAND_TTL,
+    ).update(status='expired', result=EXPIRED_SENT_TEXT, finished_at=now)
+    return pending + sent
 
 
 def send_pending_commands(device: Device) -> list:
@@ -466,13 +473,18 @@ def watch(now) -> None:
     recipients = None
     for device_id in list(Device.objects.filter(revoked_at__isnull=True, screen__isnull=False)
                           .values_list('pk', flat=True)):
-        pending = []
-        _watch_device(device_id, cfg, now, pending.append)
-        if not pending:
-            continue
-        if recipients is None:
-            recipients = notification_recipients()
-        screen = Device.objects.select_related('screen').get(pk=device_id).screen
-        for body in pending:
-            notify_many(recipients, 'system', 'Geräte-Überwachung', body, link=_link(screen))
+        try:
+            pending = []
+            _watch_device(device_id, cfg, now, pending.append)
+            if not pending:
+                continue
+            screen = Device.objects.select_related('screen').get(pk=device_id).screen
+            if screen is None:  # zwischenzeitlich entkoppelt: nichts mehr zu melden
+                continue
+            if recipients is None:
+                recipients = notification_recipients()
+            for body in pending:
+                notify_many(recipients, 'system', 'Geräte-Überwachung', body, link=_link(screen))
+        except Exception:
+            logger.exception("Geräte-Überwachung für Gerät %s fehlgeschlagen", device_id)
     DeviceEvent.objects.filter(created_at__lt=now - EVENT_RETENTION).delete()

@@ -197,6 +197,7 @@ class DeviceConsumerTest(TransactionTestCase):
         async_to_sync(run)()
         command.refresh_from_db()
         self.assertEqual(command.status, 'expired')
+        self.assertEqual(command.result, 'Das Gerät war 5 Minuten nicht verbunden.')
         self.assertIsNotNone(command.finished_at)
 
     def test_push_device_command_reaches_open_socket(self):
@@ -295,6 +296,23 @@ class DeviceConsumerTest(TransactionTestCase):
         self.assertFalse(msg['allowed'])
         self.assertEqual(msg['reason'], 'Termin „Elternabend" läuft')
 
+    def test_update_gate_refusal_is_logged(self):
+        self._event('Elternabend', is_active=True)
+        self._ask_gate()
+        event = DeviceEvent.objects.get(device=self.device, kind='update')
+        self.assertEqual(event.text, 'Update oder Neustart verschoben: Termin „Elternabend" läuft')
+        self.assertEqual(event.screen, self.screen)
+
+    def test_update_gate_allowed_is_not_logged(self):
+        self._ask_gate()
+        self.assertFalse(DeviceEvent.objects.filter(device=self.device, kind='update').exists())
+
+    def test_tick_does_not_switch_on_after_screen_deleted(self):
+        from .consumers import ScreenPiConsumer
+        consumer = ScreenPiConsumer()
+        consumer.slug = 'gibtsnicht'
+        self.assertIsNone(async_to_sync(consumer._get_power_state)())
+
     def test_update_gate_denied_during_timed_event(self):
         now = timezone.now()
         self._event('Zeitfenster', active_from=now - timedelta(hours=1), active_until=now + timedelta(hours=1))
@@ -343,12 +361,22 @@ class DeviceConsumerTest(TransactionTestCase):
         MonitorSettings.objects.update_or_create(pk=1, defaults={'on_air_active': True})
         self.assertEqual(devices.update_gate(self.screen, timezone.now()), (True, ''))
 
-    def test_sent_command_without_result_expires_after_5_min(self):
+    def test_sent_command_stays_sent_within_75_min(self):
+        running = DeviceCommand.objects.create(device=self.device, kind='update_now', status='sent')
+        DeviceCommand.objects.filter(pk=running.pk).update(created_at=timezone.now() - timedelta(minutes=70))
+        self.assertEqual(devices.send_pending_commands(self.device), [])
+        running.refresh_from_db()
+        self.assertEqual(running.status, 'sent')
+        devices.finish_command(self.device, running.id, True, 'fertig')
+        running.refresh_from_db()
+        self.assertEqual((running.status, running.result), ('ok', 'fertig'))
+
+    def test_sent_command_without_result_expires_after_75_min(self):
         stuck = DeviceCommand.objects.create(device=self.device, kind='reboot', status='sent')
-        DeviceCommand.objects.filter(pk=stuck.pk).update(created_at=timezone.now() - timedelta(minutes=6))
+        DeviceCommand.objects.filter(pk=stuck.pk).update(created_at=timezone.now() - timedelta(minutes=76))
         self.assertEqual(devices.send_pending_commands(self.device), [])
         stuck.refresh_from_db()
-        self.assertEqual(stuck.status, 'expired')
+        self.assertEqual((stuck.status, stuck.result), ('expired', 'Keine Rückmeldung vom Gerät.'))
 
     def test_oversized_telemetry_ignored(self):
         devices.store_telemetry(self.device, {'cpu_temp': 40})

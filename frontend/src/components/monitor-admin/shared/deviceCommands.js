@@ -47,9 +47,13 @@ export function commandResult(kind, command) {
   const label = labelOf(kind)
   if (command.status === 'ok') return { ok: true, text: `${label} ist ausgeführt.` }
   if (command.status === 'expired') {
+    // Backend nennt den Grund: pending = nie zugestellt, sent = keine Rückmeldung
+    const noReply = (command.result || '').trim() === 'Keine Rückmeldung vom Gerät.'
     return {
       ok: false,
-      text: `${label} wurde nicht ausgeführt, weil das Gerät 5 Minuten nicht verbunden war. Bitte Netzwerk und Strom des Pi prüfen und den Befehl erneut senden.`,
+      text: noReply
+        ? `${label}: Keine Rückmeldung vom Gerät. Ob der Befehl lief, steht im Protokoll. Bitte Netzwerk und Strom des Pi prüfen und den Befehl bei Bedarf erneut senden.`
+        : `${label} wurde nicht ausgeführt, weil das Gerät 5 Minuten nicht verbunden war. Bitte Netzwerk und Strom des Pi prüfen und den Befehl erneut senden.`,
     }
   }
   const reason = (command.result || '').trim()
