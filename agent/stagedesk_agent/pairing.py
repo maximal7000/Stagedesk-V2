@@ -46,14 +46,14 @@ def _parse_time(value):
 
 class PairingClient:
     def __init__(self, config, http_post=http_post, serial="unknown", model="unknown", now=None,
-                 monotonic=time.monotonic):
+                 monotonic=time.monotonic, stop_event=None):
         self.config = config
         self.http_post = http_post
         self.serial = serial
         self.model = model
         self.now = now or (lambda: datetime.now(timezone.utc))
         self.monotonic = monotonic
-        self._stop_event = threading.Event()
+        self._stop_event = stop_event or threading.Event()
         self._deadline = 0.0
 
     def stop(self):

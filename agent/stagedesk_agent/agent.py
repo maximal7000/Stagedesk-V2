@@ -1,14 +1,20 @@
 """Wires pairing, connection and local pages together."""
+import json
 import logging
-import re
 import signal
+import threading
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
+from . import telemetry
 from .config import Config
 from .connection import Connection
 from .local_pages import LocalPages
 from .pairing import PairingClient
 from .paths import Paths
+from .power import make_power
+from .runner import Runner
+from .telemetry import read_cpu_serial, read_model
 
 log = logging.getLogger("stagedesk_agent")
 LOCAL_URL = "http://127.0.0.1:8765/"
@@ -16,56 +22,129 @@ LOCAL_URL = "http://127.0.0.1:8765/"
 
 def read_identity(paths):
     """(serial, model) of this Raspberry Pi; 'unknown' when not readable."""
-    serial = model = "unknown"
-    try:
-        match = re.search(r"^Serial\s*:\s*(\S+)", (paths.proc / "cpuinfo").read_text(), re.M)
-        if match:
-            serial = match.group(1)
-    except OSError:
-        pass
-    try:
-        model = (paths.proc / "device-tree" / "model").read_bytes().decode().strip("\x00 \n") or model
-    except OSError:
-        pass
-    return serial, model
+    return read_cpu_serial(paths) or "unknown", read_model(paths) or "unknown"
 
 
 class Agent:
-    def __init__(self, config, pages, kiosk_set_url=None, pairing_factory=None, connection_factory=None):
+    def __init__(self, config, pages, kiosk_set_url=None, pairing_factory=None, connection_factory=None,
+                 runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60):
         self.config = config
         self.pages = pages
         self.kiosk_set_url = kiosk_set_url or (lambda url: None)
         self.pairing_factory = pairing_factory or self._default_pairing
-        self.connection_factory = connection_factory or (lambda cfg, om, af: Connection(cfg, om, af))
+        self.connection_factory = connection_factory or (
+            lambda cfg, om, af: Connection(cfg, om, af, stop_event=self.stop_event))
+        self.runner = runner or Runner()
+        self.power_factory = power_factory
+        self.collect = collect
+        self.telemetry_interval = telemetry_interval
         self.state = "pairing" if not config.token else "connecting"
         self.pairing = None
         self.connection = None
-        self._stopped = False
+        # Set from the SIGTERM handler and shared with Connection/PairingClient, so a stop request is
+        # never lost between a check and the creation of the next part.
+        self.stop_event = threading.Event()
         self._kiosk_url = None
+        self._power = None
+        self._power_key = None
+        self._power_error = None
+        self._power_lock = threading.Lock()
+
+    @property
+    def _stopped(self):
+        return self.stop_event.is_set()
 
     def _default_pairing(self, cfg):
         serial, model = read_identity(cfg.paths)
-        return PairingClient(cfg, serial=serial, model=model)
+        return PairingClient(cfg, serial=serial, model=model, stop_event=self.stop_event)
 
     def _set_kiosk(self, url):
         if url != self._kiosk_url:
             self._kiosk_url = url
             self.kiosk_set_url(url)
 
+    def request_stop(self):
+        """Signal-safe: only sets the event (no locks, no I/O). The watcher thread does the closing."""
+        self.stop_event.set()
+
+    def start_stop_watcher(self):
+        def watch():
+            self.stop_event.wait()
+            self.stop()
+        threading.Thread(target=watch, daemon=True, name="stop-watcher").start()
+
     def stop(self):
-        self._stopped = True
+        self.stop_event.set()
         for part in (self.pairing, self.connection):
             if part:
                 part.stop()
+        with self._power_lock:
+            if self._power:
+                self._power.stop()
 
     def send(self, msg):
         return bool(self.connection and self.connection.send(msg))
 
+    # power
+
+    def _power_controller(self):
+        """Controller for the configured method; rebuilt when method or config change. Hold _power_lock."""
+        key = (self.config.power_method, json.dumps(self.config.power_config, sort_keys=True, default=str))
+        if key != self._power_key:
+            if self._power:
+                self._power.stop()
+            self._power, self._power_error = None, None
+            try:
+                self._power = self.power_factory(self.config.power_method, self.config.power_config or {},
+                                                 self.runner)
+            except Exception as exc:
+                log.warning("power setup failed: %s", exc)
+                self._power_error = f"Fehler: {exc}"
+            self._power_key = key
+        return self._power
+
+    def _power_status(self):
+        with self._power_lock:
+            controller = self._power_controller()
+            return controller.status() if controller else self._power_error
+
+    def _apply_power(self, on):
+        with self._power_lock:
+            controller = self._power_controller()
+            if controller is None:
+                return self._power_error
+            current = controller.status()
+            if (on and current == "an") or (not on and current in ("standby", "aus")):
+                return current  # already in the wanted state
+            return controller.set(on)
+
+    def _on_power_command(self, message):
+        status = self._apply_power(bool(message.get("power", True)))
+        self.send({"type": "power_status", "status": status})
+
+    # telemetry
+
+    def _telemetry_loop(self, ended):
+        while not ended.is_set() and not self.stop_event.is_set():
+            try:
+                status = self._power_status()
+                data = self.collect(self.runner, self.config.paths, datetime.now(timezone.utc), power_status=status)
+                self.send({"type": "telemetry", **data})
+                self.send({"type": "power_status", "status": status})
+            except Exception:
+                log.exception("telemetry failed")
+            ended.wait(self.telemetry_interval)
+
     def on_message(self, message):
-        if message.get("type") == "hello":
+        kind = message.get("type")
+        if kind == "hello":
             self.config.apply_hello(message)
             if self.config.kiosk_url:
                 self._set_kiosk(self.config.kiosk_url)
+            with self._power_lock:
+                self._power_controller()
+        elif kind == "power_command":
+            self._on_power_command(message)
 
     def on_auth_failed(self):
         log.warning("token rejected, starting pairing again")
@@ -93,9 +172,15 @@ class Agent:
         if self.config.kiosk_url:
             self._set_kiosk(self.config.kiosk_url)
         self.connection = self.connection_factory(self.config, self.on_message, self.on_auth_failed)
-        self.connection.run_forever()
+        ended = threading.Event()
+        threading.Thread(target=self._telemetry_loop, args=(ended,), daemon=True, name="telemetry").start()
+        try:
+            self.connection.run_forever()
+        finally:
+            ended.set()
 
     def run(self):
+        self.start_stop_watcher()
         while not self._stopped:
             self.run_once()
 
@@ -107,10 +192,11 @@ def main():
     pages = LocalPages()
     pages.start()
     agent = Agent(config, pages)
-    signal.signal(signal.SIGTERM, lambda *_: agent.stop())
+    signal.signal(signal.SIGTERM, lambda *_: agent.request_stop())
     try:
         agent.run()
     except KeyboardInterrupt:
+        agent.request_stop()
         agent.stop()
     finally:
         pages.stop()

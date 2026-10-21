@@ -1,0 +1,9 @@
+HDMI-A-1 "iiyama North America LH4341UHS (HDMI-A-1)"
+  Physical size: 940x530 mm
+  Enabled: yes
+  Modes:
+    3840x2160 px, 30.000000 Hz (preferred, current)
+    1920x1080 px, 60.000000 Hz
+  Position: 0,0
+  Transform: normal
+  Scale: 1.000000

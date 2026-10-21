@@ -60,21 +60,24 @@ def ws_url(server, slug):
 
 class Connection:
     def __init__(self, config, on_message, on_auth_failed, transport_factory=WebsocketTransport,
-                 delays=backoff_delays, sleep=None):
+                 delays=backoff_delays, sleep=None, stop_event=None):
         self.config = config
         self.on_message = on_message
         self.on_auth_failed = on_auth_failed
         self.transport_factory = transport_factory
         self.delays = delays
-        self._stop_event = threading.Event()
+        self._stop_event = stop_event or threading.Event()  # shared with the agent: set from the signal handler
         self.sleep = sleep or self._stop_event.wait
         self._got_message = False
         self._transport = None
         self._lock = threading.Lock()
-        self._stopped = False
+
+    @property
+    def _stopped(self):
+        return self._stop_event.is_set()
 
     def stop(self):
-        self._stopped = True
+        """Stop and close the transport. Not for signal handlers (takes the lock); they set the event."""
         self._stop_event.set()
         with self._lock:
             transport = self._transport

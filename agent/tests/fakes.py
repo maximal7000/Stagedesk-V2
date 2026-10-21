@@ -12,9 +12,11 @@ class FakeRunner:
     def __init__(self, responses=None):
         self.responses = dict(responses or {})
         self.calls = []
+        self.inputs = []
 
-    def run(self, args, timeout=30, user=None):
+    def run(self, args, timeout=30, user=None, input=None):
         self.calls.append((tuple(args), user))
+        self.inputs.append(input)
         return self.responses.get(tuple(args), RunResult(0, "", ""))
 
 

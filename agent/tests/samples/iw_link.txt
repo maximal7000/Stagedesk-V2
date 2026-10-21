@@ -1,0 +1,11 @@
+Connected to 3c:a6:2f:12:34:56 (on wlan0)
+	SSID: KATH-Lehrer
+	freq: 5180
+	RX: 123456 bytes (1234 packets)
+	TX: 12345 bytes (123 packets)
+	signal: -58 dBm
+	rx bitrate: 433.3 MBit/s VHT-MCS 4 80MHz short GI VHT-NSS 2
+	tx bitrate: 390.0 MBit/s VHT-MCS 4 80MHz short GI VHT-NSS 2
+	bss flags: short-slot-time
+	dtim period: 1
+	beacon int: 100

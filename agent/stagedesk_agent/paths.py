@@ -29,3 +29,7 @@ class Paths:
     @property
     def sys(self):
         return self.root / "sys"
+
+    @property
+    def state_dir(self):
+        return self.root / "var" / "lib" / "stagedesk-agent"
