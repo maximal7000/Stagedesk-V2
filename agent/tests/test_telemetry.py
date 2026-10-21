@@ -163,6 +163,21 @@ class TelemetryTests(unittest.TestCase):
         telemetry.collect(runner, self.paths, NOW)  # cached for an hour
         self.assertEqual([c[0] for c in runner.calls].count(apt), 1)
 
+    def test_apt_failure_cached_only_five_minutes_and_uses_long_timeout(self):
+        apt = ("apt-get", "-s", "upgrade")
+        runner = FakeRunner({apt: RunResult(100, "", "lock")})
+        timeouts = []
+        original = runner.run
+        runner.run = lambda args, timeout=30, user=None, input=None: (
+            timeouts.append(timeout) if args[0] == "apt-get" else None) or original(args, timeout, user, input)
+        telemetry.collect(runner, self.paths, NOW)
+        self.assertEqual(timeouts, [60])
+        later = NOW.replace(minute=3)
+        telemetry.collect(runner, self.paths, later)
+        self.assertEqual(len(timeouts), 1)
+        telemetry.collect(runner, self.paths, NOW.replace(minute=6))
+        self.assertEqual(len(timeouts), 2)
+
     def test_reboot_required_since_from_file_mtime(self):
         target = self.put("var/run/reboot-required", "*** System restart required ***\n")
         stamp = datetime(2026, 10, 15, 8, 30, tzinfo=timezone.utc).timestamp()

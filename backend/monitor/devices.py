@@ -317,7 +317,10 @@ def store_telemetry(device: Device, data: dict) -> None:
     if "last_update" not in telemetry and "last_update" in current:
         telemetry["last_update"] = current["last_update"]
     fields = {"last_telemetry": telemetry}
-    version = telemetry.get("agent_version")
+    system = telemetry.get("system")
+    version = system.get("agent_version") if isinstance(system, dict) else None
+    if not (isinstance(version, str) and version):
+        version = telemetry.get("agent_version")  # fallback: flat form
     if isinstance(version, str) and version:
         fields["agent_version"] = version[:20]
     Device.objects.filter(pk=device.pk).update(**fields)

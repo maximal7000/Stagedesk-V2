@@ -1,6 +1,7 @@
 """Wires pairing, connection and local pages together."""
 import json
 import logging
+import queue
 import signal
 import threading
 from datetime import datetime, timezone
@@ -27,7 +28,8 @@ def read_identity(paths):
 
 class Agent:
     def __init__(self, config, pages, kiosk_set_url=None, pairing_factory=None, connection_factory=None,
-                 runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60):
+                 runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60,
+                 telemetry_retry=1):
         self.config = config
         self.pages = pages
         self.kiosk_set_url = kiosk_set_url or (lambda url: None)
@@ -38,6 +40,10 @@ class Agent:
         self.power_factory = power_factory
         self.collect = collect
         self.telemetry_interval = telemetry_interval
+        self.telemetry_retry = telemetry_retry
+        self._telemetry_wake = threading.Event()  # set by hello: send telemetry now
+        self._power_queue = queue.Queue()
+        self._power_worker = None
         self.state = "pairing" if not config.token else "connecting"
         self.pairing = None
         self.connection = None
@@ -48,6 +54,7 @@ class Agent:
         self._power = None
         self._power_key = None
         self._power_error = None
+        self._power_target = None
         self._power_lock = threading.Lock()
 
     @property
@@ -87,16 +94,22 @@ class Agent:
 
     # power
 
-    def _power_controller(self):
-        """Controller for the configured method; rebuilt when method or config change. Hold _power_lock."""
-        key = (self.config.power_method, json.dumps(self.config.power_config, sort_keys=True, default=str))
+    def _power_controller(self, target=None):
+        """Controller for the last applied (method, config); rebuilt when it changes. Hold _power_lock.
+
+        `target` comes from a hello job, so queued commands see the config of their time, not a later one."""
+        if target is not None:
+            self._power_target = target
+        elif self._power_target is None:
+            self._power_target = (self.config.power_method, self.config.power_config)
+        method, config = self._power_target
+        key = (method, json.dumps(config, sort_keys=True, default=str))
         if key != self._power_key:
             if self._power:
                 self._power.stop()
             self._power, self._power_error = None, None
             try:
-                self._power = self.power_factory(self.config.power_method, self.config.power_config or {},
-                                                 self.runner)
+                self._power = self.power_factory(method, config or {}, self.runner)
             except Exception as exc:
                 log.warning("power setup failed: %s", exc)
                 self._power_error = f"Fehler: {exc}"
@@ -118,22 +131,52 @@ class Agent:
                 return current  # already in the wanted state
             return controller.set(on)
 
+    def _enqueue_power(self, job):
+        """Power work runs on one worker thread (in order), so the reader keeps answering pings."""
+        if self._power_worker is None:
+            self._power_worker = threading.Thread(target=self._power_loop, daemon=True, name="power")
+            self._power_worker.start()
+        self._power_queue.put(job)
+
+    def _power_loop(self):
+        while True:
+            job = self._power_queue.get()
+            try:
+                job()
+            except Exception:
+                log.exception("power job failed")
+
+    def _rebuild_power(self, target):
+        with self._power_lock:
+            self._power_controller(target)
+
     def _on_power_command(self, message):
         status = self._apply_power(bool(message.get("power", True)))
         self.send({"type": "power_status", "status": status})
 
     # telemetry
 
+    def _send_telemetry(self):
+        status = self._power_status()
+        data = self.collect(self.runner, self.config.paths, datetime.now(timezone.utc), power_status=status)
+        sent = self.send({"type": "telemetry", **data})
+        self.send({"type": "power_status", "status": status})
+        return sent
+
     def _telemetry_loop(self, ended):
         while not ended.is_set() and not self.stop_event.is_set():
+            wait = self.telemetry_interval
             try:
-                status = self._power_status()
-                data = self.collect(self.runner, self.config.paths, datetime.now(timezone.utc), power_status=status)
-                self.send({"type": "telemetry", **data})
-                self.send({"type": "power_status", "status": status})
+                if not self._send_telemetry():
+                    wait = self.telemetry_retry  # no transport yet (or just lost): try again soon
             except Exception:
                 log.exception("telemetry failed")
-            ended.wait(self.telemetry_interval)
+            if self._telemetry_wake.wait(wait):  # hello: the server is ready, send right away
+                self._telemetry_wake.clear()
+                continue
+            # waiting is cut short when the connection ends
+            if ended.is_set():
+                break
 
     def on_message(self, message):
         kind = message.get("type")
@@ -141,10 +184,11 @@ class Agent:
             self.config.apply_hello(message)
             if self.config.kiosk_url:
                 self._set_kiosk(self.config.kiosk_url)
-            with self._power_lock:
-                self._power_controller()
+            target = (self.config.power_method, json.loads(json.dumps(self.config.power_config, default=str)))
+            self._enqueue_power(lambda: self._rebuild_power(target))
+            self._telemetry_wake.set()
         elif kind == "power_command":
-            self._on_power_command(message)
+            self._enqueue_power(lambda: self._on_power_command(message))
 
     def on_auth_failed(self):
         log.warning("token rejected, starting pairing again")
@@ -178,6 +222,7 @@ class Agent:
             self.connection.run_forever()
         finally:
             ended.set()
+            self._telemetry_wake.set()
 
     def run(self):
         self.start_stop_watcher()

@@ -77,7 +77,12 @@ class CecPower(PowerController):
         self.device = _text(self.config.get("cec_device"), "0")
 
     def _cec(self, command):
-        return self._check(self.runner.run(CEC_CLIENT, timeout=20, input=f"{command}\n"), "cec-client")
+        result = self.runner.run(CEC_CLIENT, timeout=20, input=f"{command}\n")
+        # Like the legacy scripts: cec-client often exits non-zero although it worked.
+        # Only a missing binary or a timeout is a failure.
+        if result.code in (124, 127):
+            raise PowerError((result.err or result.out).strip() or f"cec-client endete mit Code {result.code}")
+        return result
 
     def _set(self, on):
         self._cec(f"on {self.device}" if on else f"standby {self.device}")

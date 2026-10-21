@@ -9,6 +9,8 @@ from .power import KIOSK_USER, wayland_command
 
 log = logging.getLogger("stagedesk_agent.telemetry")
 APT_CACHE_SECONDS = 3600
+APT_FAILURE_CACHE_SECONDS = 300
+APT_TIMEOUT = 60
 MAX_TEXT = 500
 _apt_cache = {"at": None, "value": None}
 
@@ -32,9 +34,9 @@ def _read(path):
         return None
 
 
-def _output(runner, args, user=None):
+def _output(runner, args, user=None, timeout=10):
     """stdout of a command, None when it is missing or fails."""
-    result = runner.run(args, timeout=10, user=user)
+    result = runner.run(args, timeout=timeout, user=user)
     return result.out if result.code == 0 else None
 
 
@@ -182,9 +184,11 @@ def _state(paths):
 
 def _pending_from_apt(runner, now):
     cached_at = _apt_cache["at"]
-    if cached_at is not None and (now - cached_at).total_seconds() < APT_CACHE_SECONDS:
-        return _apt_cache["value"]
-    out = _output(runner, ["apt-get", "-s", "upgrade"])
+    if cached_at is not None:
+        ttl = APT_CACHE_SECONDS if _apt_cache["value"] is not None else APT_FAILURE_CACHE_SECONDS
+        if (now - cached_at).total_seconds() < ttl:
+            return _apt_cache["value"]
+    out = _output(runner, ["apt-get", "-s", "upgrade"], timeout=APT_TIMEOUT)
     value = None if out is None else sum(1 for line in out.splitlines() if line.startswith("Inst "))
     _apt_cache.update(at=now, value=value)
     return value

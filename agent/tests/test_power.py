@@ -206,8 +206,23 @@ class DdcTests(unittest.TestCase):
 
 class ErrorTests(unittest.TestCase):
     def test_power_error_status_text(self):
-        runner = FakeRunner({CEC: RunResult(1, "", "no adapter found")})
-        self.assertEqual(make_power("cec", {}, runner).set(True), "Fehler: no adapter found")
+        runner = FakeRunner({CEC: RunResult(127, "", "cec-client: not found")})
+        self.assertEqual(make_power("cec", {}, runner).set(True), "Fehler: cec-client: not found")
+
+    def test_cec_timeout_is_error(self):
+        runner = FakeRunner({CEC: RunResult(124, "", "timeout after 20s")})
+        self.assertEqual(make_power("cec", {}, runner).set(False), "Fehler: timeout after 20s")
+
+    def test_cec_nonzero_exit_alone_is_not_a_failure(self):
+        runner = FakeRunner({CEC: RunResult(1, "power status: standby\n", "")})
+        power = make_power("cec", {}, runner)
+        self.assertEqual(power.set(False), "standby")
+        self.assertEqual(power.status(), "standby")
+
+    def test_hybrid_on_tolerates_cec_nonzero_exit(self):
+        runner = FakeRunner({CEC: RunResult(1, "", "")})
+        power = make_power("hybrid", {"display_ip": "192.0.2.7"}, runner, connect=FakeConnect(), sleep=no_sleep)
+        self.assertEqual(power.set(True), "an")
 
     def test_error_text_from_exception(self):
         class Boom:

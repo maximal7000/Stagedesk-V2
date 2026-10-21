@@ -125,6 +125,18 @@ class DeviceConsumerTest(TransactionTestCase):
             self.fail('keine Close-Nachricht')
         async_to_sync(run)()
 
+    def test_flat_agent_telemetry_fills_agent_version_from_system_group(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'telemetry', 'system': {'agent_version': '2.0.1'}})
+            await _sync_point(comm)
+            device = await sync_to_async(Device.objects.get)(pk=self.device.pk)
+            self.assertEqual(device.agent_version, '2.0.1')
+            await comm.disconnect()
+        async_to_sync(run)()
+
     def test_telemetry_throttled_but_last_seen_updated(self):
         async def run():
             comm = _communicator('glocke', self.token)

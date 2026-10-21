@@ -271,6 +271,66 @@ class WiringTests(unittest.TestCase):
         self.assertEqual(conns[0].of_type("power_status")[0]["status"], "Fehler: unbekannte Power-Methode: laser")
 
 
+class HelloGatedConn(RecordingConn):
+    """send() fails until hello was delivered, like a transport that does not exist yet."""
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.ready = False
+
+    def run_forever(self):
+        threading.Event().wait(0.1)  # the telemetry thread tries (and fails) meanwhile
+        self.ready = True
+        super().run_forever()
+
+    def send(self, msg):
+        return self.ready and super().send(msg)
+
+
+class FirstSendTests(unittest.TestCase):
+    setUp = WiringTests.setUp
+    wait_for = WiringTests.wait_for
+    run_agent = WiringTests.run_agent
+
+    def test_telemetry_sent_right_after_hello_not_after_a_minute(self):
+        done = threading.Event()
+        self.done = done
+        conns = self.conns
+        agent = Agent(self.cfg, FakePages(), power_factory=lambda m, c, r: FakePower(m, c), runner=object(),
+                      telemetry_interval=60, telemetry_retry=60, collect=lambda *a, **k: {"system": {}},
+                      connection_factory=lambda c, om, af: conns.append(
+                          HelloGatedConn(c, om, af, [{"type": "hello", "power_method": "cec"}], done)) or conns[-1])
+        self.run_agent(agent, lambda: conns and conns[0].of_type("telemetry") and conns[0].of_type("power_status"))
+
+    def test_failed_send_is_retried_quickly(self):
+        done = threading.Event()
+        self.done = done
+        conns = self.conns
+        agent = Agent(self.cfg, FakePages(), power_factory=lambda m, c, r: FakePower(m, c), runner=object(),
+                      telemetry_interval=60, telemetry_retry=0.01, collect=lambda *a, **k: {"system": {}},
+                      connection_factory=lambda c, om, af: conns.append(
+                          HelloGatedConn(c, om, af, [], done)) or conns[-1])
+        self.run_agent(agent, lambda: conns and conns[0].of_type("telemetry"))
+
+    def test_power_command_does_not_block_the_reader(self):
+        gate = threading.Event()
+
+        class Slow(FakePower):
+            def set(self, on):
+                gate.wait(5)
+                return super().set(on)
+        agent = Agent(self.cfg, FakePages(), power_factory=lambda m, c, r: Slow(m, c), runner=object(),
+                      collect=lambda *a, **k: {}, telemetry_interval=60)
+        sent = []
+        agent.connection = type("C", (), {"send": lambda s, m: sent.append(m) or True})()
+        started = threading.Event()
+        threading.Thread(target=lambda: (agent.on_message({"type": "power_command", "power": True}),
+                                         started.set())).start()
+        self.assertTrue(started.wait(2), "on_message blocked on the power command")
+        gate.set()
+        self.assertTrue(self.wait_for(lambda: {"type": "power_status", "status": "an"} in sent))
+
+
 class StopTests(unittest.TestCase):
     def setUp(self):
         self.paths = make_paths(self)
