@@ -78,6 +78,22 @@ describe('SubstitutionsView', () => {
     expect(cls.className).not.toMatch(/truncate|nowrap/)
   })
 
+  it('kurze Werte brechen nicht mitten im Wert um', () => {
+    const data = { days: [{
+      date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
+      rows: [row({ periods: '8.–9.', room: '015', room_old: '113', teacher: 'KLM, HRT', teacher_old: 'BEC' })],
+    }] }
+    const el = render(<SubstitutionsView view={view(data)} />)
+    const cell = (key) => visible(el).querySelector(`[data-column="${key}"]`)
+    expect(cell('periods').className).toContain('whitespace-nowrap')
+    expect(cell('kind').className).toContain('whitespace-nowrap')
+    const pair = cell('room').querySelector('.whitespace-nowrap')
+    expect(pair.textContent).toBe('113 015')
+    const teacher = [...cell('teacher').querySelectorAll('.whitespace-nowrap')].map((s) => s.textContent)
+    expect(teacher).toEqual(['BEC KLM', 'HRT'])
+    expect(cell('teacher').textContent).toBe('BEC KLM, HRT')
+  })
+
   it('zeigt Altwerte durchgestrichen und die Art nach kind_label', () => {
     const data = { days: [{
       date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],

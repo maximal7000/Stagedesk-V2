@@ -13,31 +13,37 @@ const ROW_MIN_REM = 2.1875
 const KIND_TONE = { cancelled: 'text-(--d-red)', room_change: 'text-(--d-info)' }
 const KIND_FALLBACK = { substitution: 'Vertretung', cancelled: 'Entfall', room_change: 'Raumänderung', other: 'Änderung' }
 
-// Ersetztes durchgestrichen, Neues dahinter
+// Ersetztes durchgestrichen, Neues dahinter. Altwert und erster neuer Wert bleiben zusammen ("~~113~~ 015");
+// umbrochen wird nur zwischen getrennten Werten einer Liste ("KLM, HRT").
 function Replaced({ old, value }) {
+  const [first = '', ...rest] = String(value ?? '').split(/,\s*/)
   return (
     <>
-      {old && <s className="text-(--d-muted)">{old}</s>}
-      {old && value ? ' ' : ''}
-      {value}
+      <span className="whitespace-nowrap">
+        {old && <s className="text-(--d-muted)">{old}</s>}
+        {old && first ? ' ' : ''}
+        {first}
+      </span>
+      {rest.map((item, i) => <span key={i}>, <span className="whitespace-nowrap">{item}</span></span>)}
     </>
   )
 }
 
-// Spalten: flag = Schalter in data.columns (Format-Optionen aus WebUntis), ohne flag immer sichtbar
+// Spalten: flag = Schalter in data.columns (Format-Optionen aus WebUntis), ohne flag immer sichtbar.
+// nowrap: kurze Werte ("8.–9.", "Raumänderung") brechen nie mitten im Wert; Klasse, Lehrkraft, Raum und Hinweis umbrechen.
 const COLUMN_DEFS = {
-  group: { head: 'Kürzel', fr: 6, cls: 'd-oswald font-medium', lead: true, cell: (row) => row.group },
+  group: { head: 'Kürzel', fr: 7, nowrap: true, cls: 'd-oswald font-medium', lead: true, cell: (row) => row.group },
   class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-oswald font-medium', cell: (row) => row.classes_label },
-  periods: { head: 'Std.', fr: 5, cls: 'd-oswald', cell: (row) => row.periods },
-  subject: { head: 'Fach', fr: 6, flag: 'subject', cls: 'd-lato', cell: (row) => row.subject },
+  periods: { head: 'Std.', fr: 6, nowrap: true, cls: 'd-oswald', cell: (row) => row.periods },
+  subject: { head: 'Fach', fr: 6, flag: 'subject', nowrap: true, cls: 'd-lato', cell: (row) => row.subject },
   teacher: { head: 'Lehrkraft', fr: 12, flag: 'teacher', cls: 'd-lato', cell: (row) => <Replaced old={row.teacher_old} value={row.teacher} /> },
-  room: { head: 'Raum', fr: 9, flag: 'room', cls: 'd-lato', cell: (row) => <Replaced old={row.room_old} value={row.room} /> },
+  room: { head: 'Raum', fr: 10, flag: 'room', cls: 'd-lato', cell: (row) => <Replaced old={row.room_old} value={row.room} /> },
   kind: {
-    head: 'Art', fr: 15, cls: 'd-oswald text-[1.25rem] uppercase',
+    head: 'Art', fr: 16, nowrap: true, cls: 'd-oswald text-[1.25rem] uppercase',
     tone: (row) => KIND_TONE[row.kind] ?? '',
     cell: (row) => row.kind_label || KIND_FALLBACK[row.kind] || KIND_FALLBACK.other,
   },
-  note: { head: 'Hinweis', fr: 30, flag: 'note', cls: 'd-lato text-[1.25rem] text-(--d-fg-soft)', cell: (row) => row.note },
+  note: { head: 'Hinweis', fr: 27, flag: 'note', cls: 'd-lato text-[1.25rem] text-(--d-fg-soft)', cell: (row) => row.note },
 }
 const ORDER = {
   class: ['class', 'periods', 'subject', 'teacher', 'room', 'kind', 'note'],
@@ -231,7 +237,7 @@ function SubstitutionRow({ row, columns, showLead }) {
         const def = COLUMN_DEFS[key]
         const hidden = key === columns.leadKey && !showLead
         return (
-          <span key={key} data-column={key} className={`min-w-0 whitespace-normal break-words ${def.cls} ${def.tone?.(row) ?? ''}`}>
+          <span key={key} data-column={key} className={`min-w-0 ${def.nowrap ? 'whitespace-nowrap' : 'whitespace-normal break-words'} ${def.cls} ${def.tone?.(row) ?? ''}`}>
             {hidden ? '' : def.cell(row)}
           </span>
         )
