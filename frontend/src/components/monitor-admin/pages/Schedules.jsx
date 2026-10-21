@@ -3,7 +3,7 @@
 // Die Balken folgen power.compute_power_state (shared/schedule.weekBars). Recht: monitor.power (Route).
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Info, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, Button } from '../../ui'
 import ConfirmDialog from '../shared/ConfirmDialog'
@@ -266,10 +266,6 @@ export default function Schedules() {
         <div className="space-y-4">
           <Holidays holidays={holidays} onReload={load} />
           <WeekOverview screens={screens} />
-          <div className="bg-surface rounded-lg px-5 py-3.5 flex items-center gap-3 text-sm text-fg-muted" data-update-hint>
-            <Info className="w-4 h-4 text-fg-subtle shrink-0" aria-hidden="true" />
-            Automatische Updates: Sonntag 03:00 (wirksam mit dem Geräte-Agent)
-          </div>
         </div>
       ) : null}
     </div>

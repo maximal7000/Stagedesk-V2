@@ -4,7 +4,6 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from '../../ui'
 import ConfirmDialog from './ConfirmDialog'
 
-export const EMERGENCY_HINT = 'Manuell. Nicht mit der Brandmeldeanlage verbunden.'
 const FREE = 'free'
 
 const fieldClass = 'w-full bg-raised border border-line rounded-md hover:border-line-strong focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none px-3 py-2 text-sm text-fg'
@@ -108,7 +107,6 @@ export default function EmergencyDialog({ active = false, currentText = '', curr
   return (
     <Shell titleId={titleId} onCancel={onCancel}>
       <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight text-fg">Notfall auslösen</h2>
-      <p className="mt-1 text-sm text-fg-muted">{EMERGENCY_HINT}</p>
 
       <fieldset className="mt-4">
         <legend className="text-sm font-medium text-fg-muted mb-1.5">Vorlage</legend>
