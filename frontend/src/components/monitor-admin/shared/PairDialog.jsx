@@ -12,10 +12,53 @@ const MODES = [
   { value: 'new', label: 'Neuer Bildschirm' },
 ]
 
+// Sechs Einzelfelder, gruppiert 3 + 3 wie auf dem Pi ("482 913"). value ist der Code als Ziffernfolge (höchstens 6 Stellen).
+function CodeInput({ value, onChange }) {
+  const digits = normalizeCode(value).slice(0, 6)
+  const groupRef = useRef(null)
+  const focusAt = (i) => {
+    const el = groupRef.current?.querySelector(`[data-code-index="${Math.max(0, Math.min(5, i))}"]`)
+    el?.focus()
+    el?.select?.()
+  }
+  // Ziffern ab Position i einsetzen (Eingabe oder Einfügen), Rest des Codes bleibt
+  const put = (i, raw) => {
+    const typed = normalizeCode(raw)
+    if (!typed) return
+    const arr = digits.padEnd(6, ' ').split('')
+    const chunk = typed.slice(0, 6 - i)
+    chunk.split('').forEach((d, k) => { arr[i + k] = d })
+    onChange(arr.join('').replace(/ /g, ''))
+    focusAt(Math.min(i + chunk.length, 5))
+  }
+  const clear = (i) => {
+    const arr = digits.padEnd(6, ' ').split('')
+    arr[i] = ' '
+    onChange(arr.join('').trimEnd().replace(/ /g, ''))
+  }
+  const onKey = (i) => (e) => {
+    if (e.key === 'Backspace') {
+      e.preventDefault()
+      if (digits[i]) clear(i)
+      else if (i > 0) { clear(i - 1); focusAt(i - 1) }
+    } else if (e.key === 'ArrowLeft') { e.preventDefault(); focusAt(i - 1) }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); focusAt(i + 1) }
+  }
+  return (
+    <div ref={groupRef} role="group" aria-label="Kopplungscode" className="flex items-center gap-2">
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <input key={i} data-code-index={i} aria-label={`Ziffer ${i + 1} von 6`} type="text" inputMode="numeric" autoComplete="one-time-code"
+          value={digits[i] ?? ''} onChange={(e) => { const t = normalizeCode(e.target.value); put(i, t.length <= 2 ? t.slice(-1) : t) }} onKeyDown={onKey(i)} onFocus={(e) => e.target.select()}
+          onPaste={(e) => { e.preventDefault(); put(i, e.clipboardData.getData('text')) }}
+          className={`${fieldClass} !w-11 px-0 text-center font-display text-2xl tabular-nums ${i === 3 ? 'ml-4' : ''}`} />
+      ))}
+    </div>
+  )
+}
+
 // screens: [{ id, name, hasDevice? }] (hasDevice null = unbekannt, die Geräteliste ließ sich nicht laden); onPaired lädt die Liste neu, onClose schließt
 export default function PairDialog({ screens, onClose, onPaired }) {
   const titleId = useId()
-  const codeId = useId()
   const screenId = useId()
   const nameId = useId()
   const locationId = useId()
@@ -31,7 +74,21 @@ export default function PairDialog({ screens, onClose, onPaired }) {
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
   // Fokus auf das erste Bedienelement des Schritts (Code, Auswahl oder Name)
-  useEffect(() => { dialogRef.current?.querySelector('input, select')?.focus() }, [step, mode])
+  // Schritt 1: erstes leeres Ziffernfeld, nach einem Codefehler das erste Feld
+  const codeFocus = useRef(null)
+  useEffect(() => {
+    const root = dialogRef.current
+    if (!root) return
+    if (step === 1) {
+      const at = codeFocus.current ?? Math.min(normalizeCode(code).length, 5)
+      codeFocus.current = null
+      root.querySelector(`[data-code-index="${at}"]`)?.focus()
+    } else {
+      root.querySelector('input, select')?.focus()
+    }
+    // code bewusst nicht in den Abhängigkeiten: nur beim Schrittwechsel fokussieren
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, mode])
 
   const onKeyDown = (e) => {
     if (e.key === 'Escape') { e.stopPropagation(); if (!busy) onClose?.() }
@@ -55,7 +112,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
       if (mounted.current) {
         setError(errorText(err, 'Das Koppeln ist fehlgeschlagen. Bitte erneut versuchen.'))
         // Fehler des Codes (ungültig, abgelaufen, zu viele Versuche): zurück zur Codeeingabe
-        if (err?.response?.status === 400 || err?.response?.status === 429) setStep(1)
+        if (err?.response?.status === 400 || err?.response?.status === 429) { codeFocus.current = 0; setStep(1) }
       }
     }
     if (mounted.current) setBusy(false)
@@ -77,10 +134,9 @@ export default function PairDialog({ screens, onClose, onPaired }) {
 
         {step === 1 ? (
           <div className="mt-4">
-            <Field label="Kopplungscode" htmlFor={codeId} help="Den Code zeigt der Raspberry Pi nach der Installation auf seinem Bildschirm. Er gilt 15 Minuten.">
-              <input id={codeId} className={`${fieldClass} font-display text-2xl tracking-[0.2em] tabular-nums`} inputMode="numeric"
-                autoComplete="off" placeholder="482 913" maxLength={9} value={code} onChange={(e) => setCode(e.target.value)} />
-            </Field>
+            <div className="text-sm font-medium text-fg mb-1.5">Kopplungscode</div>
+            <CodeInput value={code} onChange={setCode} />
+            <p className="text-xs text-fg-subtle mt-1.5">Den Code zeigt der Raspberry Pi nach der Installation auf seinem Bildschirm. Er gilt 15 Minuten.</p>
           </div>
         ) : (
           <div className="mt-4 space-y-4">
