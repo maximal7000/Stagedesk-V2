@@ -22,7 +22,10 @@ from .models import (
     generate_access_key, Device,
 )
 from .validation import validate_view_data as _validate_view_data
-from .validation import validate_screen_device_data, validate_screen_schedule, validate_settings_device_data
+from .validation import (
+    validate_screen_device_data, validate_screen_schedule, validate_settings_device_data,
+    validate_settings_light_times,
+)
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -964,6 +967,7 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
         _require_perm(request, 'monitor.onair')
     validate_settings_device_data(data)
     settings = MonitorSettings.load()
+    validate_settings_light_times(data, settings.light_from, settings.light_until)
     for key, value in data.items():
         setattr(settings, key, value)
     settings.save()

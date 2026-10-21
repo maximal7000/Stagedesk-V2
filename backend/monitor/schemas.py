@@ -1,9 +1,12 @@
 """
 Monitor Schemas
 """
-from typing import Literal, Optional, List
+from typing import Dict, Literal, Optional, List
 from datetime import date, datetime
+from django.utils import timezone
 from ninja import Schema
+
+from .sun import sun_times
 
 
 class MediaFileSchema(Schema):
@@ -130,7 +133,7 @@ class DisplayViewSchema(Schema):
     transit_disruption_position: str = 'bottom'
     on_air_split_side: str = 'right'
     kind: str = 'info'
-    style: str = 'auto'
+    layout: str = 'auto'
     on_air_behavior: str = 'fullscreen'
     rotation_items: list = []
     media_items: list = []
@@ -216,7 +219,7 @@ class DisplayViewUpdateSchema(Schema):
     transit_disruption_position: Optional[str] = None
     on_air_split_side: Optional[str] = None
     kind: Optional[str] = None
-    style: Optional[str] = None
+    layout: Optional[str] = None
     on_air_behavior: Optional[str] = None
     rotation_items: Optional[list] = None
     media_items: Optional[list] = None
@@ -304,6 +307,7 @@ class ScreenListSchema(Schema):
     auto_updates: bool = True
     update_window: dict = {}
     daily_reboot: bool = True
+    color_scheme: str = 'inherit'
     created_at: datetime
     updated_at: datetime
 
@@ -333,6 +337,7 @@ class ScreenUpdateSchema(Schema):
     auto_updates: Optional[bool] = None
     update_window: Optional[dict] = None
     daily_reboot: Optional[bool] = None
+    color_scheme: Optional[Literal['inherit', 'light', 'dark']] = None
 
 
 class DisplayViewVersionSchema(Schema):
@@ -541,6 +546,15 @@ class MonitorSettingsSchema(Schema):
     warn_wifi_dbm: int = -75
     warn_reboot_days: int = 7
     require_device_token: bool = False
+    color_scheme: str = 'light'
+    light_from: str = '07:00'
+    light_until: str = '18:00'
+    daylight_today: Dict[str, str] = {}
+
+    @staticmethod
+    def resolve_daylight_today(obj):
+        sunrise, sunset = sun_times(timezone.localdate())
+        return {'sunrise': sunrise.strftime('%H:%M'), 'sunset': sunset.strftime('%H:%M')}
 
     @staticmethod
     def resolve_weather_api_key(obj):
@@ -577,6 +591,9 @@ class MonitorSettingsUpdateSchema(Schema):
     warn_wifi_dbm: Optional[int] = None
     warn_reboot_days: Optional[int] = None
     require_device_token: Optional[bool] = None
+    color_scheme: Optional[Literal['light', 'dark', 'daylight', 'schedule']] = None
+    light_from: Optional[str] = None
+    light_until: Optional[str] = None
 
 
 class PairStartSchema(Schema):

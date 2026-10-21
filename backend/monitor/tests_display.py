@@ -14,9 +14,9 @@ from .models import (
     DisplayView, Exam, MediaFile, MediaPage, MonitorSettings, Screen,
 )
 
-TOP_KEYS = {'generated_at', 'reload_requested_at', 'screen', 'mode', 'view'}
-SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power'}
-VIEW_KEYS = {'id', 'kind', 'style', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
+TOP_KEYS = {'generated_at', 'reload_requested_at', 'screen', 'scheme', 'mode', 'view'}
+SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power', 'scheme'}
+VIEW_KEYS = {'id', 'kind', 'layout', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
 DATA_KEYS = {
     'departures': {'stations', 'disruptions'},
     'substitutions': {'source', 'fallback', 'group_by', 'columns', 'days', 'news', 'updated_at',
@@ -127,8 +127,8 @@ class ContractTest(DisplayTestBase):
         self.assertEqual(len(pages), 2)
         self.assertEqual(set(pages[0]), {'url', 'width', 'height', 'orientation'})
 
-        self.assertEqual(self._payload(views['split'])['view']['style'], 'dense')
-        self.assertEqual(self._payload(info)['view']['style'], 'ci')
+        self.assertEqual(self._payload(views['split'])['view']['layout'], 'wide')
+        self.assertEqual(self._payload(info)['view']['layout'], 'normal')
 
     def test_unknown_screen_returns_nulls(self):
         r = self.client.get('/api/monitor/display', {'screen': 'gibt-es-nicht'})
@@ -394,7 +394,7 @@ class PreviewValidationTest(PreviewTestBase):
 
     def test_invalid_choices_rejected(self):
         self.assert_rejected({'view': {'kind': 'tabelle'}}, 'Typ')
-        self.assert_rejected({'view': {'id': self.saved.id, 'style': 'bunt'}}, 'Stil')
+        self.assert_rejected({'view': {'id': self.saved.id, 'layout': 'bunt'}}, 'Aufteilung')
         self.assert_rejected({'view': {'on_air_behavior': 'flash'}}, 'On-Air')
         self.assert_rejected({'view': {'split_left': 'kantine'}}, 'Split')
 

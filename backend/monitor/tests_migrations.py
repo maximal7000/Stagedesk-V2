@@ -762,3 +762,49 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
                       [{'days': [4], 'from': '22:00', 'until': '23:59'},
                        {'days': [4], 'from': '00:00', 'until': '06:00'}]),
         })
+
+
+class LayoutColorSchemeMigrationTest(MigrationTestCase):
+    """0046: Stil wird Aufteilung, „Dunkel“ wandert als Ausnahme an den Bildschirm (Spec §3.2)."""
+    migrate_from = ('monitor', '0045_unified_screen_schedule')
+    migrate_to = ('monitor', '0046_layout_color_scheme')
+
+    def setUpBeforeMigration(self, apps):
+        View = apps.get_model('monitor', 'DisplayView')
+        Screen = apps.get_model('monitor', 'Screen')
+        Version = apps.get_model('monitor', 'DisplayViewVersion')
+        for style in ('auto', 'ci', 'dense', 'dark'):
+            _make_view(View, style, style=style)
+        dark = View.objects.get(slug='dark')
+        Screen.objects.create(name='Dunkel', slug='s-dark', default_view=dark)
+        Screen.objects.create(name='Hell', slug='s-ci', default_view=View.objects.get(slug='ci'))
+        Screen.objects.create(name='Ohne', slug='s-none')
+        Version.objects.create(view=dark, data={'kind': 'info', 'style': 'ci'})
+
+    def test_0046_forward(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        Screen = self.apps.get_model('monitor', 'Screen')
+        self.assertEqual(dict(View.objects.values_list('slug', 'layout')),
+                         {'auto': 'auto', 'ci': 'normal', 'dense': 'wide', 'dark': 'wide'})
+        self.assertNotIn('style', {f.name for f in View._meta.get_fields()})
+        self.assertEqual(dict(Screen.objects.values_list('slug', 'color_scheme')),
+                         {'s-dark': 'dark', 's-ci': 'inherit', 's-none': 'inherit'})
+        settings = self.apps.get_model('monitor', 'MonitorSettings').objects.create()
+        self.assertEqual((settings.color_scheme, settings.light_from, settings.light_until),
+                         ('light', '07:00', '18:00'))
+        version = self.apps.get_model('monitor', 'DisplayViewVersion').objects.get()
+        self.assertEqual(version.data, {'kind': 'info', 'layout': 'normal'})
+
+    def test_0046_backward(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        _make_view(View, 'neu-breit', layout='wide')
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        OldView = apps.get_model('monitor', 'DisplayView')
+        self.assertEqual(dict(OldView.objects.values_list('slug', 'style')),
+                         {'auto': 'auto', 'ci': 'ci', 'dense': 'dense', 'dark': 'dark', 'neu-breit': 'dense'})
+        self.assertNotIn('color_scheme', {f.name for f in apps.get_model('monitor', 'Screen')._meta.get_fields()})
+        version = apps.get_model('monitor', 'DisplayViewVersion').objects.get()
+        self.assertEqual(version.data, {'kind': 'info', 'style': 'ci'})

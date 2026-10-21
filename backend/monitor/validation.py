@@ -15,7 +15,7 @@ from .models import DisplayView, validate_rotation_items
 # Auswahlfelder der Ansicht → Bezeichnung in der Fehlermeldung
 CHOICE_FIELDS = {
     'kind': 'Typ',
-    'style': 'Stil',
+    'layout': 'Aufteilung',
     'on_air_behavior': 'On-Air-Verhalten',
     'on_air_split_side': 'On-Air-Seite',
     'split_left': 'Split links',
@@ -287,3 +287,17 @@ def validate_settings_device_data(data: dict) -> None:
     for key, (label, lo, hi) in SETTINGS_DEVICE_FIELDS.items():
         if key in data and not (_is_int(data[key]) and lo <= data[key] <= hi):
             raise HttpError(422, number_message(label, lo, hi))
+
+
+# ── Farbschema (Spec §3.2) ───────────────────────────────────────────
+
+LIGHT_ORDER_MESSAGE = "Die helle Zeit muss vor ihrem Ende beginnen."
+
+
+def validate_settings_light_times(data: dict, current_from: str, current_until: str) -> None:
+    """Zeitplan hell von/bis: HH:MM, Beginn vor Ende (gespeicherter Wert, wenn nur eines kommt)."""
+    for key, label in (('light_from', 'Hell ab'), ('light_until', 'Hell bis')):
+        if key in data and not (isinstance(data[key], str) and _HHMM.match(data[key])):
+            raise HttpError(422, f"{label}: Uhrzeit ungültig. Bitte im Format HH:MM eintragen.")
+    if data.get('light_from', current_from) >= data.get('light_until', current_until):
+        raise HttpError(422, LIGHT_ORDER_MESSAGE)

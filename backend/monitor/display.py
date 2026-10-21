@@ -14,7 +14,7 @@ import urllib.request
 from django.core.cache import cache
 from django.utils import timezone
 
-from . import oepnv, substitutions
+from . import color_scheme, oepnv, substitutions
 from .models import Announcement, DisplayView, MediaFile, MonitorSettings
 from .power import compute_power_state
 
@@ -368,7 +368,7 @@ def _view_object(view, key_ok, now, single_day=False):
     return {
         'id': view.id,
         'kind': view.kind,
-        'style': view.effective_style(),
+        'layout': view.effective_layout(),
         'page_seconds': view.page_seconds,
         'show_weather': view.show_weather,
         'weather': _fetch_weather(view),
@@ -398,10 +398,11 @@ def _mode(screen, view, settings):
     return None
 
 
-def _screen_object(screen, now):
+def _screen_object(screen, now, settings):
     return {'slug': screen.slug, 'name': screen.name, 'location': screen.location,
             'scale': screen.scale, 'orientation': screen.orientation,
-            'power': compute_power_state(screen, now)}
+            'power': compute_power_state(screen, now),
+            'scheme': color_scheme.resolve(screen, settings, now)}
 
 
 def build_payload(screen, view, *, key_ok, now, preview=False):
@@ -410,15 +411,18 @@ def build_payload(screen, view, *, key_ok, now, preview=False):
     `preview=True`: der Entwurf ist immer zu sehen, unabhängig vom Strom des Bildschirms und von
     Notfall, Klausur oder On-Air.
     """
-    screen_data = _screen_object(screen, now) if screen else None
+    settings = MonitorSettings.load()
+    screen_data = _screen_object(screen, now, settings) if screen else None
     if screen_data and preview:
         screen_data['power'] = True
-    mode = _mode(screen, view, MonitorSettings.load()) if view and not preview else None
+    mode = _mode(screen, view, settings) if view and not preview else None
     single_day = bool(mode) and mode.get('display') == 'split'
     return {
         'generated_at': now.isoformat(),
         'reload_requested_at': _iso(screen.reload_requested_at) if screen else None,
         'screen': screen_data,
+        # ohne Bildschirm (Vorschau, unbekannter Bildschirm): die Einstellung ohne Ausnahme
+        'scheme': screen_data['scheme'] if screen_data else color_scheme.resolve(None, settings, now),
         'mode': mode,
         'view': _view_object(view, key_ok, now, single_day) if view else None,
     }

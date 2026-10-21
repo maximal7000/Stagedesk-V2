@@ -92,7 +92,7 @@ class DisplayView(models.Model):
         help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
 
-    # ─── Ansichtsart und Stil ───
+    # ─── Ansichtsart und Aufteilung ───
     KIND_CHOICES = [
         ('departures', 'Abfahrten'),
         ('substitutions', 'Vertretungsplan'),
@@ -102,13 +102,12 @@ class DisplayView(models.Model):
         ('rotation', 'Rotation'),
     ]
     kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='info')
-    STYLE_CHOICES = [
+    LAYOUT_CHOICES = [
         ('auto', 'Automatisch'),
-        ('ci', 'CI'),
-        ('dense', 'Dicht'),
-        ('dark', 'Dunkel'),
+        ('normal', 'Normal'),
+        ('wide', 'Breit'),
     ]
-    style = models.CharField(max_length=10, choices=STYLE_CHOICES, default='auto')
+    layout = models.CharField(max_length=10, choices=LAYOUT_CHOICES, default='auto')
     ON_AIR_BEHAVIOR_CHOICES = [
         ('fullscreen', 'Vollbild'),
         ('split', 'Geteilt'),
@@ -344,11 +343,11 @@ class DisplayView(models.Model):
             return self.webuntis_link_next_day.url
         return self.webuntis_url_next_day
 
-    def effective_style(self):
-        """Stil der Anzeige: 'auto' wird aus der Ansichtsart abgeleitet."""
-        if self.style != 'auto':
-            return self.style
-        return 'dense' if self.kind in ('departures', 'substitutions', 'split') else 'ci'
+    def effective_layout(self):
+        """Aufteilung der Anzeige: 'auto' heißt Normal für Info und Medien, sonst Breit."""
+        if self.layout != 'auto':
+            return self.layout
+        return 'normal' if self.kind in ('info', 'media') else 'wide'
 
     def __str__(self):
         return f"{self.name} ({self.slug})"
@@ -444,6 +443,14 @@ class Screen(models.Model):
     update_window = models.JSONField(default=default_update_window, blank=True,
         help_text='{"weekday": 0-6 (0=Montag), "from": "HH:MM", "until": "HH:MM"}')
     daily_reboot = models.BooleanField(default=True)
+
+    # ─── Farbschema: Ausnahme vor der Einstellung für alle ───
+    COLOR_SCHEME_CHOICES = [
+        ('inherit', 'Wie eingestellt'),
+        ('light', 'Immer hell'),
+        ('dark', 'Immer dunkel'),
+    ]
+    color_scheme = models.CharField(max_length=10, choices=COLOR_SCHEME_CHOICES, default='inherit')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -755,6 +762,17 @@ class MonitorSettings(models.Model):
     warn_wifi_dbm = models.IntegerField(default=-75)
     warn_reboot_days = models.PositiveIntegerField(default=7)
     require_device_token = models.BooleanField(default=False)
+
+    # ─── Farbschema (alle Bildschirme) ───
+    COLOR_SCHEME_CHOICES = [
+        ('light', 'Hell'),
+        ('dark', 'Dunkel'),
+        ('daylight', 'Tageslicht'),
+        ('schedule', 'Zeitplan'),
+    ]
+    color_scheme = models.CharField(max_length=10, choices=COLOR_SCHEME_CHOICES, default='light')
+    light_from = models.CharField(max_length=5, default='07:00', help_text="Zeitplan: hell ab HH:MM")
+    light_until = models.CharField(max_length=5, default='18:00', help_text="Zeitplan: hell bis HH:MM")
 
     class Meta:
         verbose_name = 'Globale Monitor-Einstellung'
