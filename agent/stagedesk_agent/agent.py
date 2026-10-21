@@ -8,8 +8,10 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from . import telemetry
+from .commands import CommandContext, PlaceholderUpdater, execute
 from .config import Config
 from .connection import Connection
+from .kiosk import Kiosk
 from .local_pages import LocalPages
 from .pairing import PairingClient
 from .paths import Paths
@@ -28,10 +30,19 @@ def read_identity(paths):
 
 class Agent:
     def __init__(self, config, pages, kiosk_set_url=None, pairing_factory=None, connection_factory=None,
-                 runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60):
+                 runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60,
+                 kiosk=None, updater=None, timer_factory=threading.Timer):
         self.config = config
         self.pages = pages
-        self.kiosk_set_url = kiosk_set_url or (lambda url: None)
+        self.kiosk = kiosk
+        self.kiosk_set_url = kiosk_set_url or (kiosk.apply if kiosk else (lambda url: None))
+        self.updater = updater or PlaceholderUpdater()  # Task 9 replaces it
+        self.timer_factory = timer_factory
+        self.last_telemetry = None
+        self._command_queue = queue.Queue()
+        self._command_worker = None
+        self._after_ack = []
+        self._timers = []
         self.pairing_factory = pairing_factory or self._default_pairing
         self.connection_factory = connection_factory or (
             lambda cfg, om, af: Connection(cfg, om, af, stop_event=self.stop_event))
@@ -84,6 +95,7 @@ class Agent:
             if part:
                 part.stop()
         self._drop_power_jobs()
+        self._drop_command_jobs()
         with self._power_lock:
             if self._power:
                 self._power.stop()
@@ -95,6 +107,58 @@ class Agent:
         except queue.Empty:
             pass
         self._power_queue.put(None)  # wakes the worker, which then exits
+
+    # commands
+
+    def _drop_command_jobs(self):
+        try:
+            while True:
+                self._command_queue.get_nowait()
+        except queue.Empty:
+            pass
+        self._command_queue.put(None)
+        for timer in self._timers:
+            timer.cancel()
+
+    def _enqueue_command(self, message):
+        """Commands run in order on their own worker (updates and screenshots take long)."""
+        if self.stop_event.is_set():
+            return
+        if self._command_worker is None:
+            self._command_worker = threading.Thread(target=self._command_loop, daemon=True, name="commands")
+            self._command_worker.start()
+        self._command_queue.put(message)
+
+    def _command_loop(self):
+        while True:
+            message = self._command_queue.get()
+            if message is None or self.stop_event.is_set():
+                return
+            try:
+                self._run_command(message)
+            except Exception:
+                log.exception("command failed")
+
+    def _defer(self, delay, fn):
+        self._after_ack.append((delay, fn))
+
+    def _context(self):
+        return CommandContext(
+            config=self.config, kiosk=self.kiosk, pages=self.pages, runner=self.runner, updater=self.updater,
+            apply_power=self._apply_power, last_telemetry=lambda: self.last_telemetry,
+            set_kiosk=self._set_kiosk, defer=self._defer)
+
+    def _run_command(self, message):
+        self._after_ack = []
+        ok, text = execute(message, self._context())
+        self.send({"type": "command_result", "id": message.get("id"), "ok": ok, "text": text})
+        # Deferred work (reboot, back from the test pattern) starts only after the result was sent.
+        for delay, fn in self._after_ack:
+            timer = self.timer_factory(delay, fn)
+            timer.daemon = True
+            self._timers.append(timer)
+            timer.start()
+        self._after_ack = []
 
     def send(self, msg):
         return bool(self.connection and self.connection.send(msg))
@@ -170,6 +234,7 @@ class Agent:
     def _send_telemetry(self):
         status = self._power_status()
         data = self.collect(self.runner, self.config.paths, datetime.now(timezone.utc), power_status=status)
+        self.last_telemetry = data
         sent = self.send({"type": "telemetry", **data})
         self.send({"type": "power_status", "status": status})
         return sent
@@ -206,6 +271,8 @@ class Agent:
                 self._rebuild_power(target)
                 wake.set()  # telemetry and power_status now come from the new controller
             self._enqueue_power(apply_hello)
+        elif kind == "command":
+            self._enqueue_command(message)
         elif kind == "power_command":
             self._enqueue_power(lambda: self._on_power_command(message))
 
@@ -256,7 +323,8 @@ def main():
     config = Config.load(paths)
     pages = LocalPages()
     pages.start()
-    agent = Agent(config, pages)
+    runner = Runner()
+    agent = Agent(config, pages, runner=runner, kiosk=Kiosk(runner, paths))
     signal.signal(signal.SIGTERM, lambda *_: agent.request_stop())
     try:
         agent.run()

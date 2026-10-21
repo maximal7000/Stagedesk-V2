@@ -1,0 +1,322 @@
+import io
+import threading
+import unittest
+import urllib.error
+
+from stagedesk_agent import commands
+from stagedesk_agent.agent import Agent
+from stagedesk_agent.commands import CommandContext, execute, upload_screenshot
+from stagedesk_agent.config import Config
+from stagedesk_agent.runner import RunResult
+from tests.fakes import FakeRunner, make_paths
+from tests.test_agent import FakePages, FakePower, RecordingConn
+
+ACTIVE = ("systemctl", "is-active", "stagedesk-kiosk")
+RESTART = ("systemctl", "restart", "stagedesk-kiosk")
+
+
+class FakeKiosk:
+    def __init__(self, running=True):
+        self.running, self.log = running, []
+
+    def is_running(self):
+        return self.running
+
+    def restart(self):
+        self.log.append("restart")
+        return True
+
+    def apply(self, url):
+        self.log.append(("apply", url))
+        return True
+
+
+class FakeUpdater:
+    def __init__(self):
+        self.calls = []
+
+    def run(self, manual=False):
+        self.calls.append(manual)
+        return {"ok": True, "text": "2 Pakete aktualisiert"}
+
+
+class Base(unittest.TestCase):
+    def setUp(self):
+        self.paths = make_paths(self)
+        self.cfg = Config.load(self.paths)
+        self.cfg.token, self.cfg.slug = "TOK", "eingang"
+        self.cfg.server = "https://srv.example"
+        self.cfg.kiosk_url = "https://srv.example/monitor?screen=eingang&key=k"
+        self.runner = FakeRunner()
+        self.kiosk = FakeKiosk()
+        self.deferred = []
+        self.uploads = []
+        self.shot = self.paths.root / "sd-shot.png"
+        self.telemetry = {"display": {"browser_running": True, "resolution": "3840x2160"}}
+        self.power_calls = []
+        self.pages = type("P", (), {"shots": [], "show_test_pattern": lambda s, n, r, sec=60: s.shots.append((n, r, sec))})()
+        self.updater = FakeUpdater()
+        self.ctx = CommandContext(
+            config=self.cfg, kiosk=self.kiosk, pages=self.pages, runner=self.runner, updater=self.updater,
+            apply_power=lambda on: self.power_calls.append(on) or ("an" if on else "standby"),
+            last_telemetry=lambda: self.telemetry, set_kiosk=lambda url: self.kiosk.apply(url),
+            defer=lambda delay, fn: self.deferred.append((delay, fn)),
+            upload=lambda *a: self.uploads.append(a) or (True, "Screenshot hochgeladen"), screenshot_path=self.shot)
+
+
+class ExecuteTests(Base):
+    def test_unknown_command_fails(self):
+        self.assertEqual(execute({"id": 1, "kind": "dance"}, self.ctx), (False, "Unbekannter Befehl"))
+
+    def test_reload_only_restarts_kiosk_when_not_running(self):
+        self.assertEqual(execute({"kind": "reload"}, self.ctx), (True, "Neu geladen"))
+        self.assertEqual(self.kiosk.log, [])
+        self.kiosk.running = False
+        self.assertEqual(execute({"kind": "reload"}, self.ctx)[0], True)
+        self.assertEqual(self.kiosk.log, ["restart"])
+
+    def test_reload_restarts_kiosk_when_last_telemetry_says_browser_down(self):
+        self.telemetry = {"display": {"browser_running": False}}
+        self.assertTrue(execute({"kind": "reload"}, self.ctx)[0])
+        self.assertEqual(self.kiosk.log, ["restart"])
+
+    def test_restart_browser(self):
+        self.assertEqual(execute({"kind": "restart_browser"}, self.ctx)[0], True)
+        self.assertEqual(self.kiosk.log, ["restart"])
+
+    def test_power_commands_use_power_module(self):
+        self.assertEqual(execute({"kind": "power_on"}, self.ctx), (True, "Bildschirm: an"))
+        self.assertEqual(execute({"kind": "power_off"}, self.ctx), (True, "Bildschirm: standby"))
+        self.assertEqual(self.power_calls, [True, False])
+
+    def test_power_error_status_is_failure(self):
+        self.ctx.apply_power = lambda on: "Fehler: cec-client fehlt"
+        self.assertEqual(execute({"kind": "power_on"}, self.ctx), (False, "Fehler: cec-client fehlt"))
+
+    def test_update_now_calls_updater_manual(self):
+        self.assertEqual(execute({"kind": "update_now"}, self.ctx), (True, "2 Pakete aktualisiert"))
+        self.assertEqual(self.updater.calls, [True])
+
+    def test_update_now_failure_and_crash(self):
+        self.updater.run = lambda manual=False: {"ok": False, "text": "apt belegt"}
+        self.assertEqual(execute({"kind": "update_now"}, self.ctx), (False, "apt belegt"))
+
+        def boom(manual=False):
+            raise RuntimeError("kaputt")
+        self.updater.run = boom
+        ok, text = execute({"kind": "update_now"}, self.ctx)
+        self.assertFalse(ok)
+        self.assertIn("kaputt", text)
+
+    def test_reboot_is_deferred_not_immediate(self):
+        self.assertEqual(execute({"kind": "reboot"}, self.ctx), (True, "Pi startet in 3 Sekunden neu"))
+        self.assertNotIn(("systemctl", "reboot"), [c[0:1][0] for c in self.runner.calls])
+        self.assertEqual([d for d, _ in self.deferred], [3])
+        self.deferred[0][1]()
+        self.assertIn((("systemctl", "reboot"), None), self.runner.calls)
+
+    def test_screenshot_uploads_with_token(self):
+        def grim(args, timeout=30, user=None, input=None):
+            self.shot.write_bytes(b"\x89PNG-data")
+            return RunResult(0, "", "")
+        self.ctx.runner = type("R", (), {"run": staticmethod(lambda a, timeout=30, user=None, input=None:
+                                                              (self.runner.calls.append((tuple(a), user)), grim(a))[1])})()
+        self.assertEqual(execute({"kind": "screenshot"}, self.ctx), (True, "Screenshot hochgeladen"))
+        (call, user), = [c for c in self.runner.calls if "grim" in c[0]]
+        self.assertEqual(user, "pi")
+        self.assertEqual(call[-3:], ("-o", "HDMI-A-1", str(self.shot)))
+        self.assertEqual(call[0], "env")
+        self.assertIn("XDG_RUNTIME_DIR=/run/user/1000", call)
+        self.assertEqual(self.uploads, [("https://srv.example", "TOK", b"\x89PNG-data")])
+        self.assertFalse(self.shot.exists())
+
+    def test_screenshot_uses_power_output(self):
+        self.cfg.power_config = {"output": "HDMI-A-2"}
+        self.runner.run = lambda a, timeout=30, user=None, input=None: (self.shot.write_bytes(b"x"), RunResult(0, "", ""))[1]
+        execute({"kind": "screenshot"}, self.ctx)
+        self.assertEqual(self.uploads[0][2], b"x")
+
+    def test_screenshot_grim_failure(self):
+        self.runner.responses.clear()
+        self.ctx.runner = type("R", (), {"run": staticmethod(lambda *a, **k: RunResult(1, "", "no wayland"))})()
+        ok, text = execute({"kind": "screenshot"}, self.ctx)
+        self.assertFalse(ok)
+        self.assertIn("no wayland", text)
+        self.assertEqual(self.uploads, [])
+
+    def test_screenshot_too_large_not_uploaded(self):
+        self.ctx.runner = type("R", (), {"run": staticmethod(
+            lambda *a, **k: (self.shot.write_bytes(b"0" * (commands.MAX_SCREENSHOT + 1)), RunResult(0, "", ""))[1])})()
+        ok, text = execute({"kind": "screenshot"}, self.ctx)
+        self.assertFalse(ok)
+        self.assertEqual(self.uploads, [])
+        self.assertFalse(self.shot.exists())
+
+    def test_test_pattern_returns_to_kiosk_url_after_60s(self):
+        self.assertEqual(execute({"kind": "test_pattern"}, self.ctx), (True, "Testbild für 60 Sekunden"))
+        self.assertEqual(self.pages.shots, [("eingang", "3840x2160", 60)])
+        self.assertEqual(self.kiosk.log, [("apply", "http://127.0.0.1:8765/")])
+        self.assertEqual([d for d, _ in self.deferred], [60])
+        self.deferred[0][1]()  # the clock reaches 60 s
+        self.assertEqual(self.kiosk.log[-1], ("apply", self.cfg.kiosk_url))
+
+
+class FakeResponse:
+    def __init__(self, status=200):
+        self.status = status
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+
+class UploadTests(unittest.TestCase):
+    def test_multipart_request(self):
+        seen = {}
+
+        def opener(request, timeout=None):
+            seen["request"], seen["timeout"] = request, timeout
+            return FakeResponse(200)
+        self.assertEqual(upload_screenshot("https://srv.example/", "TOK", b"PNGDATA", opener=opener), (True, "Screenshot hochgeladen"))
+        request = seen["request"]
+        self.assertEqual(request.full_url, "https://srv.example/api/monitor/agent/screenshot")
+        self.assertEqual(request.get_method(), "POST")
+        self.assertEqual(request.get_header("Authorization"), "Bearer TOK")
+        self.assertTrue(request.get_header("Content-type").startswith("multipart/form-data; boundary="))
+        self.assertIn(b'name="file"', request.data)
+        self.assertIn(b"PNGDATA", request.data)
+
+    def test_http_errors_have_texts(self):
+        def failing(code):
+            def opener(request, timeout=None):
+                raise urllib.error.HTTPError(request.full_url, code, "x", {}, io.BytesIO(b""))
+            return opener
+        self.assertIn("Token", upload_screenshot("https://s", "T", b"x", opener=failing(401))[1])
+        self.assertIn("15 MB", upload_screenshot("https://s", "T", b"x", opener=failing(413))[1])
+        self.assertFalse(upload_screenshot("https://s", "T", b"x", opener=failing(500))[0])
+
+    def test_network_error(self):
+        def opener(request, timeout=None):
+            raise urllib.error.URLError("nicht erreichbar")
+        ok, text = upload_screenshot("https://s", "T", b"x", opener=opener)
+        self.assertFalse(ok)
+        self.assertIn("nicht erreichbar", text)
+
+
+class AgentCommandTests(unittest.TestCase):
+    def setUp(self):
+        self.paths = make_paths(self)
+        self.cfg = Config.load(self.paths)
+        self.cfg.token, self.cfg.slug, self.cfg.key = "T", "s", "k"
+        self.cfg.save()
+        self.made = []
+        self.conns = []
+
+    def build(self, script, runner=None, timer=None):
+        done = threading.Event()
+        self.done = done
+
+        def power_factory(method, config, r):
+            p = FakePower(method, config)
+            self.made.append(p)
+            return p
+        agent = Agent(self.cfg, FakePages(), kiosk_set_url=lambda url: None, runner=runner or FakeRunner(),
+                      power_factory=power_factory, collect=lambda *a, **k: {"display": {"browser_running": True}},
+                      telemetry_interval=60, timer_factory=timer,
+                      connection_factory=lambda c, om, af: self.conns.append(RecordingConn(c, om, af, script, done)) or self.conns[-1])
+        return agent
+
+    def run_agent(self, agent, until):
+        thread = threading.Thread(target=agent.run_once)
+        thread.start()
+        for _ in range(500):
+            if until():
+                break
+            threading.Event().wait(0.01)
+        self.done.set()
+        thread.join(5)
+
+    def results(self):
+        return self.conns[0].of_type("command_result") if self.conns else []
+
+    def test_power_command_from_server_switches_display(self):
+        agent = self.build([{"type": "hello", "power_method": "cec"},
+                            {"type": "command", "id": 7, "kind": "power_on", "params": {}}])
+        self.run_agent(agent, lambda: self.results())
+        self.assertEqual(self.results(), [{"type": "command_result", "id": 7, "ok": True, "text": "Bildschirm: an"}])
+        self.assertEqual(self.made[0].calls, [True])
+
+    def test_unknown_command_gets_result(self):
+        agent = self.build([{"type": "command", "id": 3, "kind": "x"}])
+        self.run_agent(agent, lambda: self.results())
+        self.assertEqual(self.results()[0], {"type": "command_result", "id": 3, "ok": False, "text": "Unbekannter Befehl"})
+
+    def test_reboot_acknowledged_before_reboot(self):
+        order = []
+        runner = FakeRunner()
+        real_run = runner.run
+        runner.run = lambda args, **kw: (order.append(("run", tuple(args))), real_run(args, **kw))[1]
+        timers = []
+
+        class FakeTimer:
+            def __init__(self, delay, fn):
+                self.delay, self.fn, self.daemon, self.cancelled = delay, fn, False, False
+                timers.append(self)
+
+            def start(self):
+                order.append(("timer_started", self.delay))
+
+            def cancel(self):
+                self.cancelled = True
+        agent = self.build([{"type": "command", "id": 9, "kind": "reboot"}], runner=runner, timer=FakeTimer)
+        self.run_agent(agent, lambda: self.results() and timers)
+        self.assertEqual(self.results()[0]["id"], 9)
+        self.assertTrue(self.results()[0]["ok"])
+        self.assertEqual(order, [("timer_started", 3)])  # nothing ran yet; the ack is already sent
+        timers[0].fn()
+        self.assertEqual(order[-1], ("run", ("systemctl", "reboot")))
+
+    def test_commands_do_not_block_reader_and_run_in_order(self):
+        gate = threading.Event()
+        agent = self.build([])
+        agent.connection = type("C", (), {"send": lambda s, m: sent.append(m) or True, "stop": lambda s: None})()
+        sent = []
+        agent.updater = type("U", (), {"run": lambda s, manual=False: (gate.wait(5), {"ok": True, "text": "fertig"})[1]})()
+        started = threading.Event()
+        threading.Thread(target=lambda: (
+            agent.on_message({"type": "command", "id": 1, "kind": "update_now"}),
+            agent.on_message({"type": "command", "id": 2, "kind": "bogus"}),
+            started.set())).start()
+        self.assertTrue(started.wait(2), "on_message blocked on a command")
+        self.assertEqual(sent, [])
+        gate.set()
+        for _ in range(300):
+            if len(sent) == 2:
+                break
+            threading.Event().wait(0.01)
+        self.assertEqual([m["id"] for m in sent], [1, 2])
+        agent.stop()
+
+    def test_stop_ends_command_worker(self):
+        agent = self.build([])
+        agent.connection = type("C", (), {"send": lambda s, m: True, "stop": lambda s: None})()
+        agent.on_message({"type": "command", "id": 1, "kind": "bogus"})
+        worker = agent._command_worker
+        agent.stop()
+        worker.join(2)
+        self.assertFalse(worker.is_alive())
+
+    def test_placeholder_updater_reports_failure(self):
+        agent = self.build([])
+        ok, text = agent.updater.run(manual=True)["ok"], agent.updater.run(manual=True)["text"]
+        self.assertFalse(ok)
+        self.assertEqual(text, "Updates folgen mit dem nächsten Agent-Update")
+
+    def test_last_telemetry_feeds_reload(self):
+        agent = self.build([])
+        agent.collect = lambda *a, **k: {"display": {"browser_running": False}}
+        agent.connection = type("C", (), {"send": lambda s, m: True})()
+        agent._send_telemetry()
+        self.assertEqual(agent.last_telemetry["display"]["browser_running"], False)
