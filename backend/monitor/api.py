@@ -701,6 +701,8 @@ AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'u
 SCREEN_POWER_FIELDS = {'power_mode', 'schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
 # Geräte-Felder gehören zum Recht devices (Spec §3.4)
 NON_NULL_DEVICE_FIELDS = ('power_method', 'auto_updates', 'daily_reboot')
+# Felder, die nie leer sind: ein ausdrückliches null gilt als nicht gesendet
+NON_NULL_SCREEN_FIELDS = NON_NULL_DEVICE_FIELDS + ('color_scheme',)
 SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 
 
@@ -716,7 +718,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         _require_perm(request, 'monitor.devices')
     screen = get_object_or_404(Screen, id=id)
     # Ein ausdrückliches null hieße "leeren"; diese Felder sind nie leer, also wie nicht gesendet behandeln.
-    for key in NON_NULL_DEVICE_FIELDS:
+    for key in NON_NULL_SCREEN_FIELDS:
         if key in data and data[key] is None:
             del data[key]
     validate_screen_device_data(data, screen.power_method, screen.power_config)

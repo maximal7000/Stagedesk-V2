@@ -181,3 +181,12 @@ class ColorSchemeApiTest(TestCase):
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()['color_scheme'], 'dark')
         self.assertEqual(self.put(f'/screens/{screen.id}', {'color_scheme': 'bunt'}).status_code, 422)
+
+    def test_screen_scheme_null_is_ignored(self):
+        screen = Screen.objects.create(name='Halle', slug='halle', color_scheme='dark')
+        self.grant('monitor.view', 'monitor.setup')
+        r = self.put(f'/screens/{screen.id}', {'color_scheme': None, 'name': 'Aula'})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['color_scheme'], 'dark')
+        screen.refresh_from_db()
+        self.assertEqual((screen.name, screen.color_scheme), ('Aula', 'dark'))
