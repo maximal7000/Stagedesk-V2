@@ -12,6 +12,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+
+from core.notify import notify_many
 
 from . import push
 from .agent_package import agent_package_info
@@ -318,3 +321,139 @@ def store_telemetry(device: Device, data: dict) -> None:
     if isinstance(version, str) and version:
         fields["agent_version"] = version[:20]
     Device.objects.filter(pk=device.pk).update(**fields)
+
+
+# ── Warnungen und Überwachung (Spec §7.2, §7.3) ──────────────────────
+
+EVENT_RETENTION = timedelta(days=90)
+UPDATE_FAILED_LOOKBACK = timedelta(days=1)
+
+
+def _number(value):
+    return value if isinstance(value, (int, float)) and not isinstance(value, bool) else None
+
+
+def _group(telemetry, name) -> dict:
+    group = telemetry.get(name) if isinstance(telemetry, dict) else None
+    return group if isinstance(group, dict) else {}
+
+
+def _aware(value):
+    parsed = parse_datetime(value) if isinstance(value, str) else None
+    if parsed is not None and timezone.is_naive(parsed):
+        parsed = timezone.make_aware(parsed)
+    return parsed
+
+
+def compute_warnings(telemetry: dict, settings, now) -> list:
+    """Warnungen `[{code, text}]` aus der Telemetrie. Fehlende Werte (null) erzeugen keine Warnung."""
+    network, system = _group(telemetry, 'network'), _group(telemetry, 'system')
+    display, updates = _group(telemetry, 'display'), _group(telemetry, 'updates')
+    out = []
+    temperature = _number(system.get('temperature_c'))
+    if temperature is not None and temperature > settings.warn_temperature_c:
+        out.append({'code': 'temperature', 'text': f'Temperatur {round(temperature)} °C'})
+    if system.get('throttled_now') is True:
+        out.append({'code': 'throttled', 'text': 'Drosselung aktiv'})
+    disk = _number(system.get('disk_percent'))
+    if disk is not None and disk > settings.warn_disk_percent:
+        out.append({'code': 'disk', 'text': f'Speicher {round(disk)} % belegt'})
+    signal = _number(network.get('signal_dbm'))
+    if network.get('kind') == 'wifi' and signal is not None and signal < settings.warn_wifi_dbm:
+        out.append({'code': 'wifi', 'text': f'WLAN schwach ({round(signal)} dBm)'})
+    if display.get('browser_running') is False:
+        out.append({'code': 'browser', 'text': 'Browser läuft nicht'})
+    if updates.get('last_ok') is False:
+        out.append({'code': 'update_failed', 'text': 'Letztes Update fehlgeschlagen'})
+    since = _aware(updates.get('reboot_required_since'))
+    if since is not None and now - since > timedelta(days=settings.warn_reboot_days):
+        out.append({'code': 'reboot_pending', 'text': f'Neustart seit {(now - since).days} Tagen nötig'})
+    return out
+
+
+def notification_recipients() -> list:
+    """keycloak_ids aller Nutzer mit effektivem Recht `monitor.devices` (Admins zählen über das
+    gecachte Admin-Flag am Profil)."""
+    from users.models import UserProfile
+    return [p.keycloak_id for p in UserProfile.objects.all()
+            if p.keycloak_id and p.has_permission('monitor.devices', p.is_admin_cached)]
+
+
+def _link(screen) -> str:
+    return f'/monitor-admin/screens/{screen.id}'
+
+
+def _watch_device(device_id, cfg, now, notify) -> None:
+    """Zustand eines Geräts nachführen. Läuft unter Zeilensperre, damit zwei gleichzeitige Läufe
+    nichts doppelt melden."""
+    from . import power
+    with transaction.atomic():
+        device = Device.objects.select_for_update().select_related('screen').filter(
+            pk=device_id, revoked_at__isnull=True, screen__isnull=False).first()
+        if device is None:
+            return
+        screen, seen = device.screen, device.last_seen_at
+        changed = set()
+
+        def event(kind, text, **data):
+            DeviceEvent.objects.create(device=device, screen=screen, kind=kind, text=text[:300], data=data)
+
+        online = seen is not None and now - seen <= ONLINE_WINDOW
+        if online:
+            if device.offline_notified_at is not None:
+                event('online', 'Wieder online.')
+                notify(f'Bildschirm {screen.name} ist wieder online.')
+                device.offline_notified_at = None
+                changed.add('offline_notified_at')
+            # Warnungen nur aus frischer Telemetrie; offline bleibt der letzte Stand stehen.
+            current = compute_warnings(device.last_telemetry, cfg, now)
+            known = {w.get('code') for w in device.active_warnings or [] if isinstance(w, dict)}
+            for warning in current:
+                if warning['code'] not in known:
+                    event('warning', warning['text'], code=warning['code'])
+                    notify(f"{screen.name}: {warning['text']}.")
+            codes = {w['code'] for w in current}
+            for old in device.active_warnings or []:
+                if isinstance(old, dict) and old.get('code') not in codes:
+                    event('warning_cleared', f"Warnung behoben: {old.get('text', '')}", code=old.get('code'))
+            if current != (device.active_warnings or []):
+                device.active_warnings = current
+                changed.add('active_warnings')
+        elif (seen is not None and now - seen >= timedelta(minutes=cfg.device_offline_minutes)
+                and device.offline_notified_at is None and power.compute_power_state(screen, now)):
+            minutes = int((now - seen).total_seconds() // 60)
+            event('offline', f'Offline seit {minutes} Minuten.')
+            notify(f'Bildschirm {screen.name} ist seit {minutes} Minuten offline.')
+            device.offline_notified_at = now
+            changed.add('offline_notified_at')
+
+        failed = DeviceEvent.objects.filter(device=device, kind='update_failed',
+                                            created_at__gte=now - UPDATE_FAILED_LOOKBACK)
+        for item in failed.order_by('created_at', 'id'):
+            if item.data.get('notified'):
+                continue
+            reason = str(item.data.get('error') or 'Grund unbekannt')[:200]
+            notify(f'Update auf {screen.name} fehlgeschlagen: {reason}.')
+            item.data = {**item.data, 'notified': True}
+            item.save(update_fields=['data'])
+        if changed:
+            device.save(update_fields=sorted(changed))
+
+
+def watch(now) -> None:
+    """Ampel und Warnungen für alle Geräte nachführen, Übergänge als Ereignisse festhalten und
+    Benachrichtigungen verschicken. Idempotent: der Zustand liegt am Gerät."""
+    cfg = MonitorSettings.load()
+    recipients = None
+    for device_id in list(Device.objects.filter(revoked_at__isnull=True, screen__isnull=False)
+                          .values_list('pk', flat=True)):
+        pending = []
+        _watch_device(device_id, cfg, now, pending.append)
+        if not pending:
+            continue
+        if recipients is None:
+            recipients = notification_recipients()
+        screen = Device.objects.select_related('screen').get(pk=device_id).screen
+        for body in pending:
+            notify_many(recipients, 'system', 'Geräte-Überwachung', body, link=_link(screen))
+    DeviceEvent.objects.filter(created_at__lt=now - EVENT_RETENTION).delete()

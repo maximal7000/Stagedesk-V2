@@ -642,6 +642,18 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
         # Methodenwechsel ohne passende Konfiguration: alte Schlüssel bleiben nicht erlaubt
         self.assertEqual(self.put(url, {'power_method': 'cec'}).status_code, 422)
 
+    def test_explicit_null_device_fields_are_ignored(self):
+        self.grant('monitor.devices')
+        url = f'/screens/{self.screen.id}'
+        for field in ('power_method', 'auto_updates', 'daily_reboot'):
+            r = self.put(url, {field: None})
+            self.assertEqual(r.status_code, 200, (field, r.content))
+        r = self.put(url, {'power_method': None, 'daily_reboot': False})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.screen.refresh_from_db()
+        self.assertEqual((self.screen.power_method, self.screen.auto_updates, self.screen.daily_reboot),
+                         ('cec', True, False))
+
     def test_screen_response_still_hides_key_without_setup(self):
         self.grant('monitor.devices')
         r = self.put(f'/screens/{self.screen.id}', {'daily_reboot': True})

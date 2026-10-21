@@ -1,0 +1,9 @@
+[Unit]
+Description=Stagedesk Geräte-Überwachung (Ampel, Warnungen, Benachrichtigungen)
+After=postgresql.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/stagedesk/backend
+ExecStart=/opt/stagedesk/backend/venv/bin/python manage.py monitor_device_watch
+Nice=10
