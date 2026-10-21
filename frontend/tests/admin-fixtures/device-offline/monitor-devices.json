@@ -1,0 +1,103 @@
+[
+  {
+    "id": 11,
+    "screen_id": 1,
+    "status": "offline",
+    "status_text": "Offline · zuletzt gesehen 09:14",
+    "agent_version": "1.0.0",
+    "last_seen_at": "2026-10-20T09:14:00+02:00",
+    "legacy": false,
+    "warnings": [],
+    "serial": "10000000a1b2c3d4",
+    "telemetry": {
+      "network": {
+        "kind": "wifi",
+        "ssid": "Technik-AG",
+        "signal_dbm": -58,
+        "ip": "192.0.2.21",
+        "mac": "dc:a6:32:00:00:01"
+      },
+      "system": {
+        "temperature_c": 83,
+        "throttled_now": true,
+        "throttled_since_boot": true,
+        "disk_percent": 41,
+        "ram_percent": 36,
+        "uptime_s": 284400,
+        "model": "Raspberry Pi 4 Model B",
+        "serial": "10000000a1b2c3d4",
+        "os": "Debian 12 (bookworm)",
+        "agent_version": "1.0.0"
+      },
+      "display": {
+        "resolution": "3840x2160",
+        "browser_running": true,
+        "power": "on"
+      },
+      "updates": {
+        "last_at": "2026-10-18T03:21:00+02:00",
+        "last_ok": true,
+        "last_error": null,
+        "pending_packages": 3,
+        "reboot_required_since": "2026-10-18T03:40:00+02:00"
+      }
+    },
+    "last_screenshot_url": "/media/monitor/device-screenshots/fixture-landscape.svg",
+    "last_screenshot_at": "2026-10-20T09:41:00+02:00"
+  },
+  {
+    "id": 12,
+    "screen_id": 2,
+    "status": "online",
+    "status_text": "Online",
+    "agent_version": "1.0.0",
+    "last_seen_at": "2026-10-20T09:59:50+02:00",
+    "legacy": false,
+    "warnings": [],
+    "telemetry": {
+      "network": {
+        "kind": "ethernet",
+        "signal_dbm": null
+      },
+      "system": {
+        "temperature_c": 47
+      }
+    },
+    "last_screenshot_url": null,
+    "last_screenshot_at": null
+  },
+  {
+    "id": 13,
+    "screen_id": 3,
+    "status": "offline",
+    "status_text": "Offline · zuletzt gesehen 09:14",
+    "agent_version": "1.0.0",
+    "last_seen_at": "2026-10-20T09:14:00+02:00",
+    "legacy": false,
+    "warnings": [],
+    "telemetry": {
+      "network": {
+        "kind": "wifi",
+        "signal_dbm": -71
+      },
+      "system": {
+        "temperature_c": 52
+      }
+    },
+    "last_screenshot_url": null,
+    "last_screenshot_at": null
+  },
+  {
+    "id": null,
+    "screen_id": 4,
+    "status": "legacy",
+    "status_text": "Altes Skript",
+    "agent_version": "",
+    "last_seen_at": "2026-10-20T09:59:00+02:00",
+    "legacy": true,
+    "warnings": [],
+    "telemetry": {},
+    "last_screenshot_url": null,
+    "last_screenshot_at": null
+  }
+]

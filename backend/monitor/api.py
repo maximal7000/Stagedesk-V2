@@ -19,9 +19,10 @@ from . import push
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
-    generate_access_key,
+    generate_access_key, Device,
 )
 from .validation import validate_view_data as _validate_view_data
+from .validation import validate_screen_device_data, validate_settings_device_data
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -48,17 +49,20 @@ from .schemas import (
     ExamTemplateSchema, ExamTemplateCreateSchema,
     MonitorSettingsSchema, MonitorSettingsUpdateSchema,
 )
-from . import display, media, oepnv
+from . import devices, display, media, oepnv
 from .display import _fetch_disruptions  # Admin-Störungsliste; Datenquellen liegen in display.py
 from .consumers import push_power_to_all
 from .permissions import _require_perm
 from .api_setup import setup_router
+from .api_devices import devices_router
 
 logger = logging.getLogger(__name__)
 
 monitor_router = Router(tags=["Monitor"])
 # Ferien, Notfall-Vorlagen, "bis Tagesende aus"
 monitor_router.add_router("", setup_router)
+# Geräte-Kopplung und Token-Verwaltung
+monitor_router.add_router("", devices_router)
 
 _HEX_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
 
@@ -686,18 +690,30 @@ def create_screen(request, payload: ScreenCreateSchema):
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
+# Felder, die ins `hello` des Geräte-Agenten gehören (Kiosk-URL, Power-Methode, Updates)
+AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 SCREEN_POWER_FIELDS = {'power_mode', 'power_schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
+# Geräte-Felder gehören zum Recht devices (Spec §3.4)
+NON_NULL_DEVICE_FIELDS = ('power_method', 'auto_updates', 'daily_reboot')
+SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 
 
 @monitor_router.put("/screens/{int:id}", response=ScreenListSchema, auth=keycloak_auth)
 def update_screen(request, id: int, payload: ScreenUpdateSchema):
     # Power-Felder gehören zum Recht power, alles andere zu setup (Spec §3.5).
     data = payload.dict(exclude_unset=True)
-    if not data or set(data) - SCREEN_POWER_FIELDS:
+    if not data or set(data) - SCREEN_POWER_FIELDS - SCREEN_DEVICE_FIELDS:
         _require_perm(request, 'monitor.setup')
     if set(data) & SCREEN_POWER_FIELDS:
         _require_perm(request, 'monitor.power')
+    if set(data) & SCREEN_DEVICE_FIELDS:
+        _require_perm(request, 'monitor.devices')
     screen = get_object_or_404(Screen, id=id)
+    # Ein ausdrückliches null hieße "leeren"; diese Felder sind nie leer, also wie nicht gesendet behandeln.
+    for key in NON_NULL_DEVICE_FIELDS:
+        if key in data and data[key] is None:
+            del data[key]
+    validate_screen_device_data(data, screen.power_method, screen.power_config)
     if 'default_view_id' in data:
         val = data.pop('default_view_id')
         screen.default_view_id = val if val else None
@@ -706,10 +722,13 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         screen.override_view_id = val if val else None
     # Power-relevante Felder erkennen, damit wir den Pi sofort informieren
     power_changed = bool(SCREEN_POWER_FIELDS & set(data.keys()))
+    hello_changed = bool(AGENT_HELLO_FIELDS & set(data.keys()))
     for key, value in data.items():
         setattr(screen, key, value)
     screen.save()
     push.notify_changed_on_commit()
+    if hello_changed:
+        transaction.on_commit(lambda: push.push_device_hello(screen))
     if power_changed:
         from .consumers import push_power_to_screen
         try:
@@ -724,7 +743,11 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
 def delete_screen(request, id: int):
     _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
-    screen.delete()
+    with transaction.atomic():
+        device = Device.objects.filter(screen=screen).first()
+        if device is not None:
+            devices.unpair(device)  # Token zurückziehen und Verbindung schließen, sonst bleibt das Gerät aktiv
+        screen.delete()
     push.notify_changed_on_commit()
     return {"success": True}
 
@@ -749,6 +772,7 @@ def regenerate_screen_key(request, id: int):
     screen.access_key = generate_access_key()
     screen.save(update_fields=['access_key', 'updated_at'])
     push.notify_changed_on_commit([screen.slug])
+    transaction.on_commit(lambda: push.push_device_hello(screen))
     return screen
 
 
@@ -933,6 +957,7 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
         _require_perm(request, 'monitor.setup')
     if set(data) & ON_AIR_SETTINGS_FIELDS:
         _require_perm(request, 'monitor.onair')
+    validate_settings_device_data(data)
     settings = MonitorSettings.load()
     for key, value in data.items():
         setattr(settings, key, value)

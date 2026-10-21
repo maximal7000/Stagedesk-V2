@@ -1,0 +1,9 @@
+[Unit]
+Description=Stagedesk Geräte-Überwachung jede Minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=10s
+
+[Install]
+WantedBy=timers.target

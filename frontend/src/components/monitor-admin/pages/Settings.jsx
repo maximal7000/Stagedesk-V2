@@ -5,7 +5,7 @@
 // Abschnitt nur lesend (Notfall-Vorlagen fehlen dann ganz, weil schon das Lesen das Recht braucht).
 // Zugangsdaten sind write-only (Ruling R22): ein leeres Feld behält den gespeicherten Wert.
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { Plug, Plus, Trash2 } from 'lucide-react'
+import { Copy, Plug, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
@@ -21,7 +21,7 @@ import { formatDayTime } from '../shared/explain'
 import { moveItem } from './viewData'
 import {
   ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SETUP_FIELDS,
-  changedIn, checkSentence, settingsPayload, sourceSentence, templateChangeCount, templateChanges, templateProblems,
+  DEVICE_NUMBER_FIELDS, changedIn, checkSentence, deviceProblems, installCommand, legacyScreenNames, settingsPayload, sourceSentence, templateChangeCount, templateChanges, templateProblems,
 } from './settingsData'
 import * as api from '../shared/api'
 
@@ -139,6 +139,45 @@ function TemplatesSection({ list, setList }) {
   )
 }
 
+function DevicesSection({ draft, set, disabled, readOnly, legacyNames }) {
+  const ids = useMemo(() => Object.fromEntries(DEVICE_NUMBER_FIELDS.map((f) => [f.key, `device-${f.key}`])), [])
+  const command = installCommand(window.location.origin)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(command)
+      toast.success('Befehl kopiert')
+    } catch {
+      toast.error('Kopieren war nicht möglich. Den Befehl im Feld markieren und mit Strg+C kopieren.')
+    }
+  }
+  const units = { device_offline_minutes: 'Minuten', warn_temperature_c: '°C', warn_disk_percent: '%', warn_wifi_dbm: 'dBm', warn_reboot_days: 'Tage' }
+  const tokenHelp = legacyNames == null ? null
+    : legacyNames.length ? `Noch mit altem Skript: ${legacyNames.join(', ')}.` : 'Aktuell meldet sich kein Bildschirm mit altem Skript. Ausgeschaltete Bildschirme mit altem Skript erscheinen hier nicht. Vor dem Einschalten prüfen, ob alle Pis den Agent nutzen.'
+  return (
+    <Section title="Geräte" data-section="devices" aside={readOnly ? readOnlyNote('die Einrichtung') : null}>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {DEVICE_NUMBER_FIELDS.map(({ key, label, min, max }) => (
+          <Field key={key} label={label} htmlFor={ids[key]} help={`${min} bis ${max} ${units[key]}`}>
+            <input id={ids[key]} type="number" inputMode="numeric" min={min} max={max} step={1} value={draft[key] ?? ''} disabled={disabled}
+              onChange={(e) => set(key, e.target.value)} className={fieldClass} />
+          </Field>
+        ))}
+      </div>
+      <div className="mt-5 pt-4 border-t border-line-subtle">
+        <Checkbox label="Nur Geräte mit Token zulassen" help={tokenHelp} checked={draft.require_device_token} disabled={disabled}
+          onChange={(v) => set('require_device_token', v)} />
+      </div>
+      <div className="mt-5 pt-4 border-t border-line-subtle">
+        <div className="text-sm font-medium text-fg mb-1.5">Installation auf dem Raspberry Pi</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <code data-install-command className="flex-1 min-w-0 break-all bg-raised border border-line rounded-md px-3 py-2 text-xs font-mono text-fg">{command}</code>
+          <Button icon={Copy} onClick={copy}>Kopieren</Button>
+        </div>
+      </div>
+    </Section>
+  )
+}
+
 function OnAirSection({ draft, set, disabled, readOnly }) {
   const textId = useId()
   return (
@@ -194,6 +233,7 @@ export default function Settings() {
 
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
+  const [legacyNames, setLegacyNames] = useState(null)
   const [templates, setTemplates] = useState(null)       // gespeichert
   const [templateList, setTemplateList] = useState([])   // Entwurf
   const [clearing, setClearing] = useState(null)
@@ -205,15 +245,18 @@ export default function Settings() {
   const fetchAll = useCallback(() => Promise.allSettled([
     api.getSettings(),
     canEmergency ? api.getEmergencyTemplates() : Promise.resolve(null),
+    Promise.all([api.getDevices(), api.getScreens()]),
   ]), [canEmergency])
 
-  const apply = useCallback(([settingsRes, templatesRes]) => {
+  const apply = useCallback(([settingsRes, templatesRes, devicesRes]) => {
     if (settingsRes.status === 'rejected') {
       setError(settingsRes.reason)
       return
     }
     setError(null)
     setSettings(settingsRes.value)
+    // Ohne Geräteliste bleibt der Hinweis unter dem Schalter weg
+    if (devicesRes.status === 'fulfilled') setLegacyNames(legacyScreenNames(devicesRes.value[0], devicesRes.value[1]))
     if (templatesRes.status === 'fulfilled' && templatesRes.value) {
       const sorted = [...templatesRes.value].sort((x, y) => x.sort_order - y.sort_order)
       setTemplates(sorted)
@@ -243,6 +286,10 @@ export default function Settings() {
   const saveAll = async () => {
     if (templateCount) {
       const problem = templateProblems(templateList)
+      if (problem) { toast.error(problem); return }
+    }
+    if (setupCount) {
+      const problem = deviceProblems(settingsOriginal, values.draft)
       if (problem) { toast.error(problem); return }
     }
     setBusy(true)
@@ -328,6 +375,7 @@ export default function Settings() {
           <OnAirSection draft={values.draft} set={values.set} disabled={onAirDisabled} readOnly={!canOnAir} />
           <WeatherSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             onClear={() => setClearing('weather_api_key')} />
+          <DevicesSection draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup} legacyNames={legacyNames} />
           <SaveBar count={dirtyCount} onSave={saveAll} onDiscard={discard} saving={busy} />
         </div>
       ) : null}

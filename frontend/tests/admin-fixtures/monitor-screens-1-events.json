@@ -1,0 +1,65 @@
+[
+  {
+    "id": 9,
+    "kind": "command",
+    "text": "Neu laden: ausgeführt",
+    "created_at": "2026-10-20T09:52:00+02:00",
+    "person": "Mara Beispiel"
+  },
+  {
+    "id": 8,
+    "kind": "warning",
+    "text": "Temperatur 83 °C",
+    "created_at": "2026-10-20T09:47:00+02:00",
+    "person": ""
+  },
+  {
+    "id": 7,
+    "kind": "online",
+    "text": "Gerät ist wieder verbunden",
+    "created_at": "2026-10-20T09:20:00+02:00",
+    "person": ""
+  },
+  {
+    "id": 6,
+    "kind": "offline",
+    "text": "Gerät nicht mehr erreichbar",
+    "created_at": "2026-10-20T09:14:00+02:00",
+    "person": ""
+  },
+  {
+    "id": 5,
+    "kind": "update",
+    "text": "Updates installiert: 12 Pakete, Neustart nötig",
+    "created_at": "2026-10-18T03:40:00+02:00",
+    "person": ""
+  },
+  {
+    "id": 4,
+    "kind": "command",
+    "text": "Screenshot aufnehmen: ausgeführt",
+    "created_at": "2026-10-16T14:05:00+02:00",
+    "person": "Tom Test"
+  },
+  {
+    "id": 3,
+    "kind": "agent_updated",
+    "text": "Agent aktualisiert auf 1.0.0",
+    "created_at": "2026-10-16T08:30:00+02:00",
+    "person": ""
+  },
+  {
+    "id": 2,
+    "kind": "token_revoked",
+    "text": "Token zurückgezogen",
+    "created_at": "2026-10-15T16:12:00+02:00",
+    "person": "Mara Beispiel"
+  },
+  {
+    "id": 1,
+    "kind": "paired",
+    "text": "Gerät gekoppelt",
+    "created_at": "2026-10-15T16:20:00+02:00",
+    "person": "Mara Beispiel"
+  }
+]

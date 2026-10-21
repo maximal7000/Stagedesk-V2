@@ -11,6 +11,12 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('../shared/api', () => ({
   getScreens: vi.fn(),
   getViews: vi.fn(() => Promise.resolve([{ id: 1, name: 'Abfahrten' }])),
+  getDevices: vi.fn(() => Promise.resolve([])),
+  getScreenEvents: vi.fn(() => Promise.resolve([])),
+  sendDeviceCommand: vi.fn(),
+  getDeviceCommand: vi.fn(),
+  unpairDevice: vi.fn(),
+  revokeDevice: vi.fn(),
   updateScreen: vi.fn(),
   regenerateScreenKey: vi.fn(),
   reloadScreen: vi.fn(),
@@ -27,6 +33,15 @@ const glocke = () => ({
   orientation: 'landscape', access_key: 'alt-key', power_mode: 'auto', off_during_holidays: true, off_until: null,
   power_schedule: [{ days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00' }], power_exceptions: [],
   cec_status: 'on', cec_status_at: null,
+  power_method: 'cec', power_config: { cec_device: '0' }, auto_updates: true,
+  update_window: { weekday: 6, from: '03:00', until: '05:00' }, daily_reboot: true,
+})
+
+const pairedDevice = (extra = {}) => ({
+  id: 5, screen_id: 1, status: 'online', status_text: 'Online', agent_version: '1.0.0', legacy: false, warnings: [],
+  last_seen_at: '2026-10-20T09:59:40', last_screenshot_url: null, last_screenshot_at: null,
+  telemetry: { network: { kind: 'wifi', ssid: 'Technik', signal_dbm: -58 }, system: { temperature_c: 47 } },
+  ...extra,
 })
 
 // Knopf neben dem Detail: wechselt wie ein Link zu Bildschirm 2, die Detail-Komponente bleibt eingehängt
@@ -63,6 +78,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   api.getScreens.mockImplementation(() => Promise.resolve([glocke()]))
   api.getViews.mockImplementation(() => Promise.resolve([{ id: 1, name: 'Abfahrten' }]))
+  api.getDevices.mockImplementation(() => Promise.resolve([]))
+  api.getScreenEvents.mockImplementation(() => Promise.resolve([]))
   api.updateScreen.mockImplementation((id, body) => Promise.resolve({ ...glocke(), ...body }))
 })
 afterEach(() => {
@@ -147,6 +164,17 @@ describe('ScreenDetail', () => {
     expect(container.textContent).not.toContain('ungespeicherte')
   })
 
+  it('zeigt mit nur monitor.devices die Geräte-Box und keine Einrichtung', async () => {
+    perms.add('monitor.devices')
+    api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
+    await mount()
+    expect(container.textContent).toContain('Glocke')
+    expect(container.querySelector('[data-section="device"]')).not.toBeNull()
+    expect(container.querySelector('[data-section="log"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Kiosk-URL')
+    expect(container.textContent).toContain('Technik')
+  })
+
   it('hält das Speichern bei unvollständigem Zeitplan an', async () => {
     perms.add('monitor.setup').add('monitor.power')
     await mount()
@@ -217,5 +245,103 @@ describe('ScreenDetail', () => {
     expect(section.textContent).toContain('Zeigt „Abfahrten“ bis auf Weiteres')
     expect(button('Aufheben', section)).toBeUndefined()
     expect(section.querySelector('select')).toBeNull()
+  })
+
+  describe('Gerät', () => {
+    const select = (label, value) => act(async () => {
+      const el = byLabel(label)
+      el.value = value
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+
+    it('Methodenwechsel sendet Methode und Konfiguration zusammen, nur für den Geräte-Entwurf', async () => {
+      perms.add('monitor.devices')
+      await mount()
+      await select('Steuerung des Bildschirms', 'hybrid')
+      await act(async () => { typeInto(byLabel('SICP-IP'), '192.0.2.30') })
+      expect(container.textContent).toContain('2 ungespeicherte Änderungen')
+      await click(button('Speichern'))
+      expect(api.updateScreen).toHaveBeenCalledTimes(1)
+      expect(api.updateScreen).toHaveBeenCalledWith(1, {
+        power_method: 'hybrid',
+        power_config: { display_ip: '192.0.2.30', display_port: 5000, monitor_id: 0, cec_device: '0' },
+      })
+    })
+
+    it('Hybrid ohne SICP-IP wird nicht gespeichert', async () => {
+      perms.add('monitor.devices')
+      await mount()
+      await select('Steuerung des Bildschirms', 'hybrid')
+      await click(button('Speichern'))
+      expect(api.updateScreen).not.toHaveBeenCalled()
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('SICP-IP'))
+      expect(container.querySelector('[data-power-method]').textContent).toContain('SICP-IP fehlt.')
+    })
+
+    it('Update-Fenster: von muss vor bis liegen, gespeichert wird nur das Geänderte', async () => {
+      perms.add('monitor.devices')
+      await mount()
+      await act(async () => { typeInto(byLabel('Von'), '06:00') })
+      expect(container.querySelector('[data-section="updates"]').textContent).toContain('„Von“ muss vor „Bis“ liegen.')
+      await click(button('Speichern'))
+      expect(api.updateScreen).not.toHaveBeenCalled()
+      await act(async () => { typeInto(byLabel('Von'), '02:00') })
+      await click(byLabel('Automatische Updates'))
+      await click(button('Speichern'))
+      expect(api.updateScreen).toHaveBeenCalledWith(1, { auto_updates: false, update_window: { weekday: 6, from: '02:00', until: '05:00' } })
+    })
+
+    it('ohne monitor.devices sind die Geräte-Felder nur lesend', async () => {
+      perms.add('monitor.power')
+      await mount()
+      expect(byLabel('Steuerung des Bildschirms').disabled).toBe(true)
+      expect(container.querySelector('[data-section="updates"]')).toBeNull()
+      expect(container.querySelector('[data-section="log"]')).toBeNull()
+    })
+
+    it('mit gekoppeltem Gerät: Geräte-Box, Ampel im Kopf und Protokoll', async () => {
+      perms.add('monitor.devices')
+      api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
+      await mount()
+      expect(container.querySelector('[data-section="device"]').textContent).toContain('Stand 09:59')
+      expect(button('Neu laden')).toBeDefined()
+      expect(api.getScreenEvents).toHaveBeenCalledWith(1, { limit: 100 })
+      expect(container.querySelector('[data-section="log"]')).not.toBeNull()
+    })
+
+    it('ohne Gerät: Hinweis, bei Ladefehler Unbekannt statt Kein Gerät gekoppelt', async () => {
+      perms.add('monitor.devices')
+      await mount()
+      expect(container.querySelector('[data-section="device"]').dataset.deviceState).toBe('unpaired')
+      expect(container.textContent).toContain('Kein Gerät gekoppelt')
+      act(() => root.unmount())
+      container.remove()
+      api.getDevices.mockImplementation(() => Promise.reject(Object.assign(new Error('x'), { response: { status: 503, data: {} } })))
+      await mount()
+      const box = container.querySelector('[data-section="device"]')
+      expect(box.dataset.deviceState).toBe('unknown')
+      expect(box.textContent).toContain('Unbekannt')
+      expect(box.textContent).not.toContain('Kein Gerät gekoppelt')
+    })
+
+    it('mit monitor.setup ohne monitor.devices bleibt Neu laden über reloadScreen, sonst keine Befehle', async () => {
+      perms.add('monitor.setup')
+      api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
+      api.reloadScreen.mockResolvedValue({ success: true })
+      await mount()
+      expect(button('Pi neu starten')).toBeUndefined()
+      expect(button('Entkoppeln')).toBeUndefined()
+      await click(button('Neu laden'))
+      expect(api.reloadScreen).toHaveBeenCalledWith(1)
+      expect(api.sendDeviceCommand).not.toHaveBeenCalled()
+    })
+
+    it('altes Skript: CEC-Stand und Hinweis', async () => {
+      perms.add('monitor.setup')
+      api.getDevices.mockImplementation(() => Promise.resolve([{ id: null, screen_id: 1, status: 'legacy', legacy: true, warnings: [], telemetry: {} }]))
+      await mount()
+      expect(container.querySelector('[data-section="device"]').textContent).toContain('Altes Skript')
+      expect(button('Neu laden')).toBeDefined()
+    })
   })
 })

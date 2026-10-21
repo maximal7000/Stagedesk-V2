@@ -49,6 +49,9 @@ ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"
 - Bezeichner-Guard: `python3 -I scripts/check-monitor-identifiers.py <pfade>` (Code englisch, Exit 0 nötig).
 - Management: `monitor_render_media` (fehlende Medien-Seitenbilder rendern, idempotent), `monitor_webuntis_check` (WebUntis-Verbindung). Rollout und Rückweg: `DEPLOY.md`.
 - Pi-Setup-Anleitung: `docs/raspberry-pi-monitor.md` (cage + chromium Kiosk, systemd, CEC/Power).
+- **Geräte-Agent** (`agent/`, Python, läuft als root auf dem Pi): `stagedesk_agent/` (Telemetrie, Befehle, Power, Selbst-Update mit Rückfall, Kopplung), `systemd/`, `kiosk/kiosk.sh`, `install.sh`. Installation: `curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash` (Raspberry Pi OS Legacy Bookworm, Benutzer `pi`). Tests: `cd agent && python3 -m unittest discover -s tests`. Selbst-Update ersetzt nur Code; Unit-/Kiosk-Änderungen brauchen erneutes `install.sh`.
+- Kopplung im Admin: Übersicht "Bildschirm koppeln" (Code vom Pi, Recht `monitor.devices`). Backend: `backend/monitor/devices.py`, `api_devices.py`, `agent_package.py`; Auslieferung unter `/api/monitor/agent/`.
+- Management `monitor_device_watch` (Ampel, Warnungen, Benachrichtigungen; Timer `scripts/stagedesk-device-watch.{service,timer}`). `backend/requirements-dev.txt` (`websocket-client`) nur für den E2E-Test `monitor/tests_agent_e2e.py`. Rollout und Rückweg (`migrate monitor 0042`): `DEPLOY.md`, Abschnitt "Geräte-Agent".
 - Bekannter Pi: **glocke** (`172.22.0.229`, mDNS `rpi-monitor-glocke.local`) — iiyama LH4341UHS-B2, 4K, CEC (schaltet an+aus). Power-Dienst via `wss://.../ws/monitor/pi/glocke/`.
 
 ## Dateien

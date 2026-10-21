@@ -107,14 +107,20 @@ Erzeugt mit `cd frontend && node scripts/shoot-admin.mjs` (1440x900, lange Seite
 | `admin-overview-day-off.png` | Bildschirme „bis Tagesende aus“ |
 | `admin-overview-override-menu.png` | Glocke mit manueller Ansicht bis 14:00, Zeilenmenü mit „Manuelle Ansicht aufheben“ |
 | `admin-overview-undo.png` | On-Air geschaltet, Meldung mit „Rückgängig“ |
+| `admin-overview-pair-dialog.png` | Dialog "Bildschirm koppeln": Code vom Bildschirm eingeben, vorhandenen Bildschirm wählen |
+| `admin-overview-pair-new-screen.png` | Dialog "Bildschirm koppeln", neuen Bildschirm anlegen (Name, Ort) |
 | `admin-screens.png` | Bildschirm-Liste |
 | `admin-screens-empty.png` | Bildschirm-Liste ohne Einträge |
-| `admin-screen-detail.png` | Bildschirm-Detail: Anzeige, Andere Ansicht vorübergehend, Ein- und Ausschalten, Gerät, Kiosk-URL, Löschen |
+| `admin-screen-detail.png` | Bildschirm-Detail: Anzeige, Andere Ansicht vorübergehend, Ein- und Ausschalten, Gerät mit Befehlen, Kiosk-URL, Protokoll, Löschen |
 | `admin-screen-detail-override.png` | Bildschirm-Detail mit aktiver vorübergehender Ansicht („Zeigt „Abfahrten“ bis …“, Aufheben) |
 | `admin-screen-delete-dialog.png` | Bestätigung „Glocke löschen?“ (endgültig, ohne Papierkorb) |
 | `admin-screen-detail-dirty.png` | Bildschirm-Detail mit ungespeicherten Änderungen (SaveBar) |
 | `admin-screen-detail-power-only.png` | Bildschirm-Detail nur mit `monitor.power`: Anzeige lesend, keine Kiosk-URL |
 | `admin-screen-detail-key.png` | Bestätigung „Schlüssel neu erzeugen“ |
+| `admin-screen-detail-device.png` | Bildschirm-Detail, Box "Gerät": Telemetrie in Gruppen, Befehle, letzter Screenshot, Entkoppeln |
+| `admin-screen-detail-device-offline.png` | Box "Gerät" bei einem Gerät ohne Verbindung (Befehle bleiben 5 Minuten offen) |
+| `admin-screen-detail-log.png` | Abschnitt "Protokoll": Ereignisse und Befehle mit Filter |
+| `admin-screen-detail-reboot-confirm.png` | Bestätigung "Pi neu starten" |
 | `admin-views.png` | Ansichten-Liste mit „Verwendet auf“ |
 | `admin-views-empty.png` | Ansichten-Liste ohne Einträge |
 | `admin-view-new.png` | Neue Ansicht: Typ-Wahl, Typ Abfahrten gewählt |
@@ -140,3 +146,4 @@ Erzeugt mit `cd frontend && node scripts/shoot-admin.mjs` (1440x900, lange Seite
 | `admin-schedules-empty.png` | Ferien & Zeitpläne ohne Ferien und Bildschirme |
 | `admin-settings.png` | Einstellungen: WebUntis mit Testergebnis, Notfall-Vorlagen, On-Air, Wetter |
 | `admin-settings-onair-only.png` | Einstellungen nur mit `monitor.onair`: WebUntis lesend, On-Air bearbeitbar |
+| `admin-settings-devices.png` | Einstellungen, Abschnitt Geräte: Warnschwellen, Offline-Minuten, "Nur Geräte mit Token zulassen", Installationsbefehl |

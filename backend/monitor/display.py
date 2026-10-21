@@ -292,13 +292,13 @@ def _upcoming_events(now):
     """Veranstaltungen: nächste 7 Tage + aktuell laufende"""
     from veranstaltung.models import Veranstaltung
     upcoming = Veranstaltung.objects.filter(
-        status__in=['bestaetigt', 'laufend'],
+        status='geplant',  # abgesagte Veranstaltungen nicht zeigen
         datum_bis__gte=now,
         datum_von__lte=now + timezone.timedelta(days=7),
     ).order_by('datum_von')[:10]
     events = []
     for v in upcoming:
-        is_running = v.status == 'laufend' or (
+        is_running = v.effektiv_status == 'laufend' or (
             v.datum_von and v.datum_bis and v.datum_von <= now <= v.datum_bis)
         events.append({
             'id': v.id, 'name': v.titel, 'location': v.ort or '',

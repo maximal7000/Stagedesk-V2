@@ -1,9 +1,106 @@
 # Stagedesk-Monitor auf einem Raspberry Pi einrichten
 
-Komplette Anleitung von der SD-Karte bis zum fertigen Wand-Monitor, der
-nach dem Einschalten (auch nach Stromausfall) automatisch im Vollbild die
-Stagedesk-Monitorseite anzeigt – **ohne Mauszeiger**, mit automatischem
-Neuladen bei WLAN-Aussetzern und optionaler TV-An/Aus-Steuerung per HDMI-CEC.
+Der Pi zeigt nach dem Einschalten (auch nach Stromausfall) automatisch im
+Vollbild die Stagedesk-Monitorseite, ohne Mauszeiger. Der **Stagedesk-Agent**
+richtet Kiosk, Neustart und TV-Steuerung selbst ein, meldet Zustand und
+Telemetrie an den Server und führt Befehle und Updates aus. Gesteuert wird
+alles im Monitor-Admin (`/monitor-admin`).
+
+Neuer Weg: SD-Karte schreiben, ein Befehl auf dem Pi, im Admin koppeln.
+Wer den Agent nicht nutzen kann, findet die Handeinrichtung ab Abschnitt
+"Ohne Agent (alt)".
+
+## Mit Agent (empfohlen)
+
+### Voraussetzungen
+
+- Raspberry Pi (3/4/5) + Netzteil, microSD-Karte **mind. 16 GB**
+- HDMI-Monitor/TV, der **eingeschaltet** ist (sonst findet `cage` keinen Ausgang)
+- Recht `monitor.devices` im Admin (zum Koppeln und für Befehle)
+
+### 1. SD-Karte schreiben
+
+1. **Raspberry Pi Imager** öffnen.
+2. OS wählen: **Raspberry Pi OS (Legacy, Bookworm) Lite (64-bit)**. Der
+   Standard im Imager ist inzwischen Trixie; `install.sh` bricht auf Trixie ab.
+   Die Legacy-Variante steht in der Imager-Liste unter den weiteren Raspberry-Pi-OS-Images.
+3. Einstellungen bearbeiten:
+   - **Hostname**, z. B. `rpi-monitor-mensa`
+   - **SSH aktivieren**
+   - **Benutzer `pi`** mit Passwort (der Kiosk-Dienst braucht `pi` mit der ID 1000)
+   - **WLAN** (SSID, Passwort, Land `DE`) oder LAN-Kabel
+   - **Zeitzone** `Europe/Berlin`
+4. Karte in den Pi stecken, Strom dran, per SSH anmelden.
+
+### 2. Agent installieren
+
+```bash
+curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
+```
+
+Das Skript installiert die Pakete (`cage`, `chromium`, `cec-utils`, `ddcutil`,
+`wlr-randr`, `grim`, `iw` und weitere), lädt das Agent-Paket vom Server und
+prüft die SHA-256-Summe, legt `stagedesk-agent.service` und
+`stagedesk-kiosk.service` an, macht den Mauszeiger unsichtbar, maskiert den
+Login-Getty auf tty1 und schaltet die alten Dienste ab (Dateien bleiben
+liegen). Es ist idempotent: ein zweiter Lauf aktualisiert Paket und Dienste und
+behält die Kopplung. Ein neuer Pi braucht danach keine Handarbeit mehr.
+
+Zum Testen gegen einen anderen Server:
+
+```bash
+curl -fsSL https://<server>/api/monitor/agent/install.sh | sudo STAGEDESK_SERVER=https://<server> bash
+```
+
+### 3. Koppeln
+
+1. Der Bildschirm zeigt einen Kopplungscode.
+2. Im Admin auf der Übersicht **Bildschirm koppeln**, Code eingeben, vorhandenen
+   Bildschirm wählen oder neu anlegen (Name, Ort), **Koppeln**.
+3. Der Pi bekommt einmalig seinen Geräte-Token und zeigt danach die Anzeige.
+   Die Kiosk-URL muss nicht mehr von Hand eingetragen werden.
+4. Im Bildschirm-Detail unter "Ein- und Ausschalten" die Power-Methode
+   einstellen (CEC, HDMI, Hybrid oder DDC/CI) und mit **Bildschirm an** und
+   **Bildschirm aus** prüfen. Hintergründe zu den Methoden stehen in den
+   Abschnitten 9, 9a und 9b unten.
+
+### 4. Betrieb
+
+- **Befehle** im Bildschirm-Detail, Box "Gerät": Neu laden, Browser neu
+  starten, Pi neu starten, Bildschirm an/aus, Jetzt aktualisieren, Screenshot
+  aufnehmen, Testbild. Ein Befehl an ein Gerät ohne Verbindung bleibt 5 Minuten
+  offen und wird beim Verbinden gesendet.
+- **Protokoll** im Bildschirm-Detail: Ereignisse und Befehle der letzten 90 Tage.
+- **Updates:** Zeitfenster und täglicher Neustart pro Bildschirm im Admin.
+  Der Agent aktualisiert bei Terminen, Klausuren, Notfall oder On-Air nicht.
+- **Entkoppeln** oder **Token zurückziehen** im Bildschirm-Detail. Der Pi zeigt
+  danach wieder einen neuen Kopplungscode.
+- **Selbst-Update des Agents** ersetzt nur den Python-Code. Änderungen an den
+  systemd-Diensten oder am Kiosk-Skript kommen erst an, wenn `install.sh` auf
+  dem Pi erneut läuft (derselbe Befehl wie oben, die Kopplung bleibt).
+- **Ohne Netz:** Der Agent verbindet sich mit Backoff neu, der Kiosk zeigt die
+  letzte Anzeige. Ohne Token und ohne Server steht auf dem Bildschirm "Keine
+  Verbindung zum Server. Netzwerk prüfen."
+
+### 5. Fehlersuche mit Agent
+
+| Symptom | Lösung |
+|---|---|
+| `install.sh` meldet "Bookworm erwartet" | Falsches Image. Mit "Raspberry Pi OS (Legacy, Bookworm) Lite" neu schreiben |
+| `install.sh` meldet "Benutzer pi fehlt" | Im Imager den Benutzer `pi` anlegen und neu schreiben |
+| Kein Kopplungscode auf dem Bildschirm | `systemctl status stagedesk-agent stagedesk-kiosk`, `journalctl -u stagedesk-agent -n 50`, Netz prüfen |
+| Code abgelaufen | Der Agent zeigt von selbst einen neuen Code. Den neuen Code im Admin eingeben |
+| Update schlug fehl | Protokoll im Admin lesen, dann `journalctl -u stagedesk-agent` |
+| Selbst-Update kaputt | Nach 2 Minuten stellt `stagedesk-agent-rollback.timer` die alte Version her: `journalctl -u stagedesk-agent-rollback` |
+
+---
+
+## Ohne Agent (alt)
+
+Die folgenden Abschnitte beschreiben die Einrichtung von Hand (Kiosk-Skript,
+Power-Dienst, Cursor-Theme, Neustart-Timer). Sie gelten für Pis, die noch nicht
+auf den Agent umgestellt sind. Ein späterer Lauf von `install.sh` schaltet diese
+Dienste ab.
 
 > Getestet auf Raspberry Pi OS **Bookworm/Trixie Lite (64-bit)** mit
 > `cage` als Kiosk-Compositor und `chromium`.

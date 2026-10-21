@@ -158,7 +158,7 @@ export default function DashboardLayout({ children }) {
   const monitorNavigation = hasPermission('monitor.view') ? [
     { name: 'Übersicht', href: '/monitor-admin', icon: LayoutDashboard, permission: 'monitor.view' },
     // Bildschirme: setup bearbeitet die Anzeige, power nur das Ein- und Ausschalten
-    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['monitor.setup', 'monitor.power'] },
+    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['monitor.setup', 'monitor.power', 'monitor.devices'] },
     { name: 'Ansichten', href: '/monitor-admin/views', icon: PanelsTopLeft, permission: 'monitor.setup' },
     { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'monitor.exams' },
     { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'monitor.media' },

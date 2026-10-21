@@ -1,0 +1,4 @@
+# Zusätzlich für die Tests (nicht für den Betrieb)
+# monitor/tests_agent_e2e.py startet den echten Agent mit websocket-client gegen einen Daphne-Server.
+-r requirements.txt
+websocket-client>=1.6

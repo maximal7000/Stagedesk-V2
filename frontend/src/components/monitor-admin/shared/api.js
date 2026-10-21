@@ -97,3 +97,13 @@ export const getWebuntisLinks = () => get('/webuntis-links')
 export const createWebuntisLink = (body) => post('/webuntis-links', body)
 export const updateWebuntisLink = (id, body) => put(`/webuntis-links/${id}`, body)
 export const deleteWebuntisLink = (id) => del(`/webuntis-links/${id}`)
+
+// ── Geräte (Geräte-Agent) ──────────────────────────────────────────
+export const getDevices = () => get('/devices')
+// body: { code, screen_id } oder { code, new_screen: { name, location } }
+export const pairDevice = (body) => post('/devices/pair', body)
+export const unpairDevice = (id) => post(`/devices/${id}/unpair`)
+export const revokeDevice = (id) => post(`/devices/${id}/revoke`)
+export const sendDeviceCommand = (id, kind) => post(`/devices/${id}/commands`, { kind })
+export const getDeviceCommand = (id, commandId) => get(`/devices/${id}/commands/${commandId}`)
+export const getScreenEvents = (screenId, { kind, limit } = {}) => get(`/screens/${screenId}/events`, { kind: kind || undefined, limit })

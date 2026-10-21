@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   checkSentence, credentialsComplete, settingsPayload, sourceSentence, SETUP_FIELDS, ON_AIR_FIELDS,
-  templateChanges, templateProblems,
+  templateChanges, templateProblems, DEVICE_FIELDS, deviceProblems, legacyScreenNames, installCommand,
 } from './settingsData'
 
 const saved = {
@@ -97,5 +97,46 @@ describe('Notfall-Vorlagen', () => {
   it('Titel und Text sind Pflicht', () => {
     expect(templateProblems([{ title: 'A', text: 'B' }])).toBeNull()
     expect(templateProblems([{ title: 'A', text: 'B' }, { title: ' ', text: 'B' }])).toBe('Vorlage 2: Titel und Text eintragen.')
+  })
+})
+
+describe('Geräte-Einstellungen', () => {
+  const base = {
+    device_offline_minutes: 10, warn_temperature_c: 80, warn_disk_percent: 90, warn_wifi_dbm: -75,
+    warn_reboot_days: 7, require_device_token: false,
+  }
+
+  it('Payload enthält nur geänderte Geräte-Felder, Zahlen als Zahl', () => {
+    const draft = { ...base, warn_temperature_c: '75', require_device_token: true }
+    expect(settingsPayload(base, draft, DEVICE_FIELDS)).toEqual({ warn_temperature_c: 75, require_device_token: true })
+    expect(settingsPayload(base, { ...base, warn_wifi_dbm: '-75' }, DEVICE_FIELDS)).toEqual({})
+  })
+
+  it('Bereichsprüfung nennt Feld und Bereich auf Deutsch', () => {
+    expect(deviceProblems(base, base)).toBeNull()
+    expect(deviceProblems(base, { ...base, device_offline_minutes: '1' }))
+      .toBe('Offline melden nach: Bitte eine ganze Zahl von 2 bis 240 eintragen.')
+    expect(deviceProblems(base, { ...base, warn_temperature_c: '' })).toContain('Warnung ab Temperatur')
+    expect(deviceProblems(base, { ...base, warn_wifi_dbm: '-30' })).toContain('-95 bis -40')
+    expect(deviceProblems(base, { ...base, warn_disk_percent: '90.5' })).toContain('50 bis 99')
+    expect(deviceProblems(base, { ...base, warn_reboot_days: '61' })).toContain('1 bis 60')
+  })
+
+  it('ungeänderte Felder werden nicht geprüft', () => {
+    const odd = { ...base, warn_reboot_days: 99 }
+    expect(deviceProblems(odd, odd)).toBeNull()
+  })
+
+  it('Namen der Bildschirme mit altem Skript', () => {
+    const devices = [{ id: 1, screen_id: 1, legacy: false }, { id: null, screen_id: 4, legacy: true }, { id: null, screen_id: 2, legacy: true }]
+    const screens = [{ id: 1, name: 'Glocke' }, { id: 2, name: 'Aula' }, { id: 4, name: 'Mensa' }]
+    expect(legacyScreenNames(devices, screens)).toEqual(['Aula', 'Mensa'])
+    expect(legacyScreenNames([], screens)).toEqual([])
+    expect(legacyScreenNames([{ screen_id: 9, legacy: true }], screens)).toEqual(['Bildschirm 9'])
+  })
+
+  it('Installationsbefehl aus der aktuellen Adresse', () => {
+    expect(installCommand('https://stagedesk.t410.de'))
+      .toBe('curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash')
   })
 })

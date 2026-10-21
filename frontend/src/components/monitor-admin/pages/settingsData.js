@@ -4,7 +4,17 @@ import { deepEqual } from '../shared/useDraft'
 import { errorText } from '../shared/errorText'
 
 export const SECRET_FIELDS = ['webuntis_password', 'weather_api_key']
-export const SETUP_FIELDS = ['webuntis_server', 'webuntis_school', 'webuntis_username', 'webuntis_password', 'weather_api_key']
+// Geräte-Überwachung (Spec §8): Zahlenfelder mit Bereich wie im Backend, dazu der Token-Schalter
+export const DEVICE_NUMBER_FIELDS = [
+  { key: 'device_offline_minutes', label: 'Offline melden nach', min: 2, max: 240 },
+  { key: 'warn_temperature_c', label: 'Warnung ab Temperatur', min: 50, max: 95 },
+  { key: 'warn_disk_percent', label: 'Warnung ab Speicherbelegung', min: 50, max: 99 },
+  { key: 'warn_wifi_dbm', label: 'Warnung bei WLAN schwächer als', min: -95, max: -40 },
+  { key: 'warn_reboot_days', label: 'Warnung, wenn Neustart nötig seit', min: 1, max: 60 },
+]
+export const DEVICE_FIELDS = [...DEVICE_NUMBER_FIELDS.map((f) => f.key), 'require_device_token']
+const NUMBER_KEYS = new Set(DEVICE_NUMBER_FIELDS.map((f) => f.key))
+export const SETUP_FIELDS = ['webuntis_server', 'webuntis_school', 'webuntis_username', 'webuntis_password', 'weather_api_key', ...DEVICE_FIELDS]
 export const ON_AIR_FIELDS = ['on_air_text', 'on_air_animation', 'on_air_show_clock']
 
 export const ON_AIR_ANIMATION_OPTIONS = [
@@ -64,6 +74,11 @@ export function settingsPayload(base, draft, fields) {
       if (text(draft[key])) out[key] = draft[key]
       continue
     }
+    if (NUMBER_KEYS.has(key)) {
+      if (String(base?.[key] ?? '').trim() === String(draft?.[key] ?? '').trim()) continue
+      out[key] = Number(draft[key])
+      continue
+    }
     if (deepEqual(base?.[key], draft?.[key])) continue
     out[key] = typeof draft[key] === 'string' && key !== 'on_air_text' ? draft[key].trim() : draft[key]
   }
@@ -104,3 +119,29 @@ export function templateProblems(list) {
   const index = (list || []).findIndex((t) => !text(t.title) || !text(t.text))
   return index < 0 ? null : `Vorlage ${index + 1}: Titel und Text eintragen.`
 }
+
+// ── Geräte ──────────────────────────────────────────────────────────
+
+// Erste Bereichsverletzung eines geänderten Geräte-Felds als Satz, sonst null
+export function deviceProblems(base, draft) {
+  const changed = settingsPayload(base, draft, DEVICE_FIELDS)
+  for (const { key, label, min, max } of DEVICE_NUMBER_FIELDS) {
+    if (!(key in changed)) continue
+    const raw = String(draft[key] ?? '').trim()
+    const n = Number(raw)
+    if (raw === '' || !Number.isInteger(n) || n < min || n > max) {
+      return `${label}: Bitte eine ganze Zahl von ${min} bis ${max} eintragen.`
+    }
+  }
+  return null
+}
+
+// Bildschirme, die sich noch ohne Token melden (GET /devices: legacy), mit Namen aus der Bildschirmliste
+export function legacyScreenNames(devices, screens) {
+  const names = new Map((screens || []).map((s) => [s.id, s.name]))
+  return (devices || []).filter((d) => d.legacy)
+    .map((d) => d.screen_name || names.get(d.screen_id) || `Bildschirm ${d.screen_id}`)
+    .sort((a, b) => a.localeCompare(b, 'de'))
+}
+
+export const installCommand = (origin) => `curl -fsSL ${origin}/api/monitor/agent/install.sh | sudo bash`

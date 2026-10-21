@@ -45,6 +45,26 @@ const PAGES = {
       await page.waitForSelector('[data-emergency-dialog] input[type="radio"]:checked')
     },
   },
+  'overview-pair-dialog': {
+    path: '/monitor-admin',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
+      await page.getByLabel('Kopplungscode').fill('482 913')
+      await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+      await page.getByLabel('Bildschirm', { exact: true }).selectOption({ label: 'Mensa' })
+    },
+  },
+  'overview-pair-new-screen': {
+    path: '/monitor-admin',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
+      await page.getByLabel('Kopplungscode').fill('482913')
+      await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+      await page.getByRole('radio', { name: 'Neuer Bildschirm' }).click()
+      await page.getByLabel('Name', { exact: true }).fill('Foyer')
+      await page.getByLabel('Ort', { exact: true }).fill('Eingangshalle Nord')
+    },
+  },
   'overview-day-off': { path: '/monitor-admin', variant: 'day-off' },
   'overview-emergency-menu': {
     path: '/monitor-admin',
@@ -62,7 +82,37 @@ const PAGES = {
     },
   },
   screens: { path: '/monitor-admin/screens' },
-  'screen-detail': { path: '/monitor-admin/screens/1', height: 1600 },
+  'screen-detail': { path: '/monitor-admin/screens/1', height: 2900 },
+  // Gerät gekoppelt: Telemetrie, Befehle, Screenshot; Ein- und Ausschalten mit Methode, Updates, Protokoll
+  'screen-detail-device': {
+    path: '/monitor-admin/screens/1', height: 1250,
+    action: async (page) => {
+      await page.locator('[data-section="device"] [data-telemetry-group]').first().waitFor()
+      await page.locator('[data-section="device"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    },
+  },
+  // Gerät offline: Befehle mit Hinweis
+  'screen-detail-device-offline': {
+    path: '/monitor-admin/screens/1', variant: 'device-offline', height: 1250,
+    action: async (page) => {
+      await page.locator('[data-section="device"] [data-device-commands]').waitFor()
+      await page.locator('[data-section="device"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    },
+  },
+  'screen-detail-log': {
+    path: '/monitor-admin/screens/1', height: 900,
+    action: async (page) => {
+      await page.locator('[data-section="log"] tbody tr').first().waitFor()
+      await page.locator('[data-section="log"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    },
+  },
+  'screen-detail-reboot-confirm': {
+    path: '/monitor-admin/screens/1', height: 1200,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Pi neu starten', exact: true }).click()
+      await page.waitForSelector('[role="alertdialog"]')
+    },
+  },
   'screen-detail-dirty': {
     path: '/monitor-admin/screens/1',
     action: async (page) => {
@@ -137,7 +187,7 @@ const PAGES = {
   },
   schedules: { path: '/monitor-admin/schedules', variant: 'schedules', height: 1380 },
   settings: {
-    path: '/monitor-admin/settings', height: 1500,
+    path: '/monitor-admin/settings', height: 2000,
     action: async (page) => {
       await page.getByRole('button', { name: 'Verbindung testen' }).click()
       await page.waitForSelector('[data-check-result]')
@@ -178,6 +228,13 @@ const PAGES = {
   'exams-offline': { path: '/monitor-admin/exams', variant: 'offline' },
   'media-empty': { path: '/monitor-admin/media', variant: 'empty' },
   'schedules-empty': { path: '/monitor-admin/schedules', variant: 'empty' },
+  'settings-devices': {
+    path: '/monitor-admin/settings', height: 2000,
+    action: async (page) => {
+      await page.waitForSelector('[data-section="devices"]')
+      await page.locator('[data-section="devices"]').scrollIntoViewIfNeeded()
+    },
+  },
   'settings-onair-only': { path: '/monitor-admin/settings', variant: 'onair-only', height: 1180 },
   'stop-filter-dialog': {
     path: '/monitor-admin/views/1', preview: 'departures',
