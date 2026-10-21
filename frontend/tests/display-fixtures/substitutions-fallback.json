@@ -21,11 +21,22 @@
     "weather": null,
     "qr": null,
     "data": {
-      "source": null,
-      "news": null,
+      "source": "unavailable",
+      "fallback": true,
+      "group_by": "class",
+      "columns": {
+        "class": true,
+        "subject": true,
+        "teacher": true,
+        "room": true,
+        "note": true
+      },
       "days": [],
-      "fallback_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst",
-      "fetched_at": null
+      "news": null,
+      "updated_at": null,
+      "fetched_at": null,
+      "embed_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst",
+      "mode": "embed"
     }
   }
 }
