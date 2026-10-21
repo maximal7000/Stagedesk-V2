@@ -30,7 +30,8 @@ export default function PairDialog({ screens, onClose, onPaired }) {
   const dialogRef = useRef(null)
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  useEffect(() => { dialogRef.current?.querySelector('input')?.focus() }, [])
+  // Fokus auf das erste Bedienelement des Schritts (Code, Auswahl oder Name)
+  useEffect(() => { dialogRef.current?.querySelector('input, select')?.focus() }, [step, mode])
 
   const onKeyDown = (e) => {
     if (e.key === 'Escape') { e.stopPropagation(); if (!busy) onClose?.() }
@@ -51,7 +52,11 @@ export default function PairDialog({ screens, onClose, onPaired }) {
       onPaired?.()
       onClose?.()
     } catch (err) {
-      if (mounted.current) setError(errorText(err, 'Das Koppeln ist fehlgeschlagen. Bitte erneut versuchen.'))
+      if (mounted.current) {
+        setError(errorText(err, 'Das Koppeln ist fehlgeschlagen. Bitte erneut versuchen.'))
+        // Fehler des Codes (ungültig, abgelaufen, zu viele Versuche): zurück zur Codeeingabe
+        if (err?.response?.status === 400 || err?.response?.status === 429) setStep(1)
+      }
     }
     if (mounted.current) setBusy(false)
   }
@@ -72,7 +77,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
 
         {step === 1 ? (
           <div className="mt-4">
-            <Field label="Kopplungscode" htmlFor={codeId} help="Der Code steht groß auf dem Bildschirm, den der Agent einrichtet. Er gilt 15 Minuten.">
+            <Field label="Kopplungscode" htmlFor={codeId} help="Den Code zeigt der Raspberry Pi nach der Installation auf seinem Bildschirm. Er gilt 15 Minuten.">
               <input id={codeId} className={`${fieldClass} font-display text-2xl tracking-[0.2em] tabular-nums`} inputMode="numeric"
                 autoComplete="off" placeholder="482 913" maxLength={9} value={code} onChange={(e) => setCode(e.target.value)} />
             </Field>

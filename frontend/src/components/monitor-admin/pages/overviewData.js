@@ -2,6 +2,7 @@
 // und ob alle Bildschirme bis Tagesende aus sind.
 import { formatShortDate, formatTime, parseLocalDate } from '../../display/lib/format'
 import { formatDayTime } from '../shared/explain'
+import { screenStatus } from '../shared/ScreenStatus'
 
 function asDate(value) {
   if (!value) return null
@@ -120,4 +121,11 @@ export function powerMenu(screen, { now, isOn, emergencyActive }) {
     : { key: 'manual', label: 'Jetzt einschalten', mode: 'manual_on', disabled })
   if (screen.power_mode !== 'auto') items.push({ key: 'auto', label: 'Wieder automatisch', mode: 'auto', disabled })
   return { items, hint: disabled ? EMERGENCY_POWER_HINT : '' }
+}
+
+// "3 Bildschirme · 2 online"; online zählt die Geräte-Ampel (Warnung gilt als online), sonst der CEC-Rückfall
+export function screensMeta(screens, now, devices = {}) {
+  const online = screens.filter((s) => screenStatus(s, now, devices[s.id]).state === 'online').length
+  const count = screens.length === 1 ? '1 Bildschirm' : `${screens.length} Bildschirme`
+  return `${count} · ${online} online`
 }

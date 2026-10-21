@@ -78,7 +78,7 @@ describe('PairDialog', () => {
     expect(toast.success).toHaveBeenCalledWith('Bildschirm Foyer ist gekoppelt.')
   })
 
-  it('zeigt den Fehler des Servers und bleibt offen', async () => {
+  it('Codefehler (400): zurück zu Schritt 1 mit der Meldung dort', async () => {
     api.pairDevice.mockRejectedValue({ response: { status: 400, data: { detail: 'Der Code ist ungültig oder abgelaufen. Den Code auf dem Bildschirm prüfen.' } } })
     const { onClose, onPaired } = mount()
     type(host.querySelector('input'), '482913')
@@ -86,8 +86,30 @@ describe('PairDialog', () => {
     host.querySelector('select').value = '1'
     act(() => { host.querySelector('select').dispatchEvent(new Event('change', { bubbles: true })) })
     await click(button('Koppeln'))
+    expect(host.querySelector('[data-pair-dialog]').dataset.pairDialog).toBe('1')
     expect(host.querySelector('[role="alert"]').textContent).toContain('Der Code ist ungültig oder abgelaufen.')
+    expect(host.querySelector('input').value).toBe('482913')
     expect(onClose).not.toHaveBeenCalled()
     expect(onPaired).not.toHaveBeenCalled()
+  })
+
+  it('anderer Fehler: bleibt in Schritt 2', async () => {
+    api.pairDevice.mockRejectedValue({ response: { status: 500, data: {} } })
+    mount()
+    type(host.querySelector('input'), '482913')
+    await click(button('Weiter'))
+    host.querySelector('select').value = '1'
+    act(() => { host.querySelector('select').dispatchEvent(new Event('change', { bubbles: true })) })
+    await click(button('Koppeln'))
+    expect(host.querySelector('[data-pair-dialog]').dataset.pairDialog).toBe('2')
+    expect(host.querySelector('[role="alert"]')).not.toBeNull()
+  })
+
+  it('setzt den Fokus beim Schrittwechsel auf das erste Bedienelement', async () => {
+    mount()
+    expect(document.activeElement).toBe(host.querySelector('input'))
+    type(host.querySelector('input'), '482913')
+    await click(button('Weiter'))
+    expect(document.activeElement).toBe(host.querySelector('select'))
   })
 })

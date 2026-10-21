@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { PageHeader, EmptyState, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
 import { formatTime } from '../../display/lib/format'
-import ScreenStatus, { DeviceCell, screenStatus } from '../shared/ScreenStatus'
+import ScreenStatus, { DeviceCell } from '../shared/ScreenStatus'
 import { Cell, ScreenNameCell, ScreenRow, ScreenTable, iconButton } from '../shared/ScreenTable'
 import PairDialog from '../shared/PairDialog'
 import ConfirmDialog from '../shared/ConfirmDialog'
@@ -15,17 +15,11 @@ import EmergencyDialog, { EMERGENCY_HINT } from '../shared/EmergencyDialog'
 import UndoToast from '../shared/UndoToast'
 import { describeShown, explainScreen, formatDayTime } from '../shared/explain'
 import { errorText } from '../shared/errorText'
-import { allOffUntil, dataSources, formatRange, nextExam, powerMenu, upcoming } from './overviewData'
+import { allOffUntil, dataSources, formatRange, nextExam, powerMenu, screensMeta, upcoming } from './overviewData'
 import { OVERRIDE_CLEAR, activeOverride, kioskUrl } from './screenData'
 import * as api from '../shared/api'
 
 const REFRESH_MS = 60 * 1000
-
-function screensMeta(screens, now, devices) {
-  const online = screens.filter((s) => screenStatus(s, now, devices[s.id]).state === 'online').length
-  const count = screens.length === 1 ? '1 Bildschirm' : `${screens.length} Bildschirme`
-  return `${count} · ${online} online`
-}
 
 const settle = (promise) => promise.then((value) => ({ ok: true, value }), (error) => ({ ok: false, error }))
 
@@ -128,6 +122,7 @@ export default function Overview() {
   const [error, setError] = useState(null)
   const [extra, setExtra] = useState({ settings: null, views: [], exams: [], events: [], holidays: null })
   const [displays, setDisplays] = useState(null)
+  const [devicesError, setDevicesError] = useState(null)
   const [devices, setDevices] = useState({}) // screen_id -> Gerät (auch altes Skript); leer bei Fehler
   const [now, setNow] = useState(() => new Date())
   const [undo, setUndo] = useState(null)
@@ -167,6 +162,7 @@ export default function Overview() {
       holidays: holidaysRes.ok ? holidaysRes.value : null,
     })
     // Ohne Geräteliste greift pro Bildschirm der Rückfall auf den CEC-Status
+    setDevicesError(devicesRes.ok ? null : devicesRes.error)
     setDevices(devicesRes.ok ? Object.fromEntries(devicesRes.value.filter((d) => d.screen_id != null).map((d) => [d.screen_id, d])) : {})
     if (!screensRes.ok) {
       setError(screensRes.error)
@@ -383,6 +379,12 @@ export default function Overview() {
           <EmptyState icon={MonitorOff} title="Noch keine Bildschirme" />
         </div>
       ) : screens ? (
+        <>
+        {devicesError && (
+          <p role="status" data-devices-error className="text-xs text-warn mb-2">
+            Gerätedaten nicht verfügbar: {errorText(devicesError, 'Bitte die Seite neu laden.')} Der Status stammt vom alten Skript.
+          </p>
+        )}
         <ScreenTable columns={OVERVIEW_COLUMNS}>
           {screens.map((s) => {
             const payload = displays?.[s.slug]
@@ -429,6 +431,7 @@ export default function Overview() {
             )
           })}
         </ScreenTable>
+        </>
       ) : null}
 
       {screens && (

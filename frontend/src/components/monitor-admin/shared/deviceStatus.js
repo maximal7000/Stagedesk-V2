@@ -31,16 +31,17 @@ export function deviceStatusView(device) {
 
 const number = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
-// Kurze Angaben für die Spalte "Gerät": WLAN (nur bei WLAN), Temperatur, Agent-Version
-export function deviceMetrics(device) {
-  const out = []
+// Hardware-Angaben für die Spalte "Gerät": Agent-Version und Messwerte (WLAN nur bei Funk, Temperatur).
+// `warn` markiert den Messwert, der eine aktive Warnung ausgelöst hat.
+export function deviceFacts(device) {
+  const codes = new Set((device?.warnings || []).map((w) => w.code))
+  const metrics = []
   const network = device?.telemetry?.network
   const dbm = number(network?.signal_dbm)
-  if (network?.kind === 'wifi' && dbm !== null) out.push(`WLAN ${Math.round(dbm)} dBm`)
+  if (network?.kind === 'wifi' && dbm !== null) metrics.push({ text: `WLAN ${Math.round(dbm)} dBm`, warn: codes.has('wifi') })
   const temperature = number(device?.telemetry?.system?.temperature_c)
-  if (temperature !== null) out.push(`${Math.round(temperature)} °C`)
-  if (device?.agent_version) out.push(`Agent ${device.agent_version}`)
-  return out
+  if (temperature !== null) metrics.push({ text: `${Math.round(temperature)} °C`, warn: codes.has('temperature') })
+  return { agent: device?.agent_version ? `Agent ${device.agent_version}` : '', metrics }
 }
 
 export const normalizeCode = (value) => String(value ?? '').replace(/\D/g, '')

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { deviceStatusView, deviceMetrics, normalizeCode, isCompleteCode } from './deviceStatus'
+import { deviceStatusView, deviceFacts, normalizeCode, isCompleteCode } from './deviceStatus'
 
 const base = { id: 1, screen_id: 1, agent_version: '1.2.0', telemetry: {}, warnings: [], legacy: false }
 
@@ -44,15 +44,18 @@ describe('deviceStatusView', () => {
   })
 })
 
-describe('deviceMetrics', () => {
-  it('WLAN, Temperatur und Agent-Version', () => {
-    const device = { ...base, status: 'online', telemetry: { network: { kind: 'wifi', signal_dbm: -61 }, system: { temperature_c: 48.4 } } }
-    expect(deviceMetrics(device)).toEqual(['WLAN -61 dBm', '48 °C', 'Agent 1.2.0'])
+describe('deviceFacts', () => {
+  it('Agent-Version und Messwerte, Warnungsursache markiert', () => {
+    const device = { ...base, status: 'warning', warnings: [{ code: 'temperature', text: 'Temperatur 83 °C' }], telemetry: { network: { kind: 'wifi', signal_dbm: -61 }, system: { temperature_c: 83.4 } } }
+    expect(deviceFacts(device)).toEqual({
+      agent: 'Agent 1.2.0',
+      metrics: [{ text: 'WLAN -61 dBm', warn: false }, { text: '83 °C', warn: true }],
+    })
   })
 
   it('Kabel und fehlende Werte erzeugen nichts', () => {
     const device = { ...base, agent_version: '', telemetry: { network: { kind: 'ethernet', signal_dbm: null }, system: { temperature_c: null } } }
-    expect(deviceMetrics(device)).toEqual([])
+    expect(deviceFacts(device)).toEqual({ agent: '', metrics: [] })
   })
 })
 

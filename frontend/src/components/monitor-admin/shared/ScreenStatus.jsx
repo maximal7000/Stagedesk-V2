@@ -1,7 +1,7 @@
 // Status eines Bildschirms in Textform (Spec §6.2, §7.1).
 // Mit gekoppeltem Gerät (GET /devices) gilt dessen Ampel. Ohne Gerät, also bei altem Skript, bleibt der
 // Rückfall: online, wenn der letzte CEC-Status höchstens 5 min alt ist.
-import { deviceMetrics, deviceStatusView } from './deviceStatus'
+import { deviceFacts, deviceStatusView } from './deviceStatus'
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000
 
@@ -46,25 +46,30 @@ export default function ScreenStatus({ screen, now, device }) {
   )
 }
 
-// Spalte "Gerät" der Übersicht: Ampel und Text, darunter WLAN, Temperatur und Agent-Version
+// Spalte "Gerät": nur Hardware-Angaben, keine zweite Ampel (die zeigt "Status").
+// Ohne Gerät: Text mit nächstem Schritt.
 export function DeviceCell({ device }) {
   const paired = device && device.id != null && !device.legacy
-  const view = deviceStatusView(device)
-  const metrics = paired ? deviceMetrics(device) : []
   if (!paired) {
+    const legacy = !!device?.legacy
     return (
-      <div className="min-w-0 text-sm" data-device-state={device?.legacy ? 'legacy' : 'unpaired'}>
-        <span className={device?.legacy ? 'text-warn' : 'text-fg-subtle'}>{view.label}</span>
+      <div className="min-w-0 text-sm" data-device-state={legacy ? 'legacy' : 'unpaired'}>
+        <div className={legacy ? 'text-fg' : 'text-fg-subtle'}>{deviceStatusView(device).label}</div>
+        {legacy && <div className="text-xs text-fg-muted">Agent installieren</div>}
       </div>
     )
   }
+  const { agent, metrics } = deviceFacts(device)
   return (
     <div className="min-w-0" data-device-state={device.status}>
-      <div className="flex items-center gap-2 text-sm text-fg">
-        <span className={`w-2 h-2 rounded-full shrink-0 ${TONE_DOT[view.tone]}`} aria-hidden="true" />
-        <span className="truncate">{view.label}</span>
-      </div>
-      {metrics.length > 0 && <div className="text-xs text-fg-muted tabular-nums">{metrics.join(' · ')}</div>}
+      {agent && <div className="text-sm text-fg">{agent}</div>}
+      {metrics.length > 0 && (
+        <div className="text-xs text-fg-muted tabular-nums">
+          {metrics.map((m, i) => (
+            <span key={m.text}>{i > 0 && ' · '}<span className={m.warn ? 'text-warn' : ''}>{m.text}</span></span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
