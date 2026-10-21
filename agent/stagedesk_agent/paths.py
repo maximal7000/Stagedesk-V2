@@ -38,3 +38,31 @@ class Paths:
     def runtime_dir(self):
         """XDG_RUNTIME_DIR of the kiosk user pi (owned by pi, not world-writable)."""
         return self.root / "run" / "user" / "1000"
+
+    @property
+    def opt_new(self):
+        return self.root / "opt" / "stagedesk-agent.new"
+
+    @property
+    def opt_prev(self):
+        return self.root / "opt" / "stagedesk-agent.prev"
+
+    @property
+    def systemd_dir(self):
+        return self.root / "etc" / "systemd" / "system"
+
+    @property
+    def pending_confirm(self):
+        return self.state_dir / "pending-confirm"
+
+    @property
+    def failed_version_file(self):
+        return self.state_dir / "failed-version"
+
+    @property
+    def update_state(self):
+        return self.state_dir / "update-state.json"
+
+    @property
+    def reboot_required(self):
+        return self.root / "var" / "run" / "reboot-required"

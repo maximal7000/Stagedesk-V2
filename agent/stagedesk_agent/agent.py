@@ -8,6 +8,9 @@ from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 from . import telemetry
+from .self_update import SelfUpdater
+from .timers import write_timers
+from .updater import Updater
 from .commands import CommandContext, PlaceholderUpdater, execute
 from .config import Config
 from .connection import Connection
@@ -31,12 +34,18 @@ def read_identity(paths):
 class Agent:
     def __init__(self, config, pages, kiosk_set_url=None, pairing_factory=None, connection_factory=None,
                  runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60,
-                 kiosk=None, updater=None, timer_factory=threading.Timer):
+                 kiosk=None, updater=None, timer_factory=threading.Timer, self_updater=None, timer_writer=None):
         self.config = config
         self.pages = pages
         self.kiosk = kiosk
         self.kiosk_set_url = kiosk_set_url or (kiosk.apply if kiosk else (lambda url: None))
-        self.updater = updater or PlaceholderUpdater()  # Task 9 replaces it
+        self.updater = updater or PlaceholderUpdater()  # main() wires the real Updater
+        self.self_updater = self_updater
+        self.timer_writer = timer_writer
+        self._agent_updated = None
+        self._update_requested = False
+        self._reboot_requested = False
+        self._signal_wake = threading.Event()
         self.timer_factory = timer_factory
         self.last_telemetry = None
         self._command_queue = queue.Queue()
@@ -100,8 +109,44 @@ class Agent:
             self.stop()
         threading.Thread(target=watch, daemon=True, name="stop-watcher").start()
 
+    def request_update(self):
+        """Signal-safe (SIGUSR1): only sets a flag and an event; the signal watcher enqueues the work."""
+        self._update_requested = True
+        self._signal_wake.set()
+
+    def request_daily_reboot(self):
+        """Signal-safe (SIGUSR2), like request_update."""
+        self._reboot_requested = True
+        self._signal_wake.set()
+
+    def start_signal_watcher(self):
+        def watch():
+            while not self.stop_event.is_set():
+                self._signal_wake.wait()
+                self._signal_wake.clear()
+                if self.stop_event.is_set():
+                    return
+                update, reboot = self._update_requested, self._reboot_requested
+                self._update_requested = self._reboot_requested = False
+                if update:
+                    self._enqueue_command(self._auto_update)
+                if reboot:
+                    self._enqueue_command(self._daily_reboot)
+        threading.Thread(target=watch, daemon=True, name="signals").start()
+
+    def _auto_update(self):
+        if not self.config.auto_updates:
+            return
+        log.info("update window: %s", self.updater.run(manual=False))
+
+    def _daily_reboot(self):
+        if not self.config.daily_reboot:
+            return
+        log.info("daily reboot: %s", self.updater.daily_reboot())
+
     def stop(self):
         self.stop_event.set()
+        self._signal_wake.set()
         for part in (self.pairing, self.connection):
             if part:
                 part.stop()
@@ -148,7 +193,10 @@ class Agent:
             if message is None or self.stop_event.is_set():
                 return
             try:
-                self._run_command(message)
+                if callable(message):
+                    message()  # internal job (signals, hello maintenance)
+                else:
+                    self._run_command(message)
             except Exception:
                 log.exception("command failed")
 
@@ -277,7 +325,10 @@ class Agent:
         status = self._power_status()
         data = self.collect(self.runner, self.config.paths, datetime.now(timezone.utc), power_status=status)
         self.last_telemetry = data
-        sent = self.send({"type": "telemetry", **data})
+        updated = self._agent_updated
+        sent = self.send({"type": "telemetry", **data, **({"agent_updated": updated} if updated else {})})
+        if sent and updated and self._agent_updated is updated:
+            self._agent_updated = None  # reported once
         self.send({"type": "power_status", "status": status})
         return sent
 
@@ -313,10 +364,41 @@ class Agent:
                 self._rebuild_power(target)
                 wake.set()  # telemetry and power_status now come from the new controller
             self._enqueue_power(apply_hello)
+            if self.self_updater or self.timer_writer:
+                self._enqueue_command(lambda: self._after_hello(message))
+        elif kind == "update_gate":
+            gate = getattr(self.updater, "on_gate", None)
+            if gate:
+                gate(message)
         elif kind == "command":
             self._enqueue_command(message)
         elif kind == "power_command":
             self._enqueue_power(lambda: self._on_power_command(message))
+
+    def _after_hello(self, hello):
+        """Confirm a self-update, rewrite the update timers, then look for a newer agent version."""
+        wake = self._telemetry_wake
+        if self.self_updater:
+            try:
+                event = self.self_updater.confirm()
+                if event:
+                    self._agent_updated = event
+                    wake.set()
+            except Exception:
+                log.exception("update confirmation failed")
+        if self.timer_writer:
+            try:
+                self.timer_writer(self.config.update_window, self.config.auto_updates, self.config.daily_reboot,
+                                  self.runner, self.config.paths)
+            except Exception:
+                log.exception("writing timers failed")
+        if self.self_updater:
+            try:
+                result = self.self_updater.check(hello)
+                if result:
+                    log.info("self update: %s", result)
+            except Exception:
+                log.exception("self update failed")
 
     def on_auth_failed(self):
         log.warning("token rejected, starting pairing again")
@@ -355,6 +437,7 @@ class Agent:
 
     def run(self):
         self.start_stop_watcher()
+        self.start_signal_watcher()
         while not self._stopped:
             self.run_once()
 
@@ -366,8 +449,12 @@ def main():
     pages = LocalPages()
     pages.start()
     runner = Runner()
-    agent = Agent(config, pages, runner=runner, kiosk=Kiosk(runner, paths))
+    agent = Agent(config, pages, runner=runner, kiosk=Kiosk(runner, paths),
+                  self_updater=SelfUpdater(paths, runner, config.server), timer_writer=write_timers)
+    agent.updater = Updater(paths, runner, agent.send)
     signal.signal(signal.SIGTERM, lambda *_: agent.request_stop())
+    signal.signal(signal.SIGUSR1, lambda *_: agent.request_update())
+    signal.signal(signal.SIGUSR2, lambda *_: agent.request_daily_reboot())
     try:
         agent.run()
     except KeyboardInterrupt:
