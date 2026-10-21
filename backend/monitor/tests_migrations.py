@@ -681,3 +681,49 @@ class SubstitutionSourcesMigrationTest(MigrationTestCase):
         self.assertEqual(dict(OldView.objects.values_list('slug', 'substitutions_next_day')),
                          {'heute': False, 'zwei': False, 'lehrer': True})
         self.assertNotIn('substitutions_source', {f.name for f in OldView._meta.get_fields()})
+
+
+OFFICE = [{'days': [0, 1, 2, 3, 4], 'from': '07:00', 'until': '18:00'}]
+EARLY_VIEW = [{'view_id': 3, 'days': [0], 'from': '06:00', 'until': '09:00'}]
+FULL_DAY = {'days': [0, 1, 2, 3, 4, 5, 6], 'from': '00:00', 'until': '23:59', 'view_id': None}
+
+
+class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
+    """0045: Einschaltzeiten und Ansichten-Zeitplan werden eine Liste (Spec §2.2)."""
+    migrate_from = ('monitor', '0044_substitution_sources')
+    migrate_to = ('monitor', '0045_unified_screen_schedule')
+
+    def setUpBeforeMigration(self, apps):
+        Screen = apps.get_model('monitor', 'Screen')
+        Screen.objects.create(name='Beide', slug='beide', schedule=EARLY_VIEW, power_schedule=OFFICE)
+        Screen.objects.create(name='Power', slug='power', schedule=[], power_schedule=OFFICE)
+        Screen.objects.create(name='Ansicht', slug='ansicht', schedule=EARLY_VIEW, power_schedule=[])
+        Screen.objects.create(name='Leer', slug='leer', schedule=[], power_schedule=[])
+
+    def schedules(self, apps):
+        return {s.slug: s.schedule for s in apps.get_model('monitor', 'Screen').objects.all()}
+
+    def test_0045_forward(self):
+        Screen = self.apps.get_model('monitor', 'Screen')
+        self.assertNotIn('power_schedule', {f.name for f in Screen._meta.get_fields()})
+        self.assertEqual(self.schedules(self.apps), {
+            'beide': [{'days': [0], 'from': '07:00', 'until': '09:00', 'view_id': 3},
+                      {**OFFICE[0], 'view_id': None}],
+            'power': [{**OFFICE[0], 'view_id': None}],
+            'ansicht': [*EARLY_VIEW, FULL_DAY],
+            'leer': [],
+        })
+
+    def test_0045_backward(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        old = {s.slug: (s.schedule, s.power_schedule) for s in apps.get_model('monitor', 'Screen').objects.all()}
+        self.assertEqual(old, {
+            'beide': ([{'view_id': 3, 'days': [0], 'from': '07:00', 'until': '09:00'}], OFFICE),
+            'power': ([], OFFICE),
+            # die angehängte Standard-Zeile ganztags hält den Bildschirm wie vorher immer an
+            'ansicht': (EARLY_VIEW, [{k: v for k, v in FULL_DAY.items() if k != 'view_id'}]),
+            'leer': ([], []),
+        })

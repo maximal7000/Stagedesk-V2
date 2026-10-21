@@ -28,7 +28,7 @@ MONDAY_10 = local(2026, 10, 19, 10)
 class ComputePowerStateTest(TestCase):
 
     def screen(self, **kwargs):
-        kwargs.setdefault('power_schedule', OFFICE_HOURS)
+        kwargs.setdefault('schedule', OFFICE_HOURS)
         return Screen.objects.create(name='S', slug='s', **kwargs)
 
     def test_emergency_forces_on(self):
@@ -60,7 +60,7 @@ class ComputePowerStateTest(TestCase):
         HolidayPeriod.objects.create(name='Herbstferien', start_date=date(2026, 10, 19),
                                      end_date=date(2026, 10, 30))
         self.assertFalse(power.compute_power_state(self.screen(), MONDAY_10))
-        other = Screen.objects.create(name='T', slug='t', power_schedule=OFFICE_HOURS, off_during_holidays=False)
+        other = Screen.objects.create(name='T', slug='t', schedule=OFFICE_HOURS, off_during_holidays=False)
         self.assertTrue(power.compute_power_state(other, MONDAY_10))
 
     def test_holiday_end_date_inclusive(self):
@@ -69,7 +69,7 @@ class ComputePowerStateTest(TestCase):
         self.assertFalse(power.is_holiday(date(2026, 10, 20)))
 
     def test_empty_schedule_always_on(self):
-        screen = self.screen(power_schedule=[])
+        screen = self.screen(schedule=[])
         self.assertTrue(power.compute_power_state(screen, local(2026, 10, 18, 3)))
 
     def test_schedule_uses_local_time(self):
@@ -86,24 +86,24 @@ class ComputePowerStateTest(TestCase):
 class NextOnTimeTest(TestCase):
 
     def test_next_on_time_same_week(self):
-        screen = Screen(power_schedule=OFFICE_HOURS)
+        screen = Screen(schedule=OFFICE_HOURS)
         self.assertEqual(power.next_on_time(screen, local(2026, 10, 19, 15)), local(2026, 10, 20, 7))
 
     def test_power_off_today_skips_days_without_window(self):
-        screen = Screen(power_schedule=OFFICE_HOURS)
+        screen = Screen(schedule=OFFICE_HOURS)
         self.assertEqual(power.next_on_time(screen, local(2026, 10, 23, 15)), local(2026, 10, 26, 7))
 
     def test_next_on_time_earliest_window_of_day(self):
-        screen = Screen(power_schedule=[{'days': [1], 'from': '13:00', 'until': '15:00'},
+        screen = Screen(schedule=[{'days': [1], 'from': '13:00', 'until': '15:00'},
                                         {'days': [1], 'from': '07:30', 'until': '09:00'}])
         self.assertEqual(power.next_on_time(screen, local(2026, 10, 19, 15)), local(2026, 10, 20, 7, 30))
 
     def test_next_on_time_without_schedule(self):
-        screen = Screen(power_schedule=[])
+        screen = Screen(schedule=[])
         self.assertEqual(power.next_on_time(screen, local(2026, 10, 19, 15)), local(2026, 10, 20, 5))
 
     def test_next_on_time_schedule_without_days_falls_back(self):
-        screen = Screen(power_schedule=[{'days': [], 'from': '07:00', 'until': '08:00'}])
+        screen = Screen(schedule=[{'days': [], 'from': '07:00', 'until': '08:00'}])
         self.assertEqual(power.next_on_time(screen, local(2026, 10, 19, 15)), local(2026, 10, 20, 5))
 
 
@@ -114,8 +114,8 @@ def _auth():
 class PowerOffTodayEndpointTest(TestCase):
 
     def setUp(self):
-        self.a = Screen.objects.create(name='A', slug='a', power_schedule=OFFICE_HOURS)
-        self.b = Screen.objects.create(name='B', slug='b', power_schedule=[])
+        self.a = Screen.objects.create(name='A', slug='a', schedule=OFFICE_HOURS)
+        self.b = Screen.objects.create(name='B', slug='b', schedule=[])
         patches = [_auth(), mock.patch('monitor.api_setup._require_perm'),
                    mock.patch('monitor.api_setup.push_power_to_all'),
                    mock.patch('monitor.api_setup.timezone.now', return_value=local(2026, 10, 19, 15))]
@@ -321,11 +321,12 @@ class ScreenUpdatePermissionSplitTest(SimpleTestCase):
         return [c.args[1] for c in guard.call_args_list]
 
     def test_power_only_needs_power(self):
-        self.assertEqual(self.required(power_mode='manual_off', power_schedule=[], power_exceptions=[],
+        self.assertEqual(self.required(power_mode='manual_off', schedule=[], power_exceptions=[],
                                        off_during_holidays=False, off_until=None), ['monitor.power'])
 
     def test_setup_only_needs_setup(self):
-        self.assertEqual(self.required(name='Halle', schedule=[]), ['monitor.setup'])
+        self.assertEqual(self.required(name='Halle'), ['monitor.setup'])
+        self.assertEqual(self.required(schedule=[]), ['monitor.power'])
         self.assertEqual(self.required(), ['monitor.setup'])
 
     def test_mixed_needs_both(self):

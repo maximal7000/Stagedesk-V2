@@ -289,7 +289,6 @@ class ScreenListSchema(Schema):
     override_view_id: Optional[int] = None
     override_until: Optional[datetime] = None
     schedule: list = []
-    power_schedule: list = []
     power_exceptions: list = []
     power_mode: str = 'auto'
     cec_status: str = ''
@@ -322,7 +321,6 @@ class ScreenUpdateSchema(Schema):
     override_view_id: Optional[int] = None
     override_until: Optional[datetime] = None
     schedule: Optional[list] = None
-    power_schedule: Optional[list] = None
     power_exceptions: Optional[list] = None
     power_mode: Optional[str] = None
     location: Optional[str] = None

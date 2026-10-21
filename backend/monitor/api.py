@@ -22,7 +22,7 @@ from .models import (
     generate_access_key, Device,
 )
 from .validation import validate_view_data as _validate_view_data
-from .validation import validate_screen_device_data, validate_settings_device_data
+from .validation import validate_screen_device_data, validate_screen_schedule, validate_settings_device_data
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -628,7 +628,10 @@ def get_screen_power(request, slug: str):
         return {
             'slug': screen.slug,
             'power': screen.get_power_state(),
-            'power_schedule': screen.power_schedule,
+            # Alte Form für Pi-Skripte: Zeilen mit Standard-Ansicht als Einschaltzeiten
+            'power_schedule': [{'days': row.get('days', []), 'from': row.get('from', ''),
+                                'until': row.get('until', '')}
+                               for row in (screen.schedule or []) if isinstance(row, dict) and not row.get('view_id')],
             # Der Ferienmodus-Schalter ist entfallen (jetzt power_mode='manual_off'); Schlüssel bleibt für Pi-Skripte.
             'holiday_mode': False,
             'power_exceptions': screen.power_exceptions,
@@ -692,7 +695,7 @@ def create_screen(request, payload: ScreenCreateSchema):
 
 # Felder, die ins `hello` des Geräte-Agenten gehören (Kiosk-URL, Power-Methode, Updates)
 AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
-SCREEN_POWER_FIELDS = {'power_mode', 'power_schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
+SCREEN_POWER_FIELDS = {'power_mode', 'schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
 # Geräte-Felder gehören zum Recht devices (Spec §3.4)
 NON_NULL_DEVICE_FIELDS = ('power_method', 'auto_updates', 'daily_reboot')
 SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
@@ -714,6 +717,8 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         if key in data and data[key] is None:
             del data[key]
     validate_screen_device_data(data, screen.power_method, screen.power_config)
+    if 'schedule' in data:
+        data['schedule'] = validate_screen_schedule(data['schedule'] or [])
     if 'default_view_id' in data:
         val = data.pop('default_view_id')
         screen.default_view_id = val if val else None

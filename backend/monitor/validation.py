@@ -240,6 +240,39 @@ def validate_screen_device_data(data: dict, current_method: str, current_config:
         validate_power_config(method, current_config or {})
 
 
+# ── Zeitplan pro Bildschirm (Spec §2.2) ─────────────────────────────
+
+SCHEDULE_INVALID_MESSAGE = "Der Zeitplan ist ungültig. Bitte die Seite neu laden."
+
+
+def validate_screen_schedule(rows) -> list:
+    """Prüft die Zeilen des Bildschirm-Zeitplans und gibt sie bereinigt zurück
+    ({days, from, until, view_id}, Tage sortiert). Fehler nennen die Zeilennummer."""
+    if not isinstance(rows, list):
+        raise HttpError(422, SCHEDULE_INVALID_MESSAGE)
+    clean = []
+    for number, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise HttpError(422, SCHEDULE_INVALID_MESSAGE)
+        days = row.get('days')
+        if not isinstance(days, list) or not days:
+            raise HttpError(422, f"Zeile {number}: Bitte mindestens einen Wochentag wählen.")
+        if not all(_is_int(d) and 0 <= d <= 6 for d in days):
+            raise HttpError(422, f"Zeile {number}: Wochentag ungültig. Bitte Tage von Montag bis Sonntag wählen.")
+        for key, label in (('from', 'Beginn'), ('until', 'Ende')):
+            if not isinstance(row.get(key), str) or not _HHMM.match(row[key]):
+                raise HttpError(422, f"Zeile {number}: {label} ungültig. "
+                                     "Bitte eine Uhrzeit im Format HH:MM eintragen.")
+        if row['from'] == row['until']:
+            raise HttpError(422, f"Zeile {number}: Beginn und Ende sind gleich.")
+        view_id = row.get('view_id')
+        if view_id is not None and not (
+                _is_int(view_id) and DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).exists()):
+            raise HttpError(422, f"Zeile {number}: Die gewählte Ansicht gibt es nicht mehr.")
+        clean.append({'days': sorted(set(days)), 'from': row['from'], 'until': row['until'], 'view_id': view_id})
+    return clean
+
+
 # Geräte-Felder der Einstellungen → (Bezeichnung, kleinster, größter Wert)
 SETTINGS_DEVICE_FIELDS = {
     'device_offline_minutes': ('Offline nach (Minuten)', 2, 240),

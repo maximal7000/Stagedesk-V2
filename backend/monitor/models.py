@@ -7,6 +7,8 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from .screen_schedule import active_row
+
 
 # Upload-Ordner bleiben die bisherigen (Spec-Vorgabe: Upload-Pfade ändern sich nicht),
 # auch nachdem die gespeicherten kind-Werte englisch sind.
@@ -405,7 +407,8 @@ class Screen(models.Model):
         help_text="Fallback-Profil wenn kein Zeitplan greift"
     )
     schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"view_id": 3, "days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
+        help_text='Zeitplan: [{"days": [0-6], "from": "HH:MM", "until": "HH:MM", "view_id": 3 | null}]. '
+                  'null = Standard-Ansicht, until < from = über Mitternacht. Leer = immer an.')
     # Manueller Sofort-Override (Cockpit): zeigt bis zum Zurücksetzen/Ablauf diese Ansicht.
     override_view = models.ForeignKey(
         DisplayView, on_delete=models.SET_NULL, null=True, blank=True,
@@ -413,8 +416,6 @@ class Screen(models.Model):
         help_text="Sofort-Override: erzwingt diese Ansicht (vor Event/Zeitplan)")
     override_until = models.DateTimeField(null=True, blank=True,
         help_text="Optionales Ablaufdatum des Overrides; leer = bis manuell zurückgesetzt")
-    power_schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]. Leer = immer an.')
     power_exceptions = models.JSONField(default=list, blank=True,
         help_text='[{"from_date": "YYYY-MM-DD", "until_date": "YYYY-MM-DD", "from": "HH:MM", "until": "HH:MM", "note": ""}]')
     reload_requested_at = models.DateTimeField(null=True, blank=True,
@@ -485,24 +486,12 @@ class Screen(models.Model):
         if event_view and event_view.deleted_at is None:
             return event_view
 
-        now = timezone.localtime()
-        weekday = now.weekday()
-        time = now.strftime('%H:%M')
-
-        if self.schedule and isinstance(self.schedule, list):
-            for entry in self.schedule:
-                if not isinstance(entry, dict):
-                    continue
-                days = entry.get('days', [])
-                start = entry.get('from', '00:00')
-                end = entry.get('until', '23:59')
-                view_id = entry.get('view_id')
-                if (isinstance(days, list) and weekday in days
-                        and start <= time <= end and view_id):
-                    try:
-                        return DisplayView.objects.get(id=view_id, deleted_at__isnull=True)
-                    except DisplayView.DoesNotExist:
-                        continue
+        # Zeitplan-Zeile: Ansicht der oberen passenden Zeile; Standard-Ansicht oder fehlende Ansicht -> Default
+        row = active_row(self.schedule, timezone.localtime())
+        if row and row.get('view_id'):
+            view = DisplayView.objects.filter(id=row['view_id'], deleted_at__isnull=True).first()
+            if view is not None:
+                return view
 
         if self.default_view and self.default_view.deleted_at is None:
             return self.default_view

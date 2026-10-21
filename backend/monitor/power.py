@@ -7,6 +7,8 @@ from datetime import date, datetime, time, timedelta
 
 from django.utils import timezone
 
+from . import screen_schedule
+
 # "Bis Tagesende aus" ohne Zeitplan: am nächsten Tag um diese Uhrzeit wieder an.
 FALLBACK_ON_TIME = time(5, 0)
 # Höchstens so viele Tage nach einem Zeitplan-Fenster suchen.
@@ -50,7 +52,7 @@ def _emergency_active() -> bool:
 
 
 def _schedule_entries(screen):
-    return [e for e in (screen.power_schedule or [])
+    return [e for e in (screen.schedule or [])
             if isinstance(e, dict) and isinstance(e.get('days', []), list)]
 
 
@@ -77,12 +79,8 @@ def compute_power_state(screen, now: datetime) -> bool:
     # 5. Ferien
     if screen.off_during_holidays and is_holiday(local_now.date()):
         return False
-    # 6. Wochenzeitplan (leer = immer an)
-    if not screen.power_schedule:
-        return True
-    weekday = local_now.weekday()
-    return any(weekday in e.get('days', []) and time_in_window(hhmm, e.get('from', ''), e.get('until', ''))
-               for e in _schedule_entries(screen))
+    # 6. Zeitplan: Vereinigung aller Zeilen (leer = immer an)
+    return screen_schedule.is_on(screen.schedule, local_now)
 
 
 def _parse_hhmm(value: str):
