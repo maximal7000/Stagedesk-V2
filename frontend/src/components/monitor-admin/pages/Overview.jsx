@@ -382,7 +382,7 @@ export default function Overview() {
         <>
         {devicesError && (
           <p role="status" data-devices-error className="text-xs text-warn mb-2">
-            Gerätedaten nicht verfügbar: {errorText(devicesError, 'Bitte die Seite neu laden.')} Der Status stammt vom alten Skript.
+            Gerätedaten nicht verfügbar: {errorText(devicesError, 'Bitte die Seite neu laden.')} Der Status stammt aus der letzten Meldung des Bildschirms.
           </p>
         )}
         <ScreenTable columns={OVERVIEW_COLUMNS}>
@@ -410,7 +410,7 @@ export default function Overview() {
                     </>
                   )}
                 </Cell>
-                <Cell className="min-w-0"><DeviceCell device={devices[s.id]} /></Cell>
+                <Cell className="min-w-0"><DeviceCell device={devices[s.id]} unknown={!!devicesError} /></Cell>
                 <Cell>
                   <div className="flex items-center justify-end gap-1">
                     {can.setup && (
@@ -447,7 +447,7 @@ export default function Overview() {
 
       {dialog === 'pair' && screens && (
         <PairDialog
-          screens={screens.map((s) => ({ id: s.id, name: s.name, hasDevice: devices[s.id]?.id != null && !devices[s.id]?.legacy }))}
+          screens={screens.map((s) => ({ id: s.id, name: s.name, hasDevice: devicesError ? null : devices[s.id]?.id != null && !devices[s.id]?.legacy }))}
           onClose={() => setDialog(null)}
           onPaired={load}
         />

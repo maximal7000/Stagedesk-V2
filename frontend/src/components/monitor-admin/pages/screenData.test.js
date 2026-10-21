@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
+  DEVICE_FIELDS, POWER_CONFIG_DEFAULTS, deviceDefaults, deviceProblems, devicePayload, DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
   pickFields, powerSummary, sectionPayload,
 } from './screenData'
 
@@ -99,5 +99,73 @@ describe('overridePayload / overrideProblem', () => {
     expect(overrideProblem(4, '2026-10-20T09:00', now)).toMatch(/Zukunft/)
     expect(overrideProblem(4, '2026-10-20T14:00', now)).toBe('')
     expect(overrideProblem(4, '', now)).toBe('')
+  })
+})
+
+describe('Geräte-Felder', () => {
+  const orig = {
+    power_method: 'cec', power_config: { cec_device: '0' }, auto_updates: true,
+    update_window: { weekday: 6, from: '03:00', until: '05:00' }, daily_reboot: true,
+  }
+  const screen = { ...glocke, ...orig }
+
+  it('DEVICE_FIELDS und pickFields', () => {
+    expect(DEVICE_FIELDS).toEqual(['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'])
+    expect(pickFields(screen, DEVICE_FIELDS)).toEqual(orig)
+  })
+
+  it('Standardwerte je Methode (Ruling R4)', () => {
+    expect(POWER_CONFIG_DEFAULTS).toEqual({
+      cec: { cec_device: '0' },
+      hdmi: { output: 'HDMI-A-1' },
+      hybrid: { display_ip: '', display_port: 5000, monitor_id: 0, cec_device: '0' },
+      ddc: { vcp_on: '01', vcp_off: '04' },
+    })
+    expect(deviceDefaults({}).update_window).toEqual({ weekday: 6, from: '03:00', until: '05:00' })
+  })
+
+  it('sendet nur geänderte Felder', () => {
+    expect(devicePayload(orig, orig)).toEqual({})
+    expect(devicePayload({ ...orig, auto_updates: false }, orig)).toEqual({ auto_updates: false })
+    expect(devicePayload({ ...orig, daily_reboot: false, update_window: { weekday: 2, from: '01:00', until: '02:30' } }, orig))
+      .toEqual({ daily_reboot: false, update_window: { weekday: 2, from: '01:00', until: '02:30' } })
+  })
+
+  it('Methodenwechsel sendet Methode und passende Konfiguration zusammen', () => {
+    const draft = { ...orig, power_method: 'hybrid', power_config: { display_ip: ' 192.0.2.30 ', display_port: '5000', monitor_id: '1', cec_device: '0', alt: 'x' } }
+    expect(devicePayload(draft, orig)).toEqual({
+      power_method: 'hybrid',
+      power_config: { display_ip: '192.0.2.30', display_port: 5000, monitor_id: 1, cec_device: '0' },
+    })
+  })
+
+  it('nur Konfiguration geändert: Methode wird mitgeschickt, fehlende Werte erhalten den Standard', () => {
+    expect(devicePayload({ ...orig, power_config: { cec_device: '1' } }, orig))
+      .toEqual({ power_method: 'cec', power_config: { cec_device: '1' } })
+    expect(devicePayload({ ...orig, power_method: 'ddc', power_config: {} }, orig))
+      .toEqual({ power_method: 'ddc', power_config: { vcp_on: '01', vcp_off: '04' } })
+  })
+
+  it('prüft das Zeitfenster: von muss vor bis liegen', () => {
+    const bad = { ...orig, update_window: { weekday: 6, from: '05:00', until: '03:00' } }
+    expect(deviceProblems(bad, orig).window).toMatch(/„Von“ muss vor „Bis“ liegen/)
+    expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '03:00', until: '03:00' } }, orig).window).not.toBe('')
+    expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '', until: '03:00' } }, orig).window).toMatch(/Von und bis/)
+    expect(deviceProblems(orig, orig).window).toBe('')
+    // Ungeändertes Fenster wird nicht beanstandet
+    expect(deviceProblems(bad, bad).window).toBe('')
+  })
+
+  it('Hybrid braucht die SICP-IP, Port und Monitor-ID liegen im Bereich', () => {
+    const hybrid = (cfg) => ({ ...orig, power_method: 'hybrid', power_config: { display_ip: '', display_port: 5000, monitor_id: 0, cec_device: '0', ...cfg } })
+    expect(deviceProblems(hybrid({}), orig).config.display_ip).toMatch(/SICP-IP/)
+    expect(deviceProblems(hybrid({ display_ip: '192.0.2.30' }), orig).config).toEqual({})
+    expect(deviceProblems(hybrid({ display_ip: '192.0.2.30', display_port: '70000' }), orig).config.display_port).toMatch(/1 bis 65535/)
+    expect(deviceProblems(hybrid({ display_ip: '192.0.2.30', monitor_id: '300' }), orig).config.monitor_id).toMatch(/0 bis 255/)
+    expect(deviceProblems({ ...orig, power_config: { cec_device: ' ' } }, orig).config.cec_device).toMatch(/CEC-Gerät/)
+  })
+
+  it('sectionPayload device nutzt das Original', () => {
+    expect(sectionPayload('device', { ...orig, auto_updates: false }, orig)).toEqual({ auto_updates: false })
   })
 })

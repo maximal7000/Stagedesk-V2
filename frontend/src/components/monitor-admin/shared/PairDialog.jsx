@@ -12,7 +12,7 @@ const MODES = [
   { value: 'new', label: 'Neuer Bildschirm' },
 ]
 
-// screens: [{ id, name, hasDevice? }]; onPaired lädt die Liste neu, onClose schließt
+// screens: [{ id, name, hasDevice? }] (hasDevice null = unbekannt, die Geräteliste ließ sich nicht laden); onPaired lädt die Liste neu, onClose schließt
 export default function PairDialog({ screens, onClose, onPaired }) {
   const titleId = useId()
   const codeId = useId()
@@ -87,7 +87,9 @@ export default function PairDialog({ screens, onClose, onPaired }) {
             <Segmented label="Zuordnung" options={MODES} value={mode} onChange={(m) => { setMode(m); setError('') }} disabled={busy} />
             {mode === 'existing' ? (
               <Field label="Bildschirm" htmlFor={screenId}
-                help={replaced?.hasDevice ? 'Dieser Bildschirm hat schon ein Gerät. Das alte Gerät verliert damit seinen Zugang.' : undefined}>
+                help={replaced?.hasDevice === null
+                  ? 'Ob dieser Bildschirm schon ein Gerät hat, ließ sich nicht laden. Hat er eines, verliert das alte Gerät damit seinen Zugang.'
+                  : replaced?.hasDevice ? 'Dieser Bildschirm hat schon ein Gerät. Das alte Gerät verliert damit seinen Zugang.' : undefined}>
                 <select id={screenId} className={fieldClass} value={existingId} onChange={(e) => setExistingId(e.target.value)}>
                   <option value="">Bildschirm wählen</option>
                   {screens.map((s) => <option key={s.id} value={s.id}>{s.name}{s.hasDevice ? ' (Gerät gekoppelt)' : ''}</option>)}

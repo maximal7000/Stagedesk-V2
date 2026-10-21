@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { screenStatus } from './ScreenStatus'
+import { screenStatus } from './screenStatus'
 import { screensMeta } from '../pages/overviewData'
 
 const now = new Date('2026-10-20T10:00:00')

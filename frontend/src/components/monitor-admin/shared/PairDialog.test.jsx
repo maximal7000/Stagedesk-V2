@@ -112,4 +112,17 @@ describe('PairDialog', () => {
     await click(button('Weiter'))
     expect(document.activeElement).toBe(host.querySelector('select'))
   })
+
+  it('warnt bei unbekanntem Gerätestand vor dem Verlust des Zugangs', async () => {
+    mount({ screens: [{ id: 1, name: 'Glocke', hasDevice: null }, { id: 2, name: 'Aula', hasDevice: false }] })
+    type(host.querySelector('input'), '482913')
+    await click(button('Weiter'))
+    const select = host.querySelector('select')
+    const choose = (v) => act(() => { select.value = v; select.dispatchEvent(new Event('change', { bubbles: true })) })
+    choose('1')
+    expect(host.textContent).toContain('Ob dieser Bildschirm schon ein Gerät hat, ließ sich nicht laden.')
+    expect(host.textContent).not.toContain('(Gerät gekoppelt)')
+    choose('2')
+    expect(host.textContent).not.toContain('ließ sich nicht laden')
+  })
 })

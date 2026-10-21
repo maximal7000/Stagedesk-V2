@@ -1,7 +1,8 @@
 // Bildschirm-Detail (Spec §6.2, Mockup admin-screen-detail.png): Anzeige, Ein- und Ausschalten, Kiosk-URL
 // und rechts das Gerät. Anzeige und Ein- und Ausschalten haben je einen Entwurf (useDraft); die gemeinsame
 // SaveBar speichert jeden geänderten Abschnitt mit einer eigenen Anfrage, die nur dessen Felder enthält.
-// Anzeige braucht monitor.setup, Ein- und Ausschalten monitor.power (ohne Recht nur lesend).
+// Anzeige braucht monitor.setup, Ein- und Ausschalten monitor.power (ohne Recht nur lesend). Die Geräte-Felder
+// (Power-Methode, Updates, täglicher Neustart) bilden einen dritten Entwurf und brauchen monitor.devices.
 // "Andere Ansicht vorübergehend" und "Löschen" wirken sofort (ohne Entwurf) und brauchen monitor.setup.
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -9,7 +10,7 @@ import { Copy, Eye, KeyRound, MonitorOff, RotateCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, EmptyState, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
-import { screenStatus } from '../shared/ScreenStatus'
+import { screenStatus } from '../shared/screenStatus'
 import { useDraft } from '../shared/useDraft'
 import SaveBar from '../shared/SaveBar'
 import ConfirmDialog from '../shared/ConfirmDialog'
@@ -18,14 +19,18 @@ import { useUnsavedGuard } from '../shared/UnsavedChangesProvider'
 import { exceptionProblems, scheduleProblems } from '../shared/schedule'
 import { errorText } from '../shared/errorText'
 import { formatDayTime } from '../shared/explain'
-import { Field, Section, Segmented, fieldClass } from '../shared/form'
+import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
+import DeviceBox from '../shared/DeviceBox'
+import DeviceLog from '../shared/DeviceLog'
+import { isPaired } from '../shared/deviceCommands'
 import {
-  DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_MODE_OPTIONS, SCALE_OPTIONS,
-  activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem, pickFields, sectionPayload,
+  DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS,
+  SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, deviceProblems, kioskUrl, lastReport,
+  overridePayload, overrideProblem, pickFields, sectionPayload,
 } from './screenData'
 import * as api from '../shared/api'
 
-const DOT = { online: 'bg-ok', offline: 'bg-bad', unknown: 'bg-fg-subtle' }
+const DOT = { online: 'bg-ok', offline: 'bg-bad', off: 'bg-fg-subtle', unknown: 'bg-fg-subtle' }
 
 const isoToday = () => {
   const d = new Date()
@@ -67,7 +72,62 @@ function DisplaySection({ draft, set, views, disabled, readOnly }) {
   )
 }
 
-function PowerSection({ draft, set, disabled, readOnly, problems }) {
+const METHOD_HELP = {
+  cec: 'Schaltet den Bildschirm über CEC.',
+  hdmi: 'Schaltet den HDMI-Ausgang des Pi ab, der Bildschirm geht von selbst in Standby.',
+  hybrid: 'Aus über das Netzwerk (SICP), an über CEC.',
+  ddc: 'Schaltet den Bildschirm über DDC/CI am HDMI-Kabel.',
+}
+const CONFIG_FIELDS = {
+  cec: [{ key: 'cec_device', label: 'CEC-Gerät', help: 'Nummer am CEC-Bus, meist 0.' }],
+  hdmi: [{ key: 'output', label: 'HDMI-Ausgang', help: 'Name des Ausgangs, zum Beispiel HDMI-A-1.' }],
+  hybrid: [
+    { key: 'display_ip', label: 'SICP-IP', help: 'IP-Adresse des Bildschirms im Netzwerk.', placeholder: '192.0.2.30' },
+    { key: 'display_port', label: 'Port', inputMode: 'numeric' },
+    { key: 'monitor_id', label: 'Monitor-ID', inputMode: 'numeric' },
+    { key: 'cec_device', label: 'CEC-Gerät', help: 'Damit wird der Bildschirm eingeschaltet.' },
+  ],
+  ddc: [
+    { key: 'vcp_on', label: 'DDC-Wert an', help: 'Hexwert für „an“, Standard 01.' },
+    { key: 'vcp_off', label: 'DDC-Wert aus', help: 'Hexwert für „aus“, Standard 04.' },
+  ],
+}
+
+// Steuerung des Bildschirms (Power-Methode): eigener Entwurf, braucht monitor.devices
+function PowerMethodBlock({ device, original, canDevices, problems }) {
+  const methodId = useId()
+  const idBase = useId()
+  const values = deviceDefaults(device.draft)
+  const method = values.power_method
+  const disabled = !canDevices || device.saving
+  const changeMethod = (next) => {
+    const base = original.power_method ?? 'cec'
+    device.set('power_method', next)
+    device.set('power_config', next === base && original.power_config ? original.power_config : configFor(next, device.draft.power_config))
+  }
+  return (
+    <div className="pt-5 border-t border-line-subtle" data-power-method>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Steuerung des Bildschirms" htmlFor={methodId} className="sm:col-span-2"
+          help={canDevices ? METHOD_HELP[method] : `${METHOD_HELP[method]} Zum Ändern fehlt das Recht für Geräte.`}>
+          <select id={methodId} value={method} disabled={disabled} onChange={(e) => changeMethod(e.target.value)} className={fieldClass}>
+            {POWER_METHOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Field>
+        {CONFIG_FIELDS[method].map((f) => (
+          <Field key={`${method}-${f.key}`} label={f.label} htmlFor={`${idBase}-${f.key}`} help={f.help}>
+            <input id={`${idBase}-${f.key}`} value={values.power_config[f.key] ?? ''} disabled={disabled} inputMode={f.inputMode}
+              placeholder={f.placeholder} onChange={(e) => device.set(`power_config.${f.key}`, e.target.value)}
+              aria-invalid={problems.config[f.key] ? true : undefined} className={fieldClass} />
+            {problems.config[f.key] && <p className="text-xs text-bad mt-1.5">{problems.config[f.key]}</p>}
+          </Field>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function PowerSection({ draft, set, disabled, readOnly, problems, methodBlock }) {
   const holidaysId = useId()
   const auto = draft.power_mode === 'auto'
   return (
@@ -97,6 +157,49 @@ function PowerSection({ draft, set, disabled, readOnly, problems }) {
           <ExceptionEditor value={draft.power_exceptions} onChange={(v) => set('power_exceptions', v)} disabled={disabled}
             problems={problems.exceptions} today={isoToday()} />
         </Field>
+        {methodBlock}
+      </div>
+    </Section>
+  )
+}
+
+// Updates (Spec §6): automatische Updates, Zeitfenster, täglicher Neustart; braucht monitor.devices
+function UpdatesSection({ device, canDevices, problem }) {
+  const ids = { weekday: useId(), from: useId(), until: useId() }
+  const values = deviceDefaults(device.draft)
+  const w = values.update_window
+  const disabled = !canDevices || device.saving
+  return (
+    <Section title="Updates" data-section="updates"
+      aside={!canDevices ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für Geräte fehlt</span> : null}>
+      <div className="space-y-5">
+        <Checkbox label="Automatische Updates" checked={values.auto_updates} disabled={disabled}
+          help="Der Pi installiert Updates im Zeitfenster. Neustart nur, wenn nötig und nicht während Termin, Klausur, Notfall oder On-Air."
+          onChange={(v) => device.set('auto_updates', v)} />
+        <div>
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+            <Field label="Wochentag" htmlFor={ids.weekday}>
+              <select id={ids.weekday} value={w.weekday} disabled={disabled || !values.auto_updates}
+                onChange={(e) => device.set('update_window', { ...w, weekday: Number(e.target.value) })} className={fieldClass}>
+                {WEEKDAY_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </Field>
+            <Field label="Von" htmlFor={ids.from}>
+              <input id={ids.from} type="time" value={w.from ?? ''} disabled={disabled || !values.auto_updates}
+                onChange={(e) => device.set('update_window', { ...w, from: e.target.value })} className={fieldClass} />
+            </Field>
+            <Field label="Bis" htmlFor={ids.until}>
+              <input id={ids.until} type="time" value={w.until ?? ''} disabled={disabled || !values.auto_updates}
+                onChange={(e) => device.set('update_window', { ...w, until: e.target.value })} className={fieldClass} />
+            </Field>
+          </div>
+          {problem
+            ? <p className="text-xs text-bad mt-1.5">{problem}</p>
+            : <p className="text-xs text-fg-subtle mt-1.5">Das Fenster liegt an einem Tag, ein Fenster über Mitternacht ist nicht möglich.</p>}
+        </div>
+        <Checkbox label="Täglicher Neustart um 04:00" checked={values.daily_reboot} disabled={disabled}
+          help="Mit derselben Sperre wie die Updates."
+          onChange={(v) => device.set('daily_reboot', v)} />
       </div>
     </Section>
   )
@@ -175,10 +278,14 @@ function KioskSection({ screen, onRegenerate }) {
   )
 }
 
-function DeviceSection({ screen, now, onReload }) {
+// Bildschirm ohne gekoppeltes Gerät: CEC-Stand des alten Skripts oder Hinweis. devicesError: die Geräteliste
+// ließ sich nicht laden, ob ein Gerät gekoppelt ist, ist dann unbekannt.
+function DeviceSection({ screen, device, devicesError, now, onReload }) {
   // onReload fehlt ohne monitor.setup (Backend: reload_screen braucht setup)
+  const legacy = !!device?.legacy
+  const state = devicesError ? 'unknown' : legacy ? 'legacy' : 'unpaired'
   return (
-    <Section title="Gerät" data-section="device">
+    <Section title="Gerät" data-section="device" data-device-state={state}>
       <dl className="space-y-2 text-sm">
         <div className="flex justify-between gap-4">
           <dt className="text-fg-muted">Bildschirm (CEC)</dt>
@@ -195,9 +302,18 @@ function DeviceSection({ screen, now, onReload }) {
           <p className="text-xs text-fg-subtle mt-1.5">Lädt die Anzeige im Browser des Bildschirms neu.</p>
         </div>
       )}
-      <p className="text-sm text-fg-muted mt-5 pt-4 border-t border-line-subtle">
-        Kein Agent installiert. WLAN, Temperatur und Updates erscheinen hier, sobald der Geräte-Agent eingerichtet ist.
-      </p>
+      <div className="text-sm text-fg-muted mt-5 pt-4 border-t border-line-subtle">
+        {devicesError ? (
+          <>
+            <p className="text-fg">Unbekannt</p>
+            <p className="mt-1">Die Gerätedaten konnten nicht geladen werden. {errorText(devicesError, 'Bitte die Seite neu laden.')}</p>
+          </>
+        ) : legacy ? (
+          <p>Altes Skript. Den Geräte-Agent auf dem Raspberry Pi installieren, dann erscheinen WLAN, Temperatur und Updates hier.</p>
+        ) : (
+          <p>Kein Gerät gekoppelt. Den Kopplungscode des Raspberry Pi unter Monitore mit „Bildschirm koppeln“ eingeben.</p>
+        )}
+      </div>
     </Section>
   )
 }
@@ -209,12 +325,16 @@ export default function ScreenDetail() {
   const { hasPermission } = useUser()
   const canSetup = hasPermission('monitor.setup')
   const canPower = hasPermission('monitor.power')
+  const canDevices = hasPermission('monitor.devices')
 
   const [screen, setScreen] = useState(null)
   // Ausgangsstände der Abschnitte: nur beim Laden und nach vollständigem Speichern neu gesetzt, damit ein
   // gespeicherter Abschnitt den Entwurf des anderen nicht zurücksetzt
   const [originals, setOriginals] = useState(null)
   const [views, setViews] = useState([])
+  const [devices, setDevices] = useState(null) // Liste von GET /devices, null = nicht geladen
+  const [devicesError, setDevicesError] = useState(null)
+  const [logKey, setLogKey] = useState(0)
   const [error, setError] = useState(null)
   const [missing, setMissing] = useState(false)
   const [now, setNow] = useState(() => new Date())
@@ -228,6 +348,8 @@ export default function ScreenDetail() {
     setShownId(screenId)
     setScreen(null)
     setOriginals(null)
+    setDevices(null)
+    setDevicesError(null)
     setError(null)
     setMissing(false)
     setConfirmKey(false)
@@ -236,16 +358,18 @@ export default function ScreenDetail() {
 
   const adopt = useCallback((s) => {
     setScreen(s)
-    setOriginals({ display: pickFields(s, DISPLAY_FIELDS), power: pickFields(s, POWER_FIELDS) })
+    setOriginals({ display: pickFields(s, DISPLAY_FIELDS), power: pickFields(s, POWER_FIELDS), device: pickFields(s, DEVICE_FIELDS) })
   }, [])
 
   // Beim Wechsel zu einem anderen Bildschirm oder nach dem Abbau zählt eine späte Antwort nicht mehr
   useEffect(() => {
     let alive = true
-    Promise.allSettled([api.getScreens(), api.getViews()]).then(([screensRes, viewsRes]) => {
+    Promise.allSettled([api.getScreens(), api.getViews(), api.getDevices()]).then(([screensRes, viewsRes, devicesRes]) => {
       if (!alive) return
       setNow(new Date())
       if (viewsRes.status === 'fulfilled') setViews(viewsRes.value)
+      setDevices(devicesRes.status === 'fulfilled' ? devicesRes.value : null)
+      setDevicesError(devicesRes.status === 'rejected' ? devicesRes.reason : null)
       if (screensRes.status === 'rejected') {
         setError(screensRes.reason)
         return
@@ -258,15 +382,37 @@ export default function ScreenDetail() {
     return () => { alive = false }
   }, [screenId, adopt])
 
+  // Nach Befehl, Entkoppeln oder Token zurückziehen: Gerät und Protokoll neu laden
+  const reloadDevices = useCallback(async () => {
+    try {
+      const list = await api.getDevices()
+      setDevices(list)
+      setDevicesError(null)
+    } catch (e) {
+      setDevicesError(e) // der letzte Stand bleibt stehen
+    }
+    setNow(new Date())
+    setLogKey((k) => k + 1)
+  }, [])
+
+  // Telemetrie kommt jede Minute: Gerät und Protokoll im gleichen Takt neu laden
+  useEffect(() => {
+    const timer = setInterval(reloadDevices, 60 * 1000)
+    return () => clearInterval(timer)
+  }, [reloadDevices])
+
   const display = useDraft(originals?.display)
   const power = useDraft(originals?.power)
-  const dirtyCount = display.changedCount + power.changedCount
+  const deviceDraft = useDraft(originals?.device)
+  const dirtyCount = display.changedCount + power.changedCount + deviceDraft.changedCount
   const { confirmLeave } = useUnsavedGuard(dirtyCount > 0)
 
   const problems = {
     schedule: scheduleProblems(power.draft?.power_schedule),
     exceptions: exceptionProblems(power.draft?.power_exceptions),
   }
+
+  const deviceIssues = deviceProblems(deviceDraft.draft, originals?.device)
 
   const saveAll = async () => {
     if (display.changedCount && !(display.draft.name ?? '').trim()) {
@@ -277,12 +423,16 @@ export default function ScreenDetail() {
       toast.error('Zeitplan oder Ausnahmen sind unvollständig. Bitte die markierten Zeilen korrigieren.')
       return
     }
-    const sections = [['display', display], ['power', power]].filter(([, d]) => d.changedCount > 0)
+    if (deviceDraft.changedCount && (deviceIssues.window || Object.values(deviceIssues.config).some(Boolean))) {
+      toast.error(deviceIssues.window || Object.values(deviceIssues.config).find(Boolean))
+      return
+    }
+    const sections = [['display', display], ['power', power], ['device', deviceDraft]].filter(([, d]) => d.changedCount > 0)
     let latest = null
     let failed = false
     for (const [name, d] of sections) {
       try {
-        latest = await d.save((draft) => api.updateScreen(screenId, sectionPayload(name, draft)))
+        latest = await d.save((draft) => api.updateScreen(screenId, sectionPayload(name, draft, originals[name])))
       } catch (e) {
         failed = true
         toast.error(errorText(e))
@@ -299,6 +449,7 @@ export default function ScreenDetail() {
   const discard = () => {
     display.reset()
     power.reset()
+    deviceDraft.reset()
   }
 
   const regenerate = async () => {
@@ -353,7 +504,8 @@ export default function ScreenDetail() {
   }
 
   const state = error ? 'error' : missing ? 'missing' : screen ? 'ready' : 'loading'
-  const status = screen ? screenStatus(screen, now) : null
+  const device = devices?.find((d) => d.screen_id === screenId) ?? null
+  const status = screen ? screenStatus(screen, now, device) : null
 
   const breadcrumb = (
     <nav aria-label="Brotkrümel" className="text-sm text-fg-subtle mb-2">
@@ -393,7 +545,7 @@ export default function ScreenDetail() {
             title={screen.name}
             meta={(
               <span className="inline-flex items-center gap-2" data-screen-state={status.state}>
-                <span className={`w-2 h-2 rounded-full ${DOT[status.state]}`} aria-hidden="true" />
+                <span className={`w-2 h-2 rounded-full ${status.tone === 'warn' ? 'bg-warn' : DOT[status.state]}`} aria-hidden="true" />
                 {[status.label, status.detail].filter(Boolean).join(' · ')}
               </span>
             )}
@@ -411,12 +563,17 @@ export default function ScreenDetail() {
                 <OverrideSection screen={screen} views={views} now={now} canEdit={canSetup} busy={busy}
                   onApply={changeOverride} onClear={() => changeOverride(OVERRIDE_CLEAR)} />
               )}
-              <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems} />
+              <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems}
+                methodBlock={<PowerMethodBlock device={deviceDraft} original={originals.device} canDevices={canDevices} problems={deviceIssues} />} />
+              {(canDevices || isPaired(device)) && <UpdatesSection device={deviceDraft} canDevices={canDevices} problem={deviceIssues.window} />}
               {canSetup && <KioskSection screen={screen} onRegenerate={() => setConfirmKey(true)} />}
+              {canDevices && <DeviceLog screenId={screenId} reloadKey={logKey} />}
             </div>
-            <DeviceSection screen={screen} now={now} onReload={canSetup ? reload : null} />
+            {isPaired(device)
+              ? <DeviceBox device={device} screen={screen} can={hasPermission} onChanged={reloadDevices} />
+              : <DeviceSection screen={screen} device={device} devicesError={devicesError} now={now} onReload={canSetup ? reload : null} />}
           </div>
-          <SaveBar count={dirtyCount} onSave={saveAll} onDiscard={discard} saving={display.saving || power.saving} />
+          <SaveBar count={dirtyCount} onSave={saveAll} onDiscard={discard} saving={display.saving || power.saving || deviceDraft.saving} />
         </>
       )}
       {confirmDelete && screen && (

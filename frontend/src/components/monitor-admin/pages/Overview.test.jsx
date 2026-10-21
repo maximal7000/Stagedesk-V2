@@ -27,6 +27,7 @@ const screen = (name) => ({ id: 1, name, slug: 's', location: '', power_mode: 'a
 
 let root, container
 afterEach(() => {
+  api.getDevices.mockImplementation(() => Promise.resolve([]))
   if (root) act(() => root.unmount())
   root = undefined
   vi.useRealTimers()
@@ -139,6 +140,8 @@ describe('Overview', () => {
     await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
     expect(container.querySelector('[data-devices-error]').textContent).toContain('Gerätedaten nicht verfügbar')
     expect(container.querySelector('[data-screen="s"]')).not.toBeNull()
-    api.getDevices.mockImplementation(() => Promise.resolve([]))
+    expect(container.querySelector('[data-device-state="unknown"]').textContent).toBe('Unbekannt')
+    expect(container.textContent).not.toContain('Kein Gerät gekoppelt')
+    expect(container.querySelector('[data-devices-error]').textContent).toContain('Der Status stammt aus der letzten Meldung des Bildschirms.')
   })
 })

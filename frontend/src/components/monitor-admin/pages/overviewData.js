@@ -2,7 +2,7 @@
 // und ob alle Bildschirme bis Tagesende aus sind.
 import { formatShortDate, formatTime, parseLocalDate } from '../../display/lib/format'
 import { formatDayTime } from '../shared/explain'
-import { screenStatus } from '../shared/ScreenStatus'
+import { screenStatus } from '../shared/screenStatus'
 
 function asDate(value) {
   if (!value) return null
