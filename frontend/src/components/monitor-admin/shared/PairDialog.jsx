@@ -12,44 +12,49 @@ const MODES = [
   { value: 'new', label: 'Neuer Bildschirm' },
 ]
 
-// Sechs Einzelfelder, gruppiert 3 + 3 wie auf dem Pi ("482 913"). value ist der Code als Ziffernfolge (höchstens 6 Stellen).
-function CodeInput({ value, onChange }) {
-  const digits = normalizeCode(value).slice(0, 6)
+// Sechs Einzelfelder, gruppiert 3 + 3 wie auf dem Pi ("482 913"). cells: Array aus sechs Zeichen, leer = ''; Lücken bleiben erhalten.
+const EMPTY_CELLS = ['', '', '', '', '', '']
+
+function CodeInput({ cells, onChange }) {
   const groupRef = useRef(null)
   const focusAt = (i) => {
     const el = groupRef.current?.querySelector(`[data-code-index="${Math.max(0, Math.min(5, i))}"]`)
     el?.focus()
     el?.select?.()
   }
-  // Ziffern ab Position i einsetzen (Eingabe oder Einfügen), Rest des Codes bleibt
-  const put = (i, raw) => {
-    const typed = normalizeCode(raw)
+  // Ziffern ab Position i einsetzen (Eingabe oder Einfügen), übrige Felder bleiben
+  const put = (i, typed) => {
     if (!typed) return
-    const arr = digits.padEnd(6, ' ').split('')
+    const next = [...cells]
     const chunk = typed.slice(0, 6 - i)
-    chunk.split('').forEach((d, k) => { arr[i + k] = d })
-    onChange(arr.join('').replace(/ /g, ''))
+    chunk.split('').forEach((d, k) => { next[i + k] = d })
+    onChange(next)
     focusAt(Math.min(i + chunk.length, 5))
   }
-  const clear = (i) => {
-    const arr = digits.padEnd(6, ' ').split('')
-    arr[i] = ' '
-    onChange(arr.join('').trimEnd().replace(/ /g, ''))
+  const clear = (i) => onChange(cells.map((c, k) => (k === i ? '' : c)))
+  const onInput = (i) => (e) => {
+    const raw = e.target.value
+    if (raw === '') { clear(i); return }
+    const old = cells[i]
+    // Neu getippte Ziffer: das alte Zeichen einmal abziehen, egal wo der Cursor stand
+    const typed = normalizeCode(old && raw.includes(old) && raw.length === 2 ? raw.replace(old, '') : raw)
+    if (typed) put(i, typed.length <= 2 ? typed.slice(-1) : typed)
   }
   const onKey = (i) => (e) => {
     if (e.key === 'Backspace') {
       e.preventDefault()
-      if (digits[i]) clear(i)
+      if (cells[i]) clear(i)
       else if (i > 0) { clear(i - 1); focusAt(i - 1) }
-    } else if (e.key === 'ArrowLeft') { e.preventDefault(); focusAt(i - 1) }
+    } else if (e.key === 'Delete') { e.preventDefault(); clear(i) }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); focusAt(i - 1) }
     else if (e.key === 'ArrowRight') { e.preventDefault(); focusAt(i + 1) }
   }
   return (
     <div ref={groupRef} role="group" aria-label="Kopplungscode" className="flex items-center gap-2">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
+      {cells.map((c, i) => (
         <input key={i} data-code-index={i} aria-label={`Ziffer ${i + 1} von 6`} type="text" inputMode="numeric" autoComplete="one-time-code"
-          value={digits[i] ?? ''} onChange={(e) => { const t = normalizeCode(e.target.value); put(i, t.length <= 2 ? t.slice(-1) : t) }} onKeyDown={onKey(i)} onFocus={(e) => e.target.select()}
-          onPaste={(e) => { e.preventDefault(); put(i, e.clipboardData.getData('text')) }}
+          value={c} onChange={onInput(i)} onKeyDown={onKey(i)} onFocus={(e) => e.target.select()}
+          onPaste={(e) => { e.preventDefault(); put(i, normalizeCode(e.clipboardData.getData('text'))) }}
           className={`${fieldClass} !w-11 px-0 text-center font-display text-2xl tabular-nums ${i === 3 ? 'ml-4' : ''}`} />
       ))}
     </div>
@@ -63,7 +68,8 @@ export default function PairDialog({ screens, onClose, onPaired }) {
   const nameId = useId()
   const locationId = useId()
   const [step, setStep] = useState(1)
-  const [code, setCode] = useState('')
+  const [cells, setCells] = useState(EMPTY_CELLS)
+  const code = cells.join('')
   const [mode, setMode] = useState(screens.length ? 'existing' : 'new')
   const [existingId, setExistingId] = useState('')
   const [name, setName] = useState('')
@@ -80,7 +86,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
     const root = dialogRef.current
     if (!root) return
     if (step === 1) {
-      const at = codeFocus.current ?? Math.min(normalizeCode(code).length, 5)
+      const at = codeFocus.current ?? (cells.indexOf('') === -1 ? 5 : cells.indexOf(''))
       codeFocus.current = null
       root.querySelector(`[data-code-index="${at}"]`)?.focus()
     } else {
@@ -135,7 +141,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
         {step === 1 ? (
           <div className="mt-4">
             <div className="text-sm font-medium text-fg mb-1.5">Kopplungscode</div>
-            <CodeInput value={code} onChange={setCode} />
+            <CodeInput cells={cells} onChange={setCells} />
             <p className="text-xs text-fg-subtle mt-1.5">Den Code zeigt der Raspberry Pi nach der Installation auf seinem Bildschirm. Er gilt 15 Minuten.</p>
           </div>
         ) : (

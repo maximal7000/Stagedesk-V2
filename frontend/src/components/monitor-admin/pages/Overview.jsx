@@ -31,7 +31,8 @@ function BoxText({ title, children }) {
   return (
     <div className="min-w-0 flex-1">
       <div className="text-sm font-semibold text-fg">{title}</div>
-      {children && <div className="text-xs text-fg-muted mt-0.5">{children}</div>}
+      {/* Unterzeile bleibt als Platz erhalten, damit die Titel der drei Kästen auf einer Linie stehen */}
+      <div className="text-xs text-fg-muted mt-0.5 min-h-4">{children}</div>
     </div>
   )
 }

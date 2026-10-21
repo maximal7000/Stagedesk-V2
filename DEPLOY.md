@@ -222,3 +222,5 @@ curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
 ## Lokale Entwicklung: Channel-Layer
 
 Mit `DJANGO_DEBUG=True` nutzt das Backend lokal einen Channel-Layer im Speicher (kein Redis nötig). `REDIS_URL` (z. B. `redis://127.0.0.1:6379/0`) erzwingt Redis; Produktion ohne `REDIS_URL` bleibt bei Redis auf 127.0.0.1.
+
+Produktion muss `DJANGO_DEBUG=False` setzen, sonst wird der Channel-Layer im Speicher statt Redis benutzt.

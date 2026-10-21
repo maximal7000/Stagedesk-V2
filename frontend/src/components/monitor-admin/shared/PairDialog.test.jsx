@@ -92,6 +92,41 @@ describe('PairDialog', () => {
     expect(inputs[0].value).toBe('4')
   })
 
+  it('Eingabe in Feld 4 nach "48" bleibt in Feld 4 (keine Lücken-Verschiebung)', () => {
+    mount()
+    enterCode('48')
+    type(digitInputs()[3], '9')
+    expect(digitInputs().map((i) => i.value)).toEqual(['4', '8', '', '9', '', ''])
+  })
+
+  it('Rücktaste in einem gefüllten mittleren Feld leert nur dieses Feld', () => {
+    mount()
+    enterCode('482913')
+    key(digitInputs()[2], 'Backspace')
+    expect(digitInputs().map((i) => i.value)).toEqual(['4', '8', '', '9', '1', '3'])
+    expect(button('Weiter').disabled).toBe(true)
+  })
+
+  it('Entfernen-Taste und leere Eingabe (Ausschneiden) leeren das Feld', () => {
+    mount()
+    enterCode('482913')
+    key(digitInputs()[1], 'Delete')
+    expect(digitInputs()[1].value).toBe('')
+    type(digitInputs()[4], '')
+    expect(digitInputs().map((i) => i.value)).toEqual(['4', '', '2', '9', '', '3'])
+  })
+
+  it('Tippen in ein gefülltes Feld ersetzt die Ziffer, auch bei angehängtem oder vorangestelltem Zeichen', () => {
+    mount()
+    enterCode('482913')
+    type(digitInputs()[0], '47')
+    expect(digitInputs()[0].value).toBe('7')
+    type(digitInputs()[1], '58')
+    expect(digitInputs()[1].value).toBe('5')
+    type(digitInputs()[2], '2')
+    expect(digitInputs().map((i) => i.value).join('')).toBe('752913')
+  })
+
   it('Pfeiltasten wechseln das Feld', () => {
     mount()
     const inputs = digitInputs()
