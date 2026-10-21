@@ -224,7 +224,7 @@ class MonitorSourceTest(SubstitutionsTestBase):
     def test_format_last_good_respects_exam_override(self):
         self.load(self.view(substitutions_show_exams=True))
         cache.add('monitor:subs:monitor:vplan-schueler:2026-10-19:1:lock', 1, 30)
-        result = self.load(self.view(slug='ohne-klausuren'), single_day=True)
+        result = self.load(self.view(slug='no-exams'), single_day=True)
         self.assertEqual((result['source'], result['fallback']), ('substitutions', True))
 
 

@@ -304,3 +304,58 @@ class RecordCommandTests(TestCase):
             self.assertEqual(json.loads((Path(tmp) / 'format-vplan-schueler.json').read_text('utf-8')),
                              {'payload': STUDENT_FORMAT})
             self.assertEqual(json.loads((Path(tmp) / 'data-20261027.json').read_text('utf-8')), data)
+
+
+class CheckCommandTest(TestCase):
+    """monitor_webuntis_check prüft auch die öffentliche Monitor-Schnittstelle: nur Status und Ursache."""
+
+    WEBUNTIS_OK = {'login': True, 'substitutions': True, 'timetable': True, 'news': True,
+                   'source': 'substitutions'}
+
+    def setUp(self):
+        from .models import MonitorSettings
+        cache.clear()
+        settings = MonitorSettings.load()
+        settings.webuntis_server, settings.webuntis_school = 'example.test', 'katharineum'
+        settings.save()
+
+    def run_command(self, fake):
+        from io import StringIO
+
+        from django.core.management import call_command
+        out = StringIO()
+        with mock.patch('monitor.untis_monitor.requests.post', fake), \
+                mock.patch('monitor.webuntis.check', return_value=self.WEBUNTIS_OK):
+            call_command('monitor_webuntis_check', stdout=out)
+        return out.getvalue()
+
+    def test_monitor_source_works(self):
+        secret_row = {'data': ['GEHEIMKLASSE'], 'cssClasses': []}
+        fake = route({'format': {'payload': STUDENT_FORMAT},
+                      'data': {'payload': payload_with(rows=[secret_row])}})
+        text = self.run_command(fake)
+        self.assertIn('Monitor-Schnittstelle (vplan-schueler): geht\n', text)
+        self.assertEqual([c['url'].split('?')[0].rsplit('/', 1)[1] for c in fake.calls], ['format', 'data'])
+        self.assertNotIn('GEHEIMKLASSE', text)
+
+    def test_monitor_source_ignores_cached_format(self):
+        cache.set('monitor:untis-monitor:format:vplan-schueler', STUDENT_FORMAT, 3600)
+        fake = route({'format': [FakeResponse({}, status=503)], 'data': {'payload': payload_with()}})
+        text = self.run_command(fake)
+        self.assertIn('Monitor-Schnittstelle (vplan-schueler): geht nicht (Ursache: HTTPError)\n', text)
+
+    def test_monitor_source_day_fails(self):
+        fake = route({'format': {'payload': STUDENT_FORMAT}, 'data': [requests.ConnectionError('boom')]})
+        text = self.run_command(fake)
+        self.assertIn('Monitor-Schnittstelle (vplan-schueler): geht nicht (Ursache: ConnectionError)\n', text)
+
+    def test_monitor_source_not_configured(self):
+        from .models import MonitorSettings
+        settings = MonitorSettings.load()
+        settings.webuntis_server = ''
+        settings.save()
+        fake = route({'format': [], 'data': []})
+        text = self.run_command(fake)
+        self.assertIn('Monitor-Schnittstelle (vplan-schueler): nicht eingerichtet '
+                      '(Server und Schule im Monitor-Admin unter Einstellungen eintragen)\n', text)
+        self.assertEqual(fake.calls, [])

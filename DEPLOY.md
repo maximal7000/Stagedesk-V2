@@ -223,7 +223,7 @@ Migrationen `monitor` 0044 (`0044_substitution_sources`), 0045 (`0045_unified_sc
 
 - **0044:** Vertretungsplan-Ansichten bekommen Datenquelle, Ausgabe, Abwesenheiten, Klausuren und "Nächsten Schultag zeigen ab". "Morgen zeigen" aus wird Ausgabe "Schüler, 1 Tag", sonst "Schüler, 2 Tage"; alle Ansichten starten auf der Quelle "WebUntis-Vertretungsplan".
 - **0045:** Einschaltzeiten und Ansichten-Zeitplan werden eine Liste "Zeitplan" pro Bildschirm. Außerhalb der Zeilen ist der Bildschirm aus. Zeilen über Mitternacht aus den alten Einschaltzeiten gelten weiter am selben Tag und werden dazu in zwei Zeilen geteilt (bis 23:59 und ab 00:00). Ansichten-Zeilen, die nie griffen (Ansicht fehlt, gelöscht, von nicht vor bis), entfallen. Das Recht `monitor.power` bleibt Voraussetzung.
-- **0046:** Der Stil einer Ansicht wird die Aufteilung (Automatisch, Normal, Breit): Standard wird Normal, Dicht wird Breit, Dunkel wird Breit. Eine Ansicht im Stil Dunkel, die als Standard eines Bildschirms läuft, setzt dort "Immer dunkel". Das Farbschema der Einstellungen (Hell, Dunkel, Tageslicht, Zeitplan) startet auf Hell.
+- **0046:** Der Stil einer Ansicht wird die Aufteilung (Automatisch, Normal, Breit): Automatisch bleibt Automatisch, CI wird Normal, Dicht wird Breit, Dunkel wird Breit. Eine Ansicht im Stil Dunkel, die als Standard eines Bildschirms läuft, setzt dort "Immer dunkel". Das Farbschema der Einstellungen (Hell, Dunkel, Tageslicht, Zeitplan) startet auf Hell.
 
 ### Ablauf
 
@@ -231,10 +231,15 @@ Migrationen `monitor` 0044 (`0044_substitution_sources`), 0045 (`0045_unified_sc
 2. **Probelauf:** Produktions-Dump in eine Test-DB, `python manage.py migrate monitor`, dann `python manage.py migrate monitor 0043` und die Daten vergleichen (Zeitpläne, Vertretungs-Ausgabe, Stil der Ansichten).
 3. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`.
 4. **Kontrolle nach dem Deploy:**
-   - Der Vertretungsplan auf glocke zeigt in der Fußzeile "Stand WebUntis · …". Steht dort stattdessen "Ersatzquelle", antwortet der öffentliche Monitor-Weg nicht: `python manage.py monitor_webuntis_check` ausführen.
+   - Direkt nach dem Deploy glocke und mensa im Admin über "Neu laden" neu laden. Die Form der Anzeige-Daten hat sich geändert; ohne Neuladen behalten die Kiosks das alte Bundle bis zum nächtlichen Neuladen.
+   - Der Vertretungsplan auf glocke zeigt in der Fußzeile "Stand WebUntis · …". Steht dort stattdessen "Ersatzquelle", antwortet der öffentliche Monitor-Weg nicht: im venv `python manage.py monitor_webuntis_check` ausführen. Die letzte Zeile "Monitor-Schnittstelle (vplan-schueler)" ruft Format und heutigen Tag frisch ab und meldet "geht" oder "geht nicht" mit Ursache (zum Beispiel `HTTPError`, `ConnectionError`, `Frist abgelaufen`); Daten gibt der Befehl nicht aus. "nicht eingerichtet" heißt: Server und Schule fehlen in den Einstellungen.
    - Im Admin den Zeitplan der Bildschirme glocke und mensa ansehen: Zeilen, Wochenübersicht und Zeiten außerhalb prüfen (Überschneidungen sind gelb markiert, die obere Zeile gewinnt).
-   - Ansichten, die vorher "Dunkel" waren, zeigen sich jetzt als Breit mit dunklem Bildschirm; in den Einstellungen unter Farbschema nachsehen.
-5. **Rückweg:** zuerst im venv `python manage.py migrate monitor 0043`, dann Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten. Der Rückweg trennt den Zeitplan wieder in Einschaltzeiten und Ansichten-Zeitplan und stellt Stil und "Morgen zeigen" her. Das Farbschema der Einstellungen und der Bildschirme sowie die neuen Vertretungs-Felder entfallen; ein Zeitplan, der im neuen Stil gepflegt wurde (zum Beispiel Zeilen über Mitternacht), kommt nicht bytegleich zurück.
+   - Ansichten im Stil "Dunkel", die Standard-Ansicht eines Bildschirms waren, zeigen sich jetzt als Breit, und der Bildschirm steht auf "Immer dunkel"; am Bildschirm unter Farbschema nachsehen. Andere "Dunkel"-Ansichten sind nur Breit und folgen dem Farbschema der Einstellungen.
+5. **Rückweg:** zuerst im venv `python manage.py migrate monitor 0043`, dann Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten. Der Rückweg trennt den Zeitplan wieder in Einschaltzeiten und Ansichten-Zeitplan und stellt Stil und "Morgen zeigen" her. Das Farbschema der Einstellungen und der Bildschirme sowie die neuen Vertretungs-Felder entfallen. Abweichungen vom alten Stand:
+   - Einschaltzeiten über Mitternacht kommen als zwei Zeilen am selben Tag zurück (bis 23:59 und ab 00:00), mit derselben Wirkung.
+   - Ansichten-Zeilen, die nie griffen und bei 0045 entfielen, kommen nicht zurück.
+   - Eine Ansicht im Stil "Dunkel" wird nur dann wieder "Dunkel", wenn sie Standard-Ansicht eines Bildschirms mit "Immer dunkel" ist; jede andere kommt als "Dicht" zurück.
+   - Ein Zeitplan, der im neuen Stil gepflegt wurde (zum Beispiel Zeilen über Mitternacht), kommt nicht bytegleich zurück.
 
 ### Fixtures aufzeichnen
 

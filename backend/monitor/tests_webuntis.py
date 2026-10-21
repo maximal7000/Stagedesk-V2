@@ -413,7 +413,8 @@ class CheckTest(WebUntisTestBase):
                          getKlassen=[{'id': 1, 'name': 'GEHEIMKLASSE'}], getTimetable=[])
         out = StringIO()
         with mock.patch.object(WebUntisSession, 'call', autospec=True, side_effect=fake), \
-                mock.patch.object(WebUntisSession, 'get_json', side_effect=OSError):
+                mock.patch.object(WebUntisSession, 'get_json', side_effect=OSError), \
+                mock.patch('monitor.untis_monitor.check', return_value=None):
             call_command('monitor_webuntis_check', stdout=out)
         text = out.getvalue()
         self.assertIn('Anmeldung: geht\n', text)

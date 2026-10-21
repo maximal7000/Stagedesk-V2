@@ -105,6 +105,22 @@ def fetch_day(server, school, format_name, options, day: date, deadline) -> dict
     return request_day(server, school, format_name, options, day, deadline)['payload']
 
 
+def check(server, school, format_name, deadline):
+    """Format (frisch, nicht aus dem Cache) und heutigen Tag abrufen. None, wenn es geht, sonst die Ursache.
+
+    Gibt keine Daten zurück.
+    """
+    cache.delete(FORMAT_CACHE_PREFIX + format_name)
+    try:
+        options = fetch_format(server, school, format_name, deadline)
+        fetch_day(server, school, format_name, options, timezone.localdate(), deadline)
+    except MonitorUnavailable as exc:
+        return str(exc)
+    except Exception as exc:
+        return type(exc).__name__
+    return None
+
+
 # ═══ Kopf ═════════════════════════════════════════════════════════
 
 def _iso_date(value):
