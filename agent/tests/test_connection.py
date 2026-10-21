@@ -91,6 +91,13 @@ class ConnectionTests(unittest.TestCase):
         self.assertEqual(self.sleeps, [5, 5])
         self.assertEqual(len(f.calls), 3)
 
+    def test_outages_counted_for_connect_failures_and_lost_connections(self):
+        f = Factory([OSError("no network"), FakeTransport([ConnectionClosed(1006)]),
+                     FakeTransport([ConnectionClosed(4003)])])
+        c = self.conn(f)
+        c.run_forever()
+        self.assertEqual(c.outages, 2)
+
     def test_backoff_resets_after_successful_connect(self):
         f = Factory([OSError("x"), FakeTransport(["{}", ConnectionClosed(1006)]),
                      OSError("y"), FakeTransport([ConnectionClosed(4003)])])

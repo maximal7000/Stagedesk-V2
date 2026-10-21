@@ -1,4 +1,5 @@
 import threading
+import time
 import unittest
 
 from stagedesk_agent.agent import Agent, read_identity
@@ -76,6 +77,39 @@ class AgentTests(unittest.TestCase):
         again = Config.load(self.paths)
         self.assertEqual((again.slug, again.key), ("neu", "k9"))
         self.assertEqual(self.kiosk[-1], "https://x/m?screen=neu")
+
+    def test_kiosk_restarted_on_first_hello_after_outage(self):
+        restarts = []
+
+        class Kiosk:
+            pending_restart = False
+
+            def apply(self, url):
+                return True
+
+            def restart(self):
+                restarts.append(1)
+                return True
+
+        class Conn(FakeConn):
+            outages = 0
+
+            def run_forever(self):
+                msg = {"type": "hello", "slug": "s", "key": "k", "kiosk_url": "https://x/m?screen=s"}
+                self.on_message(msg)          # first hello: URL changes, apply restarts; nothing extra
+                self.on_message(msg)          # config change without outage: no restart
+                self.outages = 1              # connection lost and back
+                self.on_message(msg)
+                self.on_message(msg)          # same outage count: only once
+        self.cfg.token = "T"
+        self.cfg.save()
+        a = Agent(self.cfg, self.pages, kiosk=Kiosk(), connection_factory=lambda cfg, om, af: Conn(cfg, om, af))
+        a.run_once()
+        for _ in range(100):
+            if restarts:
+                break
+            time.sleep(0.01)
+        self.assertEqual(len(restarts), 1)
 
     def test_auth_failed_goes_back_to_pairing(self):
         self.cfg.token = "T"

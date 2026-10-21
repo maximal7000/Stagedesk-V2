@@ -43,6 +43,7 @@ class Agent:
         self.self_updater = self_updater
         self.timer_writer = timer_writer
         self._agent_updated = None
+        self._outages_seen = 0
         self._update_requested = False
         self._reboot_requested = False
         self._signal_wake = threading.Event()
@@ -357,8 +358,15 @@ class Agent:
         kind = message.get("type")
         if kind == "hello":
             self.config.apply_hello(message)
+            outages = getattr(self.connection, "outages", 0)
+            recovered = outages > self._outages_seen
+            self._outages_seen = outages
+            url_before = self._kiosk_url
             if self.config.kiosk_url:
                 self._set_kiosk(self.config.kiosk_url)
+            if recovered and self.kiosk is not None and self._kiosk_url == url_before:
+                # Replaces the old netwatch cron job: the browser may show an error page from the outage.
+                self._enqueue_command(self.kiosk.restart)
             target = (self.config.power_method, json.loads(json.dumps(self.config.power_config, default=str)))
             wake = self._telemetry_wake
 
@@ -428,6 +436,7 @@ class Agent:
         if self.config.kiosk_url:
             self._set_kiosk(self.config.kiosk_url)
         self.connection = self.connection_factory(self.config, self.on_message, self.on_auth_failed)
+        self._outages_seen = 0
         ended = threading.Event()
         wake = self._telemetry_wake = threading.Event()
         threading.Thread(target=self._telemetry_loop, args=(ended, wake), daemon=True, name="telemetry").start()

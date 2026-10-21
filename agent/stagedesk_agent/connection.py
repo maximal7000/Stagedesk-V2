@@ -69,6 +69,7 @@ class Connection:
         self._stop_event = stop_event or threading.Event()  # shared with the agent: set from the signal handler
         self.sleep = sleep or self._stop_event.wait
         self._got_message = False
+        self.outages = 0  # connect failures and lost connections; the agent restarts the kiosk after one
         self._transport = None
         self._lock = threading.Lock()
 
@@ -112,6 +113,7 @@ class Connection:
                     {"Authorization": f"Bearer {self.config.token}"})
             except Exception as exc:
                 log.warning("connect failed: %s", exc)
+                self.outages += 1
                 self._wait(delays)
                 continue
             with self._lock:
@@ -129,6 +131,7 @@ class Connection:
                 self._auth_failed()
                 return
             if not self._stopped:
+                self.outages += 1
                 self._wait(delays)
 
     def _wait(self, delays):

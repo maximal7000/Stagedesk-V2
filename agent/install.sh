@@ -2,11 +2,11 @@
 # Stagedesk Geräte-Agent: Installation auf einem Raspberry Pi (Bookworm).
 # Aufruf: curl -fsSL <Server>/api/monitor/agent/install.sh | sudo bash
 # Idempotent: ein zweiter Lauf aktualisiert Paket und Dienste und behält die Kopplung.
+# Eine andere Server-Adresse (z. B. zum Testen): sudo STAGEDESK_SERVER=https://server bash install.sh
 set -euo pipefail
 
 PLACEHOLDER="__STAGEDESK_""SERVER__"
 SERVER="${STAGEDESK_SERVER:-__STAGEDESK_SERVER__}"
-KIOSK_USER="pi"
 OPT_DIR="/opt/stagedesk-agent"
 CONFIG_DIR="/etc/stagedesk-agent"
 STATE_DIR="/var/lib/stagedesk-agent"
@@ -14,7 +14,9 @@ UNIT_DIR="/etc/systemd/system"
 LOCAL_URL="http://127.0.0.1:8765/"
 work=""
 PACKAGE_CHANGED=0
-PACKAGES=(python3-websocket cage chromium-browser cec-utils ddcutil wlr-randr grim iw curl ca-certificates x11-apps)
+UNITS_CHANGED_AGENT=0
+UNITS_CHANGED_KIOSK=0
+PACKAGES=(python3-websocket cage cec-utils ddcutil wlr-randr grim iw curl ca-certificates x11-apps)
 
 cleanup() { [ -z "$work" ] || rm -rf "$work"; }
 trap cleanup EXIT
@@ -28,7 +30,7 @@ check_system() {
   local codename
   codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME:-}")"
   [ "$codename" = "bookworm" ] || die "Raspberry Pi OS Bookworm erwartet, gefunden: ${codename:-unbekannt}. Mit Bookworm Lite neu aufsetzen."
-  id "$KIOSK_USER" >/dev/null 2>&1 || die "Der Benutzer $KIOSK_USER fehlt. Im Raspberry Pi Imager den Benutzer pi anlegen."
+  [ "$(id -u pi 2>/dev/null || true)" = "1000" ] || die "Der Benutzer pi mit der ID 1000 fehlt. Im Raspberry Pi Imager den Benutzer pi anlegen (der Kiosk-Dienst nutzt /home/pi und /run/user/1000)."
   case "$SERVER" in
     *"$PLACEHOLDER"*|"") die "Server-URL fehlt. Den Installationsbefehl vom Stagedesk-Server verwenden oder STAGEDESK_SERVER setzen." ;;
   esac
@@ -39,17 +41,19 @@ install_packages() {
   say "1/6 Pakete installieren"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update </dev/null
-  apt-get install -y --no-install-recommends "${PACKAGES[@]}" </dev/null
+  # Auf Bookworm heißt das Paket chromium; chromium-browser nur als Rückfall für andere Quellen.
+  local browser=chromium
+  apt-cache show chromium >/dev/null 2>&1 || browser=chromium-browser
+  apt-get install -y --no-install-recommends "${PACKAGES[@]}" "$browser" </dev/null
 }
 
 install_package() {
   say "2/6 Agent-Paket laden und prüfen"
   install -d -m 755 -o root -g root "$STATE_DIR"
   local info version sha256 actual current=""
-  work="$(mktemp -d)"
   info="$(curl -fsS --max-time 30 "$SERVER/api/monitor/agent/version")" || die "Der Server $SERVER ist nicht erreichbar. Netzwerk und Adresse prüfen."
-  version="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])')"
-  sha256="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha256"])')"
+  version="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' 2>/dev/null)" || die "Die Antwort des Servers von /agent/version ist ungültig. Die Server-Adresse prüfen."
+  sha256="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha256"])' 2>/dev/null)" || die "Die Antwort des Servers von /agent/version ist ungültig. Die Server-Adresse prüfen."
   [[ "$version" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || die "Der Server meldet keine gültige Agent-Version."
   [[ "$sha256" =~ ^[0-9a-f]{64}$ ]] || die "Der Server meldet keine gültige Prüfsumme."
   [ -r "$OPT_DIR/VERSION" ] && current="$(tr -d '[:space:]' < "$OPT_DIR/VERSION")"
@@ -79,7 +83,6 @@ install_package() {
     rm -rf "$OPT_DIR.new"
     say "    Version $version installiert."
   fi
-  PACKAGE_VERSION="$version"
 }
 
 write_config() {
@@ -108,13 +111,19 @@ PY
     (umask 077; printf 'KIOSK_URL=%s\n' "$LOCAL_URL" > "$CONFIG_DIR/kiosk.env")
   fi
   chmod 600 "$CONFIG_DIR/kiosk.env"
-  install -m 644 "$OPT_DIR/systemd/stagedesk-agent.service" "$UNIT_DIR/stagedesk-agent.service"
-  install -m 644 "$OPT_DIR/systemd/stagedesk-kiosk.service" "$UNIT_DIR/stagedesk-kiosk.service"
+  if ! cmp -s "$OPT_DIR/systemd/stagedesk-agent.service" "$UNIT_DIR/stagedesk-agent.service"; then
+    install -m 644 "$OPT_DIR/systemd/stagedesk-agent.service" "$UNIT_DIR/stagedesk-agent.service"
+    UNITS_CHANGED_AGENT=1
+  fi
+  if ! cmp -s "$OPT_DIR/systemd/stagedesk-kiosk.service" "$UNIT_DIR/stagedesk-kiosk.service"; then
+    install -m 644 "$OPT_DIR/systemd/stagedesk-kiosk.service" "$UNIT_DIR/stagedesk-kiosk.service"
+    UNITS_CHANGED_KIOSK=1
+  fi
 }
 
 prepare_kiosk_user() {
   say "4/6 Kiosk-Benutzer vorbereiten"
-  usermod -aG video,render,input,tty "$KIOSK_USER"
+  usermod -aG video,render,input,tty pi
   systemctl mask getty@tty1.service
   # Der Bildschirm soll nie dunkel werden (consoleblank=0), die Zeile in cmdline.txt bleibt eine Zeile.
   local cmdline=/boot/firmware/cmdline.txt
@@ -123,12 +132,13 @@ prepare_kiosk_user() {
   fi
   # Unsichtbarer Mauszeiger für cage (Doku: Mauszeiger ausblenden).
   local home icons
-  home="$(getent passwd "$KIOSK_USER" | cut -d: -f6)"
+  home="$(getent passwd pi | cut -d: -f6)"
   icons="$home/.icons"
   if [ ! -e "$icons/default/cursors/left_ptr" ] || [ ! -e "$icons/blank/cursors/left_ptr" ]; then
-    local tmp name
+    local name
     command -v xcursorgen >/dev/null 2>&1 || die "xcursorgen fehlt. Paket x11-apps installieren und das Skript erneut starten."
-    tmp="$(mktemp -d)"
+    local tmp="$work/cursor"
+    mkdir -p "$tmp"
     echo "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAE0lEQVR4nGNgGAWjYBSMAgYwAAAEEAABsax5zAAAAABJRU5ErkJggg==" | base64 -d > "$tmp/blank.png"
     echo "16 0 0 $tmp/blank.png" > "$tmp/blank.cursor"
     mkdir -p "$icons/blank/cursors" "$icons/default/cursors"
@@ -141,8 +151,7 @@ prepare_kiosk_user() {
                 col-resize row-resize sb_h_double_arrow sb_v_double_arrow question_arrow help; do
       ln -sf left_ptr "$icons/default/cursors/$name"
     done
-    chown -R "$KIOSK_USER:$KIOSK_USER" "$icons"
-    rm -rf "$tmp"
+    chown -R "pi:pi" "$icons"
   fi
 }
 
@@ -164,8 +173,7 @@ disable_old_setup() {
     mv /etc/cron.d/stagedesk-reboot /etc/cron.d/stagedesk-reboot.disabled
     say "    /etc/cron.d/stagedesk-reboot abgeschaltet."
   fi
-  local cron_file
-  cron_file="$(mktemp)"
+  local cron_file="$work/crontab"
   if crontab -l > "$cron_file" 2>/dev/null; then
     if grep -Eq '^[^#].*(shutdown -r now|netwatch\.sh)' "$cron_file"; then
       cp "$cron_file" "$STATE_DIR/root-crontab.backup"
@@ -173,19 +181,23 @@ disable_old_setup() {
       say "    Alte Crontab-Einträge auskommentiert (Sicherung: $STATE_DIR/root-crontab.backup)."
     fi
   fi
-  rm -f "$cron_file"
 }
 
 start_services() {
   say "6/6 Agent und Kiosk starten"
   systemctl daemon-reload
   systemctl enable --now stagedesk-agent.service stagedesk-kiosk.service
-  if [ "${PACKAGE_CHANGED:-0}" = "1" ]; then
+  # Beim ersten Lauf startet enable --now beide Dienste; bei einem erneuten Lauf nur bei Änderungen neu starten.
+  if [ "$PACKAGE_CHANGED" = "1" ] || [ "$UNITS_CHANGED_AGENT" = "1" ]; then
     systemctl restart stagedesk-agent.service
+  fi
+  if [ "$UNITS_CHANGED_KIOSK" = "1" ]; then
+    systemctl restart stagedesk-kiosk.service
   fi
 }
 
 main() {
+  work="$(mktemp -d)"
   check_system
   install_packages
   install_package
@@ -198,6 +210,7 @@ main() {
   else
     say "Fertig. Der Bildschirm zeigt jetzt einen Kopplungscode."
   fi
+  say "Hinweis: Die Einstellung gegen das Abdunkeln des Bildschirms (consoleblank=0) gilt erst nach dem nächsten Neustart."
 }
 
 main "$@"
