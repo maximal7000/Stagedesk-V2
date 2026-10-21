@@ -29,6 +29,7 @@ const settings = () => ({
   on_air_text: 'ON AIR', on_air_animation: 'pulse', on_air_show_clock: true, webuntis_source: '', webuntis_checked_at: null,
   device_offline_minutes: 10, warn_temperature_c: 80, warn_disk_percent: 90, warn_wifi_dbm: -75, warn_reboot_days: 7,
   require_device_token: false,
+  color_scheme: 'light', light_from: '07:00', light_until: '18:00', daylight_today: { sunrise: '07:58', sunset: '18:12' },
 })
 
 let root, container
@@ -185,5 +186,31 @@ describe('Settings', () => {
     expect(container.querySelector('[data-install-command]').textContent).toBe(cmd)
     await click(button('Kopieren'))
     expect(writeText).toHaveBeenCalledWith(cmd)
+  })
+
+  it('Farbschema: Zeitfelder nur bei Zeitplan, Tageslicht-Text mit Werten, nur Geändertes gesendet', async () => {
+    perms.add('monitor.setup')
+    api.updateSettings.mockResolvedValue({ ...settings(), color_scheme: 'schedule', light_until: '17:30' })
+    await mount()
+    const radio = (t) => [...container.querySelectorAll('[role="radiogroup"][aria-label="Farbschema"] button')].find((b) => b.textContent === t)
+    expect(radio('Hell').getAttribute('aria-checked')).toBe('true')
+    expect(byLabel('Hell von')).toBeUndefined()
+    expect(container.textContent).toContain('Einzelne Bildschirme können auf der Bildschirm-Seite immer hell oder immer dunkel bleiben.')
+    await click(radio('Tageslicht'))
+    expect(container.textContent).toContain('Heute hell von 07:58 bis 18:12.')
+    expect(byLabel('Hell von')).toBeUndefined()
+    await click(radio('Zeitplan'))
+    expect(container.textContent).not.toContain('Heute hell von')
+    expect(byLabel('Hell von').value).toBe('07:00')
+    await act(async () => { typeInto(byLabel('bis'), '17:30') })
+    await click(button('Speichern'))
+    expect(api.updateSettings).toHaveBeenCalledTimes(1)
+    expect(api.updateSettings).toHaveBeenCalledWith({ color_scheme: 'schedule', light_until: '17:30' })
+  })
+
+  it('Farbschema ohne Recht nur lesend', async () => {
+    await mount()
+    const group = container.querySelector('[role="radiogroup"][aria-label="Farbschema"]')
+    expect([...group.querySelectorAll('button')].every((b) => b.disabled)).toBe(true)
   })
 })

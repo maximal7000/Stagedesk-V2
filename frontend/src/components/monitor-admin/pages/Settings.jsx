@@ -20,7 +20,7 @@ import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
 import { formatDayTime } from '../shared/explain'
 import { moveItem } from './viewData'
 import {
-  ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SETUP_FIELDS,
+  COLOR_SCHEME_OPTIONS, ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SCHEME_FIELDS, SETUP_FIELDS,
   DEVICE_NUMBER_FIELDS, changedIn, checkSentence, deviceProblems, installCommand, legacyScreenNames, settingsPayload, sourceSentence, templateChangeCount, templateChanges, templateProblems,
 } from './settingsData'
 import * as api from '../shared/api'
@@ -198,6 +198,35 @@ function OnAirSection({ draft, set, disabled, readOnly }) {
   )
 }
 
+function ColorSchemeSection({ settings, draft, set, disabled, readOnly }) {
+  const fromId = useId()
+  const untilId = useId()
+  const daylight = settings.daylight_today
+  return (
+    <Section title="Farbschema" data-section="color-scheme" aside={readOnly ? readOnlyNote('die Einrichtung') : null}>
+      <div className="space-y-4">
+        <div className="max-w-md">
+          <Segmented label="Farbschema" options={COLOR_SCHEME_OPTIONS} value={draft.color_scheme} disabled={disabled} onChange={(v) => set('color_scheme', v)} />
+        </div>
+        {draft.color_scheme === 'daylight' && daylight && (
+          <p className="text-sm text-fg-muted">Heute hell von {daylight.sunrise} bis {daylight.sunset}.</p>
+        )}
+        {draft.color_scheme === 'schedule' && (
+          <div className="grid gap-4 sm:grid-cols-2 max-w-md">
+            <Field label="Hell von" htmlFor={fromId}>
+              <input id={fromId} type="time" value={draft.light_from ?? ''} disabled={disabled} onChange={(e) => set('light_from', e.target.value)} className={fieldClass} />
+            </Field>
+            <Field label="bis" htmlFor={untilId}>
+              <input id={untilId} type="time" value={draft.light_until ?? ''} disabled={disabled} onChange={(e) => set('light_until', e.target.value)} className={fieldClass} />
+            </Field>
+          </div>
+        )}
+        <p className="text-xs text-fg-subtle">Einzelne Bildschirme können auf der Bildschirm-Seite immer hell oder immer dunkel bleiben.</p>
+      </div>
+    </Section>
+  )
+}
+
 function WeatherSection({ settings, draft, set, disabled, readOnly, onClear }) {
   const keyId = useId()
   return (
@@ -272,14 +301,15 @@ export default function Settings() {
 
   // Ausgangsstand neu, wenn sich die Werte ändern oder gespeichert wurde; ein geänderter *_set-Schalter (Entfernen)
   // setzt den Entwurf nicht zurück
-  const originalKey = settings ? JSON.stringify([savedRound, pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS])]) : null
+  const originalKey = settings ? JSON.stringify([savedRound, pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS, ...SCHEME_FIELDS])]) : null
   const settingsOriginal = useMemo(() => (originalKey ? JSON.parse(originalKey)[1] : null), [originalKey])
   const values = useDraft(settingsOriginal)
 
   const setupCount = settings ? changedIn(settingsOriginal, values.draft, SETUP_FIELDS) : 0
+  const schemeCount = settings ? changedIn(settingsOriginal, values.draft, SCHEME_FIELDS) : 0
   const onAirCount = settings ? changedIn(settingsOriginal, values.draft, ON_AIR_FIELDS) : 0
   const templateCount = templates ? templateChangeCount(templates, templateList) : 0
-  const dirtyCount = setupCount + onAirCount + templateCount
+  const dirtyCount = setupCount + schemeCount + onAirCount + templateCount
   const webuntisDirty = settings ? changedIn(settingsOriginal, values.draft, WEBUNTIS_FIELDS) > 0 : false
   useUnsavedGuard(dirtyCount > 0)
 
@@ -307,7 +337,7 @@ export default function Settings() {
     // Schlägt eine fehl, bleibt der Entwurf stehen; erneutes Speichern schickt dieselben Werte noch einmal.
     let latest = null
     let settingsFailed = false
-    for (const [count, fields] of [[setupCount, SETUP_FIELDS], [onAirCount, ON_AIR_FIELDS]]) {
+    for (const [count, fields] of [[setupCount, SETUP_FIELDS], [schemeCount, SCHEME_FIELDS], [onAirCount, ON_AIR_FIELDS]]) {
       if (!count) continue
       const result = await run(() => api.updateSettings(settingsPayload(settingsOriginal, values.draft, fields)))
       if (result) latest = result
@@ -372,6 +402,7 @@ export default function Settings() {
           <WebuntisSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             dirty={webuntisDirty} onClear={() => setClearing('webuntis_password')} />
           {canEmergency && templates && <TemplatesSection list={templateList} setList={setTemplateList} />}
+          <ColorSchemeSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup} />
           <OnAirSection draft={values.draft} set={values.set} disabled={onAirDisabled} readOnly={!canOnAir} />
           <WeatherSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             onClear={() => setClearing('weather_api_key')} />

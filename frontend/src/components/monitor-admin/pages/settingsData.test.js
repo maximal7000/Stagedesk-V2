@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  checkSentence, credentialsComplete, settingsPayload, sourceSentence, SETUP_FIELDS, ON_AIR_FIELDS,
+  checkSentence, credentialsComplete, settingsPayload, sourceSentence, SETUP_FIELDS, ON_AIR_FIELDS, SCHEME_FIELDS,
   templateChanges, templateProblems, DEVICE_FIELDS, deviceProblems, legacyScreenNames, installCommand,
 } from './settingsData'
 
@@ -138,5 +138,18 @@ describe('Geräte-Einstellungen', () => {
   it('Installationsbefehl aus der aktuellen Adresse', () => {
     expect(installCommand('https://stagedesk.t410.de'))
       .toBe('curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash')
+  })
+})
+
+describe('Farbschema', () => {
+  const base = { color_scheme: 'light', light_from: '07:00', light_until: '18:00', webuntis_server: 'a' }
+  it('SCHEME_FIELDS und Payload mit nur geänderten Feldern', () => {
+    expect(SCHEME_FIELDS).toEqual(['color_scheme', 'light_from', 'light_until'])
+    expect(settingsPayload(base, { ...base, color_scheme: 'schedule', light_until: '17:30' }, SCHEME_FIELDS))
+      .toEqual({ color_scheme: 'schedule', light_until: '17:30' })
+    expect(settingsPayload(base, { ...base }, SCHEME_FIELDS)).toEqual({})
+  })
+  it('gehört nicht zu den Einrichtungs-Feldern', () => {
+    expect(SETUP_FIELDS).not.toContain('color_scheme')
   })
 })
