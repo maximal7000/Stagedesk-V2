@@ -2,7 +2,7 @@ import json
 import unittest
 
 from stagedesk_agent.runner import RunResult
-from stagedesk_agent.updater import DPKG_CMD, UPDATE_CMD, UPGRADE_CMD, Updater
+from stagedesk_agent.updater import DPKG_CMD, FIX_CMD, UPDATE_CMD, UPGRADE_CMD, Updater
 from tests.fakes import FakeRunner, make_paths
 
 REBOOT = ("systemctl", "reboot")
@@ -63,7 +63,9 @@ class UpdaterTests(Base):
     def test_update_runs_apt_and_reports(self):
         self.gates = [True]
         result = self.updater.run(manual=False)
-        self.assertEqual(self.commands()[:3], [DPKG_CMD, UPDATE_CMD, UPGRADE_CMD])
+        self.assertEqual(self.commands()[:4], [DPKG_CMD, FIX_CMD, UPDATE_CMD, UPGRADE_CMD])
+        self.assertIn("-f", FIX_CMD)
+        self.assertIn("DPkg::Lock::Timeout=300", FIX_CMD)
         self.assertIn("DPkg::Lock::Timeout=300", UPDATE_CMD)
         self.assertIn("DPkg::Lock::Timeout=300", UPGRADE_CMD)
         self.assertIn("full-upgrade", UPGRADE_CMD)

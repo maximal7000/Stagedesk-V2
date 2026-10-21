@@ -22,6 +22,7 @@ log = logging.getLogger("stagedesk_agent.self_update")
 SERVICE = "stagedesk-agent"
 ROLLBACK_UNIT = "stagedesk-agent-rollback"
 ROLLBACK_MINUTES = 2
+BOOT_MINUTES = 5  # counted from kernel boot: after a power cut WLAN and hello need longer
 DOWNLOAD_TIMEOUT = 30  # per read
 DOWNLOAD_DEADLINE = 600  # whole download
 MAX_PACKAGE = 50 * 1024 * 1024
@@ -150,6 +151,18 @@ def _try(runner, args):
     return result.code == 0
 
 
+def _abandoned(paths, event):
+    """Pending-confirm written, but the install was interrupted before the first rename."""
+    return bool(event) and not paths.opt_prev.exists() \
+        and _read(paths.opt_dir / "VERSION") == event.get("from") != event.get("to")
+
+
+def _clear_abandoned(paths, runner):
+    log.warning("abandoned update: removing pending-confirm")
+    paths.pending_confirm.unlink(missing_ok=True)
+    _try(runner, ["systemctl", "disable", "--now", f"{ROLLBACK_UNIT}.timer"])
+
+
 def _read_json(path):
     try:
         data = json.loads(_read(path))
@@ -174,6 +187,10 @@ class SelfUpdater:
         wanted, own = parse_version(version), self.current_version()
         if wanted is None or (own is not None and wanted <= own):
             return None
+        with _locked(self.paths):
+            event = _read_json(self.paths.pending_confirm)
+            if _abandoned(self.paths, event):
+                _clear_abandoned(self.paths, self.runner)
         failed = _read_json(self.paths.failed_version_file)
         if self.paths.pending_confirm.exists() or (failed.get("version") == version and failed.get("sha256") == sha256):
             return None
@@ -241,7 +258,7 @@ class SelfUpdater:
                    f"Environment=PYTHONPATH={paths.opt_prev}\nWorkingDirectory={paths.opt_prev}\n"
                    f"ExecStart=/usr/bin/python3 -m stagedesk_agent.self_update rollback\n")
         timer = (f"[Unit]\nDescription=Stagedesk Agent: Rückfall nach {ROLLBACK_MINUTES} Minuten ohne Bestätigung\n\n"
-                 f"[Timer]\nOnActiveSec={ROLLBACK_MINUTES}min\nOnBootSec={ROLLBACK_MINUTES}min\n\n"
+                 f"[Timer]\nOnActiveSec={ROLLBACK_MINUTES}min\nOnBootSec={BOOT_MINUTES}min\n\n"
                  "[Install]\nWantedBy=timers.target\n")
         _write_if_changed(paths.systemd_dir / f"{ROLLBACK_UNIT}.service", service)
         _write_if_changed(paths.systemd_dir / timer_name, timer)
@@ -258,6 +275,9 @@ class SelfUpdater:
             event = _read_json(self.paths.pending_confirm)
             if not event:
                 return None
+            if _abandoned(self.paths, event):
+                _clear_abandoned(self.paths, self.runner)
+                return None
             if event.get("to") != self.running_version:
                 log.warning("pending update to %s, but %s is running: not confirming", event.get("to"),
                             self.running_version)
@@ -271,19 +291,24 @@ def rollback(paths, runner):
     """Restore .prev when the new version was never confirmed. True if a rollback happened."""
     with _locked(paths):
         event = _read_json(paths.pending_confirm)  # re-checked under the lock: a confirm may have won
+        if _abandoned(paths, event):
+            _clear_abandoned(paths, runner)
+            return False
         if not event or not paths.opt_prev.is_dir():
             return False
+        had_active = paths.opt_dir.exists()
         failed_dir = paths.opt_dir.with_name("stagedesk-agent.failed")
         shutil.rmtree(failed_dir, ignore_errors=True)
         if paths.opt_dir.exists():  # missing after a power cut between the two renames
             os.rename(paths.opt_dir, failed_dir)
         os.rename(paths.opt_prev, paths.opt_dir)
         shutil.rmtree(failed_dir, ignore_errors=True)
-        if event.get("to"):
+        if event.get("to") and had_active:  # without an active dir the new version never ran
             _atomic_write(paths.failed_version_file,
                           json.dumps({"version": event["to"], "sha256": event.get("sha256", "")}))
         paths.pending_confirm.unlink(missing_ok=True)
     _try(runner, ["systemctl", "disable", "--now", f"{ROLLBACK_UNIT}.timer"])
+    _try(runner, ["systemctl", "reset-failed", SERVICE])
     _try(runner, ["systemctl", "--no-block", "restart", SERVICE])
     return True
 

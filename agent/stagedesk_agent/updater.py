@@ -13,10 +13,12 @@ TOTAL_LIMIT = 60 * 60
 GATE_TIMEOUT = 30
 LOCK_WAIT = "DPkg::Lock::Timeout=300"
 DPKG_CMD = ("env", "DEBIAN_FRONTEND=noninteractive", "dpkg", "--configure", "-a", "--force-confold")
+FIX_CMD = ("env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "-y", "-o", LOCK_WAIT,
+           "-o", "Dpkg::Options::=--force-confold", "-f", "install")
 UPDATE_CMD = ("apt-get", "-o", LOCK_WAIT, "update")
 UPGRADE_CMD = ("env", "DEBIAN_FRONTEND=noninteractive", "LANG=C", "apt-get", "-y", "-o", LOCK_WAIT,
                "-o", "Dpkg::Options::=--force-confold", "full-upgrade")
-_STEPS = ((DPKG_CMD, "dpkg"), (UPDATE_CMD, "apt-get"), (UPGRADE_CMD, "apt-get"))
+_STEPS = ((DPKG_CMD, "dpkg"), (FIX_CMD, "apt-get"), (UPDATE_CMD, "apt-get"), (UPGRADE_CMD, "apt-get"))
 _COUNT = re.compile(r"(\d+) upgraded, (\d+) newly installed")
 NO_ANSWER = "Keine Antwort vom Server"
 

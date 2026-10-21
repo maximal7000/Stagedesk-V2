@@ -205,7 +205,7 @@ class SelfUpdateTests(unittest.TestCase):
         timer = (self.paths.systemd_dir / "stagedesk-agent-rollback.timer").read_text()
         service = (self.paths.systemd_dir / "stagedesk-agent-rollback.service").read_text()
         self.assertIn("OnActiveSec=2min", timer)
-        self.assertIn("OnBootSec=2min", timer)
+        self.assertIn("OnBootSec=5min", timer)
         self.assertIn(f"PYTHONPATH={self.paths.opt_prev}", service)
         self.assertIn("stagedesk_agent.self_update rollback", service)
 
@@ -226,6 +226,49 @@ class SelfUpdateTests(unittest.TestCase):
             return hashlib.sha256(self.blob).hexdigest()
         updater = SelfUpdater(self.paths, self.runner, "https://srv", fetch=fetch)
         self.assertEqual(updater.check(self.hello()), {"updated": "1.1.0"})
+
+
+    def abandon(self):
+        """Interrupted between writing pending-confirm and the first rename."""
+        self.paths.state_dir.mkdir(parents=True, exist_ok=True)
+        self.paths.pending_confirm.write_text(json.dumps({"at": "t", "from": "1.0.0", "to": "1.1.0", "sha256": "x"}))
+
+    def test_abandoned_pending_does_not_block_next_update(self):
+        self.abandon()
+        self.assertEqual(self.updater.check(self.hello()), {"updated": "1.1.0"})
+
+    def test_abandoned_pending_cleaned_by_rollback_service(self):
+        self.abandon()
+        self.assertFalse(rollback(self.paths, self.runner))
+        self.assertFalse(self.paths.pending_confirm.exists())
+        self.assertIn(("systemctl", "disable", "--now", "stagedesk-agent-rollback.timer"), self.commands())
+        self.assertEqual((self.paths.opt_dir / "VERSION").read_text(), "1.0.0\n")
+
+    def test_abandoned_pending_cleaned_by_confirm(self):
+        self.abandon()
+        self.assertIsNone(self.updater.confirm())
+        self.assertFalse(self.paths.pending_confirm.exists())
+
+    def test_no_failed_version_when_active_dir_was_missing(self):
+        import shutil
+        self.updater.check(self.hello())
+        shutil.rmtree(self.paths.opt_dir)
+        rollback(self.paths, self.runner)
+        self.assertFalse(self.paths.failed_version_file.exists())
+
+    def test_rollback_resets_failed_state_before_restart(self):
+        self.updater.check(self.hello())
+        self.runner.calls.clear()
+        rollback(self.paths, self.runner)
+        cmds = self.commands()
+        self.assertLess(cmds.index(("systemctl", "reset-failed", "stagedesk-agent")),
+                        cmds.index(("systemctl", "--no-block", "restart", "stagedesk-agent")))
+
+    def test_boot_timer_is_five_minutes(self):
+        self.updater.check(self.hello())
+        timer = (self.paths.systemd_dir / "stagedesk-agent-rollback.timer").read_text()
+        self.assertIn("OnBootSec=5min", timer)
+        self.assertIn("OnActiveSec=2min", timer)
 
 
 if __name__ == "__main__":
