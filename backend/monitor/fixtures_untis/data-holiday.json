@@ -1,0 +1,42 @@
+{
+ "payload": {
+  "importInProgress": false,
+  "date": 20261026,
+  "nextDate": 20261027,
+  "showingNextDate": false,
+  "rows": [],
+  "lastUpdate": "19.10.2026 11:41:02",
+  "absentElements": [
+   {
+    "elementType": 2,
+    "elementId": 1,
+    "elementName": "AAA",
+    "startUnit": null,
+    "endUnit": null,
+    "absences": [
+     {
+      "type": "ALL_DAY",
+      "startTime": 0,
+      "endTime": 2359,
+      "isEvent": false,
+      "startUnit": "0",
+      "endUnit": "0"
+     }
+    ]
+   }
+  ],
+  "affectedElements": {
+   "1": [],
+   "2": [
+    "BBB",
+    "CCC",
+    "DDD"
+   ]
+  },
+  "messageData": {
+   "messages": []
+  },
+  "weekDay": "Montag",
+  "regularFreeData": []
+ }
+}

@@ -1,0 +1,243 @@
+{
+ "payload": {
+  "importInProgress": false,
+  "date": 20261027,
+  "nextDate": 20261028,
+  "showingNextDate": false,
+  "rows": [
+   {
+    "data": [
+     "1",
+     "5c",
+     "De",
+     "179",
+     "<span class=\"substMonitorSubstElem\">KAA</span> (<span class=\"cancelStyle\">MÜB</span>)",
+     "",
+     ""
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "5c"
+   },
+   {
+    "data": [
+     "1 - 2",
+     "7a",
+     "Ma",
+     "<span class=\"substMonitorSubstElem\">204</span> (209)",
+     "SAC",
+     "Raum&auml;nderung",
+     ""
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "7a"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Ea",
+     "Geo",
+     "180",
+     "EHD",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Ea"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Ed",
+     "Geo",
+     "179",
+     "WIE",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Ed"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q1c, Q1d, Q2a, Q2b, Q2d",
+     "Gr",
+     "062",
+     "SAF",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q1c"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q1c, Q1d, Q2a, Q2b, Q2d",
+     "Gr",
+     "062",
+     "SAF",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q1d"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q1c, Q1d, Q2a, Q2b, Q2d",
+     "Gr",
+     "062",
+     "SAF",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q2a"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q1c, Q1d, Q2a, Q2b, Q2d",
+     "Gr",
+     "062",
+     "SAF",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q2b"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q2b, Q2c, Q2d",
+     "If",
+     "G10",
+     "P-G",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q2b"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q2b, Q2c, Q2d",
+     "If",
+     "G10",
+     "P-G",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q2c"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q1c, Q1d, Q2a, Q2b, Q2d",
+     "Gr",
+     "062",
+     "SAF",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q2d"
+   },
+   {
+    "data": [
+     "8 - 9",
+     "Q2b, Q2c, Q2d",
+     "If",
+     "G10",
+     "P-G",
+     "Text",
+     "Klausur"
+    ],
+    "cssClasses": [],
+    "cellClasses": {},
+    "group": "Q2d"
+   }
+  ],
+  "lastUpdate": "19.10.2026 11:41:02",
+  "absentElements": [
+   {
+    "elementType": 2,
+    "elementId": 11,
+    "elementName": "ASI",
+    "startUnit": null,
+    "endUnit": null,
+    "absences": [
+     {
+      "type": "ALL_DAY",
+      "startTime": 0,
+      "endTime": 2359,
+      "isEvent": false,
+      "startUnit": "0",
+      "endUnit": "0"
+     }
+    ]
+   },
+   {
+    "elementType": 2,
+    "elementId": 128,
+    "elementName": "MÜB",
+    "startUnit": null,
+    "endUnit": null,
+    "absences": [
+     {
+      "type": "TO",
+      "startTime": 800,
+      "endTime": 845,
+      "isEvent": false,
+      "startUnit": "1",
+      "endUnit": "1"
+     }
+    ]
+   }
+  ],
+  "affectedElements": {
+   "1": [
+    "5c",
+    "7a",
+    "Ea",
+    "Ed",
+    "Q1c",
+    "Q1d",
+    "Q2a",
+    "Q2b",
+    "Q2c",
+    "Q2d"
+   ],
+   "2": [
+    "EHD",
+    "KAA",
+    "MÜB",
+    "P-G",
+    "SAF",
+    "SAC",
+    "WIE"
+   ]
+  },
+  "messageData": {
+   "messages": []
+  },
+  "weekDay": "Dienstag",
+  "regularFreeData": []
+ }
+}
