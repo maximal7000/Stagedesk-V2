@@ -218,3 +218,7 @@ curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
 ## V1-Backup
 
 `/srv/t-ag/` wurde in `/srv/t-ag-backup/` verschoben. Wird nicht mehr von einem Service angefasst.
+
+## Lokale Entwicklung: Channel-Layer
+
+Mit `DJANGO_DEBUG=True` nutzt das Backend lokal einen Channel-Layer im Speicher (kein Redis nötig). `REDIS_URL` (z. B. `redis://127.0.0.1:6379/0`) erzwingt Redis; Produktion ohne `REDIS_URL` bleibt bei Redis auf 127.0.0.1.
