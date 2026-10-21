@@ -1,4 +1,5 @@
 import io
+import os
 import threading
 import unittest
 import urllib.error
@@ -54,13 +55,15 @@ class Base(unittest.TestCase):
         self.shot = self.paths.root / "sd-shot.png"
         self.telemetry = {"display": {"browser_running": True, "resolution": "3840x2160"}}
         self.power_calls = []
-        self.pages = type("P", (), {"shots": [], "show_test_pattern": lambda s, n, r, sec=60: s.shots.append((n, r, sec))})()
+        self.pages = type("P", (), {"shots": [], "none": 0,
+                                    "show_test_pattern": lambda s, n, r, sec=60: s.shots.append((n, r, sec)),
+                                    "show_none": lambda s: setattr(s, "none", s.none + 1)})()
         self.updater = FakeUpdater()
         self.ctx = CommandContext(
             config=self.cfg, kiosk=self.kiosk, pages=self.pages, runner=self.runner, updater=self.updater,
             apply_power=lambda on: self.power_calls.append(on) or ("an" if on else "standby"),
             last_telemetry=lambda: self.telemetry, set_kiosk=lambda url: self.kiosk.apply(url),
-            defer=lambda delay, fn: self.deferred.append((delay, fn)),
+            defer=lambda delay, fn, key=None: self.deferred.append((delay, fn, key)),
             upload=lambda *a: self.uploads.append(a) or (True, "Screenshot hochgeladen"), screenshot_path=self.shot)
 
 
@@ -110,34 +113,48 @@ class ExecuteTests(Base):
 
     def test_reboot_is_deferred_not_immediate(self):
         self.assertEqual(execute({"kind": "reboot"}, self.ctx), (True, "Pi startet in 3 Sekunden neu"))
-        self.assertNotIn(("systemctl", "reboot"), [c[0:1][0] for c in self.runner.calls])
-        self.assertEqual([d for d, _ in self.deferred], [3])
+        self.assertNotIn(("systemctl", "reboot"), [args for args, _ in self.runner.calls])
+        self.assertEqual([d[0] for d in self.deferred], [3])
         self.deferred[0][1]()
         self.assertIn((("systemctl", "reboot"), None), self.runner.calls)
 
-    def test_screenshot_uploads_with_token(self):
-        def grim(args, timeout=30, user=None, input=None):
-            self.shot.write_bytes(b"\x89PNG-data")
+    PNG = b"\x89PNG\r\n\x1a\n" + b"data"
+
+    def grim_does(self, action):
+        def run(args, timeout=30, user=None, input=None):
+            self.runner.calls.append((tuple(args), user))
+            action()
             return RunResult(0, "", "")
-        self.ctx.runner = type("R", (), {"run": staticmethod(lambda a, timeout=30, user=None, input=None:
-                                                              (self.runner.calls.append((tuple(a), user)), grim(a))[1])})()
+        self.ctx.runner = type("R", (), {"run": staticmethod(run)})()
+
+    def test_screenshot_uploads_with_token(self):
+        self.grim_does(lambda: self.shot.write_bytes(self.PNG))
         self.assertEqual(execute({"kind": "screenshot"}, self.ctx), (True, "Screenshot hochgeladen"))
         (call, user), = [c for c in self.runner.calls if "grim" in c[0]]
         self.assertEqual(user, "pi")
         self.assertEqual(call[-3:], ("-o", "HDMI-A-1", str(self.shot)))
         self.assertEqual(call[0], "env")
         self.assertIn("XDG_RUNTIME_DIR=/run/user/1000", call)
-        self.assertEqual(self.uploads, [("https://srv.example", "TOK", b"\x89PNG-data")])
+        self.assertEqual(self.uploads, [("https://srv.example", "TOK", self.PNG)])
         self.assertFalse(self.shot.exists())
+
+    def test_screenshot_default_path_is_in_pi_runtime_dir(self):
+        self.ctx.screenshot_path = None
+        seen = []
+        self.ctx.runner = type("R", (), {"run": staticmethod(lambda a, timeout=30, user=None, input=None:
+                                                              (seen.append(a), RunResult(1, "", "x"))[1])})()
+        execute({"kind": "screenshot"}, self.ctx)
+        self.assertEqual(seen[0][-1], str(self.paths.runtime_dir / "sd-shot.png"))
+        self.assertTrue(str(self.paths.runtime_dir).endswith("run/user/1000"))
 
     def test_screenshot_uses_power_output(self):
         self.cfg.power_config = {"output": "HDMI-A-2"}
-        self.runner.run = lambda a, timeout=30, user=None, input=None: (self.shot.write_bytes(b"x"), RunResult(0, "", ""))[1]
+        self.grim_does(lambda: self.shot.write_bytes(self.PNG))
         execute({"kind": "screenshot"}, self.ctx)
-        self.assertEqual(self.uploads[0][2], b"x")
+        (call, _), = [c for c in self.runner.calls if "grim" in c[0]]
+        self.assertEqual(call[-3:], ("-o", "HDMI-A-2", str(self.shot)))
 
     def test_screenshot_grim_failure(self):
-        self.runner.responses.clear()
         self.ctx.runner = type("R", (), {"run": staticmethod(lambda *a, **k: RunResult(1, "", "no wayland"))})()
         ok, text = execute({"kind": "screenshot"}, self.ctx)
         self.assertFalse(ok)
@@ -145,20 +162,55 @@ class ExecuteTests(Base):
         self.assertEqual(self.uploads, [])
 
     def test_screenshot_too_large_not_uploaded(self):
-        self.ctx.runner = type("R", (), {"run": staticmethod(
-            lambda *a, **k: (self.shot.write_bytes(b"0" * (commands.MAX_SCREENSHOT + 1)), RunResult(0, "", ""))[1])})()
+        self.grim_does(lambda: self.shot.write_bytes(self.PNG + b"0" * commands.MAX_SCREENSHOT))
         ok, text = execute({"kind": "screenshot"}, self.ctx)
         self.assertFalse(ok)
+        self.assertIn("15 MB", text)
         self.assertEqual(self.uploads, [])
         self.assertFalse(self.shot.exists())
+
+    def test_screenshot_symlink_rejected(self):
+        secret = self.paths.root / "secret"
+        secret.write_bytes(self.PNG)
+        self.grim_does(lambda: (self.shot.unlink(missing_ok=True), os.symlink(secret, self.shot)))
+        ok, _ = execute({"kind": "screenshot"}, self.ctx)
+        self.assertFalse(ok)
+        self.assertEqual(self.uploads, [])
+        self.assertTrue(secret.exists())  # only the link is removed
+
+    def test_screenshot_fifo_rejected_without_hanging(self):
+        self.grim_does(lambda: os.mkfifo(self.shot))
+        result = []
+        thread = threading.Thread(target=lambda: result.append(execute({"kind": "screenshot"}, self.ctx)), daemon=True)
+        thread.start()
+        thread.join(3)
+        self.assertFalse(thread.is_alive(), "reading a FIFO blocked")
+        self.assertFalse(result[0][0])
+        self.assertEqual(self.uploads, [])
+
+    def test_screenshot_without_png_magic_rejected(self):
+        self.grim_does(lambda: self.shot.write_bytes(b"not a png"))
+        self.assertFalse(execute({"kind": "screenshot"}, self.ctx)[0])
+        self.assertEqual(self.uploads, [])
 
     def test_test_pattern_returns_to_kiosk_url_after_60s(self):
         self.assertEqual(execute({"kind": "test_pattern"}, self.ctx), (True, "Testbild für 60 Sekunden"))
         self.assertEqual(self.pages.shots, [("eingang", "3840x2160", 60)])
         self.assertEqual(self.kiosk.log, [("apply", "http://127.0.0.1:8765/")])
-        self.assertEqual([d for d, _ in self.deferred], [60])
+        self.assertEqual([d[0] for d in self.deferred], [60])
         self.deferred[0][1]()  # the clock reaches 60 s
         self.assertEqual(self.kiosk.log[-1], ("apply", self.cfg.kiosk_url))
+
+    def test_test_pattern_expiry_without_kiosk_url_shows_status_page(self):
+        self.cfg.kiosk_url = None
+        execute({"kind": "test_pattern"}, self.ctx)
+        self.deferred[0][1]()
+        self.assertEqual(self.pages.none, 1)
+        self.assertEqual(self.kiosk.log, [("apply", "http://127.0.0.1:8765/")])
+
+    def test_test_pattern_defers_with_key(self):
+        execute({"kind": "test_pattern"}, self.ctx)
+        self.assertEqual(self.deferred[0][2], "test_pattern")
 
 
 class FakeResponse:
@@ -320,3 +372,51 @@ class AgentCommandTests(unittest.TestCase):
         agent.connection = type("C", (), {"send": lambda s, m: True})()
         agent._send_telemetry()
         self.assertEqual(agent.last_telemetry["display"]["browser_running"], False)
+
+
+class TimerTests(unittest.TestCase):
+    def setUp(self):
+        self.paths = make_paths(self)
+        self.cfg = Config.load(self.paths)
+        self.cfg.token, self.cfg.kiosk_url = "T", "https://x/monitor"
+        self.timers = []
+        timers = self.timers
+
+        class FakeTimer:
+            def __init__(self, delay, fn):
+                self.delay, self.fn, self.cancelled, self.started = delay, fn, False, False
+                timers.append(self)
+
+            def start(self):
+                self.started = True
+
+            def cancel(self):
+                self.cancelled = True
+        self.agent = Agent(self.cfg, FakePages(), runner=FakeRunner(), timer_factory=FakeTimer)
+        self.agent.pages.show_test_pattern = lambda *a: None
+        self.sent = []
+        self.agent.connection = type("C", (), {"send": lambda s, m: self.sent.append(m) or True,
+                                               "stop": lambda s: None})()
+
+    def test_second_test_pattern_replaces_return_timer(self):
+        self.agent._run_command({"id": 1, "kind": "test_pattern"})
+        self.agent._run_command({"id": 2, "kind": "test_pattern"})
+        self.assertTrue(self.timers[0].cancelled)
+        self.assertFalse(self.timers[1].cancelled)
+        self.assertEqual(len(self.agent._timers), 1)
+
+    def test_finished_timers_are_pruned(self):
+        self.agent._run_command({"id": 1, "kind": "test_pattern"})
+        self.timers[0].fn()
+        self.assertEqual(self.agent._timers, [])
+
+    def test_no_timer_started_after_stop(self):
+        self.agent.stop_event.set()
+        self.agent._run_command({"id": 1, "kind": "test_pattern"})
+        self.assertEqual(self.timers, [])
+
+    def test_failed_result_send_is_logged(self):
+        self.agent.connection = type("C", (), {"send": lambda s, m: False})()
+        with self.assertLogs("stagedesk_agent", level="WARNING") as logs:
+            self.agent._run_command({"id": 5, "kind": "bogus"})
+        self.assertIn("5", logs.output[0])

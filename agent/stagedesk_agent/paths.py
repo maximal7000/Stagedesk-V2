@@ -33,3 +33,8 @@ class Paths:
     @property
     def state_dir(self):
         return self.root / "var" / "lib" / "stagedesk-agent"
+
+    @property
+    def runtime_dir(self):
+        """XDG_RUNTIME_DIR of the kiosk user pi (owned by pi, not world-writable)."""
+        return self.root / "run" / "user" / "1000"

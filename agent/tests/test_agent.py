@@ -427,3 +427,29 @@ class StopTests(unittest.TestCase):
         agent.start_stop_watcher()
         agent.request_stop()
         self.assertTrue(closed.wait(2))
+
+
+class KioskRetryTests(unittest.TestCase):
+    def setUp(self):
+        self.paths = make_paths(self)
+        self.cfg = Config.load(self.paths)
+
+    def test_failed_kiosk_switch_is_retried_on_next_hello(self):
+        from stagedesk_agent.kiosk import Kiosk
+        from stagedesk_agent.runner import RunResult
+        from tests.fakes import FakeRunner
+        runner = FakeRunner({("systemctl", "restart", "stagedesk-kiosk"): RunResult(1, "", "busy")})
+        agent = Agent(self.cfg, FakePages(), runner=runner, kiosk=Kiosk(runner, self.paths))
+        agent._set_kiosk("https://x/m")
+        self.assertIsNone(agent._kiosk_url)
+        runner.responses.clear()
+        agent._set_kiosk("https://x/m")
+        self.assertEqual(agent._kiosk_url, "https://x/m")
+        self.assertEqual(len([c for c in runner.calls if c[0][1] == "restart"]), 2)
+
+    def test_kiosk_error_does_not_raise_from_on_message(self):
+        def boom(url):
+            raise ValueError("kaputt")
+        agent = Agent(self.cfg, FakePages(), kiosk_set_url=boom, runner=object())
+        agent.on_message({"type": "hello", "kiosk_url": "https://x/m"})
+        self.assertIsNone(agent._kiosk_url)

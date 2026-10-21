@@ -41,3 +41,13 @@ class KioskTests(unittest.TestCase):
     def test_restart_failure_returns_false(self):
         self.runner.responses[RESTART[0]] = RunResult(5, "", "Unit not found")
         self.assertFalse(self.kiosk.restart())
+
+    def test_failed_restart_is_retried_by_next_apply(self):
+        self.runner.responses[RESTART[0]] = RunResult(5, "", "busy")
+        self.assertFalse(self.kiosk.apply("https://x/a"))
+        self.assertTrue(self.kiosk.pending_restart)
+        self.runner.responses.clear()
+        self.assertTrue(self.kiosk.apply("https://x/a"))  # same URL, but the restart is retried
+        self.assertFalse(self.kiosk.pending_restart)
+        self.assertFalse(self.kiosk.apply("https://x/a"))
+        self.assertEqual(len(self.restarts()), 2)

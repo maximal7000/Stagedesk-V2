@@ -10,6 +10,7 @@ class Kiosk:
     def __init__(self, runner, paths):
         self.runner = runner
         self.paths = paths
+        self.pending_restart = False  # a written URL whose restart failed; the next apply retries
 
     def _current(self):
         try:
@@ -18,12 +19,18 @@ class Kiosk:
             return None
 
     def apply(self, url):
-        """Write the URL and restart the kiosk, only when the URL changed. True when it restarted."""
+        """Write the URL and restart the kiosk, only when the URL changed. Returns the result of the restart;
+        False also when nothing changed."""
         if "\n" in url or "\r" in url:
             raise ValueError("Kiosk-URL enthält einen Zeilenumbruch")
         content = f"KIOSK_URL={url}\n"
-        if self._current() == content:
+        if self._current() == content and not self.pending_restart:
             return False
+        if self._current() != content:
+            self._write(content)
+        return self.restart()
+
+    def _write(self, content):
         target = self.paths.kiosk_env
         target.parent.mkdir(parents=True, exist_ok=True)
         tmp = target.with_name(target.name + ".tmp")
@@ -32,11 +39,10 @@ class Kiosk:
             handle.write(content)
         os.chmod(tmp, 0o600)
         os.replace(tmp, target)
-        self.restart()
-        return True
 
     def restart(self):
         result = self.runner.run(["systemctl", "restart", SERVICE], timeout=30)
+        self.pending_restart = result.code != 0
         if result.code != 0:
             log.warning("kiosk restart failed: %s", (result.err or result.out).strip())
         return result.code == 0

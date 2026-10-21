@@ -43,6 +43,8 @@ class Agent:
         self._command_worker = None
         self._after_ack = []
         self._timers = []
+        self._keyed_timers = {}
+        self._timer_lock = threading.Lock()
         self.pairing_factory = pairing_factory or self._default_pairing
         self.connection_factory = connection_factory or (
             lambda cfg, om, af: Connection(cfg, om, af, stop_event=self.stop_event))
@@ -75,9 +77,18 @@ class Agent:
         return PairingClient(cfg, serial=serial, model=model, stop_event=self.stop_event)
 
     def _set_kiosk(self, url):
-        if url != self._kiosk_url:
-            self._kiosk_url = url
+        """Remember the URL only after it was applied, so a failed switch is retried by the next call."""
+        if url == self._kiosk_url:
+            return
+        try:
             self.kiosk_set_url(url)
+        except Exception:
+            log.exception("kiosk update failed")
+            return
+        if self.kiosk is not None and self.kiosk.pending_restart:
+            log.warning("kiosk restart failed, will retry")
+            return
+        self._kiosk_url = url
 
     def request_stop(self):
         """Signal-safe: only sets the event (no locks, no I/O). The watcher thread does the closing."""
@@ -117,7 +128,9 @@ class Agent:
         except queue.Empty:
             pass
         self._command_queue.put(None)
-        for timer in self._timers:
+        with self._timer_lock:
+            timers, self._timers, self._keyed_timers = list(self._timers), [], {}
+        for timer in timers:
             timer.cancel()
 
     def _enqueue_command(self, message):
@@ -139,8 +152,8 @@ class Agent:
             except Exception:
                 log.exception("command failed")
 
-    def _defer(self, delay, fn):
-        self._after_ack.append((delay, fn))
+    def _defer(self, delay, fn, key=None):
+        self._after_ack.append((delay, fn, key))
 
     def _context(self):
         return CommandContext(
@@ -151,14 +164,43 @@ class Agent:
     def _run_command(self, message):
         self._after_ack = []
         ok, text = execute(message, self._context())
-        self.send({"type": "command_result", "id": message.get("id"), "ok": ok, "text": text})
+        if not self.send({"type": "command_result", "id": message.get("id"), "ok": ok, "text": text}):
+            log.warning("command_result for command %s could not be sent", message.get("id"))
         # Deferred work (reboot, back from the test pattern) starts only after the result was sent.
-        for delay, fn in self._after_ack:
-            timer = self.timer_factory(delay, fn)
-            timer.daemon = True
-            self._timers.append(timer)
-            timer.start()
+        for delay, fn, key in self._after_ack:
+            self._start_timer(delay, fn, key)
         self._after_ack = []
+
+    def _start_timer(self, delay, fn, key):
+        if self.stop_event.is_set():
+            return
+        holder = []
+
+        def run():
+            try:
+                fn()
+            finally:
+                self._forget_timer(holder[0])
+        timer = self.timer_factory(delay, run)
+        holder.append(timer)
+        timer.daemon = True
+        with self._timer_lock:
+            previous = self._keyed_timers.pop(key, None) if key else None
+            self._timers.append(timer)
+            if key:
+                self._keyed_timers[key] = timer
+        if previous is not None:
+            previous.cancel()
+            self._forget_timer(previous)
+        timer.start()
+
+    def _forget_timer(self, timer):
+        with self._timer_lock:
+            if timer in self._timers:
+                self._timers.remove(timer)
+            for key, value in list(self._keyed_timers.items()):
+                if value is timer:
+                    del self._keyed_timers[key]
 
     def send(self, msg):
         return bool(self.connection and self.connection.send(msg))

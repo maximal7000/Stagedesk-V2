@@ -1,5 +1,7 @@
 """Server commands: execute one and return (ok, text). The caller sends the command_result."""
 import logging
+import os
+import stat
 import urllib.error
 import urllib.request
 import uuid
@@ -11,7 +13,8 @@ from .power import KIOSK_USER, wayland_command
 
 log = logging.getLogger("stagedesk_agent.commands")
 MAX_SCREENSHOT = 15 * 1024 * 1024
-SCREENSHOT_PATH = Path("/tmp/sd-shot.png")
+SCREENSHOT_NAME = "sd-shot.png"
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 LOCAL_URL = "http://127.0.0.1:8765/"
 DEFAULT_OUTPUT = "HDMI-A-1"
 REBOOT_DELAY = 3
@@ -58,9 +61,9 @@ class CommandContext:
     apply_power: Callable[[bool], str]
     last_telemetry: Callable[[], dict]
     set_kiosk: Callable[[str], Any]
-    defer: Callable[[float, Callable], Any]  # run fn after the result was sent
+    defer: Callable[..., Any]  # defer(delay, fn, key=None): run fn after the result was sent; same key replaces
     upload: Callable = upload_screenshot
-    screenshot_path: Path = field(default=SCREENSHOT_PATH)
+    screenshot_path: Any = None  # default: <runtime dir of pi>/sd-shot.png
 
 
 def _reload(ctx):
@@ -108,24 +111,40 @@ def _output(config):
     return str(power_config.get("output") or DEFAULT_OUTPUT)
 
 
+def _read_screenshot(path):
+    """Read the PNG grim wrote as user pi. pi controls the directory, so never follow links or open pipes."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except OSError as exc:
+        return None, f"Screenshot nicht lesbar: {exc.strerror or exc}"
+    with os.fdopen(fd, "rb") as handle:
+        if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+            return None, "Screenshot ist keine normale Datei und wurde nicht hochgeladen"
+        data = handle.read(MAX_SCREENSHOT + 1)
+    if len(data) > MAX_SCREENSHOT:
+        return None, "Screenshot ist größer als 15 MB und wurde nicht hochgeladen"
+    if not data.startswith(PNG_MAGIC):
+        return None, "Screenshot ist kein PNG und wurde nicht hochgeladen"
+    return data, None
+
+
 def _screenshot(ctx):
-    path = ctx.screenshot_path
+    path = Path(ctx.screenshot_path or ctx.config.paths.runtime_dir / SCREENSHOT_NAME)
     path.unlink(missing_ok=True)
     try:
         args = wayland_command(["grim", "-o", _output(ctx.config), str(path)], ctx.config.paths.root)
         result = ctx.runner.run(args, timeout=30, user=KIOSK_USER)
         if result.code != 0:
             return False, f"grim fehlgeschlagen: {(result.err or result.out).strip() or result.code}"
-        try:
-            size = path.stat().st_size
-            if size > MAX_SCREENSHOT:
-                return False, "Screenshot ist größer als 15 MB und wurde nicht hochgeladen"
-            png = path.read_bytes()
-        except OSError as exc:
-            return False, f"Screenshot nicht lesbar: {exc}"
+        png, error = _read_screenshot(path)
+        if error:
+            return False, error
         return ctx.upload(ctx.config.server, ctx.config.token, png)
     finally:
-        path.unlink(missing_ok=True)
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _test_pattern(ctx):
@@ -133,7 +152,13 @@ def _test_pattern(ctx):
     ctx.pages.show_test_pattern(ctx.config.slug or "Bildschirm", display.get("resolution") or "Auflösung unbekannt",
                                 PATTERN_SECONDS)
     ctx.set_kiosk(LOCAL_URL)
-    ctx.defer(PATTERN_SECONDS, lambda: ctx.config.kiosk_url and ctx.set_kiosk(ctx.config.kiosk_url))
+
+    def back():
+        if ctx.config.kiosk_url:
+            ctx.set_kiosk(ctx.config.kiosk_url)
+        else:
+            ctx.pages.show_none()  # no real URL yet: stay on the (now empty) local status page
+    ctx.defer(PATTERN_SECONDS, back, key="test_pattern")
     return True, f"Testbild für {PATTERN_SECONDS} Sekunden"
 
 
