@@ -45,6 +45,26 @@ const PAGES = {
       await page.waitForSelector('[data-emergency-dialog] input[type="radio"]:checked')
     },
   },
+  'overview-pair-dialog': {
+    path: '/monitor-admin',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
+      await page.getByLabel('Kopplungscode').fill('482 913')
+      await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+      await page.getByLabel('Bildschirm', { exact: true }).selectOption({ label: 'Mensa' })
+    },
+  },
+  'overview-pair-new-screen': {
+    path: '/monitor-admin',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
+      await page.getByLabel('Kopplungscode').fill('482913')
+      await page.getByRole('button', { name: 'Weiter', exact: true }).click()
+      await page.getByRole('radio', { name: 'Neuer Bildschirm' }).click()
+      await page.getByLabel('Name', { exact: true }).fill('Foyer')
+      await page.getByLabel('Ort', { exact: true }).fill('Eingangshalle Nord')
+    },
+  },
   'overview-day-off': { path: '/monitor-admin', variant: 'day-off' },
   'overview-emergency-menu': {
     path: '/monitor-admin',

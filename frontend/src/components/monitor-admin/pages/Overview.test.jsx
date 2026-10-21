@@ -9,6 +9,8 @@ const perms = vi.hoisted(() => ({ allow: () => true }))
 vi.mock('../../../contexts/UserContext', () => ({ useUser: () => ({ hasPermission: (p) => perms.allow(p) }) }))
 vi.mock('../shared/api', () => ({
   getScreens: vi.fn(),
+  getDevices: vi.fn(() => Promise.resolve([])),
+  pairDevice: vi.fn(),
   getSettings: vi.fn(() => Promise.resolve({ on_air_active: false })),
   getViews: vi.fn(() => Promise.resolve([])),
   getExams: vi.fn(() => Promise.resolve([])),
@@ -89,5 +91,40 @@ describe('Overview', () => {
     await act(async () => { [...undo.querySelectorAll('button')].find((b) => b.textContent === 'Rückgängig').click() })
     expect(api.updateScreen).toHaveBeenLastCalledWith(1, { override_view_id: 3, override_until: until })
     container.remove()
+  })
+  it('zeigt Geräte-Ampel, Kennzahlen und die Platzhalter für Bildschirme ohne Gerät', async () => {
+    api.getScreens.mockImplementation(() => Promise.resolve([
+      { ...screen('Glocke'), id: 1, slug: 'g' }, { ...screen('Aula'), id: 2, slug: 'a' }, { ...screen('Mensa'), id: 3, slug: 'm' },
+    ]))
+    api.getDevices.mockImplementation(() => Promise.resolve([
+      { id: 5, screen_id: 1, status: 'warning', status_text: 'Warnung · Temperatur 83 °C', agent_version: '1.0.0', legacy: false, warnings: [{ code: 'temperature', text: 'Temperatur 83 °C' }],
+        telemetry: { network: { kind: 'wifi', signal_dbm: -58 }, system: { temperature_c: 83 } } },
+      { id: null, screen_id: 2, status: 'legacy', status_text: 'Altes Skript', agent_version: '', legacy: true, warnings: [], telemetry: {} },
+    ]))
+    container = document.createElement('div')
+    root = createRoot(container)
+    await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
+    const cell = (slug) => container.querySelector(`[data-screen="${slug}"] [data-device-state]`)
+    expect(cell('g').textContent).toContain('Warnung')
+    expect(cell('g').textContent).toContain('WLAN -58 dBm · 83 °C · Agent 1.0.0')
+    expect(cell('a').textContent).toBe('Altes Skript')
+    expect(cell('m').textContent).toBe('Kein Gerät gekoppelt')
+    expect(container.textContent).not.toContain('Kopplung folgt')
+  })
+
+  it('Koppeln-Knopf nur mit monitor.devices', async () => {
+    api.getScreens.mockImplementation(() => Promise.resolve([screen('Glocke')]))
+    const buttons = () => [...container.querySelectorAll('button')].filter((b) => b.textContent === 'Bildschirm koppeln')
+    perms.allow = (p) => p !== 'monitor.devices'
+    container = document.createElement('div')
+    root = createRoot(container)
+    await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
+    expect(buttons()).toHaveLength(0)
+    act(() => root.unmount())
+    perms.allow = () => true
+    root = createRoot(container)
+    await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
+    expect(buttons()).toHaveLength(1)
+    expect(buttons()[0].disabled).toBe(false)
   })
 })

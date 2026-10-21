@@ -2,13 +2,14 @@
 // Datenquellen und "Demnächst". Sofortige Schalter speichern direkt und bieten 8 s "Rückgängig".
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, MonitorOff, MoreVertical, Power, RotateCw } from 'lucide-react'
+import { Eye, Link2, MonitorOff, MoreVertical, Power, RotateCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, EmptyState, Button } from '../../ui'
 import { useUser } from '../../../contexts/UserContext'
 import { formatTime } from '../../display/lib/format'
-import ScreenStatus, { screenStatus } from '../shared/ScreenStatus'
+import ScreenStatus, { DeviceCell, screenStatus } from '../shared/ScreenStatus'
 import { Cell, ScreenNameCell, ScreenRow, ScreenTable, iconButton } from '../shared/ScreenTable'
+import PairDialog from '../shared/PairDialog'
 import ConfirmDialog from '../shared/ConfirmDialog'
 import EmergencyDialog, { EMERGENCY_HINT } from '../shared/EmergencyDialog'
 import UndoToast from '../shared/UndoToast'
@@ -20,8 +21,8 @@ import * as api from '../shared/api'
 
 const REFRESH_MS = 60 * 1000
 
-function screensMeta(screens, now) {
-  const online = screens.filter((s) => screenStatus(s, now).state === 'online').length
+function screensMeta(screens, now, devices) {
+  const online = screens.filter((s) => screenStatus(s, now, devices[s.id]).state === 'online').length
   const count = screens.length === 1 ? '1 Bildschirm' : `${screens.length} Bildschirme`
   return `${count} · ${online} online`
 }
@@ -54,7 +55,7 @@ const OVERVIEW_COLUMNS = [
   { key: 'name', label: 'Bildschirm', className: 'w-[22%]' },
   { key: 'status', label: 'Status', className: 'w-[16%]' },
   { key: 'shown', label: 'Zeigt gerade' },
-  { key: 'device', label: 'Gerät', className: 'w-[17%]' },
+  { key: 'device', label: 'Gerät', className: 'w-[22%]' },
   { key: 'actions', label: null, srLabel: 'Aktionen', className: 'w-px' },
 ]
 
@@ -120,12 +121,14 @@ export default function Overview() {
     emergency: hasPermission('monitor.emergency'),
     setup: hasPermission('monitor.setup'),
     exams: hasPermission('monitor.exams'),
+    devices: hasPermission('monitor.devices'),
   }
 
   const [screens, setScreens] = useState(null)
   const [error, setError] = useState(null)
   const [extra, setExtra] = useState({ settings: null, views: [], exams: [], events: [], holidays: null })
   const [displays, setDisplays] = useState(null)
+  const [devices, setDevices] = useState({}) // screen_id -> Gerät (auch altes Skript); leer bei Fehler
   const [now, setNow] = useState(() => new Date())
   const [undo, setUndo] = useState(null)
   const [dialog, setDialog] = useState(null) // 'all-off' | 'emergency'
@@ -144,8 +147,9 @@ export default function Overview() {
   const load = useCallback(async () => {
     const seq = ++loadSeq.current
     const current = () => mounted.current && seq === loadSeq.current
-    const [screensRes, settingsRes, viewsRes, examsRes, eventsRes, holidaysRes] = await Promise.all([
+    const [screensRes, devicesRes, settingsRes, viewsRes, examsRes, eventsRes, holidaysRes] = await Promise.all([
       settle(api.getScreens()),
+      settle(api.getDevices()),
       settle(api.getSettings()),
       settle(api.getViews()),
       settle(api.getExams()),
@@ -162,6 +166,8 @@ export default function Overview() {
       events: eventsRes.ok ? eventsRes.value : [],
       holidays: holidaysRes.ok ? holidaysRes.value : null,
     })
+    // Ohne Geräteliste greift pro Bildschirm der Rückfall auf den CEC-Status
+    setDevices(devicesRes.ok ? Object.fromEntries(devicesRes.value.filter((d) => d.screen_id != null).map((d) => [d.screen_id, d])) : {})
     if (!screensRes.ok) {
       setError(screensRes.error)
       return
@@ -305,21 +311,20 @@ export default function Overview() {
     }
   }
 
-  const headerActions = (can.power || can.setup) ? (
+  const headerActions = (can.power || can.devices) ? (
     <div className="flex flex-col items-end gap-1.5">
       <div className="flex items-center gap-2">
         {can.power && !offUntil && screens?.length > 0 && (
           <Button icon={Power} onClick={() => setDialog('all-off')}>Alle bis Tagesende aus</Button>
         )}
-        {can.setup && <Button variant="primary" disabled>Bildschirm koppeln</Button>}
+        {can.devices && <Button variant="primary" icon={Link2} onClick={() => setDialog('pair')}>Bildschirm koppeln</Button>}
       </div>
-      {can.setup && <p className="text-xs text-fg-subtle">Kopplung folgt mit dem Geräte-Agent.</p>}
     </div>
   ) : null
 
   return (
     <div data-admin-page="overview" data-state={state}>
-      <PageHeader title="Monitore" meta={screens ? screensMeta(screens, now) : null} actions={headerActions} />
+      <PageHeader title="Monitore" meta={screens ? screensMeta(screens, now, devices) : null} actions={headerActions} />
 
       {offUntil && (
         <div className="bg-surface rounded-lg px-4 py-2.5 mb-4 flex items-center gap-3" data-all-off>
@@ -387,7 +392,7 @@ export default function Overview() {
             return (
               <ScreenRow key={s.id} screen={s}>
                 <ScreenNameCell screen={s} to={(can.setup || can.power) ? `/monitor-admin/screens/${s.id}` : undefined} />
-                <Cell><ScreenStatus screen={s} now={now} /></Cell>
+                <Cell><ScreenStatus screen={s} now={now} device={devices[s.id]} /></Cell>
                 <Cell className="min-w-0">
                   {!known ? (
                     <div className="text-sm text-fg-subtle">Wird geladen…</div>
@@ -403,7 +408,7 @@ export default function Overview() {
                     </>
                   )}
                 </Cell>
-                <Cell className="text-sm text-fg-subtle">Kein Agent installiert</Cell>
+                <Cell className="min-w-0"><DeviceCell device={devices[s.id]} /></Cell>
                 <Cell>
                   <div className="flex items-center justify-end gap-1">
                     {can.setup && (
@@ -437,6 +442,13 @@ export default function Overview() {
         </div>
       )}
 
+      {dialog === 'pair' && screens && (
+        <PairDialog
+          screens={screens.map((s) => ({ id: s.id, name: s.name, hasDevice: devices[s.id]?.id != null && !devices[s.id]?.legacy }))}
+          onClose={() => setDialog(null)}
+          onPaired={load}
+        />
+      )}
       {dialog === 'all-off' && (
         <ConfirmDialog
           title="Alle Bildschirme bis Tagesende aus?"
