@@ -1,0 +1,104 @@
+import unittest
+from datetime import datetime, timedelta, timezone
+
+from stagedesk_agent.config import Config
+from stagedesk_agent.pairing import PairingClient
+from tests.fakes import make_paths
+
+T0 = datetime(2026, 10, 20, 12, 0, tzinfo=timezone.utc)
+
+
+def iso(dt):
+    return dt.isoformat().replace("+00:00", "Z")
+
+
+class FakeHttp:
+    def __init__(self, replies):
+        self.replies = list(replies)
+        self.calls = []
+
+    def __call__(self, url, payload):
+        self.calls.append((url, payload))
+        reply = self.replies.pop(0)
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+
+class PairingTests(unittest.TestCase):
+    def setUp(self):
+        self.cfg = Config.load(make_paths(self))
+        self.clock = [T0]
+
+    def client(self, replies):
+        self.http = FakeHttp(replies)
+        return PairingClient(self.cfg, self.http, serial="abc", model="Pi 4", now=lambda: self.clock[0])
+
+    def test_start_returns_code_and_posts_identity(self):
+        c = self.client([(200, {"code": "482913", "pairing_id": "pid", "expires_at": iso(T0 + timedelta(minutes=15))})])
+        code, pid, exp = c.start()
+        self.assertEqual((code, pid), ("482913", "pid"))
+        self.assertEqual(self.http.calls[0], ("https://stagedesk.t410.de/api/monitor/agent/pair/start",
+                                              {"serial": "abc", "model": "Pi 4"}))
+
+    def test_poll_waiting_is_none(self):
+        c = self.client([(202, {"status": "waiting"})])
+        self.assertIsNone(c.poll("pid"))
+
+    def test_pairing_success_saves_token_slug_key(self):
+        c = self.client([(200, {"status": "paired", "token": "T", "slug": "mensa", "key": "K"})])
+        result = c.poll("pid")
+        self.assertEqual(result["status"], "paired")
+        again = Config.load(self.cfg.paths)
+        self.assertEqual((again.token, again.slug, again.key), ("T", "mensa", "K"))
+
+    def test_poll_404_and_410_mean_expired(self):
+        for status in (404, 410):
+            c = self.client([(status, {"detail": "x"})])
+            self.assertEqual(c.poll("pid"), {"status": "expired"})
+
+    def test_pairing_requests_new_code_after_expiry(self):
+        exp1 = iso(T0 + timedelta(minutes=15))
+        exp2 = iso(T0 + timedelta(minutes=40))
+        c = self.client([
+            (200, {"code": "111111", "pairing_id": "p1", "expires_at": exp1}),
+            (202, {"status": "waiting"}),
+            (200, {"code": "222222", "pairing_id": "p2", "expires_at": exp2}),
+            (200, {"status": "paired", "token": "T", "slug": "s", "key": "k"}),
+        ])
+        codes = []
+
+        def sleep(seconds):
+            self.clock[0] += timedelta(minutes=8)
+
+        self.assertTrue(c.run(on_code=codes.append, sleep=sleep, poll_interval=5))
+        self.assertEqual(codes, ["111111", "222222"])
+        self.assertEqual(self.cfg.token, "T")
+
+    def test_gone_on_poll_starts_new_pairing(self):
+        far = iso(T0 + timedelta(hours=5))
+        c = self.client([
+            (200, {"code": "111111", "pairing_id": "p1", "expires_at": far}),
+            (410, {}),
+            (200, {"code": "222222", "pairing_id": "p2", "expires_at": far}),
+            (200, {"status": "paired", "token": "T", "slug": "s", "key": "k"}),
+        ])
+        codes = []
+        self.assertTrue(c.run(on_code=codes.append, sleep=lambda s: None))
+        self.assertEqual(codes, ["111111", "222222"])
+
+    def test_network_error_reports_unreachable_and_retries(self):
+        far = iso(T0 + timedelta(hours=5))
+        c = self.client([
+            OSError("down"),
+            (200, {"code": "111111", "pairing_id": "p1", "expires_at": far}),
+            (200, {"status": "paired", "token": "T", "slug": "s", "key": "k"}),
+        ])
+        events = []
+        c.run(on_code=lambda code: events.append(code), on_unreachable=lambda: events.append("down"),
+              sleep=lambda s: None)
+        self.assertEqual(events, ["down", "111111"])
+
+    def test_stop_ends_loop(self):
+        c = self.client([OSError("down")] * 5)
+        self.assertFalse(c.run(on_code=lambda c: None, sleep=lambda s: c.stop()))

@@ -128,6 +128,7 @@ def default_files(root):
     files += [root / 'frontend/src/pages/MonitorPage.jsx']
     files += walk(root / 'frontend/src/components/display')
     files += walk(root / 'frontend/src/components/monitor-admin')
+    files += walk(root / 'agent')
     return [p for p in files if p.exists()]
 
 

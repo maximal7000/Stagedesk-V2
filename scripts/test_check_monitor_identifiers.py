@@ -141,12 +141,18 @@ class DefaultScopeTests(CheckerTestCase):
             "frontend/src/components/display/views/InfoView.jsx",
             "frontend/src/components/monitor-admin/pages/Settings.jsx",
             "frontend/src/components/other/Unrelated.jsx",
+            "agent/stagedesk_agent/agent.py",
+            "agent/tests/test_agent.py",
+            "agent/stagedesk_agent/__pycache__/agent.cpython-311.pyc",
+            "agent/VERSION",
         ):
             self.write(f"repo/{rel}", "x = 1\n")
         found = sorted(p.relative_to(root).as_posix() for p in mod.default_files(root))
         self.assertEqual(
             found,
             [
+                "agent/stagedesk_agent/agent.py",
+                "agent/tests/test_agent.py",
                 "backend/monitor/api.py",
                 "frontend/src/components/display/views/InfoView.jsx",
                 "frontend/src/components/monitor-admin/pages/Settings.jsx",
