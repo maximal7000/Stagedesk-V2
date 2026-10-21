@@ -399,3 +399,20 @@ class PreviewValidationTest(PreviewTestBase):
 
     def test_empty_number_rejected(self):
         self.assert_rejected({'view': {'id': self.saved.id, 'page_seconds': None}}, 'Blättertakt')
+
+
+class UpcomingEventsTest(TestCase):
+    def make(self, titel, von, bis, status='geplant'):
+        from veranstaltung.models import Veranstaltung
+        return Veranstaltung.objects.create(titel=titel, datum_von=von, datum_bis=bis, status=status)
+
+    def test_planned_and_running_listed_cancelled_skipped(self):
+        now = timezone.now()
+        self.make('Konzert', now + timedelta(days=2), now + timedelta(days=2, hours=2))
+        self.make('Probe', now - timedelta(hours=1), now + timedelta(hours=1))
+        self.make('Abgesagt', now + timedelta(days=1), now + timedelta(days=1, hours=1), status='abgesagt')
+        self.make('Zu spaet', now + timedelta(days=10), now + timedelta(days=10, hours=1))
+        self.make('Vorbei', now - timedelta(days=2), now - timedelta(days=1))
+        events = display._upcoming_events(now)
+        self.assertEqual([e['name'] for e in events], ['Probe', 'Konzert'])
+        self.assertEqual([e['is_running'] for e in events], [True, False])

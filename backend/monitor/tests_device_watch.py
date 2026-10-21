@@ -219,6 +219,32 @@ class WatchTest(WatchBase):
         self.go()
         self.notify.assert_not_called()
 
+    def test_failing_notification_does_not_abort_other_devices_or_purge(self):
+        other_screen = Screen.objects.create(name='Aula', slug='aula')
+        other = Device.objects.create(screen=other_screen, serial='def', last_seen_at=self.now - timedelta(minutes=11),
+                                      last_telemetry=telemetry())
+        self.seen_ago(11)
+        old = DeviceEvent.objects.create(device=self.device, screen=self.screen, kind='online', text='alt')
+        DeviceEvent.objects.filter(pk=old.pk).update(created_at=self.now - timedelta(days=91))
+        self.notify.side_effect = [RuntimeError('boom'), None]
+        with self.assertLogs('monitor.devices', level='ERROR'):
+            self.go()
+        self.assertEqual(self.notify.call_count, 2)
+        self.assertFalse(DeviceEvent.objects.filter(pk=old.pk).exists())
+        other.refresh_from_db()
+        self.assertIsNotNone(other.offline_notified_at)
+
+    def test_device_unpaired_during_run_is_skipped(self):
+        self.seen_ago(11)
+        real = devices._watch_device
+
+        def unpair_after(device_id, cfg, now, add):
+            real(device_id, cfg, now, add)
+            Device.objects.filter(pk=device_id).update(screen=None)
+        with mock.patch('monitor.devices._watch_device', side_effect=unpair_after):
+            self.go()
+        self.notify.assert_not_called()
+
     def test_events_older_than_90_days_deleted(self):
         old = DeviceEvent.objects.create(device=self.device, screen=self.screen, kind='online', text='alt')
         fresh = DeviceEvent.objects.create(device=self.device, screen=self.screen, kind='online', text='neu')
