@@ -163,6 +163,31 @@ class SubstitutionsTest(WebUntisTestBase):
         self.assertEqual([d['date'] for d in result['days']], ['2026-10-27'])
         self.assertIsNone(result['updated_at'])
 
+    def test_single_day_from_today(self):
+        """start=None, count=1 (eintägige Ansicht ohne Wechsel auf den nächsten Schultag)."""
+        fake = FakeUntis(getSubstitutions=[subst(20261019, 800, 845, 'cancel')])
+        news = mock.Mock(return_value={'data': {'messagesOfDay': []}})
+        with mock.patch.object(WebUntisSession, 'call', autospec=True, side_effect=fake), \
+                mock.patch.object(WebUntisSession, 'get_json', news):
+            result = webuntis.get_substitutions(MONDAY_8, start=None, count=1)
+        self.assertEqual(result['source'], 'substitutions')
+        self.assertEqual([d['date'] for d in result['days']], ['2026-10-19'])
+
+    def test_variants_have_own_cache_keys(self):
+        fake = FakeUntis(getSubstitutions=[])
+        news = mock.Mock(return_value={'data': {'messagesOfDay': []}})
+        with mock.patch.object(WebUntisSession, 'call', autospec=True, side_effect=fake), \
+                mock.patch.object(WebUntisSession, 'get_json', news):
+            default = webuntis.get_substitutions(MONDAY_8)
+            single = webuntis.get_substitutions(MONDAY_8, count=1)
+            later = webuntis.get_substitutions(MONDAY_8, start=date(2026, 10, 27), count=1)
+        self.assertEqual(fake.calls.count('getSubstitutions'), 3)
+        self.assertEqual([len(r['days']) for r in (default, single, later)], [2, 1, 1])
+        self.assertEqual(later['days'][0]['date'], '2026-10-27')
+        self.assertEqual(cache.get('monitor:webuntis:subs'), default)
+        self.assertEqual(cache.get('monitor:webuntis:subs:today:1'), single)
+        self.assertEqual(cache.get('monitor:webuntis:subs:2026-10-27:1'), later)
+
     def test_unavailable_without_credentials(self):
         settings = MonitorSettings.load()
         settings.webuntis_server = ''

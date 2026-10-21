@@ -202,6 +202,31 @@ class MonitorSourceTest(SubstitutionsTestBase):
         self.load_days.assert_not_called()
         self.assertEqual((result['source'], result['fallback']), ('substitutions', True))
 
+    def test_lock_held_after_key_switch_uses_format_last_good(self):
+        view = self.view()
+        self.load(view, MONDAY_1559)
+        # 16:00: Wechsel auf den nächsten Schultag, neuer Schlüssel, ein anderer Worker lädt gerade.
+        cache.add('monitor:subs:monitor:vplan-schueler:2026-10-20:2:lock', 1, 30)
+        result = self.load(view, MONDAY_16)
+        self.assertEqual(self.load_days.call_count, 1)
+        self.assertEqual((result['source'], result['fallback']), ('monitor', False))
+        self.assertEqual([d['date'] for d in result['days']], ['2026-10-20'])
+        self.account.assert_not_called()
+
+    def test_lock_held_format_last_good_trimmed_to_count(self):
+        view = self.view()
+        self.load(view)
+        cache.add('monitor:subs:monitor:vplan-schueler:2026-10-19:1:lock', 1, 30)
+        result = self.load(view, single_day=True)
+        self.assertEqual(self.load_days.call_count, 1)
+        self.assertEqual((result['source'], [d['date'] for d in result['days']]), ('monitor', ['2026-10-19']))
+
+    def test_format_last_good_respects_exam_override(self):
+        self.load(self.view(substitutions_show_exams=True))
+        cache.add('monitor:subs:monitor:vplan-schueler:2026-10-19:1:lock', 1, 30)
+        result = self.load(self.view(slug='ohne-klausuren'), single_day=True)
+        self.assertEqual((result['source'], result['fallback']), ('substitutions', True))
+
 
 class FallbackTest(SubstitutionsTestBase):
 
@@ -281,8 +306,18 @@ class FallbackTest(SubstitutionsTestBase):
         self.load(view)
         cache.delete('monitor:subs:monitor:vplan-schueler:2026-10-19:2')
         self.load_days.side_effect = MonitorUnavailable('Timeout')
-        # Folgetag: der Schlüssel enthält den Start, der alte Stand gilt dort nicht.
+        # Folgetag: neuer Schlüssel ohne eigenen Stand; vom Stand des Formats bleibt nur der Folgetag.
         result = self.load(view, local(2026, 10, 20, 8))
+        self.assertEqual((result['source'], result['fallback']), ('monitor', False))
+        self.assertEqual([(d['date'], d['label']) for d in result['days']], [('2026-10-20', 'Heute')])
+        self.account.assert_not_called()
+
+    def test_family_last_good_without_any_current_day(self):
+        view = self.view(substitutions_next_day_from='')
+        self.load(view)
+        cache.delete('monitor:subs:monitor:vplan-schueler:2026-10-19:2')
+        self.load_days.side_effect = MonitorUnavailable('Timeout')
+        result = self.load(view, local(2026, 10, 21, 8))
         self.assertEqual(result['source'], 'substitutions')
 
     def test_chain_respects_deadline(self):
@@ -331,6 +366,34 @@ class AccountDeadlineTest(TestCase):
             with mock.patch.object(webuntis.time, 'monotonic', return_value=50.0):
                 webuntis.get_substitutions(MONDAY_8)
             self.assertEqual(login.call_args.kwargs['deadline'], 50.0 + webuntis.DEADLINE_SECONDS)
+
+
+class AccountSingleDayTest(TestCase):
+    """Ausweichen auf die echte Konto-Abfrage mit einem Tag ab heute (start=None, count=1)."""
+
+    def test_single_day_fallback_through_real_account(self):
+        cache.clear()
+        settings = MonitorSettings.load()
+        settings.webuntis_server, settings.webuntis_school = 'untis.example', 'schule'
+        settings.webuntis_username, settings.webuntis_password = 'monitor', 'geheim'
+        settings.save()
+        answers = {'authenticate': {'sessionId': 'x'}, 'getHolidays': [], 'logout': None,
+                   'getSubstitutions': [], 'getTimegridUnits': []}
+
+        def rpc(session, method, params=None):
+            return answers[method]
+
+        view = DisplayView.objects.create(kind='substitutions', is_default=False, name='Vplan', slug='vplan')
+        with mock.patch('monitor.substitutions.untis_monitor.load_days',
+                        side_effect=MonitorUnavailable('Timeout')), \
+                mock.patch.object(webuntis.WebUntisSession, 'call', autospec=True, side_effect=rpc), \
+                mock.patch.object(webuntis.WebUntisSession, 'get_json',
+                                  return_value={'data': {'messagesOfDay': []}}), \
+                mock.patch.object(webuntis, 'logger'), \
+                mock.patch('monitor.substitutions.logger'):
+            result = substitutions.load(view, MONDAY_8, single_day=True)
+        self.assertEqual((result['source'], result['fallback']), ('substitutions', True))
+        self.assertEqual([d['date'] for d in result['days']], ['2026-10-19'])
 
 
 class DisplaySubstitutionsTest(SubstitutionsTestBase):

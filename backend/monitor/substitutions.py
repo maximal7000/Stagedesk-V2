@@ -90,12 +90,34 @@ def _current_days(days, today):
 
 # ═══ Monitor-Schnittstelle ════════════════════════════════════════
 
-def _monitor_key(format_name, start, count, overrides):
-    key = f'{CACHE_PREFIX}monitor:{format_name}:{start.isoformat()}:{count}'
+def _exams_suffix(overrides):
     # Eigene Klausur-Einstellung ändert die Zeilen: eigener Schlüssel.
-    if overrides:
-        key += f":exams-{'on' if overrides['showExamSupervision'] else 'off'}"
-    return key
+    return f":exams-{'on' if overrides['showExamSupervision'] else 'off'}" if overrides else ''
+
+
+def _monitor_key(format_name, start, count, overrides):
+    return f'{CACHE_PREFIX}monitor:{format_name}:{start.isoformat()}:{count}' + _exams_suffix(overrides)
+
+
+def _family_key(format_name, overrides):
+    """Letzter guter Stand je Format, unabhängig von Start und Tagesanzahl."""
+    return f'{CACHE_PREFIX}monitor:{format_name}' + _exams_suffix(overrides) + ':last_good'
+
+
+def _last_good(key, family_key, start, count):
+    """Letzter guter Stand dieses Schlüssels, sonst der des Formats ab `start`, auf `count` Tage gekürzt.
+
+    Greift, wenn der Schlüssel gerade gewechselt hat (Mitternacht, Wechsel auf den nächsten Schultag,
+    erster Abruf) und der neue noch keinen eigenen Stand hat.
+    """
+    stored = cache.get(key + ':last_good')
+    if stored:
+        return stored
+    stored = cache.get(family_key)
+    if not stored:
+        return None
+    days = _current_days(stored['days'], start)[:count]
+    return {**stored, 'days': days} if days else None
 
 
 def _store_monitor(data, now):
@@ -131,13 +153,14 @@ def _monitor(view, now, today, next_day, count, deadline):
     start = today + timedelta(days=1) if next_day else today
     overrides = _overrides(view)
     key = _monitor_key(format_name, start, count, overrides)
+    family_key = _family_key(format_name, overrides)
     cached = cache.get(key)
     if cached is not None:
-        return _present_monitor(cached, view, today) or _present_monitor(cache.get(key + ':last_good'),
-                                                                        view, today)
+        return (_present_monitor(cached, view, today)
+                or _present_monitor(_last_good(key, family_key, start, count), view, today))
     if not cache.add(key + ':lock', 1, LOCK_SECONDS):
         # Ein anderer Worker lädt gerade: nicht warten.
-        return _present_monitor(cache.get(key + ':last_good'), view, today)
+        return _present_monitor(_last_good(key, family_key, start, count), view, today)
     try:
         try:
             data = untis_monitor.load_days(settings.webuntis_server, settings.webuntis_school, format_name,
@@ -146,10 +169,11 @@ def _monitor(view, now, today, next_day, count, deadline):
         except Exception as exc:
             logger.warning('WebUntis-Monitor %s fehlgeschlagen: %s', format_name, type(exc).__name__)
             cache.set(key, _FAILED, FAILED_SECONDS)
-            return _present_monitor(cache.get(key + ':last_good'), view, today)
+            return _present_monitor(_last_good(key, family_key, start, count), view, today)
         stored = _store_monitor(data, now)
         cache.set(key, stored, CACHE_SECONDS)
         cache.set(key + ':last_good', stored, LAST_GOOD_SECONDS)
+        cache.set(family_key, stored, LAST_GOOD_SECONDS)
         return _present_monitor(stored, view, today)
     finally:
         cache.delete(key + ':lock')

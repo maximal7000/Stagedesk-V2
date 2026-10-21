@@ -459,7 +459,10 @@ def get_substitutions(now: datetime, *, start: date | None = None, count: int = 
     ist; ohne Angabe gilt DEADLINE_SECONDS ab jetzt.
     """
     # Nur abweichende Abfragen bekommen eigene Cache-Schlüssel.
-    suffix = f':{start.isoformat()}:{count}' if start is not None or count != 2 else ''
+    if start is None and count == 2:
+        suffix = ''
+    else:
+        suffix = f":{start.isoformat() if start is not None else 'today'}:{count}"
     cached = cache.get(CACHE_KEY + suffix)
     if cached is not None:
         return cached
