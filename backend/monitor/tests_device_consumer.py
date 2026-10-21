@@ -274,6 +274,21 @@ class DeviceConsumerTest(TransactionTestCase):
             return msg
         return async_to_sync(run)()
 
+    def test_update_gate_echoes_request_id(self):
+        async def run():
+            comm = _communicator('glocke', self.token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'update_gate_request', 'id': 'abc'})
+            msg = await _drain_until(comm, 'update_gate')
+            await comm.send_json_to({'type': 'update_gate_request'})
+            plain = await _drain_until(comm, 'update_gate')
+            await comm.disconnect()
+            return msg, plain
+        msg, plain = async_to_sync(run)()
+        self.assertEqual(msg['id'], 'abc')
+        self.assertNotIn('id', plain)
+
     def test_update_gate_denied_during_event(self):
         self._event('Elternabend', is_active=True)
         msg = self._ask_gate()

@@ -20,7 +20,7 @@ def _minutes(text):
 
 
 def parse_window(window):
-    """(weekday name, 'HH:MM', delay seconds); invalid values fall back to the default window."""
+    """(weekday name, 'HH:MM', random delay seconds); invalid values fall back to the default window."""
     window = window if isinstance(window, dict) else {}
     weekday = window.get("weekday")
     start = _minutes(window.get("from"))
@@ -29,7 +29,8 @@ def parse_window(window):
         weekday, start = window["weekday"], _minutes(window["from"])
     end = _minutes(window.get("until"))
     span = 0 if end is None else (end - start) % (24 * 60)
-    return DAYS[weekday], window["from"], span * 60
+    # The run can take up to an hour: leave that much of the window after the latest start.
+    return DAYS[weekday], window["from"], max(0, span - 60) * 60
 
 
 def _service(description, signal):

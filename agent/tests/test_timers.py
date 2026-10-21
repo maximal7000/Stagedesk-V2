@@ -22,14 +22,18 @@ class TimerTests(unittest.TestCase):
         write_timers(WINDOW, True, True, self.runner, self.paths)
         text = self.read("stagedesk-agent-update.timer")
         self.assertIn("OnCalendar=Sun 03:00", text)
-        self.assertIn("RandomizedDelaySec=7200", text)
+        self.assertIn("RandomizedDelaySec=3600", text)
         self.assertIn("OnCalendar=04:00", self.read("stagedesk-agent-reboot.timer"))
 
     def test_window_over_midnight_and_monday(self):
         write_timers({"weekday": 0, "from": "23:00", "until": "01:00"}, True, True, self.runner, self.paths)
         text = self.read("stagedesk-agent-update.timer")
         self.assertIn("OnCalendar=Mon 23:00", text)
-        self.assertIn("RandomizedDelaySec=7200", text)
+        self.assertIn("RandomizedDelaySec=3600", text)
+
+    def test_short_window_has_no_random_delay(self):
+        write_timers({"weekday": 0, "from": "03:00", "until": "03:45"}, True, True, self.runner, self.paths)
+        self.assertIn("RandomizedDelaySec=0", self.read("stagedesk-agent-update.timer"))
 
     def test_invalid_window_falls_back_to_default(self):
         write_timers({"weekday": 9, "from": "x"}, True, True, self.runner, self.paths)

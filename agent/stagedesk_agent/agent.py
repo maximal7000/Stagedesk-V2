@@ -126,8 +126,10 @@ class Agent:
                 self._signal_wake.clear()
                 if self.stop_event.is_set():
                     return
-                update, reboot = self._update_requested, self._reboot_requested
-                self._update_requested = self._reboot_requested = False
+                update = self._update_requested
+                self._update_requested = False  # reset right after reading, so a new signal is not lost
+                reboot = self._reboot_requested
+                self._reboot_requested = False
                 if update:
                     self._enqueue_command(self._auto_update)
                 if reboot:
@@ -444,10 +446,13 @@ class Agent:
 
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+    # SIGUSR1/2 would kill the process by default: catch them before anything slow starts.
+    early = {"update": False, "reboot": False}
+    signal.signal(signal.SIGUSR1, lambda *_: early.__setitem__("update", True))
+    signal.signal(signal.SIGUSR2, lambda *_: early.__setitem__("reboot", True))
     paths = Paths()
     config = Config.load(paths)
     pages = LocalPages()
-    pages.start()
     runner = Runner()
     agent = Agent(config, pages, runner=runner, kiosk=Kiosk(runner, paths),
                   self_updater=SelfUpdater(paths, runner, config.server), timer_writer=write_timers)
@@ -455,6 +460,11 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: agent.request_stop())
     signal.signal(signal.SIGUSR1, lambda *_: agent.request_update())
     signal.signal(signal.SIGUSR2, lambda *_: agent.request_daily_reboot())
+    if early["update"]:
+        agent.request_update()
+    if early["reboot"]:
+        agent.request_daily_reboot()
+    pages.start()
     try:
         agent.run()
     except KeyboardInterrupt:

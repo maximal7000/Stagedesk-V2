@@ -175,7 +175,10 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             await self._record_update_result(data)
         elif msg_type == "update_gate_request":
             allowed, reason = await self._update_gate()
-            await self.send(json.dumps({"type": "update_gate", "allowed": allowed, "reason": reason}))
+            answer = {"type": "update_gate", "allowed": allowed, "reason": reason}
+            if "id" in data:
+                answer["id"] = data["id"]  # lets the agent match the answer to its request
+            await self.send(json.dumps(answer))
         elif msg_type == "power_status":
             await self._save_cec_status(str(data.get("status", "unknown"))[:20])
         else:

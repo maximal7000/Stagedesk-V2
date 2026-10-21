@@ -2,7 +2,7 @@ import json
 import unittest
 
 from stagedesk_agent.runner import RunResult
-from stagedesk_agent.updater import UPDATE_CMD, UPGRADE_CMD, Updater
+from stagedesk_agent.updater import DPKG_CMD, UPDATE_CMD, UPGRADE_CMD, Updater
 from tests.fakes import FakeRunner, make_paths
 
 REBOOT = ("systemctl", "reboot")
@@ -31,7 +31,7 @@ class Base(unittest.TestCase):
         self.sent.append(msg)
         if msg["type"] == "update_gate_request" and self.gates:
             allowed = self.gates.pop(0)
-            self.updater.on_gate({"type": "update_gate", "allowed": allowed,
+            self.updater.on_gate({"type": "update_gate", "allowed": allowed, "id": msg["id"],
                                   "reason": "" if allowed else "Termin aktiv"})
         return True
 
@@ -63,7 +63,9 @@ class UpdaterTests(Base):
     def test_update_runs_apt_and_reports(self):
         self.gates = [True]
         result = self.updater.run(manual=False)
-        self.assertEqual(self.commands()[:2], [UPDATE_CMD, UPGRADE_CMD])
+        self.assertEqual(self.commands()[:3], [DPKG_CMD, UPDATE_CMD, UPGRADE_CMD])
+        self.assertIn("DPkg::Lock::Timeout=300", UPDATE_CMD)
+        self.assertIn("DPkg::Lock::Timeout=300", UPGRADE_CMD)
         self.assertIn("full-upgrade", UPGRADE_CMD)
         self.assertIn("DEBIAN_FRONTEND=noninteractive", UPGRADE_CMD)
         self.assertIn("Dpkg::Options::=--force-confold", UPGRADE_CMD)
@@ -123,7 +125,36 @@ class UpdaterTests(Base):
         result = self.updater.run(manual=True)
         self.assertFalse(result["ok"])
         self.assertNotIn(UPGRADE_CMD, self.commands())
-        self.assertIn("Temporary failure", self.results()[0]["error"])
+        self.assertEqual(self.results()[0]["error"], "apt-get fehlgeschlagen: Temporary failure resolving")
+
+    def test_dpkg_recovery_failure_stops_before_apt(self):
+        self.runner.responses[DPKG_CMD] = RunResult(1, "", "dpkg was interrupted")
+        result = self.updater.run(manual=True)
+        self.assertIn("dpkg fehlgeschlagen", result["text"])
+        self.assertNotIn(UPDATE_CMD, self.commands())
+
+    def test_gate_answer_with_other_id_is_ignored(self):
+        def send(msg):
+            if msg["type"] == "update_gate_request":
+                self.updater.on_gate({"type": "update_gate", "allowed": True, "id": "other"})
+            return True
+        self.updater.send = send
+        self.assertEqual(self.updater.gate(), (False, "Keine Antwort vom Server"))
+
+    def test_gate_request_carries_id(self):
+        self.gates = [True]
+        self.updater.gate()
+        self.assertTrue(self.sent[0]["id"])
+
+    def test_failed_run_keeps_previous_pending_count(self):
+        self.paths.state_dir.mkdir(parents=True)
+        self.paths.update_state.write_text(json.dumps({"pending_packages": 7}))
+        self.runner.responses[UPGRADE_CMD] = RunResult(100, "", "boom")
+        self.updater.run(manual=True)
+        self.assertEqual(self.state()["pending_packages"], 7)
+        self.paths.update_state.unlink()
+        self.updater.run(manual=True)
+        self.assertIsNone(self.state()["pending_packages"])
 
     def test_concurrent_run_is_refused(self):
         self.updater._lock.acquire()
