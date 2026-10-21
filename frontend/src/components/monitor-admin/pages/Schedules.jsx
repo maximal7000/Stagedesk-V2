@@ -1,6 +1,6 @@
 // Ferien & Zeitpläne (Spec §6.2): Ferienzeiträume als Tabelle (Anlegen, Bearbeiten, Löschen) und eine
 // Wochenübersicht der Ein-Zeiten aller Bildschirme (Zeilen Mo–So, Balken als CSS-Grid mit einer Spalte pro Minute).
-// Die Balken folgen power.compute_power_state (shared/schedule.weekBars). Recht: monitor.power (Route).
+// Die Balken folgen power.compute_power_state (shared/schedule.powerWeek). Recht: monitor.power (Route).
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
@@ -11,7 +11,7 @@ import { iconButton } from '../shared/ScreenTable'
 import { useUnsavedGuard } from '../shared/UnsavedChangesProvider'
 import { errorText } from '../shared/errorText'
 import { Section, fieldClass } from '../shared/form'
-import { DAY_MINUTES, WEEKDAYS, weekBars } from '../shared/schedule'
+import { DAY_MINUTES, WEEKDAYS, powerWeek } from '../shared/schedule'
 import { formatShortDate, parseLocalDate } from '../../display/lib/format'
 import * as api from '../shared/api'
 
@@ -186,15 +186,15 @@ function WeekOverview({ screens }) {
   return (
     <Section title="Wochenübersicht" data-section="week">
       <p className="text-sm text-fg-muted -mt-2 mb-4 max-w-3xl">
-        Grün sind die Zeiten, in denen ein Bildschirm laut Wochenzeitplan an ist. Ferien, Ausnahmen nach Datum und „Bis Tagesende aus“
-        gelten zusätzlich. Ein Fenster über Mitternacht zählt ganz zum gewählten Tag, so wie die Steuerung es auswertet.
+        Grün sind die Zeiten, in denen ein Bildschirm laut Zeitplan an ist. Ferien, Ausnahmen nach Datum und „Bis Tagesende aus“
+        gelten zusätzlich. Eine Zeile über Mitternacht reicht bis in den Folgetag.
       </p>
       {screens.length === 0 ? (
         <p className="text-sm text-fg-subtle">Noch keine Bildschirme angelegt.</p>
       ) : (
         <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
           {screens.map((s) => {
-            const { mode, days } = weekBars(s)
+            const { mode, days } = powerWeek(s)
             return (
               <div key={s.id} data-week-screen={s.slug}>
                 <div className="flex items-baseline justify-between gap-3 mb-2">

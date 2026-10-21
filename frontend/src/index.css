@@ -34,6 +34,13 @@
   --color-warn: var(--sd-warn);
   --color-bad: var(--sd-bad);
   --color-info: var(--sd-info);
+  /* Kategorische Reihe (6 Töne) für Diagramme, z.B. Ansichten in der Wochenübersicht; feste Reihenfolge */
+  --color-series-1: var(--sd-series-1);
+  --color-series-2: var(--sd-series-2);
+  --color-series-3: var(--sd-series-3);
+  --color-series-4: var(--sd-series-4);
+  --color-series-5: var(--sd-series-5);
+  --color-series-6: var(--sd-series-6);
   --shadow-overlay: 0 12px 32px -8px rgb(0 0 0 / 0.6), 0 2px 6px rgb(0 0 0 / 0.4);
 }
 
@@ -56,6 +63,12 @@
   --sd-warn: #e5b14a;
   --sd-bad: #ef5d5d;
   --sd-info: #6fa8dc;
+  --sd-series-1: #3987e5;
+  --sd-series-2: #d95926;
+  --sd-series-3: #199e70;
+  --sd-series-4: #c98500;
+  --sd-series-5: #d55181;
+  --sd-series-6: #9085e9;
 }
 
 :root.light {
@@ -76,6 +89,12 @@
   --sd-warn: #93630c;
   --sd-bad: #b42323;
   --sd-info: #235f96;
+  --sd-series-1: #2a78d6;
+  --sd-series-2: #eb6834;
+  --sd-series-3: #1baf7a;
+  --sd-series-4: #eda100;
+  --sd-series-5: #e87ba4;
+  --sd-series-6: #6250d6;
 }
 
 /* ===== DARK MODE (Standard) ===== */

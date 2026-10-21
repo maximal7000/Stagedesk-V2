@@ -3,6 +3,7 @@
 // dem Backend: Notfall schaltet ein (Power-Regel §3.2), dann die Aus-Gründe, dann Klausur, dann die
 // Ansichtsregel Override > Termin > Zeitplan > Standard (Screen.get_active_view).
 import { formatShortDate, formatTime } from '../../display/lib/format'
+import { activeRow } from './schedule'
 
 const KIND_LABELS = {
   departures: 'Abfahrten',
@@ -78,12 +79,8 @@ function viewReason(screen, viewId, { now, events }) {
     return until ? `weil Termin ${quote(event.name)} bis ${formatTime(until)} läuft` : `weil Termin ${quote(event.name)} läuft`
   }
 
-  const weekday = weekdayOf(now)
-  const hhmm = hhmmOf(now)
-  const entry = (screen.schedule || []).find((e) => e && e.view_id === viewId
-    && Array.isArray(e.days) && e.days.includes(weekday)
-    && (e.from || '00:00') <= hhmm && hhmm <= (e.until || '23:59'))
-  if (entry) return `laut Zeitplan bis ${entry.until || '23:59'}`
+  const entry = activeRow(screen.schedule, weekdayOf(now), hhmmOf(now))
+  if (entry?.view_id && entry.view_id === viewId) return `laut Zeitplan bis ${entry.until || '23:59'}`
 
   return 'Standard-Ansicht'
 }

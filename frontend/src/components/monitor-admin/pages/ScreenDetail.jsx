@@ -1,7 +1,8 @@
-// Bildschirm-Detail (Spec §6.2, Mockup admin-screen-detail.png): Anzeige, Ein- und Ausschalten, Kiosk-URL
-// und rechts das Gerät. Anzeige und Ein- und Ausschalten haben je einen Entwurf (useDraft); die gemeinsame
-// SaveBar speichert jeden geänderten Abschnitt mit einer eigenen Anfrage, die nur dessen Felder enthält.
-// Anzeige braucht monitor.setup, Ein- und Ausschalten monitor.power (ohne Recht nur lesend). Die Geräte-Felder
+// Bildschirm-Detail (Spec §6.2, Mockup admin-screen-detail.png): Anzeige, Zeitplan, Ein- und Ausschalten,
+// Kiosk-URL und rechts das Gerät. Anzeige und Zeitplan samt Ein- und Ausschalten haben je einen Entwurf
+// (useDraft); die gemeinsame SaveBar speichert jeden geänderten Entwurf mit einer eigenen Anfrage, die nur
+// dessen Felder enthält. Anzeige braucht monitor.setup, Zeitplan und Ein- und Ausschalten monitor.power
+// (ohne Recht nur lesend). Die Geräte-Felder
 // (Power-Methode, Updates, täglicher Neustart) bilden einen dritten Entwurf und brauchen monitor.devices.
 // "Andere Ansicht vorübergehend" und "Löschen" wirken sofort (ohne Entwurf) und brauchen monitor.setup.
 import { useCallback, useEffect, useId, useState } from 'react'
@@ -14,7 +15,8 @@ import { screenStatus } from '../shared/screenStatus'
 import { useDraft } from '../shared/useDraft'
 import SaveBar from '../shared/SaveBar'
 import ConfirmDialog from '../shared/ConfirmDialog'
-import ScheduleEditor, { ExceptionEditor } from '../shared/ScheduleEditor'
+import ExceptionEditor from '../shared/ExceptionEditor'
+import ScreenScheduleEditor from '../shared/ScreenScheduleEditor'
 import { useUnsavedGuard } from '../shared/UnsavedChangesProvider'
 import { exceptionProblems, scheduleProblems } from '../shared/schedule'
 import { errorText } from '../shared/errorText'
@@ -24,7 +26,7 @@ import DeviceBox from '../shared/DeviceBox'
 import DeviceLog from '../shared/DeviceLog'
 import { isPaired } from '../shared/deviceCommands'
 import {
-  DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS,
+  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS,
   SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, deviceProblems, kioskUrl, lastReport,
   overridePayload, overrideProblem, pickFields, sectionPayload,
 } from './screenData'
@@ -66,6 +68,13 @@ function DisplaySection({ draft, set, views, disabled, readOnly }) {
         <Field label="Ausrichtung">
           <Segmented label="Ausrichtung" options={ORIENTATION_OPTIONS} value={draft.orientation ?? 'landscape'} disabled={disabled}
             onChange={(v) => set('orientation', v)} />
+        </Field>
+        <Field label="Farbschema" className="sm:col-span-2"
+          help="„Wie eingestellt“ übernimmt das Farbschema aus den Einstellungen.">
+          <div className="max-w-md">
+            <Segmented label="Farbschema" options={COLOR_SCHEME_OPTIONS} value={draft.color_scheme ?? 'inherit'} disabled={disabled}
+              onChange={(v) => set('color_scheme', v)} />
+          </div>
         </Field>
       </div>
     </Section>
@@ -141,9 +150,6 @@ function PowerSection({ draft, set, disabled, readOnly, problems, methodBlock })
             <Segmented label="Steuerung" options={POWER_MODE_OPTIONS} value={draft.power_mode ?? 'auto'} disabled={disabled}
               onChange={(v) => set('power_mode', v)} />
           </div>
-        </Field>
-        <Field label="Zeitplan" help="Der Bildschirm ist nur in diesen Zeiten an. Ist „Bis“ früher als „Von“, ist er an den gewählten Tagen ab „Von“ bis Mitternacht und ab 0 Uhr bis „Bis“ an.">
-          <ScheduleEditor value={draft.power_schedule} onChange={(v) => set('power_schedule', v)} disabled={disabled} problems={problems.schedule} />
         </Field>
         <div>
           <label htmlFor={holidaysId} className="inline-flex items-center gap-2.5 text-sm text-fg cursor-pointer">
@@ -408,7 +414,7 @@ export default function ScreenDetail() {
   const { confirmLeave } = useUnsavedGuard(dirtyCount > 0)
 
   const problems = {
-    schedule: scheduleProblems(power.draft?.power_schedule),
+    schedule: scheduleProblems(power.draft?.schedule, views.length ? views : null),
     exceptions: exceptionProblems(power.draft?.power_exceptions),
   }
 
@@ -563,6 +569,8 @@ export default function ScreenDetail() {
                 <OverrideSection screen={screen} views={views} now={now} canEdit={canSetup} busy={busy}
                   onApply={changeOverride} onClear={() => changeOverride(OVERRIDE_CLEAR)} />
               )}
+              <ScreenScheduleEditor value={power.draft.schedule} onChange={(v) => power.set('schedule', v)} views={views}
+                problems={problems.schedule} readOnly={!canPower} disabled={!canPower || power.saving} />
               <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems}
                 methodBlock={<PowerMethodBlock device={deviceDraft} original={originals.device} canDevices={canDevices} problems={deviceIssues} />} />
               {(canDevices || isPaired(device)) && <UpdatesSection device={deviceDraft} canDevices={canDevices} problem={deviceIssues.window} />}

@@ -2,6 +2,7 @@
 // rowProps(index); beim Ablegen ruft der Hook onMove(von, nach). Die Tastatur-Alternative liefert
 // handleKeyDown (Pfeil hoch/runter am Griff).
 import { useState } from 'react'
+import { moveItem } from '../pages/viewData'
 
 export function useListDrag(count, onMove) {
   const [from, setFrom] = useState(null)
@@ -41,3 +42,23 @@ export function useListDrag(count, onMove) {
 
 // Gemeinsame Klassen: gezogene Zeile blass, Zielzeile hinterlegt
 export const dragRowClass = 'data-[dragging]:opacity-50 data-[drop-target]:bg-raised'
+
+// Stabile Schlüssel je Zeile (Einträge haben keine id): Verschieben, Entfernen und Hinzufügen führen sie
+// mit, damit React die Zeile samt Fokus mitnimmt. Passt die Anzahl nicht (Verwerfen, neu geladen), neu vergeben.
+let nextRowKey = 0
+const freshKey = () => `row-${++nextRowKey}`
+
+export function useRowKeys(count) {
+  const [keys, setKeys] = useState(() => Array.from({ length: count }, freshKey))
+  let current = keys
+  if (keys.length !== count) {
+    current = Array.from({ length: count }, freshKey)
+    setKeys(current)
+  }
+  return {
+    keys: current,
+    move: (a, b) => setKeys((k) => moveItem(k, a, b)),
+    remove: (i) => setKeys((k) => k.filter((_, j) => j !== i)),
+    add: () => setKeys((k) => [...k, freshKey()]),
+  }
+}

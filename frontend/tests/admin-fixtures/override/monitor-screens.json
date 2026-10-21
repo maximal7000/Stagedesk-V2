@@ -9,7 +9,6 @@
     "override_until": "2026-10-20T14:00:00+02:00",
     "schedule": [
       {
-        "view_id": 1,
         "days": [
           0,
           1,
@@ -18,10 +17,9 @@
           4
         ],
         "from": "07:00",
-        "until": "17:00"
-      }
-    ],
-    "power_schedule": [
+        "until": "17:00",
+        "view_id": 1
+      },
       {
         "days": [
           0,
@@ -31,14 +29,16 @@
           4
         ],
         "from": "07:00",
-        "until": "17:00"
+        "until": "17:00",
+        "view_id": null
       },
       {
         "days": [
           5
         ],
         "from": "10:00",
-        "until": "14:00"
+        "until": "14:00",
+        "view_id": null
       }
     ],
     "power_exceptions": [
@@ -70,7 +70,8 @@
       "from": "03:00",
       "until": "05:00"
     },
-    "daily_reboot": true
+    "daily_reboot": true,
+    "color_scheme": "inherit"
   },
   {
     "id": 2,
@@ -81,7 +82,6 @@
     "override_view_id": null,
     "override_until": null,
     "schedule": [],
-    "power_schedule": [],
     "power_exceptions": [],
     "power_mode": "auto",
     "cec_status": "on",
@@ -103,7 +103,8 @@
       "from": "03:00",
       "until": "05:00"
     },
-    "daily_reboot": true
+    "daily_reboot": true,
+    "color_scheme": "inherit"
   },
   {
     "id": 3,
@@ -114,7 +115,6 @@
     "override_view_id": null,
     "override_until": null,
     "schedule": [],
-    "power_schedule": [],
     "power_exceptions": [],
     "power_mode": "auto",
     "cec_status": "standby",
@@ -136,7 +136,8 @@
       "from": "03:00",
       "until": "05:00"
     },
-    "daily_reboot": true
+    "daily_reboot": true,
+    "color_scheme": "inherit"
   },
   {
     "id": 4,
@@ -147,7 +148,6 @@
     "override_view_id": null,
     "override_until": null,
     "schedule": [],
-    "power_schedule": [],
     "power_exceptions": [],
     "power_mode": "auto",
     "cec_status": "on",
@@ -169,7 +169,8 @@
       "from": "03:00",
       "until": "05:00"
     },
-    "daily_reboot": true
+    "daily_reboot": true,
+    "color_scheme": "inherit"
   },
   {
     "id": 5,
@@ -180,7 +181,6 @@
     "override_view_id": null,
     "override_until": null,
     "schedule": [],
-    "power_schedule": [],
     "power_exceptions": [],
     "power_mode": "auto",
     "cec_status": "",
@@ -202,6 +202,7 @@
       "from": "03:00",
       "until": "05:00"
     },
-    "daily_reboot": true
+    "daily_reboot": true,
+    "color_scheme": "inherit"
   }
 ]

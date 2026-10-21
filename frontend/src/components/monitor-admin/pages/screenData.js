@@ -4,9 +4,9 @@ import { formatDayTime } from '../shared/explain'
 import { describeSchedule, normalizeExceptions, normalizeSchedule } from '../shared/schedule'
 
 // Abschnitte des Details: Speichern sendet nur die Felder des eigenen Abschnitts.
-// Anzeige braucht monitor.setup, Ein- und Ausschalten monitor.power (Backend: SCREEN_POWER_FIELDS).
-export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation']
-export const POWER_FIELDS = ['power_mode', 'power_schedule', 'off_during_holidays', 'power_exceptions']
+// Anzeige braucht monitor.setup, Zeitplan und Ein- und Ausschalten monitor.power (Backend: SCREEN_POWER_FIELDS).
+export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme']
+export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'power_exceptions']
 // Geräte-Agent (Spec §3.4): Power-Methode, Updates und Neustart; Backend braucht dafür monitor.devices.
 export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot']
 
@@ -62,6 +62,13 @@ export const SCALE_OPTIONS = [
 export const ORIENTATION_OPTIONS = [
   { value: 'landscape', label: 'Quer' },
   { value: 'portrait', label: 'Hoch' },
+]
+
+// Farbschema pro Bildschirm (Spec §3.2); "Wie eingestellt" folgt den Einstellungen für alle Bildschirme
+export const COLOR_SCHEME_OPTIONS = [
+  { value: 'inherit', label: 'Wie eingestellt' },
+  { value: 'light', label: 'Immer hell' },
+  { value: 'dark', label: 'Immer dunkel' },
 ]
 
 export const POWER_MODE_OPTIONS = [
@@ -141,12 +148,13 @@ export function sectionPayload(section, draft, original) {
       default_view_id: draft.default_view_id ? Number(draft.default_view_id) : null,
       scale: draft.scale,
       orientation: draft.orientation,
+      color_scheme: draft.color_scheme ?? 'inherit',
     }
   }
   return {
     power_mode: draft.power_mode,
     off_during_holidays: !!draft.off_during_holidays,
-    power_schedule: normalizeSchedule(draft.power_schedule),
+    schedule: normalizeSchedule(draft.schedule),
     power_exceptions: normalizeExceptions(draft.power_exceptions),
   }
 }
@@ -154,7 +162,7 @@ export function sectionPayload(section, draft, original) {
 export function powerSummary(screen) {
   if (screen.power_mode === 'manual_on') return 'Manuell immer an'
   if (screen.power_mode === 'manual_off') return 'Manuell immer aus'
-  return describeSchedule(screen.power_schedule)
+  return describeSchedule(screen.schedule)
 }
 
 const CEC_TEXT = { on: 'an', standby: 'Standby' }
