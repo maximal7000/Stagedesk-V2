@@ -9,7 +9,7 @@ Grundlage: Gesamtentwurf `2026-10-19-monitor-overhaul-design.md` §5. Teilprojek
 Vom Nutzer entschieden:
 
 - **Ein Agent statt vier Skripte:** `stagedesk-agent` ersetzt `scripts/stagedesk-power{,-hdmi,-hybrid,-ddc}.py` und übernimmt auch den Kiosk-Browser (Kiosk-URL, Neustart, Kopplungscode auf dem Bildschirm).
-- **Auslieferung über den Stagedesk-Server:** Installation per `curl -fsSL https://stagedesk.t410.de/agent/install.sh | sudo bash`, Selbst-Update vom Server. Kein Git und keine Zugangsdaten auf dem Pi.
+- **Auslieferung über den Stagedesk-Server:** Installation per `curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash`, Selbst-Update vom Server. Kein Git und keine Zugangsdaten auf dem Pi.
 - **Verbindung:** der bestehende WebSocket `wss://…/ws/monitor/pi/<slug>/`, jetzt mit Geräte-Token. Alte Skripte ohne Token bleiben bis zur Umstellung erlaubt.
 - **Benachrichtigungen:** an alle Nutzer mit `monitor.devices`, wenn ein Bildschirm, der laut Zeitplan an sein soll, länger als 10 Minuten (einstellbar) offline ist, wenn er wieder online ist, bei jeder Warnung und bei fehlgeschlagenen Updates.
 - **Updates:** wöchentlich, Standard Sonntag 03:00–05:00, pro Bildschirm einstellbar. Neustart nur wenn nötig und nicht während Termin, Klausur, Notfall oder On-Air.
@@ -47,7 +47,7 @@ Die Kiosk-URL ist `https://stagedesk.t410.de/monitor?screen=<slug>&key=<key>` oh
 - **MonitorSettings-Felder:** `device_offline_minutes` (10), `warn_temperature_c` (80), `warn_disk_percent` (90), `warn_wifi_dbm` (-75), `warn_reboot_days` (7), `require_device_token` (aus).
 - **Consumer:** `ScreenPiConsumer` prüft den Token beim Verbinden (§3.3) und verarbeitet die neuen Nachrichtentypen (§4.2).
 - **Überwachung:** Management-Command `monitor_device_watch`, jede Minute per systemd-Timer auf dem Server (Muster wie `stagedesk-erinnerungen.timer`).
-- **Auslieferung:** öffentliche Routen `/agent/install.sh`, `/agent/version` (Version + SHA-256), `/agent/stagedesk-agent-<version>.tar.gz`. Das Paket wird beim ersten Abruf aus `agent/` gebaut und im Cache gehalten; Version aus `agent/VERSION`. Keine Geheimnisse darin.
+- **Auslieferung:** öffentliche Routen `/api/monitor/agent/install.sh`, `/api/monitor/agent/version` (Version + SHA-256), `/api/monitor/agent/stagedesk-agent-<version>.tar.gz` (Pfad unter `/api/`, damit nginx unverändert bleibt; dort geht `/` an die SPA). Das Paket wird beim ersten Abruf aus `agent/` gebaut und im Cache gehalten; Version aus `agent/VERSION`. Keine Geheimnisse darin.
 - **API** unter `/api/monitor/` (Ninja, Root-Routen mit `""`): Kopplung, Geräte, Befehle, Protokoll, Screenshot-Upload (§3, §5, §7).
 
 ## 3. Kopplung und Sicherheit
@@ -171,7 +171,7 @@ Temperatur über `warn_temperature_c`, Drosselung aktiv, Speicher über `warn_di
 
 ## 8. Admin
 
-- **Übersicht:** „Bildschirm koppeln" wird aktiv (Recht `monitor.devices`). Dialog: Code eingeben → vorhandenen Bildschirm wählen oder neuen anlegen (Name, Ort) → „Koppeln". Spalte „Gerät": Ampel, WLAN-Stärke, Temperatur, Agent-Version. Der Platzhalter „Kein Agent installiert" bleibt für Bildschirme ohne Gerät.
+- **Übersicht:** „Bildschirm koppeln" wird aktiv (Recht `monitor.devices`). Dialog: Code eingeben → vorhandenen Bildschirm wählen oder neuen anlegen (Name, Ort) → „Koppeln". Die Spalte „Status" zeigt die Ampel (eine Anzeige, für Bildschirme mit altem Skript oder ohne Gerät mit CEC-Rückfall). Die Spalte „Gerät" zeigt nur Hardware-Fakten: Agent-Version, WLAN-Stärke, Temperatur (eine Warnung darf ihren Messwert einfärben). Der Platzhalter für Bildschirme ohne Gerät ist „Kein Gerät gekoppelt" (mit altem Skript „Altes Skript"); Ruling R12.
 - **Bildschirm-Detail, Box „Gerät":**
   - Telemetrie in Gruppen (Netz, System, Anzeige, Updates) mit „Stand HH:MM".
   - Befehlsknöpfe nach §5; Neustart und Update mit `ConfirmDialog`; Ergebnis als Toast und im Protokoll.
@@ -185,8 +185,8 @@ Temperatur über `warn_temperature_c`, Drosselung aktiv, Speicher über `warn_di
 ## 9. Installationsskript
 
 `install.sh` (idempotent, `set -euo pipefail`):
-1. Prüft Raspberry Pi OS Bookworm und root.
-2. Installiert Pakete: `python3-websocket`, `cage`, `chromium-browser`, `cec-utils`, `ddcutil`, `wlr-randr`, `grim`, `iw`.
+1. Prüft root, Raspberry Pi OS Bookworm ("Raspberry Pi OS (Legacy, Bookworm)"; der Imager-Standard ist inzwischen Trixie) und den Benutzer `pi` mit ID 1000.
+2. Installiert Pakete: `python3-websocket`, `cage`, `chromium` (`chromium-browser` hat auf Bookworm keinen Installationskandidaten, nur Rückfall), `cec-utils`, `ddcutil`, `wlr-randr`, `grim`, `iw`.
 3. Lädt und prüft das Agent-Paket, legt `/opt/stagedesk-agent` an.
 4. Legt `stagedesk-agent.service`, `stagedesk-kiosk.service` und die Timer an; übernimmt Gruppen und Getty-Einstellungen aus der heutigen Doku.
 5. Stoppt und deaktiviert die alten Dienste `stagedesk-power.service`, `kiosk.service` und den alten 04:00-Neustart, falls vorhanden (Dateien bleiben liegen).

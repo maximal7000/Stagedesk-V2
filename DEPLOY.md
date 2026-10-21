@@ -149,7 +149,7 @@ Neue Anzeige unter `/monitor` und neues Admin unter `/monitor-admin`. Migratione
 | `monitor.power` | An/aus, "bis Tagesende aus", Ferien, Zeitpläne |
 | `monitor.onair` | On-Air |
 | `monitor.emergency` | Notfall und Notfall-Vorlagen |
-| `monitor.devices` | noch ohne Funktion (Geräte-Agent, Teilprojekt C) |
+| `monitor.devices` | Geräte koppeln, Geräte-Befehle, Warnschwellen (siehe "Geräte-Agent") |
 
 Die Aufteilung erlaubt es, später etwa Hausmeister (`view` + `power`) oder Sekretariat (`view` + `exams`) einzelne Teile zu geben, ohne Zugriff auf die Einrichtung. Nach der Migration ändert sich für Bestandsnutzer nichts.
 
@@ -174,7 +174,44 @@ cd /opt/stagedesk/backend && source venv/bin/activate
 
 - **Geheime Werte:** WebUntis-Passwort und Wetter-Schlüssel lassen sich in den Einstellungen nur noch setzen, nicht auslesen. Das Admin zeigt "Gespeichert" statt des Werts.
 - **Notfall:** Wird manuell im Admin ausgelöst und ist nicht mit der Brandmeldeanlage verbunden.
-- **Kopplung:** Das Eintragen der Kiosk-URL von Hand entfällt mit Teilprojekt C (Geräte-Agent und Kopplung).
+- **Kopplung:** Das Eintragen der Kiosk-URL von Hand entfällt mit dem Geräte-Agent (nächster Abschnitt).
+
+## Geräte-Agent
+
+Agent auf den Pis (`agent/`), Kopplung, Telemetrie, Befehle und Überwachung. Migration `monitor` 0043. Anleitung für die Pis: `docs/raspberry-pi-monitor.md`.
+
+**Server und Agent gemeinsam ausrollen.** Der Server schickt in der Antwort `update_gate` die Anfrage-ID des Agents zurück, und der Agent ordnet die Antwort nur über diese ID zu. Ein Agent und ein Server, die nicht zusammenpassen, bekommen deshalb keine Update-Freigabe.
+
+### Ablauf
+
+1. **Backup:** Backup-Tag, Tarball und DB-Dump wie oben.
+2. **`.env`:** `PUBLIC_BASE_URL` in `/opt/stagedesk/backend/.env` setzen, falls abweichend (Standard `https://stagedesk.t410.de`). Der Wert steht im ausgelieferten `install.sh` und in der Kiosk-URL.
+3. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`. Die Auslieferung des Agents läuft über `/api/monitor/agent/` (`install.sh`, `version`, `stagedesk-agent-<version>.tar.gz`), nginx bleibt unverändert.
+4. **Überwachungs-Timer installieren (einmalig):**
+
+```bash
+cp /opt/stagedesk/scripts/stagedesk-device-watch.service /opt/stagedesk/scripts/stagedesk-device-watch.timer /etc/systemd/system/
+systemctl daemon-reload && systemctl enable --now stagedesk-device-watch.timer
+```
+
+   Der Timer ruft jede Minute `python manage.py monitor_device_watch` auf (Ampel, Warnungen, Benachrichtigungen). Prüfen mit `systemctl list-timers stagedesk-device-watch.timer` und `journalctl -u stagedesk-device-watch -n 20`.
+5. **Pis umstellen:** auf glocke und mensa per SSH den Installationsbefehl ausführen (Voraussetzung: Raspberry Pi OS (Legacy, Bookworm), Benutzer `pi` mit ID 1000):
+
+```bash
+curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
+```
+
+   Das Skript schaltet `stagedesk-power.service`, `kiosk.service` und den alten 04:00-Neustart ab (Dateien bleiben liegen). Danach im Admin unter Übersicht "Bildschirm koppeln", Power-Methode prüfen (glocke: CEC; mensa: laut altem Skript CEC).
+6. **Abnahme auf glocke (Hardware):** koppeln; Befehle Neu laden, Browser neu starten, Bildschirm an und aus; Screenshot aufnehmen; Testbild; Jetzt aktualisieren. Dann den Rückfall-Timer des Selbst-Updates prüfen: Beim Scharfstellen darf `stagedesk-agent-rollback.service` **nicht sofort** starten (`systemctl list-timers`), nach einem Neustart des Pi feuert er etwa 2 Minuten später (`journalctl -u stagedesk-agent-rollback`). Meldet sich der Agent bis dahin mit der neuen Version, wird der Timer entfernt.
+7. **Erst danach** in den Einstellungen unter Geräte "Nur Geräte mit Token zulassen" einschalten. Der Schalter zeigt, welche Bildschirme noch ein altes Skript nutzen; solange ein Pi ohne Agent läuft, bleibt der Schalter aus, sonst verliert er die Verbindung.
+8. **Rückweg:** zuerst die Migration zurückfahren (im venv): `python manage.py migrate monitor 0042`. Dann Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten. Den Timer mit `systemctl disable --now stagedesk-device-watch.timer` abschalten. Pis mit Agent können sich danach nicht mehr melden; die alten Skripte liegen noch auf den Pis und lassen sich mit `systemctl enable --now stagedesk-power.service kiosk.service` wieder starten, nachdem `stagedesk-agent.service` und `stagedesk-kiosk.service` gestoppt und deaktiviert sind.
+
+### Hinweise
+
+- **Selbst-Update** des Agents ersetzt nur den Python-Code. Änderungen an `agent/systemd/*` oder `agent/kiosk/kiosk.sh` erreichen die Pis erst, wenn `install.sh` dort erneut läuft (Kopplung bleibt erhalten).
+- **Neue Agent-Version ausliefern:** `agent/VERSION` erhöhen und deployen. Der Server baut das Paket beim ersten Abruf neu, die Pis ziehen es in ihrem Update-Fenster.
+- **Alte Skripte** (`scripts/stagedesk-power*.py`, Kiosk-Anleitung ohne Agent) bleiben im Repo, bis alle Pis umgestellt sind. Das Entfernen ist ein eigener Schritt.
+- **Tests:** `cd agent && python3 -m unittest discover -s tests`. Der E2E-Test im Backend (`monitor/tests_agent_e2e.py`) braucht `websocket-client`: `pip install -r backend/requirements-dev.txt`.
 
 ---
 
