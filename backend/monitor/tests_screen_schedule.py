@@ -147,6 +147,27 @@ class MergeLegacyTest(TestCase):
         ])
         self.assertEqual(merge_legacy([], []), [])
 
+    def test_merge_legacy_overnight_power_stays_on_same_day(self):
+        # alt: Fr 22:00–06:00 galt am Freitag 00:00–06:00 und 22:00–23:59
+        merged = merge_legacy([{'view_id': 3, 'days': [4], 'from': '05:00', 'until': '23:00'}],
+                              [{'days': [4], 'from': '22:00', 'until': '06:00'}])
+        self.assertEqual(merged, [
+            r([4], '05:00', '06:00', 3), r([4], '22:00', '23:00', 3),
+            r([4], '22:00', '23:59', None), r([4], '00:00', '06:00', None),
+        ])
+        friday = lambda h: timezone.localtime(local(2026, 10, 23, h))  # noqa: E731
+        self.assertTrue(is_on(merged, friday(5)))
+        self.assertTrue(is_on(merged, friday(23)))
+        self.assertFalse(is_on(merged, timezone.localtime(local(2026, 10, 24, 5))))
+
+    def test_merge_legacy_drops_view_rows_that_never_matched(self):
+        never = [{'view_id': None, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': 3, 'days': [0], 'from': '16:00', 'until': '08:00'},
+                 {'view_id': 3, 'days': [0], 'from': '08:00', 'until': '08:00'}]
+        self.assertEqual(merge_legacy(never, []), [])
+        self.assertEqual(merge_legacy(never, [{'days': [0], 'from': '00:00', 'until': '23:59'}]),
+                         [r([0], '00:00', '23:59', None)])
+
     def test_merge_legacy_only_power(self):
         self.assertEqual(merge_legacy([], [{'days': [0], 'from': '07:00', 'until': '18:00'}]),
                          [r([0], '07:00', '18:00', None)])

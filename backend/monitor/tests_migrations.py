@@ -684,21 +684,34 @@ class SubstitutionSourcesMigrationTest(MigrationTestCase):
 
 
 OFFICE = [{'days': [0, 1, 2, 3, 4], 'from': '07:00', 'until': '18:00'}]
-EARLY_VIEW = [{'view_id': 3, 'days': [0], 'from': '06:00', 'until': '09:00'}]
 FULL_DAY = {'days': [0, 1, 2, 3, 4, 5, 6], 'from': '00:00', 'until': '23:59', 'view_id': None}
+FRIDAY_NIGHT = [{'days': [4], 'from': '22:00', 'until': '06:00'}]
 
 
 class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
-    """0045: Einschaltzeiten und Ansichten-Zeitplan werden eine Liste (Spec §2.2)."""
+    """0045: Einschaltzeiten und Ansichten-Zeitplan werden eine Liste (Spec §2.2), Wirkung unverändert."""
     migrate_from = ('monitor', '0044_substitution_sources')
     migrate_to = ('monitor', '0045_unified_screen_schedule')
 
     def setUpBeforeMigration(self, apps):
+        View = apps.get_model('monitor', 'DisplayView')
         Screen = apps.get_model('monitor', 'Screen')
-        Screen.objects.create(name='Beide', slug='beide', schedule=EARLY_VIEW, power_schedule=OFFICE)
+        self.view_id = _make_view(View, 'frueh').pk
+        gone_id = _make_view(View, 'weg', deleted_at='2026-10-01T00:00:00Z').pk
+        self.early = [{'view_id': self.view_id, 'days': [0], 'from': '06:00', 'until': '09:00'}]
+        # griffen nie: ohne Ansicht, Ansicht gelöscht oder fehlt, von >= bis
+        never = [{'view_id': None, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': gone_id, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': 999, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': self.view_id, 'days': [0], 'from': '16:00', 'until': '08:00'},
+                 {'view_id': self.view_id, 'days': [0], 'from': '08:00', 'until': '08:00'}]
+        Screen.objects.create(name='Beide', slug='beide', schedule=self.early + never, power_schedule=OFFICE)
         Screen.objects.create(name='Power', slug='power', schedule=[], power_schedule=OFFICE)
-        Screen.objects.create(name='Ansicht', slug='ansicht', schedule=EARLY_VIEW, power_schedule=[])
+        Screen.objects.create(name='Ansicht', slug='ansicht', schedule=self.early + never, power_schedule=[])
+        Screen.objects.create(name='Nie', slug='nie', schedule=never, power_schedule=[])
         Screen.objects.create(name='Leer', slug='leer', schedule=[], power_schedule=[])
+        Screen.objects.create(name='Nacht', slug='nacht', schedule=[
+            {'view_id': self.view_id, 'days': [4], 'from': '04:00', 'until': '23:00'}], power_schedule=FRIDAY_NIGHT)
 
     def schedules(self, apps):
         return {s.slug: s.schedule for s in apps.get_model('monitor', 'Screen').objects.all()}
@@ -707,12 +720,27 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
         Screen = self.apps.get_model('monitor', 'Screen')
         self.assertNotIn('power_schedule', {f.name for f in Screen._meta.get_fields()})
         self.assertEqual(self.schedules(self.apps), {
-            'beide': [{'days': [0], 'from': '07:00', 'until': '09:00', 'view_id': 3},
+            'beide': [{'days': [0], 'from': '07:00', 'until': '09:00', 'view_id': self.view_id},
                       {**OFFICE[0], 'view_id': None}],
             'power': [{**OFFICE[0], 'view_id': None}],
-            'ansicht': [*EARLY_VIEW, FULL_DAY],
+            'ansicht': [*self.early, FULL_DAY],
+            'nie': [],
             'leer': [],
+            'nacht': [{'days': [4], 'from': '04:00', 'until': '06:00', 'view_id': self.view_id},
+                      {'days': [4], 'from': '22:00', 'until': '23:00', 'view_id': self.view_id},
+                      {'days': [4], 'from': '22:00', 'until': '23:59', 'view_id': None},
+                      {'days': [4], 'from': '00:00', 'until': '06:00', 'view_id': None}],
         })
+
+    def test_0045_overnight_power_keeps_same_day_effect(self):
+        from django.utils import timezone
+        from datetime import datetime
+        from monitor.screen_schedule import is_on
+        rows = self.schedules(self.apps)['nacht']
+        at = lambda d, h: timezone.localtime(timezone.make_aware(datetime(2026, 10, d, h)))  # noqa: E731
+        self.assertTrue(is_on(rows, at(23, 5)))    # Freitag 05:00
+        self.assertTrue(is_on(rows, at(23, 23)))   # Freitag 23:00
+        self.assertFalse(is_on(rows, at(24, 5)))   # Samstag 05:00
 
     def test_0045_backward(self):
         executor = MigrationExecutor(connection)
@@ -720,10 +748,17 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
         executor.migrate([self.migrate_from])
         apps = executor.loader.project_state([self.migrate_from]).apps
         old = {s.slug: (s.schedule, s.power_schedule) for s in apps.get_model('monitor', 'Screen').objects.all()}
+        vid = self.view_id
         self.assertEqual(old, {
-            'beide': ([{'view_id': 3, 'days': [0], 'from': '07:00', 'until': '09:00'}], OFFICE),
+            'beide': ([{'view_id': vid, 'days': [0], 'from': '07:00', 'until': '09:00'}], OFFICE),
             'power': ([], OFFICE),
             # die angehängte Standard-Zeile ganztags hält den Bildschirm wie vorher immer an
-            'ansicht': (EARLY_VIEW, [{k: v for k, v in FULL_DAY.items() if k != 'view_id'}]),
+            'ansicht': (self.early, [{k: v for k, v in FULL_DAY.items() if k != 'view_id'}]),
+            'nie': ([], []),
             'leer': ([], []),
+            # gleiche Wirkung wie das alte Fr 22:00–06:00 (am selben Tag)
+            'nacht': ([{'view_id': vid, 'days': [4], 'from': '04:00', 'until': '06:00'},
+                       {'view_id': vid, 'days': [4], 'from': '22:00', 'until': '23:00'}],
+                      [{'days': [4], 'from': '22:00', 'until': '23:59'},
+                       {'days': [4], 'from': '00:00', 'until': '06:00'}]),
         })

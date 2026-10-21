@@ -1,7 +1,8 @@
 """Einschaltzeiten und Ansichten-Zeitplan werden ein gemeinsamer Zeitplan (Spec §2.2).
 
 Vorwärts: screen_schedule.merge_legacy (Ansichten-Zeilen auf die Einschaltzeiten zugeschnitten oben,
-darunter jede Einschaltzeile mit Standard-Ansicht). Rückwärts: screen_schedule.split_legacy.
+darunter jede Einschaltzeile mit Standard-Ansicht); Zeilen, die nie griffen (Ansicht fehlt oder gelöscht,
+von >= bis), entfallen. Rückwärts: screen_schedule.split_legacy.
 """
 from django.db import migrations, models
 
@@ -10,8 +11,13 @@ from monitor.screen_schedule import merge_legacy, split_legacy
 
 def forward(apps, schema_editor):
     Screen = apps.get_model('monitor', 'Screen')
+    View = apps.get_model('monitor', 'DisplayView')
+    live = set(View.objects.filter(deleted_at__isnull=True).values_list('id', flat=True))
     for screen in Screen.objects.all():
-        screen.schedule = merge_legacy(screen.schedule, screen.power_schedule)
+        # Zeilen mit fehlender oder gelöschter Ansicht griffen nie: entfallen, statt Standard zu zeigen
+        view_rows = [row for row in (screen.schedule or [])
+                     if isinstance(row, dict) and isinstance(row.get('view_id'), int) and row['view_id'] in live]
+        screen.schedule = merge_legacy(view_rows, screen.power_schedule)
         screen.save(update_fields=['schedule'])
 
 

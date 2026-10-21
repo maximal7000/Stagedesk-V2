@@ -45,21 +45,25 @@ def is_on(rows, local_now: datetime) -> bool:
     return active_row(rows, local_now) is not None
 
 
-def _day_intervals(power_rows, day):
-    """Einschalt-Intervalle (von, bis) eines Wochentags; Fenster über Mitternacht geteilt."""
-    intervals = []
+def _legacy_power_rows(power_rows):
+    """Alte Einschaltzeilen über Mitternacht galten am selben Tag (00:00–bis und von–23:59):
+    in zwei Zeilen auf denselben Tagen umschreiben, damit sie unverändert wirken."""
+    rows = []
     for row in power_rows:
         start, end = _window(row)
         days = row.get('days', [])
-        if start <= end:
-            if day in days:
-                intervals.append((start, end))
+        if start > end:
+            rows.append({'days': days, 'from': start, 'until': DAY_END})
+            rows.append({'days': days, 'from': DAY_START, 'until': end})
         else:
-            if day in days:
-                intervals.append((start, DAY_END))
-            if (day - 1) % 7 in days:
-                intervals.append((DAY_START, end))
-    return intervals
+            rows.append({'days': days, 'from': row.get('from', ''), 'until': row.get('until', '')})
+    return rows
+
+
+def _legacy_view_row_matched(row):
+    """Alte Ansichten-Zeilen griffen nur mit view_id und bei von < bis (start <= jetzt <= ende)."""
+    start, end = _window(row)
+    return bool(row.get('view_id')) and start < end
 
 
 def _clip(view_row, power_rows):
@@ -67,7 +71,8 @@ def _clip(view_row, power_rows):
     start, end = _window(view_row)
     windows = {}
     for day in sorted(set(d for d in view_row.get('days', []) if isinstance(d, int))):
-        for on_start, on_end in sorted(_day_intervals(power_rows, day)):
+        intervals = sorted(_window(row) for row in power_rows if day in row.get('days', []))
+        for on_start, on_end in intervals:
             cut = (max(start, on_start), min(end, on_end))
             if cut[0] < cut[1]:
                 windows.setdefault(cut, []).append(day)
@@ -76,14 +81,16 @@ def _clip(view_row, power_rows):
 
 
 def merge_legacy(view_rows: list, power_rows: list) -> list:
-    """Altdaten (Ansichten-Zeitplan, Einschaltzeiten) zu einer Liste zusammenführen."""
-    view_rows, power_rows = _rows(view_rows), _rows(power_rows)
+    """Altdaten (Ansichten-Zeitplan, Einschaltzeiten) zu einer Liste zusammenführen.
+    Wirkung bleibt gleich: nie greifende Ansichten-Zeilen entfallen, Einschaltzeilen über
+    Mitternacht gelten weiter am selben Tag."""
+    view_rows = [row for row in _rows(view_rows) if _legacy_view_row_matched(row)]
+    power_rows = _legacy_power_rows(_rows(power_rows))
     if not power_rows:
         return [dict(row) for row in view_rows] + (
             [{'days': list(ALL_DAYS), 'from': DAY_START, 'until': DAY_END, 'view_id': None}] if view_rows else [])
     merged = [clipped for row in view_rows for clipped in _clip(row, power_rows)]
-    merged += [{'days': row.get('days', []), 'from': row.get('from', ''), 'until': row.get('until', ''),
-                'view_id': None} for row in power_rows]
+    merged += [{**row, 'view_id': None} for row in power_rows]
     return merged
 
 
