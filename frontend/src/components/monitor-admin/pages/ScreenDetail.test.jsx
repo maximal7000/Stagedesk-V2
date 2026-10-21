@@ -164,6 +164,17 @@ describe('ScreenDetail', () => {
     expect(container.textContent).not.toContain('ungespeicherte')
   })
 
+  it('zeigt mit nur monitor.devices die Geräte-Box und keine Einrichtung', async () => {
+    perms.add('monitor.devices')
+    api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
+    await mount()
+    expect(container.textContent).toContain('Glocke')
+    expect(container.querySelector('[data-section="device"]')).not.toBeNull()
+    expect(container.querySelector('[data-section="log"]')).not.toBeNull()
+    expect(container.textContent).not.toContain('Kiosk-URL')
+    expect(container.textContent).toContain('Technik')
+  })
+
   it('hält das Speichern bei unvollständigem Zeitplan an', async () => {
     perms.add('monitor.setup').add('monitor.power')
     await mount()

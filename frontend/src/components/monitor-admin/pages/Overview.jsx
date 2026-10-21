@@ -393,7 +393,7 @@ export default function Overview() {
             const menu = screenMenu(s)
             return (
               <ScreenRow key={s.id} screen={s}>
-                <ScreenNameCell screen={s} to={(can.setup || can.power) ? `/monitor-admin/screens/${s.id}` : undefined} />
+                <ScreenNameCell screen={s} to={(can.setup || can.power || can.devices) ? `/monitor-admin/screens/${s.id}` : undefined} />
                 <Cell><ScreenStatus screen={s} now={now} device={devices[s.id]} /></Cell>
                 <Cell className="min-w-0">
                   {!known ? (
