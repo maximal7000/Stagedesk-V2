@@ -389,3 +389,27 @@ class DeviceConsumerTest(TransactionTestCase):
         self.screen.refresh_from_db()
         self.assertEqual(self.screen.cec_status, 'standby')
         self.assertIsNotNone(self.screen.cec_status_at)
+
+
+@override_settings(CHANNEL_LAYERS=LAYERS)
+class AgentUpdatedConsumerTest(TransactionTestCase):
+    def test_agent_updated_survives_telemetry_throttle(self):
+        screen = Screen.objects.create(name='Glocke', slug='glocke')
+        device = Device.objects.create(screen=screen, serial='abc')
+        token = device.issue_token()
+        event = {'from': '1.0.0', 'to': '1.0.1', 'at': '2026-10-20T03:10:00+00:00'}
+
+        async def run():
+            comm = _communicator('glocke', token)
+            await comm.connect()
+            await _drain_until(comm, 'hello')
+            await comm.send_json_to({'type': 'telemetry', 'system': {'agent_version': '1.0.0'}})
+            await comm.send_json_to({'type': 'telemetry', 'system': {'agent_version': '1.0.1'},
+                                     'agent_updated': event})
+            await comm.send_json_to({'type': 'telemetry', 'agent_updated': event})
+            await _sync_point(comm)
+            await comm.disconnect()
+        async_to_sync(run)()
+        events = DeviceEvent.objects.filter(device=device, kind='agent_updated')
+        self.assertEqual(events.count(), 1)
+        self.assertEqual(events.get().text, 'Agent aktualisiert von 1.0.0 auf 1.0.1')

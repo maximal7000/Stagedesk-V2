@@ -9,7 +9,9 @@ import secrets
 import uuid
 
 from django.core.cache import cache
+from django.conf import settings
 from django.core.files.base import ContentFile
+from django.http import Http404, HttpResponse
 from django.utils import timezone
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -19,7 +21,7 @@ from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 from core.auth import keycloak_auth
-from . import devices, push
+from . import agent_package, devices, push
 from .models import Device, DeviceCommand, DeviceEvent, MonitorSettings, Screen
 from .permissions import _require_perm
 from .schemas import (
@@ -55,6 +57,33 @@ def pair_poll(request, payload: PairPollSchema):
         return 202, {"status": "waiting"}
     return 200, {"status": "paired", "token": result["token"],
                  "slug": result["slug"], "key": result["key"]}
+
+
+@devices_router.get("/agent/install.sh", auth=None)
+def agent_install_script(request):
+    """Installationsskript mit eingesetzter Server-URL; öffentlich, enthält keine Geheimnisse."""
+    try:
+        text = agent_package.install_script_path().read_text(encoding="utf-8")
+    except OSError:
+        raise Http404("Das Installationsskript fehlt auf dem Server.")
+    text = text.replace("__STAGEDESK_SERVER__", settings.PUBLIC_BASE_URL)
+    return HttpResponse(text, content_type="text/plain; charset=utf-8")
+
+
+@devices_router.get("/agent/version", auth=None)
+def agent_version(request):
+    version, sha256 = agent_package.agent_package_info()
+    return {"version": version, "sha256": sha256}
+
+
+@devices_router.get("/agent/stagedesk-agent-{version}.tar.gz", auth=None)
+def agent_tarball(request, version: str):
+    current, _ = agent_package.agent_package_info()
+    if version != current:
+        raise Http404("Diese Agent-Version wird nicht ausgeliefert.")
+    response = HttpResponse(agent_package.build_package(), content_type="application/gzip")
+    response["Content-Disposition"] = f'attachment; filename="stagedesk-agent-{version}.tar.gz"'
+    return response
 
 
 def _failed_key(request) -> str:

@@ -1,0 +1,24 @@
+[Unit]
+Description=Stagedesk Agent
+After=network-online.target
+Wants=network-online.target
+# Kein Start-Limit: der Rückfall-Dienst (self_update) und systemd-Neustarts dürfen den Agent jederzeit starten.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/stagedesk-agent
+Environment=PYTHONPATH=/opt/stagedesk-agent
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -m stagedesk_agent
+Restart=always
+RestartSec=5
+# Nur der Hauptprozess bekommt das Signal (auch das letzte SIGKILL). Ein laufendes apt oder dpkg,
+# das der Agent gestartet hat, bleibt beim Neustart des Agents am Leben und wird nicht mitten im Schreiben getötet.
+KillMode=process
+TimeoutStopSec=30
+SyslogIdentifier=stagedesk-agent
+
+[Install]
+WantedBy=multi-user.target

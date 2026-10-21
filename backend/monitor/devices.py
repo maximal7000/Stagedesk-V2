@@ -306,6 +306,21 @@ def record_update_result(device: Device, data: dict) -> None:
     Device.objects.filter(pk=device.pk).update(last_telemetry=telemetry)
 
 
+def record_agent_update(device: Device, event) -> None:
+    """Ereignis `agent_updated` für ein abgeschlossenes Selbst-Update, einmal je from/to/at."""
+    if not isinstance(event, dict):
+        return
+    old, new, at = event.get("from"), event.get("to"), event.get("at")
+    if not (isinstance(old, str) and isinstance(new, str) and isinstance(at, str) and old and new and at):
+        return
+    old, new, at = old[:20], new[:20], at[:40]
+    if any(e.data == {"from": old, "to": new, "at": at}
+           for e in DeviceEvent.objects.filter(device=device, kind='agent_updated').order_by('-id')[:20]):
+        return
+    DeviceEvent.objects.create(device=device, screen=device.screen, kind='agent_updated',
+                               text=f"Agent aktualisiert von {old} auf {new}", data={"from": old, "to": new, "at": at})
+
+
 def store_telemetry(device: Device, data: dict) -> None:
     """Telemetrie speichern; das vom Server gesetzte `last_update` bleibt erhalten.
     Zu große Nachrichten (über 64 KB JSON) werden verworfen."""
@@ -314,6 +329,7 @@ def store_telemetry(device: Device, data: dict) -> None:
         return
     current = Device.objects.filter(pk=device.pk).values_list('last_telemetry', flat=True).first() or {}
     telemetry = dict(data)
+    record_agent_update(device, telemetry.pop("agent_updated", None))
     if "last_update" not in telemetry and "last_update" in current:
         telemetry["last_update"] = current["last_update"]
     fields = {"last_telemetry": telemetry}

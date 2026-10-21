@@ -161,6 +161,12 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
     async def _receive_device(self, msg_type, data) -> bool:
         """Agent-Nachrichten; True, wenn behandelt."""
         if msg_type == "telemetry":
+            # Das Selbst-Update wird einmal gemeldet; die Drosselung darf es nicht verschlucken.
+            event = data.get("agent_updated")
+            if event is None and isinstance(data.get("data"), dict):
+                event = data["data"].get("agent_updated")
+            if event is not None:
+                await self._record_agent_update(event)
             now = _monotonic()
             if self._last_telemetry_save is None or now - self._last_telemetry_save >= TELEMETRY_INTERVAL:
                 self._last_telemetry_save = now
@@ -316,6 +322,11 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
     def _store_telemetry(self, payload):
         from . import devices
         devices.store_telemetry(self.device, payload)
+
+    @database_sync_to_async
+    def _record_agent_update(self, event):
+        from . import devices
+        devices.record_agent_update(self.device, event)
 
     @database_sync_to_async
     def _record_update_result(self, data):
