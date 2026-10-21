@@ -49,7 +49,8 @@ const PAGES = {
     path: '/monitor-admin',
     action: async (page) => {
       await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
-      await page.getByLabel('Kopplungscode').fill('482 913')
+      await page.getByLabel('Ziffer 1 von 6').click()
+      await page.keyboard.type('482913')
       await page.getByRole('button', { name: 'Weiter', exact: true }).click()
       await page.getByLabel('Bildschirm', { exact: true }).selectOption({ label: 'Mensa' })
     },
@@ -58,7 +59,8 @@ const PAGES = {
     path: '/monitor-admin',
     action: async (page) => {
       await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
-      await page.getByLabel('Kopplungscode').fill('482913')
+      await page.getByLabel('Ziffer 1 von 6').click()
+      await page.keyboard.type('482913')
       await page.getByRole('button', { name: 'Weiter', exact: true }).click()
       await page.getByRole('radio', { name: 'Neuer Bildschirm' }).click()
       await page.getByLabel('Name', { exact: true }).fill('Foyer')
@@ -156,7 +158,6 @@ const PAGES = {
   'view-edit-departures': {
     path: '/monitor-admin/views/1', preview: 'departures', height: 2450,
     action: async (page) => {
-      await page.getByRole('radio', { name: 'Dunkel' }).click()
       await page.getByLabel('Max. Zeilen Kohlmarkt').fill('8')
       await page.waitForSelector('[data-disruptions]')
       await waitForPreview(page)
@@ -168,6 +169,18 @@ const PAGES = {
   },
   'view-edit-info': { path: '/monitor-admin/views/3', preview: 'info', action: waitForPreview },
   'view-edit-split': { path: '/monitor-admin/views/5', preview: 'split', height: 1300, action: waitForPreview },
+  // Vertretungsplan: Datenquelle, Ausgabe, Aufteilung; Typwahl mit Bestätigung
+  'view-edit-substitutions': { path: '/monitor-admin/views/2', preview: 'substitutions', height: 1500, action: waitForPreview },
+  'view-edit-substitutions-fallback': { path: '/monitor-admin/views/2', preview: 'substitutions-fallback-source', height: 1500, action: waitForPreview },
+  'view-edit-kind-change': {
+    path: '/monitor-admin/views/2', preview: 'substitutions', height: 1200,
+    action: async (page) => {
+      await waitForPreview(page)
+      await page.getByLabel('Typ', { exact: true }).selectOption('info')
+      await page.getByRole('button', { name: 'Speichern', exact: true }).click()
+      await page.waitForSelector('[role="alertdialog"]')
+    },
+  },
   'view-edit-media': { path: '/monitor-admin/views/6', preview: 'media-landscape', height: 1100, action: waitForPreview },
   exams: { path: '/monitor-admin/exams', height: 1240 },
   'exam-form': {
@@ -243,6 +256,18 @@ const PAGES = {
   'exams-offline': { path: '/monitor-admin/exams', variant: 'offline' },
   'media-empty': { path: '/monitor-admin/media', variant: 'empty' },
   'schedules-empty': { path: '/monitor-admin/schedules', variant: 'empty' },
+  'settings-color-scheme': {
+    path: '/monitor-admin/settings', height: 1000,
+    action: async (page) => {
+      await page.locator('[data-section="color-scheme"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    },
+  },
+  'screen-detail-color-scheme': {
+    path: '/monitor-admin/screens/1', height: 1000,
+    action: async (page) => {
+      await page.locator('[data-section="display"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
+    },
+  },
   'settings-devices': {
     path: '/monitor-admin/settings', height: 2000,
     action: async (page) => {

@@ -22,5 +22,12 @@
   "warn_disk_percent": 90,
   "warn_wifi_dbm": -75,
   "warn_reboot_days": 7,
-  "require_device_token": false
+  "require_device_token": false,
+  "color_scheme": "daylight",
+  "light_from": "07:00",
+  "light_until": "18:00",
+  "daylight_today": {
+    "sunrise": "07:52",
+    "sunset": "17:49"
+  }
 }

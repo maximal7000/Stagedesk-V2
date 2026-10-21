@@ -213,6 +213,33 @@ curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
 - **Alte Skripte** (`scripts/stagedesk-power*.py`, Kiosk-Anleitung ohne Agent) bleiben im Repo, bis alle Pis umgestellt sind. Das Entfernen ist ein eigener Schritt.
 - **Tests:** `cd agent && python3 -m unittest discover -s tests`. Der E2E-Test im Backend (`monitor/tests_agent_e2e.py`) braucht `websocket-client`: `pip install -r backend/requirements-dev.txt`.
 
+## Monitor Anzeige: Vertretungsplan, Zeitplan, Aufteilung, Farbschema
+
+Migrationen `monitor` 0044 (`0044_substitution_sources`), 0045 (`0045_unified_screen_schedule`), 0046 (`0046_layout_color_scheme`). Jede hat einen getesteten Rückweg.
+
+**Admin (Frontend) und Backend gemeinsam ausrollen.** Nach 0045 kennt die Bildschirm-API kein `power_schedule` mehr. Ein altes Admin-Bundle kann Ein- und Ausschaltzeiten dann nicht mehr speichern; `deploy.sh` baut beides in einem Lauf.
+
+### Was sich ändert
+
+- **0044:** Vertretungsplan-Ansichten bekommen Datenquelle, Ausgabe, Abwesenheiten, Klausuren und "Nächsten Schultag zeigen ab". "Morgen zeigen" aus wird Ausgabe "Schüler, 1 Tag", sonst "Schüler, 2 Tage"; alle Ansichten starten auf der Quelle "WebUntis-Vertretungsplan".
+- **0045:** Einschaltzeiten und Ansichten-Zeitplan werden eine Liste "Zeitplan" pro Bildschirm. Außerhalb der Zeilen ist der Bildschirm aus. Zeilen über Mitternacht aus den alten Einschaltzeiten gelten weiter am selben Tag und werden dazu in zwei Zeilen geteilt (bis 23:59 und ab 00:00). Ansichten-Zeilen, die nie griffen (Ansicht fehlt, gelöscht, von nicht vor bis), entfallen. Das Recht `monitor.power` bleibt Voraussetzung.
+- **0046:** Der Stil einer Ansicht wird die Aufteilung (Automatisch, Normal, Breit): Standard wird Normal, Dicht wird Breit, Dunkel wird Breit. Eine Ansicht im Stil Dunkel, die als Standard eines Bildschirms läuft, setzt dort "Immer dunkel". Das Farbschema der Einstellungen (Hell, Dunkel, Tageslicht, Zeitplan) startet auf Hell.
+
+### Ablauf
+
+1. **Backup:** Backup-Tag, Tarball und DB-Dump wie oben.
+2. **Probelauf:** Produktions-Dump in eine Test-DB, `python manage.py migrate monitor`, dann `python manage.py migrate monitor 0043` und die Daten vergleichen (Zeitpläne, Vertretungs-Ausgabe, Stil der Ansichten).
+3. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`.
+4. **Kontrolle nach dem Deploy:**
+   - Der Vertretungsplan auf glocke zeigt in der Fußzeile "Stand WebUntis · …". Steht dort stattdessen "Ersatzquelle", antwortet der öffentliche Monitor-Weg nicht: `python manage.py monitor_webuntis_check` ausführen.
+   - Im Admin den Zeitplan der Bildschirme glocke und mensa ansehen: Zeilen, Wochenübersicht und Zeiten außerhalb prüfen (Überschneidungen sind gelb markiert, die obere Zeile gewinnt).
+   - Ansichten, die vorher "Dunkel" waren, zeigen sich jetzt als Breit mit dunklem Bildschirm; in den Einstellungen unter Farbschema nachsehen.
+5. **Rückweg:** zuerst im venv `python manage.py migrate monitor 0043`, dann Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten. Der Rückweg trennt den Zeitplan wieder in Einschaltzeiten und Ansichten-Zeitplan und stellt Stil und "Morgen zeigen" her. Das Farbschema der Einstellungen und der Bildschirme sowie die neuen Vertretungs-Felder entfallen; ein Zeitplan, der im neuen Stil gepflegt wurde (zum Beispiel Zeilen über Mitternacht), kommt nicht bytegleich zurück.
+
+### Fixtures aufzeichnen
+
+`python manage.py monitor_webuntis_record --format <name> --date YYYYMMDD --out <dir>` speichert rohe Antworten des öffentlichen WebUntis-Monitors (Format und Daten) für Testdaten. Vor dem Einchecken anonymisieren: Lehrkraft-Kürzel durch erfundene ersetzen, Nachrichtentexte durch Beispieltext.
+
 ---
 
 ## V1-Backup
