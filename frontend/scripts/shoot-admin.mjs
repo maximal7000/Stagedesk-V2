@@ -187,7 +187,7 @@ const PAGES = {
   },
   schedules: { path: '/monitor-admin/schedules', variant: 'schedules', height: 1380 },
   settings: {
-    path: '/monitor-admin/settings', height: 1500,
+    path: '/monitor-admin/settings', height: 2000,
     action: async (page) => {
       await page.getByRole('button', { name: 'Verbindung testen' }).click()
       await page.waitForSelector('[data-check-result]')
@@ -228,6 +228,13 @@ const PAGES = {
   'exams-offline': { path: '/monitor-admin/exams', variant: 'offline' },
   'media-empty': { path: '/monitor-admin/media', variant: 'empty' },
   'schedules-empty': { path: '/monitor-admin/schedules', variant: 'empty' },
+  'settings-devices': {
+    path: '/monitor-admin/settings', height: 2000,
+    action: async (page) => {
+      await page.waitForSelector('[data-section="devices"]')
+      await page.locator('[data-section="devices"]').scrollIntoViewIfNeeded()
+    },
+  },
   'settings-onair-only': { path: '/monitor-admin/settings', variant: 'onair-only', height: 1180 },
   'stop-filter-dialog': {
     path: '/monitor-admin/views/1', preview: 'departures',

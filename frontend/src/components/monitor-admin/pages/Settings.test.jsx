@@ -12,6 +12,8 @@ vi.mock('../shared/api', () => ({
   getSettings: vi.fn(),
   updateSettings: vi.fn(),
   checkWebuntis: vi.fn(),
+  getDevices: vi.fn(),
+  getScreens: vi.fn(),
   getEmergencyTemplates: vi.fn(),
   updateEmergencyTemplate: vi.fn(),
   createEmergencyTemplate: vi.fn(),
@@ -25,6 +27,8 @@ const settings = () => ({
   weather_api_key: '', weather_api_key_set: false, webuntis_server: 'neilo.webuntis.com', webuntis_school: 'katharineum',
   webuntis_username: 'monitor', webuntis_password: '', webuntis_password_set: true,
   on_air_text: 'ON AIR', on_air_animation: 'pulse', on_air_show_clock: true, webuntis_source: '', webuntis_checked_at: null,
+  device_offline_minutes: 10, warn_temperature_c: 80, warn_disk_percent: 90, warn_wifi_dbm: -75, warn_reboot_days: 7,
+  require_device_token: false,
 })
 
 let root, container
@@ -47,6 +51,8 @@ beforeEach(() => {
   perms.clear()
   vi.clearAllMocks()
   api.getSettings.mockResolvedValue(settings())
+  api.getDevices.mockResolvedValue([{ id: null, screen_id: 4, legacy: true }])
+  api.getScreens.mockResolvedValue([{ id: 4, name: 'Mensa' }, { id: 5, name: 'Aula' }])
   api.getEmergencyTemplates.mockResolvedValue([
     { id: 1, title: 'Räumung', text: 'Raus', note: '', sort_order: 0 },
     { id: 2, title: 'Unwetter', text: 'Drinnen', note: '', sort_order: 1 },
@@ -138,5 +144,46 @@ describe('Settings', () => {
     expect(container.textContent).not.toContain('ungespeicherte Änderung')
     expect(byLabel('Passwort').value).toBe('')
     expect(button('Verbindung testen').disabled).toBe(false)
+  })
+
+  it('Geräte: Payload nur mit geänderten Feldern, Hinweis zu altem Skript', async () => {
+    perms.add('monitor.setup')
+    api.updateSettings.mockResolvedValue({ ...settings(), warn_temperature_c: 70, require_device_token: true })
+    await mount()
+    expect(container.querySelector('[data-section="devices"]').textContent).toContain('Noch mit altem Skript: Mensa.')
+    await act(async () => { typeInto(byLabel('Warnung ab Temperatur'), '70') })
+    await click(byLabel('Nur Geräte mit Token zulassen'))
+    await click(button('Speichern'))
+    expect(api.updateSettings).toHaveBeenCalledTimes(1)
+    expect(api.updateSettings).toHaveBeenCalledWith({ warn_temperature_c: 70, require_device_token: true })
+  })
+
+  it('Geräte: Wert außerhalb des Bereichs blockiert das Speichern mit Hinweis', async () => {
+    perms.add('monitor.setup')
+    await mount()
+    await act(async () => { typeInto(byLabel('Offline melden nach'), '1') })
+    await click(button('Speichern'))
+    expect(api.updateSettings).not.toHaveBeenCalled()
+    const { toast } = await import('sonner')
+    expect(toast.error).toHaveBeenCalledWith('Offline melden nach: Bitte eine ganze Zahl von 2 bis 240 eintragen.')
+  })
+
+  it('Geräte: ohne altes Skript steht der Hinweis für alle Bildschirme, ohne Recht nur lesend', async () => {
+    perms.add('monitor.view')
+    api.getDevices.mockResolvedValue([])
+    await mount()
+    expect(container.querySelector('[data-section="devices"]').textContent).toContain('Alle Bildschirme nutzen den Agent.')
+    expect(byLabel('Warnung ab Temperatur').disabled).toBe(true)
+  })
+
+  it('Geräte: Installationsbefehl mit Kopieren', async () => {
+    perms.add('monitor.setup')
+    const writeText = vi.fn().mockResolvedValue()
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    await mount()
+    const cmd = `curl -fsSL ${window.location.origin}/api/monitor/agent/install.sh | sudo bash`
+    expect(container.querySelector('[data-install-command]').textContent).toBe(cmd)
+    await click(button('Kopieren'))
+    expect(writeText).toHaveBeenCalledWith(cmd)
   })
 })

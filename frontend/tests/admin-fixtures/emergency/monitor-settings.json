@@ -14,5 +14,11 @@
   "emergency_note": "Sammelplatz: Schulhof",
   "emergency_since": "2026-10-20T09:55:00+02:00",
   "webuntis_source": "substitutions",
-  "webuntis_checked_at": "2026-10-20T09:52:00+02:00"
+  "webuntis_checked_at": "2026-10-20T09:52:00+02:00",
+  "device_offline_minutes": 10,
+  "warn_temperature_c": 80,
+  "warn_disk_percent": 90,
+  "warn_wifi_dbm": -75,
+  "warn_reboot_days": 7,
+  "require_device_token": false
 }
