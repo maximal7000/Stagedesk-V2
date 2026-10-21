@@ -29,13 +29,21 @@ const text = () => container.textContent
 const button = (label) => [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === label)
 const input = (label) => container.querySelector(`[aria-label="${label}"]`)
 
+function expectFallbackSection() {
+  const heading = container.querySelector('[data-fallback-heading]')
+  expect(heading?.textContent).toBe('Ausweichen')
+  expect(text()).toContain('Kommen keine Vertretungsdaten, erscheint diese WebUntis-Seite eingebettet.')
+  expect(container.querySelectorAll('input[type="url"]').length).toBe(2)
+  expect(text()).toContain('Rückfall-Link für einen Tag')
+}
+
 afterEach(() => {
   act(() => root?.unmount())
   container?.remove()
 })
 
 describe('SubstitutionsEditor', () => {
-  it('zeigt bei der Monitor-Quelle Ausgabe und Abwesenheiten, aber weder Formatname noch Links', async () => {
+  it('zeigt bei der Monitor-Quelle Ausgabe, Abwesenheiten, Klausuren und die Ausweich-Links, aber keinen Formatnamen', async () => {
     await mount()
     expect(text()).toContain('Datenquelle')
     expect(text()).toContain('Die Vertretungen, wie WebUntis sie für Bildschirme bereitstellt. Kein Konto nötig.')
@@ -44,8 +52,8 @@ describe('SubstitutionsEditor', () => {
     expect(text()).toContain('Klausuren anzeigen')
     expect(text()).toContain('Nächsten Schultag zeigen ab')
     expect(text()).not.toContain('Formatname')
-    expect(text()).not.toContain('Rückfall-Link')
     expect(text()).not.toContain('Morgen zeigen')
+    expectFallbackSection()
   })
 
   it('zeigt den Formatnamen nur beim eigenen Format', async () => {
@@ -53,21 +61,24 @@ describe('SubstitutionsEditor', () => {
     expect(text()).toContain('Formatname')
   })
 
-  it('zeigt bei der Konto-Quelle weder Ausgabe noch Abwesenheiten noch Links', async () => {
+  it('zeigt bei der Konto-Quelle weder Ausgabe noch Abwesenheiten noch Klausuren, aber die Ausweich-Links', async () => {
     await mount({ substitutions_source: 'account' })
     expect(text()).toContain('Abfrage mit Benutzername und Passwort aus den Einstellungen.')
     expect(text()).not.toContain('Ausgabe')
     expect(text()).not.toContain('Abwesenheiten anzeigen')
-    expect(text()).not.toContain('Rückfall-Link')
-    expect(text()).toContain('Klausuren anzeigen')
+    expect(text()).not.toContain('Klausuren anzeigen')
     expect(text()).toContain('Nächsten Schultag zeigen ab')
     expect(text()).toContain('Blättertakt')
+    expectFallbackSection()
   })
 
-  it('zeigt die Rückfall-Links nur bei der eingebetteten Seite', async () => {
+  it('zeigt die Rückfall-Links bei der eingebetteten Seite ohne Ausweichen-Überschrift', async () => {
     await mount({ substitutions_source: 'embed' })
     expect(text()).toContain('Zeigt die Originalseite von WebUntis statt der eigenen Darstellung.')
     expect(text()).toContain('Rückfall-Link')
+    expect(text()).toContain('Rückfall-Link für einen Tag')
+    expect(text()).toContain('Diese WebUntis-Seite erscheint eingebettet, wenn keine Vertretungsdaten kommen.')
+    expect(container.querySelector('[data-fallback-heading]')).toBeNull()
     expect(text()).not.toContain('Ausgabe')
     expect(text()).not.toContain('Klausuren anzeigen')
     expect(text()).not.toContain('Nächsten Schultag zeigen ab')

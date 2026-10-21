@@ -1,5 +1,7 @@
 // Wochenübersicht des Bildschirm-Zeitplans (Spec §2.2): Zeilen Mo–So, 0–24 Uhr, ein Balken je wirksamem
 // Abschnitt (die obere Zeile gewinnt, shared/schedule.weekBars), Farbe je Ansicht, Aus-Zeit schraffiert.
+// Grenzt eine Ansicht direkt an die nächste, trennt eine dunklere Linie im Balken; eine Lücke in Hintergrundfarbe
+// sähe aus wie Aus-Zeit (der Bildschirm bleibt an).
 // Die Zeilen des Editors darunter sind die Tabellenform derselben Angaben; die Übersicht ist nur Bild.
 import { DAY_MINUTES, WEEKDAYS, seriesSlots, weekBars } from './schedule'
 
@@ -33,7 +35,7 @@ export default function WeekOverview({ rows, views }) {
               {bars.filter((b) => b.day === day).map((b, i, list) => (
                 <span key={b.start} data-view-id={b.viewId ?? 'default'}
                   title={`${label} ${hhmm(b.start)} bis ${hhmm(b.end)} · ${nameOf(b.viewId)}`}
-                  className={`absolute inset-y-0 ${SERIES[slots.get(b.viewId)]} ${i > 0 && list[i - 1].end === b.start ? 'border-l-2 border-surface' : ''}`}
+                  className={`absolute inset-y-0 ${SERIES[slots.get(b.viewId)]} ${i > 0 && list[i - 1].end === b.start ? 'border-l border-black/30' : ''}`}
                   style={{ left: percent(b.start), width: percent(b.end - b.start) }} />
               ))}
             </div>

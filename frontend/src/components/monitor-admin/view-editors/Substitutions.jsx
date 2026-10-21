@@ -40,6 +40,17 @@ function FallbackUrlField({ label, help, urlKey, linkKey, draft, set, links }) {
   )
 }
 
+function FallbackUrlFields({ draft, set, links, help }) {
+  return (
+    <>
+      <FallbackUrlField label="Rückfall-Link" urlKey="webuntis_url" linkKey="webuntis_link_id" draft={draft} set={set} links={links}
+        help={help} />
+      <FallbackUrlField label="Rückfall-Link für einen Tag" urlKey="webuntis_url_next_day" linkKey="webuntis_link_next_day_id"
+        draft={draft} set={set} links={links} help="Kompakte Fassung für geteilte Ansichten. Leer nutzt den Link oben." />
+    </>
+  )
+}
+
 const SOURCE_OPTIONS = [
   { value: 'monitor', label: 'WebUntis-Vertretungsplan', help: 'Die Vertretungen, wie WebUntis sie für Bildschirme bereitstellt. Kein Konto nötig.' },
   { value: 'account', label: 'WebUntis-Konto', help: 'Abfrage mit Benutzername und Passwort aus den Einstellungen. Nur nötig, wenn der Vertretungsplan in WebUntis nicht freigegeben ist.' },
@@ -113,25 +124,29 @@ export default function SubstitutionsEditor({ draft, set }) {
           <Checkbox label="Abwesenheiten anzeigen" checked={draft.substitutions_show_absences !== false}
             onChange={(v) => set('substitutions_show_absences', v)} help="Abwesende und betroffene Lehrkräfte und Klassen über der Tabelle." />
         )}
-        {source !== 'embed' && (
-          <>
-            <Field label="Klausuren anzeigen">
-              <div className="max-w-sm">
-                <Segmented label="Klausuren anzeigen" options={EXAM_OPTIONS} value={examValue}
-                  onChange={(v) => set('substitutions_show_exams', EXAM_OPTIONS.find((o) => o.value === v).exams)} />
-              </div>
-            </Field>
-            <NextDayField draft={draft} set={set} />
-          </>
+        {/* Die Klausur-Einstellung wirkt nur auf die Monitor-Schnittstelle. */}
+        {source === 'monitor' && (
+          <Field label="Klausuren anzeigen">
+            <div className="max-w-sm">
+              <Segmented label="Klausuren anzeigen" options={EXAM_OPTIONS} value={examValue}
+                onChange={(v) => set('substitutions_show_exams', EXAM_OPTIONS.find((o) => o.value === v).exams)} />
+            </div>
+          </Field>
         )}
+        {source !== 'embed' && <NextDayField draft={draft} set={set} />}
         <PageSecondsField draft={draft} set={set} />
-        {source === 'embed' && (
-          <>
-            <FallbackUrlField label="Rückfall-Link" urlKey="webuntis_url" linkKey="webuntis_link_id" draft={draft} set={set} links={links}
-              help="Diese WebUntis-Seite erscheint eingebettet, wenn keine Vertretungsdaten kommen." />
-            <FallbackUrlField label="Rückfall-Link für einen Tag" urlKey="webuntis_url_next_day" linkKey="webuntis_link_next_day_id"
-              draft={draft} set={set} links={links} help="Kompakte Fassung für geteilte Ansichten. Leer nutzt den Link oben." />
-          </>
+        {/* Jede Quelle weicht am Ende auf die eingebettete Seite aus, die Links gelten also immer. */}
+        {source === 'embed' ? (
+          <FallbackUrlFields draft={draft} set={set} links={links}
+            help="Diese WebUntis-Seite erscheint eingebettet, wenn keine Vertretungsdaten kommen." />
+        ) : (
+          <div className="border-t border-line pt-4 space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold text-fg" data-fallback-heading>Ausweichen</h3>
+              <p className="text-xs text-fg-muted mt-1">Kommen keine Vertretungsdaten, erscheint diese WebUntis-Seite eingebettet.</p>
+            </div>
+            <FallbackUrlFields draft={draft} set={set} links={links} />
+          </div>
         )}
       </div>
     </Section>

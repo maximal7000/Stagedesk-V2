@@ -216,6 +216,12 @@ describe('ScreenDetail', () => {
       expect(rows[2].textContent).not.toContain('Überschneidet')
       expect(section().querySelector('[data-week-overview]').textContent).toContain('Abfahrten')
       expect(section().querySelector('[data-week-overview]').textContent).toContain('Standard-Ansicht')
+      // Wechsel der Ansicht ohne Lücke: keine Fläche in Hintergrundfarbe, höchstens eine dunklere Linie im Balken
+      const bars = [...section().querySelectorAll('[data-week-day="0"] [data-view-id]')]
+      expect(bars.map((b) => b.dataset.viewId)).toEqual(['1', 'default'])
+      expect(bars.some((b) => b.className.includes('border-surface'))).toBe(false)
+      expect(bars[1].className).toContain('border-l border-black/30')
+      expect(bars[0].className).not.toContain('border-l')
     })
 
     it('verschiebt Zeilen mit dem Griff per Tastatur', async () => {
