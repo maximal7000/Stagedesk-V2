@@ -42,7 +42,7 @@ class FakeUntis:
 
     def __init__(self, **answers):
         self.answers = {'authenticate': {'sessionId': 'x'}, 'getTimegridUnits': TIMEGRID,
-                        'logout': None, **answers}
+                        'getHolidays': [], 'logout': None, **answers}
         self.calls = []
 
     def __call__(self, session, method, params=None):
@@ -94,8 +94,9 @@ class SubstitutionsTest(WebUntisTestBase):
         self.assertEqual(today[1]['room_old'], 'R07')
         self.assertEqual(today[0]['periods'], '3')
         self.assertEqual(result['days'][1]['rows'], [{
-            'class': '9b', 'periods': '1', 'subject': 'DE', 'teacher': 'SCH', 'teacher_old': 'MEY',
-            'room': 'R01', 'room_old': '', 'kind': 'substitution', 'note': 'Aufgaben im Moodle',
+            'classes': ['9b'], 'group': '', 'periods': '1', 'subject': 'DE', 'teacher': 'SCH', 'teacher_old': 'MEY',
+            'room': 'R01', 'room_old': '', 'kind': 'substitution', 'kind_label': 'Vertretung',
+            'note': 'Aufgaben im Moodle',
         }])
         self.assertEqual(MonitorSettings.load().webuntis_source, 'substitutions')
         self.assertEqual(result['fetched_at'], MONDAY_8.isoformat())
@@ -122,11 +123,45 @@ class SubstitutionsTest(WebUntisTestBase):
         result = self.run_with(fake)
         self.assertEqual(result['source'], 'timetable')
         rows = result['days'][0]['rows']
-        self.assertEqual([(r['class'], r['periods'], r['kind']) for r in rows],
-                         [('8c', '5', 'cancelled'), ('8c', '6', 'substitution')])
+        self.assertEqual([(r['classes'], r['periods'], r['kind']) for r in rows],
+                         [(['8c'], '5', 'cancelled'), (['8c'], '6', 'substitution')])
         self.assertEqual(rows[1]['teacher_old'], 'MUE')
         self.assertEqual(rows[1]['note'], 'Vertretung')
         self.assertEqual(MonitorSettings.load().webuntis_source, 'timetable')
+
+    def test_row_keeps_class_list(self):
+        item = subst(20261019, 800, 845, 'cancel')
+        item['kl'] = [{'id': 1, 'name': '5a'}, {'id': 2, 'name': '5b'}]
+        row = self.run_with(FakeUntis(getSubstitutions=[item]))['days'][0]['rows'][0]
+        self.assertEqual(row['classes'], ['5a', '5b'])
+        self.assertEqual(row['group'], '')
+        self.assertEqual(row['kind_label'], 'Entfall')
+        self.assertEqual(list(row), webuntis.ROW_KEYS)
+
+    def test_kind_labels(self):
+        self.assertEqual(webuntis.KIND_LABELS, {'substitution': 'Vertretung', 'cancelled': 'Entfall',
+                                                'room_change': 'Raumänderung', 'other': 'Änderung'})
+
+    def test_untis_holidays_skipped(self):
+        fake = FakeUntis(getSubstitutions=[], getHolidays=[
+            {'id': 1, 'name': 'Herbst', 'startDate': 20261012, 'endDate': 20261024}])
+        result = self.run_with(fake, now=local(2026, 10, 21, 8))
+        self.assertEqual([d['date'] for d in result['days']], ['2026-10-26', '2026-10-27'])
+        self.assertEqual(webuntis.cache.get(webuntis.HOLIDAYS_KEY), [(date(2026, 10, 12), date(2026, 10, 24))])
+
+    def test_holidays_failure_is_silent(self):
+        fake = FakeUntis(getSubstitutions=[], getHolidays=WebUntisError(-8509, 'no right'))
+        result = self.run_with(fake, now=local(2026, 10, 21, 8))
+        self.assertEqual(result['days'][0]['date'], '2026-10-21')
+
+    def test_start_and_count(self):
+        fake = FakeUntis(getSubstitutions=[])
+        news = mock.Mock(return_value={'data': {'messagesOfDay': []}})
+        with mock.patch.object(WebUntisSession, 'call', autospec=True, side_effect=fake), \
+                mock.patch.object(WebUntisSession, 'get_json', news):
+            result = webuntis.get_substitutions(MONDAY_8, start=date(2026, 10, 27), count=1)
+        self.assertEqual([d['date'] for d in result['days']], ['2026-10-27'])
+        self.assertIsNone(result['updated_at'])
 
     def test_unavailable_without_credentials(self):
         settings = MonitorSettings.load()
@@ -135,7 +170,8 @@ class SubstitutionsTest(WebUntisTestBase):
         with mock.patch.object(WebUntisSession, 'call') as rpc:
             result = webuntis.get_substitutions(MONDAY_8)
         rpc.assert_not_called()
-        self.assertEqual(result, {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None})
+        self.assertEqual(result, {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None,
+                                  'updated_at': None})
 
     def test_unavailable_on_network_error(self):
         result = self.run_with(FakeUntis(authenticate=OSError('timeout')))
@@ -150,7 +186,7 @@ class SubstitutionsTest(WebUntisTestBase):
             subst(20261019, 1225, 1310, 'cancel'),
         ])
         rows = self.run_with(fake, now=MONDAY_11)['days'][0]['rows']
-        self.assertEqual([(r['class'], r['periods']) for r in rows], [('6a', '4'), ('7a', '5-6')])
+        self.assertEqual([(r['classes'], r['periods']) for r in rows], [(['6a'], '4'), (['7a'], '5-6')])
 
     def test_double_lesson_in_one_entry(self):
         fake = FakeUntis(getSubstitutions=[subst(20261019, 1140, 1310, 'subst')])
@@ -208,7 +244,8 @@ class ResilienceTest(WebUntisTestBase):
         fake = FakeUntis(getSubstitutions=self.GOOD)
         self.assertEqual(self.run_with(fake), good)
         cache.delete(webuntis.LAST_GOOD_KEY)
-        self.assertEqual(self.run_with(fake), {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None})
+        self.assertEqual(self.run_with(fake), {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None,
+                                  'updated_at': None})
         self.assertEqual(fake.calls, [])
 
     def test_lock_released_after_refresh(self):
@@ -294,8 +331,8 @@ class NextSchoolDayTest(TestCase):
 class MergePeriodsTest(TestCase):
 
     def row(self, periods, **kwargs):
-        base = {'class': '7a', 'periods': periods, 'subject': 'MA', 'teacher': '', 'teacher_old': '',
-                'room': '', 'room_old': '', 'kind': 'cancelled', 'note': ''}
+        base = {'classes': ['7a'], 'group': '', 'periods': periods, 'subject': 'MA', 'teacher': '', 'teacher_old': '',
+                'room': '', 'room_old': '', 'kind': 'cancelled', 'kind_label': 'Entfall', 'note': ''}
         return {**base, **kwargs}
 
     def test_merges_only_adjacent_equal_rows(self):

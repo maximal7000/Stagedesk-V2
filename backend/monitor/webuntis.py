@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 CACHE_KEY = 'monitor:webuntis:subs'
 LOCK_KEY = 'monitor:webuntis:subs:lock'
 LAST_GOOD_KEY = 'monitor:webuntis:subs:last_good'
+HOLIDAYS_KEY = 'monitor:webuntis:holidays'
+HOLIDAYS_SECONDS = 24 * 3600
 FAILURES_KEY = 'monitor:webuntis:subs:failures'
 CACHE_SECONDS = 300
 CACHE_SECONDS_UNAVAILABLE = 60
@@ -46,7 +48,11 @@ MAX_LOOKAHEAD_DAYS = 60
 
 KIND_BY_TYPE = {'cancel': 'cancelled', 'subst': 'substitution', 'rmchg': 'room_change', 'rmlk': 'room_change'}
 WEEKDAY_LABELS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
-ROW_KEYS = ['class', 'periods', 'subject', 'teacher', 'teacher_old', 'room', 'room_old', 'kind', 'note']
+KIND_LABELS = {'substitution': 'Vertretung', 'cancelled': 'Entfall', 'room_change': 'Raumänderung',
+               'other': 'Änderung'}
+# Zeilenform beider Quellen (Konto-Abfrage hier, öffentlicher Monitor in untis_monitor.py).
+ROW_KEYS = ['classes', 'group', 'periods', 'subject', 'teacher', 'teacher_old', 'room', 'room_old',
+            'kind', 'kind_label', 'note']
 ELEMENT_FIELDS = ['id', 'name']
 
 
@@ -159,24 +165,47 @@ def _log_failure(step, exc):
 
 # ═══ Schultage ════════════════════════════════════════════════════
 
-def _is_school_day(day: date) -> bool:
-    return day.weekday() < 5 and not is_holiday(day)
+def _is_school_day(day: date, holidays=()) -> bool:
+    if day.weekday() >= 5 or is_holiday(day):
+        return False
+    return not any(first <= day <= last for first, last in holidays)
 
 
-def next_school_day(day: date) -> date:
-    """Nächster Schultag nach `day`: überspringt Wochenenden und HolidayPeriod."""
+def next_school_day(day: date, holidays=()) -> date:
+    """Nächster Schultag nach `day`: überspringt Wochenenden, HolidayPeriod und `holidays`."""
     candidate = day
     for _ in range(MAX_LOOKAHEAD_DAYS):
         candidate += timedelta(days=1)
-        if _is_school_day(candidate):
+        if _is_school_day(candidate, holidays):
             return candidate
     return day + timedelta(days=1)
 
 
-def school_days(today: date) -> list:
-    """Heute (falls Schultag, sonst der nächste) und der Schultag danach."""
-    first = today if _is_school_day(today) else next_school_day(today)
-    return [first, next_school_day(first)]
+def school_days(start: date, count: int = 2, holidays=()) -> list:
+    """`count` Schultage ab `start` (ist `start` kein Schultag, ab dem nächsten)."""
+    days = []
+    day = start if _is_school_day(start, holidays) else next_school_day(start, holidays)
+    for _ in range(max(count, 0)):
+        days.append(day)
+        day = next_school_day(day, holidays)
+    return days
+
+
+def _untis_holidays(session) -> list:
+    """WebUntis-Ferien als [(erster, letzter Tag)], 24 h gecacht. Fehler fallen still weg."""
+    cached = cache.get(HOLIDAYS_KEY)
+    if cached is not None:
+        return cached
+    try:
+        result = _rpc(session, "getHolidays") or []
+        holidays = [(_parse_untis_date(h['startDate']), _parse_untis_date(h['endDate'])) for h in result]
+    except DeadlineExceeded:
+        raise
+    except Exception as exc:
+        _log_failure('getHolidays', exc)
+        return []
+    cache.set(HOLIDAYS_KEY, holidays, HOLIDAYS_SECONDS)
+    return holidays
 
 
 def _day_label(day: date, today: date) -> str:
@@ -255,9 +284,14 @@ def _names(elements, key='name'):
     return ', '.join(e[key] for e in elements or [] if e.get(key))
 
 
-def _row(class_name, subject, teacher, teacher_old, room, room_old, kind, note):
-    return {'class': class_name, 'subject': subject, 'teacher': teacher, 'teacher_old': teacher_old,
-            'room': room, 'room_old': room_old, 'kind': kind, 'note': note or ''}
+def _name_list(elements, key='name'):
+    return [e[key] for e in elements or [] if e.get(key)]
+
+
+def _row(classes, subject, teacher, teacher_old, room, room_old, kind, note):
+    return {'classes': list(classes), 'group': '', 'subject': subject, 'teacher': teacher,
+            'teacher_old': teacher_old, 'room': room, 'room_old': room_old, 'kind': kind,
+            'kind_label': KIND_LABELS[kind], 'note': note or ''}
 
 
 def _call_substitutions(session, start: date, end: date):
@@ -270,7 +304,7 @@ def _fetch_substitution_entries(session, start: date, end: date):
     result = _call_substitutions(session, start, end)
     entries = []
     for item in result or []:
-        row = _row(_names(item.get('kl')), _names(item.get('su')),
+        row = _row(_name_list(item.get('kl')), _names(item.get('su')),
                    _names(item.get('te')), _names(item.get('te'), 'orgname'),
                    _names(item.get('ro')), _names(item.get('ro'), 'orgname'),
                    KIND_BY_TYPE.get(item.get('type'), 'other'), item.get('txt'))
@@ -315,7 +349,7 @@ def _fetch_timetable_entries(session, start: date, end: date):
             class_names.setdefault(lesson['id'], []).append(klasse.get('name', ''))
     entries = []
     for lesson_id, (lesson, kind) in lessons.items():
-        row = _row(', '.join(class_names[lesson_id]), _names(lesson.get('su')),
+        row = _row(class_names[lesson_id], _names(lesson.get('su')),
                    _names(lesson.get('te')), _names(lesson.get('te'), 'orgname'),
                    _names(lesson.get('ro')), _names(lesson.get('ro'), 'orgname'),
                    kind, lesson.get('substText') or lesson.get('lstext'))
@@ -361,22 +395,23 @@ def _build_days(entries, timegrid, days, today, now_hhmm):
             if entry_day != day or (day == today and end <= now_hhmm):
                 continue
             rows.append({**row, 'periods': _period_label(timegrid, day, start, end), '_start': start})
-        rows.sort(key=lambda r: (_natural_key(r['class']), r['_start']))
+        rows.sort(key=lambda r: (_natural_key(', '.join(r['classes'])), r['_start']))
         rows = [{k: r[k] for k in ROW_KEYS} for r in rows]
         result.append({'date': day.isoformat(), 'label': _day_label(day, today), 'rows': merge_periods(rows)})
     return result
 
 
 def _unavailable():
-    return {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None}
+    return {'source': 'unavailable', 'news': None, 'days': [], 'fetched_at': None,
+            'updated_at': None}
 
 
-def _load(settings, now: datetime):
+def _load(settings, now: datetime, start: date | None = None, count: int = 2):
     local_now = timezone.localtime(now)
     today = local_now.date()
-    days = school_days(today)
     session = _login(settings, deadline=time.monotonic() + DEADLINE_SECONDS)
     try:
+        days = school_days(start or today, max(count, 1), _untis_holidays(session))
         try:
             entries = _fetch_substitution_entries(session, days[0], days[-1])
             source = 'substitutions'
@@ -391,12 +426,12 @@ def _load(settings, now: datetime):
         _logout(session)
     now_hhmm = local_now.hour * 100 + local_now.minute
     return {'source': source, 'news': news, 'days': _build_days(entries, timegrid, days, today, now_hhmm),
-            'fetched_at': now.isoformat()}
+            'fetched_at': now.isoformat(), 'updated_at': None}
 
 
-def _relevant_last_good(today: date):
+def _relevant_last_good(today: date, suffix=''):
     """Letztes gutes Ergebnis, nur mit Tagen ab heute und neu beschriftet; sonst None."""
-    last_good = cache.get(LAST_GOOD_KEY)
+    last_good = cache.get(LAST_GOOD_KEY + suffix)
     if not last_good:
         return None
     days = [{**d, 'label': _day_label(date.fromisoformat(d['date']), today)}
@@ -414,9 +449,11 @@ def _record_failure(now: datetime):
         _save_source('unavailable', now)
 
 
-def get_substitutions(now: datetime) -> dict:
-    """Vertretungen für heute und den nächsten Schultag, gecacht (Spec §4.3)."""
-    cached = cache.get(CACHE_KEY)
+def get_substitutions(now: datetime, *, start: date | None = None, count: int = 2) -> dict:
+    """Vertretungen für `count` Schultage ab `start` (Standard: heute, 2), gecacht (Spec §4.3)."""
+    # Nur abweichende Abfragen bekommen eigene Cache-Schlüssel.
+    suffix = f':{start.isoformat()}:{count}' if start is not None or count != 2 else ''
+    cached = cache.get(CACHE_KEY + suffix)
     if cached is not None:
         return cached
     today = timezone.localtime(now).date()
@@ -424,24 +461,24 @@ def get_substitutions(now: datetime) -> dict:
     if settings is None:
         _save_source('unavailable', now)
         result = _unavailable()
-        cache.set(CACHE_KEY, result, CACHE_SECONDS_UNAVAILABLE)
+        cache.set(CACHE_KEY + suffix, result, CACHE_SECONDS_UNAVAILABLE)
         return result
     if not cache.add(LOCK_KEY, 1, LOCK_SECONDS):
         # Ein anderer Worker lädt gerade: nicht warten.
-        return _relevant_last_good(today) or _unavailable()
+        return _relevant_last_good(today, suffix) or _unavailable()
     try:
         try:
-            result = _load(settings, now)
+            result = _load(settings, now, start, count)
         except Exception as exc:
             _log_failure('Abruf', exc)
             _record_failure(now)
-            result = _relevant_last_good(today) or _unavailable()
-            cache.set(CACHE_KEY, result, CACHE_SECONDS_UNAVAILABLE)
+            result = _relevant_last_good(today, suffix) or _unavailable()
+            cache.set(CACHE_KEY + suffix, result, CACHE_SECONDS_UNAVAILABLE)
             return result
         cache.delete(FAILURES_KEY)
         _save_source(result['source'], now)
-        cache.set(CACHE_KEY, result, CACHE_SECONDS)
-        cache.set(LAST_GOOD_KEY, result, LAST_GOOD_SECONDS)
+        cache.set(CACHE_KEY + suffix, result, CACHE_SECONDS)
+        cache.set(LAST_GOOD_KEY + suffix, result, LAST_GOOD_SECONDS)
         return result
     finally:
         cache.delete(LOCK_KEY)

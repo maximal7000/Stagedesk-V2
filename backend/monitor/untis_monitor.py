@@ -16,16 +16,13 @@ import requests
 from django.core.cache import cache
 from django.utils import timezone
 
-from .webuntis import _strip_html
+from .webuntis import ROW_KEYS, _strip_html
 
 TIMEOUT = 5
 FORMAT_CACHE_SECONDS = 3600
 FORMAT_CACHE_PREFIX = 'monitor:untis-monitor:format:'
 
 FORMAT_PRESETS = {'students_2': 'vplan-schueler', 'students_1': 'vplan-schueler-1', 'teachers': 'vplan-lehrer'}
-
-ROW_KEYS = ['classes', 'group', 'periods', 'subject', 'teacher', 'teacher_old', 'room', 'room_old',
-            'kind', 'kind_label', 'note']
 
 # Spalten einer Zeile in fester Reihenfolge: (Format-Option, Feld). Feld None = verwerfen.
 # Eine Spalte ist nur vorhanden, wenn ihre Option im Format gesetzt ist.
