@@ -19,7 +19,7 @@ from . import push
 from .models import (
     DisplayView, Announcement, MediaFile, Screen, Exam, WebUntisLink,
     DisplayEvent, DisplayEventScreen, ExamTemplate, MonitorSettings,
-    generate_access_key,
+    generate_access_key, Device,
 )
 from .validation import validate_view_data as _validate_view_data
 from .validation import validate_screen_device_data, validate_settings_device_data
@@ -49,7 +49,7 @@ from .schemas import (
     ExamTemplateSchema, ExamTemplateCreateSchema,
     MonitorSettingsSchema, MonitorSettingsUpdateSchema,
 )
-from . import display, media, oepnv
+from . import devices, display, media, oepnv
 from .display import _fetch_disruptions  # Admin-Störungsliste; Datenquellen liegen in display.py
 from .consumers import push_power_to_all
 from .permissions import _require_perm
@@ -743,7 +743,11 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
 def delete_screen(request, id: int):
     _require_perm(request, 'monitor.setup')
     screen = get_object_or_404(Screen, id=id)
-    screen.delete()
+    with transaction.atomic():
+        device = Device.objects.filter(screen=screen).first()
+        if device is not None:
+            devices.unpair(device)  # Token zurückziehen und Verbindung schließen, sonst bleibt das Gerät aktiv
+        screen.delete()
     push.notify_changed_on_commit()
     return {"success": True}
 

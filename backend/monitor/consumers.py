@@ -201,7 +201,7 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             while True:
                 await asyncio.sleep(TICK_INTERVAL)
                 power = await self._get_power_state()
-                if power != self._last_power:
+                if power is not None and power != self._last_power:
                     await self._send_power(power)
         except asyncio.CancelledError:
             return
@@ -230,7 +230,8 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
 
     async def _send_current_power(self):
         power = await self._get_power_state()
-        await self._send_power(power)
+        if power is not None:
+            await self._send_power(power)
 
     async def _send_power(self, power: bool):
         try:
@@ -248,7 +249,8 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             power = await self._get_power_state()
         else:
             power = bool(event["power"])
-        await self._send_power(power)
+        if power is not None:
+            await self._send_power(power)
 
     async def device_close(self, event):
         """Token zurückgezogen oder Gerät entkoppelt (push.close_device_sockets)."""
@@ -336,17 +338,23 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def _update_gate(self):
         from . import devices
+        from .models import DeviceEvent
         screen = self.device.screen
-        return devices.update_gate(screen, timezone.now())
+        allowed, reason = devices.update_gate(screen, timezone.now())
+        if not allowed:
+            DeviceEvent.objects.create(device=self.device, screen=screen, kind='update',
+                                       text=f'Update oder Neustart verschoben: {reason}'[:300])
+        return allowed, reason
 
     @database_sync_to_async
-    def _get_power_state(self) -> bool:
+    def _get_power_state(self):
+        """Soll-Zustand des Bildschirms; None, wenn er nicht mehr existiert (nichts schalten)."""
         from .models import Screen
         try:
             screen = Screen.objects.get(slug=self.slug)
             return screen.get_power_state()
         except Screen.DoesNotExist:
-            return True
+            return None
 
     @database_sync_to_async
     def _save_cec_status(self, status: str) -> None:

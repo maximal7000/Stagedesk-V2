@@ -296,6 +296,18 @@ class UnpairRevokeTest(PairingTestBase):
         self.assertTrue(DeviceEvent.objects.filter(kind='unpaired', device=self.device).exists())
         close.assert_called_once_with(self.device)
 
+    def test_delete_screen_unpairs_device(self):
+        self.grant('monitor.setup')
+        with mock.patch('monitor.push.close_device_sockets') as close, \
+                self.captureOnCommitCallbacks(execute=True):
+            r = self.client.delete(f'/api/monitor/screens/{self.screen.id}', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.device.refresh_from_db()
+        self.assertIsNone(self.device.screen)
+        self.assertIsNotNone(self.device.revoked_at)
+        self.assertIsNone(Device.for_token(self.raw))
+        close.assert_called_once_with(self.device)
+
     def test_revoke(self):
         with mock.patch('monitor.push.close_device_sockets') as close, \
                 self.captureOnCommitCallbacks(execute=True):
