@@ -570,7 +570,7 @@ export default function ScreenDetail() {
               {canDevices && <DeviceLog screenId={screenId} reloadKey={logKey} />}
             </div>
             {isPaired(device)
-              ? <DeviceBox device={device} screen={screen} can={hasPermission} onChanged={reloadDevices} />
+              ? <DeviceBox device={device} screen={screen} can={hasPermission} onChanged={reloadDevices} onReload={canSetup && !canDevices ? reload : null} />
               : <DeviceSection screen={screen} device={device} devicesError={devicesError} now={now} onReload={canSetup ? reload : null} />}
           </div>
           <SaveBar count={dirtyCount} onSave={saveAll} onDiscard={discard} saving={display.saving || power.saving || deviceDraft.saving} />

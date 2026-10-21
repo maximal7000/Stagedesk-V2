@@ -34,38 +34,49 @@ async function fetchEvents(screenId, group) {
 export default function DeviceLog({ screenId, reloadKey = 0 }) {
   const filterId = useId()
   const [filter, setFilter] = useState('all')
-  const [state, setState] = useState({ loading: true, events: [], error: null })
+  const [state, setState] = useState({ loading: true, events: [], error: null, filter: 'all' })
 
+  const changeFilter = (value) => {
+    setFilter(value)
+    setState({ loading: true, events: [], error: null, filter: value })
+  }
+
+  // Filterwechsel: Ladeanzeige (changeFilter). Neuladen im Takt (reloadKey): die Tabelle bleibt stehen, ein Fehler erscheint als Zeile.
   useEffect(() => {
     let alive = true
     const group = LOG_GROUPS.find((g) => g.value === filter) ?? LOG_GROUPS[0]
     fetchEvents(screenId, group).then(
-      (events) => { if (alive) setState({ loading: false, events, error: null }) },
-      (error) => { if (alive) setState({ loading: false, events: [], error }) },
+      (events) => { if (alive) setState({ loading: false, events, error: null, filter }) },
+      (error) => { if (alive) setState((s) => (s.events.length ? { ...s, error } : { loading: false, events: [], error, filter })) },
     )
     return () => { alive = false }
   }, [screenId, filter, reloadKey])
+
+  const failure = state.error && (
+    <p role="alert" className="text-sm text-bad mb-3">
+      Das Protokoll konnte nicht geladen werden. {errorText(state.error, 'Bitte die Seite neu laden.')}
+    </p>
+  )
 
   return (
     <Section title="Protokoll" data-section="log"
       aside={(
         <span className="flex items-center gap-2">
           <label htmlFor={filterId} className="text-xs text-fg-subtle">Art</label>
-          <select id={filterId} value={filter} onChange={(e) => setFilter(e.target.value)} className={`${fieldClass} !w-auto py-1`}>
+          <select id={filterId} value={filter} onChange={(e) => changeFilter(e.target.value)} className={`${fieldClass} !w-auto py-1`}>
             {LOG_GROUPS.map((g) => <option key={g.value} value={g.value}>{g.label}</option>)}
           </select>
         </span>
       )}>
-      {state.error ? (
-        <p role="alert" className="text-sm text-bad">
-          Das Protokoll konnte nicht geladen werden. {errorText(state.error, 'Bitte die Seite neu laden.')}
-        </p>
+      {state.error && state.events.length === 0 ? (
+        failure
       ) : state.loading ? (
         <p className="text-sm text-fg-subtle">Lädt…</p>
       ) : state.events.length === 0 ? (
         <p className="text-sm text-fg-muted">Noch keine Einträge.</p>
       ) : (
         <div className="overflow-x-auto">
+          {failure}
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-fg-subtle">

@@ -71,4 +71,30 @@ describe('DeviceLog', () => {
     await mount()
     expect(container.querySelector('[role="alert"]').textContent).toContain('Das Protokoll konnte nicht geladen werden.')
   })
+
+  it('Fehler beim Neuladen: Tabelle bleibt, dazu eine Fehlerzeile', async () => {
+    const view = (key) => createElement(DeviceLog, { screenId: 1, reloadKey: key })
+    container = document.createElement('div')
+    document.body.appendChild(container)
+    root = createRoot(container)
+    await act(async () => { root.render(view(0)) })
+    api.getScreenEvents.mockImplementation(() => Promise.reject(Object.assign(new Error('x'), { response: { status: 503, data: {} } })))
+    await act(async () => { root.render(view(1)) })
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(3)
+    expect(container.querySelector('[role="alert"]').textContent).toContain('Das Protokoll konnte nicht geladen werden.')
+  })
+
+  it('Filterwechsel zeigt die Ladeanzeige statt der alten Zeilen', async () => {
+    await mount()
+    let resolve
+    api.getScreenEvents.mockImplementation(() => new Promise((r) => { resolve = r }))
+    await act(async () => {
+      select().value = 'commands'
+      select().dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(container.querySelector('table')).toBeNull()
+    expect(container.textContent).toContain('Lädt')
+    await act(async () => { resolve([EVENTS[0]]) })
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1)
+  })
 })

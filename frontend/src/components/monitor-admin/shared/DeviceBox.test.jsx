@@ -184,4 +184,36 @@ describe('DeviceBox', () => {
     await click(button('Token zurückziehen', dialog))
     expect(api.revokeDevice).toHaveBeenCalledWith(5)
   })
+
+  it('sofort beendeter Befehl: Toast ohne Nachfragen', async () => {
+    api.sendDeviceCommand.mockResolvedValue({ id: 8, kind: 'reload', status: 'ok', result: '' })
+    await mount()
+    await click(button('Neu laden'))
+    expect(toast.success).toHaveBeenCalledWith('Neu laden ist ausgeführt.')
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
+    expect(api.getDeviceCommand).not.toHaveBeenCalled()
+    expect(button('Neu laden').disabled).toBe(false)
+  })
+
+  it('nach 2 Minuten ohne Ergebnis: Toast mit Hinweis auf das Protokoll, Knopf wieder frei', async () => {
+    api.sendDeviceCommand.mockResolvedValue({ id: 9, kind: 'reload', status: 'pending', result: '' })
+    api.getDeviceCommand.mockResolvedValue({ id: 9, kind: 'reload', status: 'sent', result: '' })
+    await mount()
+    await click(button('Neu laden'))
+    await act(async () => { await vi.advanceTimersByTimeAsync(120000) })
+    expect(toast.error).toHaveBeenCalledWith('Neu laden: noch keine Antwort des Geräts. Der Befehl läuft weiter, das Ergebnis steht im Protokoll.')
+    expect(button('Neu laden').disabled).toBe(false)
+    const calls = api.getDeviceCommand.mock.calls.length
+    await act(async () => { await vi.advanceTimersByTimeAsync(10000) })
+    expect(api.getDeviceCommand.mock.calls.length).toBe(calls)
+  })
+
+  it('ohne monitor.devices: Neu laden nur über onReload, keine Geräte-Befehle', async () => {
+    const onReload = vi.fn()
+    await mount({ can: (p) => p === 'monitor.setup', onReload })
+    expect(button('Pi neu starten')).toBeUndefined()
+    await click(button('Neu laden'))
+    expect(onReload).toHaveBeenCalled()
+    expect(api.sendDeviceCommand).not.toHaveBeenCalled()
+  })
 })

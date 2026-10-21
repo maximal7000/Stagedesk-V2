@@ -40,7 +40,8 @@ function LargeScreenshot({ url, caption, onClose }) {
   )
 }
 
-export default function DeviceBox({ device, screen, can, onChanged }) {
+// onReload: nur für Nutzer mit monitor.setup ohne monitor.devices (Neu laden wie vor dem Geräte-Agent)
+export default function DeviceBox({ device, screen, can, onChanged, onReload }) {
   const [busy, setBusy] = useState({}) // kind -> true, solange der Befehl läuft
   const [confirm, setConfirm] = useState(null) // { kind, ... } | 'unpair' | 'revoke'
   const [working, setWorking] = useState(false)
@@ -145,10 +146,10 @@ export default function DeviceBox({ device, screen, can, onChanged }) {
 
       {items.length > 0 && (
         <div className="mt-5 pt-4 border-t border-line-subtle" data-device-commands>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1.5">
             {items.map((item) => (
               <Button key={item.kind} size="sm" icon={ICONS[item.kind] ?? MonitorPlay} disabled={!!busy[item.kind]} onClick={() => run(item)}
-                className={item.label.length > 19 ? 'col-span-2' : ''}>
+                className="w-full justify-start">
                 {item.label}
               </Button>
             ))}
@@ -159,6 +160,13 @@ export default function DeviceBox({ device, screen, can, onChanged }) {
               Wartet auf das Gerät: {items.filter((i) => busy[i.kind]).map((i) => i.label).join(', ')}
             </p>
           )}
+        </div>
+      )}
+
+      {items.length === 0 && onReload && (
+        <div className="mt-5 pt-4 border-t border-line-subtle">
+          <Button size="sm" icon={RotateCw} className="w-full justify-start" onClick={onReload}>Neu laden</Button>
+          <p className="text-xs text-fg-subtle mt-1.5">Lädt die Anzeige im Browser des Bildschirms neu.</p>
         </div>
       )}
 

@@ -313,6 +313,18 @@ describe('ScreenDetail', () => {
       expect(box.textContent).not.toContain('Kein Gerät gekoppelt')
     })
 
+    it('mit monitor.setup ohne monitor.devices bleibt Neu laden über reloadScreen, sonst keine Befehle', async () => {
+      perms.add('monitor.setup')
+      api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
+      api.reloadScreen.mockResolvedValue({ success: true })
+      await mount()
+      expect(button('Pi neu starten')).toBeUndefined()
+      expect(button('Entkoppeln')).toBeUndefined()
+      await click(button('Neu laden'))
+      expect(api.reloadScreen).toHaveBeenCalledWith(1)
+      expect(api.sendDeviceCommand).not.toHaveBeenCalled()
+    })
+
     it('altes Skript: CEC-Stand und Hinweis', async () => {
       perms.add('monitor.setup')
       api.getDevices.mockImplementation(() => Promise.resolve([{ id: null, screen_id: 1, status: 'legacy', legacy: true, warnings: [], telemetry: {} }]))
