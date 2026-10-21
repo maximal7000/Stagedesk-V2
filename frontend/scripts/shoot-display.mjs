@@ -32,7 +32,10 @@ function parseArgs(argv) {
   const opts = { only: null, portrait: false, state: null, layout: null, scheme: null, out: OUT, build: true }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
-    if (a === '--only') opts.only = argv[++i].split(',').filter(Boolean)
+    if (a === '--only') {
+      opts.only = (argv[++i] ?? '').split(',').filter(Boolean)
+      if (!opts.only.length) throw new Error('--only erwartet einen oder mehrere Namen, z. B. --only info,split')
+    }
     else if (a === '--portrait') opts.portrait = true
     else if (a === '--state') opts.state = argv[++i]
     else if (a === '--layout') opts.layout = argv[++i]

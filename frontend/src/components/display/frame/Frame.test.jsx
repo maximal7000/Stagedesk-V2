@@ -1,4 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import Frame from './Frame'
@@ -64,5 +66,16 @@ describe('Frame', () => {
     expect(rootEl.classList.contains('d-layout-wide')).toBe(true)
     expect(rootEl.classList.contains('d-scheme-dark')).toBe(true)
     expect(el.querySelector('[data-clock="box"]')).not.toBeNull()
+  })
+})
+
+describe('display.css', () => {
+  it('Breit + Hell hat eine hellgraue Seite, damit die Kästen sich abheben', () => {
+    // jsdom wertet kein CSS aus: die Regel wird im Quelltext geprüft
+    const css = readFileSync(resolve(__dirname, '../display.css'), 'utf8')
+    const rule = css.match(/\.d-scheme-light\.d-layout-wide\s*\{([^}]*)\}/)
+    expect(rule).not.toBeNull()
+    expect(rule[1]).toMatch(/--d-bg:\s*#f2f2f2;/)
+    expect(rule[1]).toMatch(/--d-surface:\s*#ffffffcc;/)
   })
 })
