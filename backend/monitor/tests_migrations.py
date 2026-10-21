@@ -649,3 +649,35 @@ class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
 
         executor = MigrationExecutor(connection)
         executor.migrate(executor.loader.graph.leaf_nodes())
+
+
+class SubstitutionSourcesMigrationTest(MigrationTestCase):
+    """0044: Vertretungsplan-Quelle und Ausgabe aus dem alten Schalter „Morgen zeigen“."""
+    migrate_from = ('monitor', '0043_device_agent')
+    migrate_to = ('monitor', '0044_substitution_sources')
+
+    def setUpBeforeMigration(self, apps):
+        View = apps.get_model('monitor', 'DisplayView')
+        _make_view(View, 'heute', kind='substitutions', substitutions_next_day=False)
+        _make_view(View, 'zwei', kind='substitutions', substitutions_next_day=True)
+
+    def test_0044_existing_views(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        today = View.objects.get(slug='heute')
+        self.assertEqual((today.substitutions_source, today.substitutions_format,
+                          today.substitutions_custom_format, today.substitutions_show_absences,
+                          today.substitutions_show_exams, today.substitutions_next_day_from),
+                         ('monitor', 'students_1', '', True, None, '16:00'))
+        self.assertEqual(View.objects.get(slug='zwei').substitutions_format, 'students_2')
+
+    def test_0044_backward(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        View.objects.filter(slug='zwei').update(substitutions_format='students_1')
+        _make_view(View, 'lehrer', kind='substitutions', substitutions_format='teachers')
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        OldView = executor.loader.project_state([self.migrate_from]).apps.get_model('monitor', 'DisplayView')
+        self.assertEqual(dict(OldView.objects.values_list('slug', 'substitutions_next_day')),
+                         {'heute': False, 'zwei': False, 'lehrer': True})
+        self.assertNotIn('substitutions_source', {f.name for f in OldView._meta.get_fields()})

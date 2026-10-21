@@ -136,6 +136,12 @@ class DisplayViewSchema(Schema):
     media_items: list = []
     media_seconds: int = 10
     substitutions_next_day: bool = True
+    substitutions_source: str = 'monitor'
+    substitutions_format: str = 'students_2'
+    substitutions_custom_format: str = ''
+    substitutions_show_absences: bool = True
+    substitutions_show_exams: Optional[bool] = None
+    substitutions_next_day_from: str = '16:00'
     page_seconds: int = 15
     api_token: str
 
@@ -216,6 +222,13 @@ class DisplayViewUpdateSchema(Schema):
     media_items: Optional[list] = None
     media_seconds: Optional[int] = None
     substitutions_next_day: Optional[bool] = None
+    substitutions_source: Optional[str] = None
+    substitutions_format: Optional[str] = None
+    substitutions_custom_format: Optional[str] = None
+    substitutions_show_absences: Optional[bool] = None
+    # None heißt hier „wie im WebUntis-Format“ und darf gesetzt werden
+    substitutions_show_exams: Optional[bool] = None
+    substitutions_next_day_from: Optional[str] = None
     page_seconds: Optional[int] = None
 
 

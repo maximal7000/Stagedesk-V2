@@ -19,7 +19,8 @@ SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power'}
 VIEW_KEYS = {'id', 'kind', 'style', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
 DATA_KEYS = {
     'departures': {'stations', 'disruptions'},
-    'substitutions': {'source', 'news', 'days', 'fallback_url', 'fetched_at'},
+    'substitutions': {'source', 'fallback', 'group_by', 'columns', 'days', 'news', 'updated_at',
+                      'fetched_at', 'embed_url', 'mode'},
     'split': {'left', 'right', 'left_percent'},
     'media': {'seconds', 'per_screen', 'pages'},
     'info': {'announcements', 'events', 'countdown'},
@@ -31,16 +32,26 @@ MODE_KEYS = {
     'on_air': {'kind', 'display', 'side', 'text', 'animation', 'show_clock', 'since'},
 }
 
-SUBSTITUTIONS = {
-    'source': 'substitutions', 'news': 'Heute 3. Stunde Vollversammlung',
-    'days': [
-        {'date': '2026-10-19', 'label': 'Heute', 'rows': [
-            {'class': '7b', 'periods': '3-4', 'subject': 'Ma', 'teacher': 'MUE', 'teacher_old': 'SCH',
-             'room': 'A12', 'room_old': '', 'kind': 'substitution', 'note': ''}]},
-        {'date': '2026-10-20', 'label': 'Morgen', 'rows': []},
-    ],
-    'fetched_at': '2026-10-19T08:37:00+00:00',
-}
+SUBSTITUTION_ROW = {'classes': ['7b'], 'group': '', 'periods': '3.–4.', 'subject': 'Ma', 'teacher': 'MUE',
+                    'teacher_old': 'SCH', 'room': 'A12', 'room_old': '', 'kind': 'substitution',
+                    'kind_label': 'Vertretung', 'note': ''}
+
+
+def fake_load_days(server, school, format_name, *, start, count, overrides, show_absences, deadline):
+    """Monitor-Schnittstelle ohne Netz: `count` Kalendertage ab `start`."""
+    days = [{'date': (start + timedelta(days=i)).isoformat(), 'next_date': None, 'updated_at': None,
+             'absent': [], 'affected': {'classes': [], 'teachers': []},
+             'messages': [{'subject': '', 'body': 'Heute 3. Stunde Vollversammlung'}],
+             'rows': [dict(SUBSTITUTION_ROW)] if i == 0 else []} for i in range(count)]
+    return {'group_by': 'class', 'columns': {'class': True, 'subject': True, 'teacher': True,
+                                             'room': True, 'note': True},
+            'days': days, 'updated_at': '2026-10-19T07:42:00+02:00'}
+
+
+def configure_webuntis():
+    settings = MonitorSettings.load()
+    settings.webuntis_server, settings.webuntis_school = 'untis.example', 'schule'
+    settings.save()
 
 STATION = {
     'station_name': 'Lübeck Hbf', 'station_id': '8000237',
@@ -53,13 +64,14 @@ def _mock_sources():
         mock.patch('monitor.display.oepnv.fetch_departures', return_value=[dict(STATION)]),
         mock.patch('monitor.display.oepnv.fetch_disruptions_nahsh', return_value=[]),
         mock.patch('monitor.display.oepnv.fetch_disruptions_swl', return_value=[]),
-        mock.patch('monitor.display.webuntis.get_substitutions', return_value=SUBSTITUTIONS),
+        mock.patch('monitor.substitutions.untis_monitor.load_days', side_effect=fake_load_days),
     ]
 
 
 class DisplayTestBase(TestCase):
     def setUp(self):
         cache.clear()
+        configure_webuntis()
         self.now = timezone.now()
         for p in _mock_sources():
             p.start()
@@ -168,8 +180,8 @@ class ContractTest(DisplayTestBase):
         view = self.view('substitutions', webuntis_url='https://example.org/untis')
         screen = Screen.objects.create(name='Halle', slug='halle', default_view=view)
         data = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()['view']['data']
-        self.assertEqual(data, {'source': None, 'news': None, 'days': [],
-                                'fallback_url': 'https://example.org/untis', 'fetched_at': None})
+        self.assertEqual((data['source'], data['days'], data['mode'], data['embed_url']),
+                         (None, [], 'embed', 'https://example.org/untis'))
         data = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': 'falsch'}).json()
         self.assertEqual(data['view']['data']['days'], [])
         # Schlüssel eines anderen Bildschirms gilt nicht
@@ -179,16 +191,19 @@ class ContractTest(DisplayTestBase):
         self.assertIsNotNone(screen.access_key)
 
     def test_substitutions_with_key(self):
-        view = self.view('substitutions', webuntis_url='https://example.org/untis')
+        view = self.view('substitutions', webuntis_url='https://example.org/untis',
+                         substitutions_next_day_from='')
         screen = Screen.objects.create(name='Halle', slug='halle', default_view=view)
         data = self.client.get('/api/monitor/display',
                                {'screen': 'halle', 'key': screen.access_key}).json()['view']['data']
-        self.assertEqual(data['source'], 'substitutions')
+        self.assertEqual((data['source'], data['mode'], data['fallback']), ('monitor', 'live', False))
         self.assertEqual([d['label'] for d in data['days']], ['Heute', 'Morgen'])
-        self.assertEqual(data['news'], SUBSTITUTIONS['news'])
-        self.assertEqual(data['fetched_at'], SUBSTITUTIONS['fetched_at'])
+        self.assertEqual(data['days'][0]['messages'][0]['body'], 'Heute 3. Stunde Vollversammlung')
+        self.assertEqual(data['days'][0]['rows'][0]['classes_label'], '7b')
+        self.assertEqual(data['updated_at'], '2026-10-19T07:42:00+02:00')
+        self.assertIsNotNone(data['fetched_at'])
 
-        view.substitutions_next_day = False
+        view.substitutions_format = 'students_1'
         view.save()
         data = self.client.get('/api/monitor/display',
                                {'bildschirm': 'halle', 'key': screen.access_key}).json()['view']['data']
@@ -382,6 +397,41 @@ class PreviewValidationTest(PreviewTestBase):
         self.assert_rejected({'view': {'id': self.saved.id, 'style': 'bunt'}}, 'Stil')
         self.assert_rejected({'view': {'on_air_behavior': 'flash'}}, 'On-Air')
         self.assert_rejected({'view': {'split_left': 'kantine'}}, 'Split')
+
+    def test_invalid_substitution_fields_rejected(self):
+        self.assert_rejected({'view': {'substitutions_source': 'ical'}}, 'Datenquelle')
+        self.assert_rejected({'view': {'substitutions_format': 'eltern'}}, 'Ausgabe')
+        for value in ('16 Uhr', '24:00', '7:30'):
+            with self.subTest(value=value):
+                self.assert_rejected({'view': {'substitutions_next_day_from': value}},
+                                     'Uhrzeit ungültig: bitte im Format HH:MM eintragen oder leer lassen')
+        self.assert_rejected({'view': {'substitutions_custom_format': 'x' * 101}}, 'Eigenes Format')
+
+    def test_substitution_fields_accepted(self):
+        for value in ('', '07:30', None):
+            with self.subTest(value=value):
+                r = self.post_preview({'view': {'id': self.saved.id, 'kind': 'substitutions',
+                                                'substitutions_next_day_from': value,
+                                                'substitutions_show_exams': None,
+                                                'substitutions_source': 'account',
+                                                'substitutions_format': 'custom',
+                                                'substitutions_custom_format': 'vplan-aula'}})
+                self.assertEqual(r.status_code, 200, r.content)
+
+    def test_save_substitution_fields(self):
+        view = self.view('substitutions', substitutions_show_exams=True)
+        r = self.client.put(f'/api/monitor/config?view_id={view.id}', {
+            'substitutions_source': 'embed', 'substitutions_format': 'teachers',
+            'substitutions_show_exams': None, 'substitutions_show_absences': False,
+            'substitutions_next_day_from': ''}, content_type='application/json',
+            HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200, r.content)
+        body = r.json()
+        self.assertEqual((body['substitutions_source'], body['substitutions_format'],
+                          body['substitutions_show_exams'], body['substitutions_show_absences'],
+                          body['substitutions_next_day_from']), ('embed', 'teachers', None, False, ''))
+        view.refresh_from_db()
+        self.assertIsNone(view.substitutions_show_exams)
 
     def test_invalid_countdown_date_rejected(self):
         self.assert_rejected({'view': {'custom_countdown_date': 'morgen früh'}}, 'Countdown')

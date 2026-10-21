@@ -14,7 +14,7 @@ import urllib.request
 from django.core.cache import cache
 from django.utils import timezone
 
-from . import oepnv, webuntis
+from . import oepnv, substitutions
 from .models import Announcement, DisplayView, MediaFile, MonitorSettings
 from .power import compute_power_state
 
@@ -23,7 +23,8 @@ PREVIEW_CACHE_PREFIX = 'monitor:preview:'
 PREVIEW_SECONDS = 600
 _PREVIEW_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{32}$')
 # Felder, die im Entwurf ausdrücklich geleert werden dürfen
-_NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date'}
+_NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date',
+                          'substitutions_show_exams'}
 
 
 def _iso(value):
@@ -206,24 +207,22 @@ def _departures_data(view):
     return {'stations': stations, 'disruptions': disruptions}
 
 
-def _substitutions_data(view, key_ok, now, compact=False):
-    """Vertretungen nur mit gültigem Schlüssel (Spec §4.1); sonst nur der iframe-Rückfall."""
+def _substitutions_data(view, key_ok, now, compact=False, single_day=False):
+    """Vertretungen nur mit gültigem Schlüssel (Spec §4.1); sonst nur die eingebettete Seite.
+
+    `mode` 'embed': die Anzeige bettet `embed_url` ein (gewählt, Ausweichen oder ohne Schlüssel).
+    """
     full, next_day = view.get_webuntis_url(), view.get_webuntis_url_next_day()
-    fallback_url = (next_day or full) if compact else (full or next_day)
-    if not key_ok:
-        return {'source': None, 'news': None, 'days': [], 'fallback_url': fallback_url or None,
-                'fetched_at': None}
-    result = webuntis.get_substitutions(now)
-    days = list(result.get('days') or [])
-    if not view.substitutions_next_day:
-        days = days[:1]
-    return {'source': result.get('source'), 'news': result.get('news'), 'days': days,
-            'fallback_url': fallback_url or None, 'fetched_at': result.get('fetched_at')}
+    embed_url = (next_day or full) if compact else (full or next_day)
+    result = substitutions.load(view, now, single_day=single_day) if key_ok else substitutions.empty()
+    live = result['source'] not in (None, 'unavailable')
+    return {**result, 'embed_url': embed_url or None, 'mode': 'live' if live else 'embed'}
 
 
 def _split_side(view, content, key_ok, now):
     if content in ('substitutions', 'webuntis'):
-        return {'kind': 'substitutions', 'data': _substitutions_data(view, key_ok, now, compact=True)}
+        return {'kind': 'substitutions',
+                'data': _substitutions_data(view, key_ok, now, compact=True, single_day=True)}
     if content == 'departures':
         return {'kind': 'departures', 'data': _departures_data(view)}
     return {'kind': content, 'data': None}
@@ -330,7 +329,7 @@ def _info_data(view, now):
             'countdown': countdown}
 
 
-def _rotation_data(view, key_ok, now):
+def _rotation_data(view, key_ok, now, single_day):
     items = []
     for item in view.rotation_items or []:
         if not isinstance(item, dict):
@@ -341,15 +340,15 @@ def _rotation_data(view, key_ok, now):
         seconds = item.get('seconds')
         if isinstance(seconds, bool) or not isinstance(seconds, int):
             seconds = 15
-        items.append({'seconds': seconds, 'view': _view_object(target, key_ok, now)})
+        items.append({'seconds': seconds, 'view': _view_object(target, key_ok, now, single_day)})
     return {'items': items}
 
 
-def _view_data(view, key_ok, now):
+def _view_data(view, key_ok, now, single_day):
     if view.kind == 'departures':
         return _departures_data(view)
     if view.kind == 'substitutions':
-        return _substitutions_data(view, key_ok, now)
+        return _substitutions_data(view, key_ok, now, single_day=single_day)
     if view.kind == 'split':
         return _split_data(view, key_ok, now)
     if view.kind == 'media':
@@ -357,11 +356,12 @@ def _view_data(view, key_ok, now):
     if view.kind == 'info':
         return _info_data(view, now)
     if view.kind == 'rotation':
-        return _rotation_data(view, key_ok, now)
+        return _rotation_data(view, key_ok, now, single_day)
     return None
 
 
-def _view_object(view, key_ok, now):
+def _view_object(view, key_ok, now, single_day=False):
+    """`single_day`: der Sondermodus teilt den Bildschirm, der Vertretungsplan zeigt einen Tag."""
     qr = None
     if view.show_qr_code and view.qr_code_url:
         qr = {'url': view.qr_code_url, 'label': view.qr_code_label}
@@ -373,7 +373,7 @@ def _view_object(view, key_ok, now):
         'show_weather': view.show_weather,
         'weather': _fetch_weather(view),
         'qr': qr,
-        'data': _view_data(view, key_ok, now),
+        'data': _view_data(view, key_ok, now, single_day),
     }
 
 
@@ -413,12 +413,14 @@ def build_payload(screen, view, *, key_ok, now, preview=False):
     screen_data = _screen_object(screen, now) if screen else None
     if screen_data and preview:
         screen_data['power'] = True
+    mode = _mode(screen, view, MonitorSettings.load()) if view and not preview else None
+    single_day = bool(mode) and mode.get('display') == 'split'
     return {
         'generated_at': now.isoformat(),
         'reload_requested_at': _iso(screen.reload_requested_at) if screen else None,
         'screen': screen_data,
-        'mode': _mode(screen, view, MonitorSettings.load()) if view and not preview else None,
-        'view': _view_object(view, key_ok, now) if view else None,
+        'mode': mode,
+        'view': _view_object(view, key_ok, now, single_day) if view else None,
     }
 
 

@@ -23,7 +23,10 @@ CHOICE_FIELDS = {
     'pdf_mode': 'Medien-Modus',
     'transit_font_size': 'Schriftgröße der Abfahrten',
     'transit_disruption_position': 'Position der Störungen',
+    'substitutions_source': 'Datenquelle',
+    'substitutions_format': 'Ausgabe',
 }
+NEXT_DAY_FROM_MESSAGE = "Uhrzeit ungültig: bitte im Format HH:MM eintragen oder leer lassen"
 
 
 # Zahlenfelder → (Bezeichnung, kleinster, größter Wert); Bereiche wie in den Editoren des Admin
@@ -84,6 +87,28 @@ def _check_stops(stops):
                 raise HttpError(422, f"Haltestelle „{name}“: {number_message(label, lo, hi)}")
 
 
+def _check_next_day_from(data):
+    """„Nächsten Schultag zeigen ab“: leer (aus) oder HH:MM."""
+    if 'substitutions_next_day_from' not in data:
+        return
+    value = data['substitutions_next_day_from']
+    if value is None:
+        value = ''
+    if not isinstance(value, str) or (value.strip() and not _HHMM.match(value.strip())):
+        raise HttpError(422, NEXT_DAY_FROM_MESSAGE)
+    data['substitutions_next_day_from'] = value.strip()
+
+
+def _check_custom_format(data):
+    """Eigenes Format: Formatname aus WebUntis, leer erlaubt (dann gilt die nächste Quelle)."""
+    if 'substitutions_custom_format' not in data:
+        return
+    value = (data['substitutions_custom_format'] or '').strip()
+    if len(value) > 100:
+        raise HttpError(422, "Eigenes Format: bitte einen Formatnamen mit höchstens 100 Zeichen eintragen.")
+    data['substitutions_custom_format'] = value
+
+
 def _clamp_int(v, lo, hi):
     try:
         return max(lo, min(hi, int(v)))
@@ -127,6 +152,8 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     Prüft Auswahlwerte, klemmt Zahlenbereiche, prüft Zeitfenster, Countdown und Rotationseinträge."""
     _check_choices(data)
     _check_numbers(data)
+    _check_next_day_from(data)
+    _check_custom_format(data)
     if 'transit_stops' in data:
         _check_stops(data['transit_stops'])
     for key, lo, hi in [

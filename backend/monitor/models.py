@@ -117,7 +117,29 @@ class DisplayView(models.Model):
         help_text='[{"view_id": 3, "seconds": 15}]')
     media_items = models.JSONField(default=list, blank=True)
     media_seconds = models.IntegerField(default=10, help_text="Sekunden pro Medium")
+    # Nur noch für den Rückweg nach 0043; ersetzt durch substitutions_format.
     substitutions_next_day = models.BooleanField(default=True)
+    SUBSTITUTIONS_SOURCE_CHOICES = [
+        ('monitor', 'WebUntis-Vertretungsplan'),
+        ('account', 'WebUntis-Konto'),
+        ('embed', 'WebUntis-Seite einbetten'),
+    ]
+    substitutions_source = models.CharField(max_length=10, choices=SUBSTITUTIONS_SOURCE_CHOICES,
+                                            default='monitor')
+    SUBSTITUTIONS_FORMAT_CHOICES = [
+        ('students_2', 'Schüler, 2 Tage'),
+        ('students_1', 'Schüler, 1 Tag'),
+        ('teachers', 'Lehrkräfte'),
+        ('custom', 'Eigenes Format'),
+    ]
+    substitutions_format = models.CharField(max_length=12, choices=SUBSTITUTIONS_FORMAT_CHOICES,
+                                            default='students_2')
+    substitutions_custom_format = models.CharField(max_length=100, blank=True, default='')
+    substitutions_show_absences = models.BooleanField(default=True)
+    # None = wie im WebUntis-Format (showExamSupervision)
+    substitutions_show_exams = models.BooleanField(null=True, blank=True, default=None)
+    # Ab dieser Uhrzeit (HH:MM) beginnt die Anzeige mit dem nächsten Schultag; leer = aus
+    substitutions_next_day_from = models.CharField(max_length=5, blank=True, default='16:00')
     page_seconds = models.IntegerField(default=15, help_text="Sekunden pro Seite")
 
     # ─── Splitscreen (kind='split') ───

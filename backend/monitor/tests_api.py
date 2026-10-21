@@ -6,7 +6,7 @@ from core.auth import KeycloakAuth
 from users.models import Permission, UserProfile
 
 from .models import DisplayView, MonitorSettings, Screen
-from .tests_display import SUBSTITUTIONS
+from .tests_display import configure_webuntis, fake_load_days
 
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
@@ -155,7 +155,8 @@ class RegenerateScreenKeyTest(TestCase):
         old = self.screen.access_key
         self.regenerate()
         new = Screen.objects.get(id=self.screen.id).access_key
-        with mock.patch('monitor.display.webuntis.get_substitutions', return_value=SUBSTITUTIONS):
+        configure_webuntis()
+        with mock.patch('monitor.substitutions.untis_monitor.load_days', side_effect=fake_load_days):
             stale = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': old}).json()
             fresh = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': new}).json()
         self.assertEqual(stale['view']['data']['days'], [])

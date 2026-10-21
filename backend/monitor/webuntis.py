@@ -406,10 +406,12 @@ def _unavailable():
             'updated_at': None}
 
 
-def _load(settings, now: datetime, start: date | None = None, count: int = 2):
+def _load(settings, now: datetime, start: date | None = None, count: int = 2, deadline: float | None = None):
     local_now = timezone.localtime(now)
     today = local_now.date()
-    session = _login(settings, deadline=time.monotonic() + DEADLINE_SECONDS)
+    if deadline is None:
+        deadline = time.monotonic() + DEADLINE_SECONDS
+    session = _login(settings, deadline=deadline)
     try:
         days = school_days(start or today, max(count, 1), _untis_holidays(session))
         try:
@@ -449,8 +451,13 @@ def _record_failure(now: datetime):
         _save_source('unavailable', now)
 
 
-def get_substitutions(now: datetime, *, start: date | None = None, count: int = 2) -> dict:
-    """Vertretungen für `count` Schultage ab `start` (Standard: heute, 2), gecacht (Spec §4.3)."""
+def get_substitutions(now: datetime, *, start: date | None = None, count: int = 2,
+                      deadline: float | None = None) -> dict:
+    """Vertretungen für `count` Schultage ab `start` (Standard: heute, 2), gecacht (Spec §4.3).
+
+    `deadline` (time.monotonic()-Zeitpunkt) begrenzt den Abruf, wenn er Teil einer längeren Kette
+    ist; ohne Angabe gilt DEADLINE_SECONDS ab jetzt.
+    """
     # Nur abweichende Abfragen bekommen eigene Cache-Schlüssel.
     suffix = f':{start.isoformat()}:{count}' if start is not None or count != 2 else ''
     cached = cache.get(CACHE_KEY + suffix)
@@ -468,7 +475,7 @@ def get_substitutions(now: datetime, *, start: date | None = None, count: int = 
         return _relevant_last_good(today, suffix) or _unavailable()
     try:
         try:
-            result = _load(settings, now, start, count)
+            result = _load(settings, now, start, count, deadline)
         except Exception as exc:
             _log_failure('Abruf', exc)
             _record_failure(now)
