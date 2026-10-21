@@ -3,7 +3,6 @@ import json
 import logging
 import struct
 import threading
-import time
 from urllib.parse import urlsplit
 
 from .config import backoff_delays
@@ -61,19 +60,22 @@ def ws_url(server, slug):
 
 class Connection:
     def __init__(self, config, on_message, on_auth_failed, transport_factory=WebsocketTransport,
-                 delays=backoff_delays, sleep=time.sleep):
+                 delays=backoff_delays, sleep=None):
         self.config = config
         self.on_message = on_message
         self.on_auth_failed = on_auth_failed
         self.transport_factory = transport_factory
         self.delays = delays
-        self.sleep = sleep
+        self._stop_event = threading.Event()
+        self.sleep = sleep or self._stop_event.wait
+        self._got_message = False
         self._transport = None
         self._lock = threading.Lock()
         self._stopped = False
 
     def stop(self):
         self._stopped = True
+        self._stop_event.set()
         with self._lock:
             transport = self._transport
         if transport:
@@ -107,13 +109,15 @@ class Connection:
                 continue
             with self._lock:
                 self._transport = transport
-            delays = self.delays()  # connected: next outage starts at 5 s again
+            self._got_message = False
             try:
                 code = self._read(transport)
             finally:
                 with self._lock:
                     self._transport = None
                 transport.close()
+            if self._got_message:
+                delays = self.delays()  # a working connection: next outage starts at 5 s again
             if code == AUTH_FAILED_CODE:
                 self._auth_failed()
                 return
@@ -138,6 +142,7 @@ class Connection:
                 return None
             if not raw:
                 continue
+            self._got_message = True
             try:
                 message = json.loads(raw)
             except ValueError:

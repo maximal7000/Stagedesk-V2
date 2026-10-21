@@ -33,12 +33,14 @@ class FakePairing:
 
 
 class FakeConn:
-    def __init__(self, on_message, on_auth_failed, fail=False):
+    def __init__(self, cfg, on_message, on_auth_failed, fail=False):
+        self.cfg = cfg
         self.on_message, self.on_auth_failed, self.fail = on_message, on_auth_failed, fail
 
     def run_forever(self):
         self.on_message({"type": "hello", "slug": "neu", "key": "k9", "kiosk_url": "https://x/m?screen=neu"})
         if self.fail:
+            self.cfg.clear_pairing()  # the real Connection does this before the callback
             self.on_auth_failed()
 
     def send(self, msg):
@@ -55,7 +57,7 @@ class AgentTests(unittest.TestCase):
     def agent(self, conn_fail=False):
         a = Agent(self.cfg, self.pages, kiosk_set_url=self.kiosk.append,
                   pairing_factory=lambda cfg: FakePairing(cfg),
-                  connection_factory=lambda cfg, om, af: FakeConn(om, af, conn_fail))
+                  connection_factory=lambda cfg, om, af: FakeConn(cfg, om, af, conn_fail))
         return a
 
     def test_without_token_pairs_shows_code_and_local_kiosk(self):
@@ -89,3 +91,22 @@ class AgentTests(unittest.TestCase):
     def test_identity_missing_files(self):
         serial, model = read_identity(self.paths)
         self.assertEqual((serial, model), ("unknown", "unknown"))
+
+    def test_after_4003_next_run_once_starts_pairing_and_shows_code(self):
+        self.cfg.token = "T"
+        self.cfg.save()
+        a = self.agent(conn_fail=True)
+        a.run_once()
+        self.pages.log.clear()
+        a.run_once()
+        self.assertIn(("code", "482913"), self.pages.log)
+        self.assertEqual(self.kiosk[-1], "http://127.0.0.1:8765/")
+
+    def test_kiosk_url_derived_right_after_pairing(self):
+        a = self.agent()
+        a.run_once()          # pairing
+        self.kiosk.clear()
+        self.cfg.token = "T"   # connection will fail before hello in this variant
+        a.connection_factory = lambda cfg, om, af: type("C", (), {"run_forever": lambda s: None})()
+        a.run_once()
+        self.assertEqual(self.kiosk, ["https://stagedesk.t410.de/monitor?screen=s&key=k"])

@@ -28,11 +28,11 @@ class FakeHttp:
 class PairingTests(unittest.TestCase):
     def setUp(self):
         self.cfg = Config.load(make_paths(self))
-        self.clock = [T0]
+        self.clock = [0.0]
 
     def client(self, replies):
         self.http = FakeHttp(replies)
-        return PairingClient(self.cfg, self.http, serial="abc", model="Pi 4", now=lambda: self.clock[0])
+        return PairingClient(self.cfg, self.http, serial="abc", model="Pi 4", now=lambda: T0, monotonic=lambda: self.clock[0])
 
     def test_start_returns_code_and_posts_identity(self):
         c = self.client([(200, {"code": "482913", "pairing_id": "pid", "expires_at": iso(T0 + timedelta(minutes=15))})])
@@ -69,7 +69,7 @@ class PairingTests(unittest.TestCase):
         codes = []
 
         def sleep(seconds):
-            self.clock[0] += timedelta(minutes=8)
+            self.clock[0] += 8 * 60
 
         self.assertTrue(c.run(on_code=codes.append, sleep=sleep, poll_interval=5))
         self.assertEqual(codes, ["111111", "222222"])
@@ -102,3 +102,54 @@ class PairingTests(unittest.TestCase):
     def test_stop_ends_loop(self):
         c = self.client([OSError("down")] * 5)
         self.assertFalse(c.run(on_code=lambda c: None, sleep=lambda s: c.stop()))
+
+
+    def _far(self):
+        return iso(T0 + timedelta(hours=1) - timedelta(minutes=1))
+
+    def test_code_shown_again_after_network_recovers(self):
+        c = self.client([
+            (200, {"code": "111111", "pairing_id": "p1", "expires_at": self._far()}),
+            OSError("down"),
+            (202, {"status": "waiting"}),
+            (200, {"status": "paired", "token": "T", "slug": "s", "key": "k"}),
+        ])
+        events = []
+        c.run(on_code=events.append, on_unreachable=lambda: events.append("down"), sleep=lambda s: None)
+        self.assertEqual(events, ["111111", "down", "111111"])
+
+    def test_server_errors_keep_code_and_back_off(self):
+        c = self.client([
+            (200, {"code": "111111", "pairing_id": "p1", "expires_at": self._far()}),
+            (503, {}),
+            (429, {}),
+            (200, {"status": "paired", "token": "T", "slug": "s", "key": "k"}),
+        ])
+        events, sleeps = [], []
+        c.run(on_code=events.append, on_unreachable=lambda: events.append("down"), sleep=sleeps.append)
+        self.assertEqual(events, ["111111"])
+        self.assertEqual(sleeps, [5, 5, 10])
+
+    def test_malformed_answer_retries(self):
+        c = self.client([
+            (200, {"nonsense": 1}),
+            (200, {"code": "111111", "pairing_id": "p1", "expires_at": self._far()}),
+            (200, {"status": "paired"}),
+            (200, {"code": "222222", "pairing_id": "p2", "expires_at": self._far()}),
+            (200, {"status": "paired", "token": "T", "slug": "s", "key": "k"}),
+        ])
+        codes = []
+        self.assertTrue(c.run(on_code=codes.append, sleep=lambda s: None))
+        self.assertEqual(codes, ["111111", "222222"])
+
+    def test_wrong_device_clock_does_not_loop_tightly(self):
+        # expires_at already in the past by the device clock: falls back to 15 min from receipt
+        c = self.client([(200, {"code": "111111", "pairing_id": "p1", "expires_at": iso(T0 - timedelta(days=3))})])
+        c.start()
+        self.assertEqual(c._deadline, 15 * 60)
+
+    def test_lifetime_measured_from_receipt(self):
+        c = self.client([(200, {"code": "1", "pairing_id": "p", "expires_at": iso(T0 + timedelta(minutes=10))})])
+        self.clock[0] = 1000.0
+        c.start()
+        self.assertEqual(c._deadline, 1000.0 + 600)

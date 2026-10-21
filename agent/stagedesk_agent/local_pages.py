@@ -1,5 +1,6 @@
 """Local HTML pages for the kiosk (pairing code, no connection, test pattern) on 127.0.0.1."""
 import html
+import json
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -24,9 +25,18 @@ def format_code(code):
     return f"{code[:3]} {code[3:]}".strip()
 
 
+# Chromium keeps the page open, so it asks the tiny local /state endpoint every 2 s.
+_SCRIPT = """
+var last=document.body.innerHTML;
+setInterval(function(){fetch('/state',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){
+if(s.body!==last){last=s.body;document.body.innerHTML=s.body}}).catch(function(){})},2000);
+"""
+
+
 def _page(body):
     return ('<!doctype html><html lang="de"><head><meta charset="utf-8">'
-            f"<title>Stagedesk</title><style>{_STYLE}</style></head><body>{body}</body></html>")
+            f"<title>Stagedesk</title><style>{_STYLE}</style></head><body>{body}"
+            f"<script>{_SCRIPT}</script></body></html>")
 
 
 class LocalPages:
@@ -60,7 +70,7 @@ class LocalPages:
         with self._lock:
             self._pattern = (screen_name, resolution, self.clock() + seconds)
 
-    def render(self):
+    def _body(self):
         with self._lock:
             state, pattern = self._state, self._pattern
             if pattern and self.clock() >= pattern[2]:
@@ -68,23 +78,32 @@ class LocalPages:
         if pattern:
             name, resolution, _ = pattern
             bars = "".join(f'<div style="background:{c}"></div>' for c in _BARS)
-            return _page(f'<div class="grid"></div><h1>{html.escape(name)}</h1>'
-                         f"<p>{html.escape(resolution)}</p><div class=\"bars\">{bars}</div>")
+            return (f'<div class="grid"></div><h1>{html.escape(name)}</h1>'
+                    f"<p>{html.escape(resolution)}</p><div class=\"bars\">{bars}</div>")
         if state[0] == "code":
-            return _page(f"<h1>Kopplungscode {html.escape(format_code(state[1]))}</h1>"
-                         f"<p>{html.escape(PAIR_HINT)}</p>")
+            return (f"<h1>Kopplungscode {html.escape(format_code(state[1]))}</h1>"
+                    f"<p>{html.escape(PAIR_HINT)}</p>")
         if state[0] == "no_server":
-            return _page(f"<p>{html.escape(NO_SERVER)}</p>")
-        return _page("")
+            return f"<p>{html.escape(NO_SERVER)}</p>"
+        return ""
+
+    def render(self):
+        return _page(self._body())
+
+    def state(self):
+        return {"body": self._body()}
 
     def start(self):
         pages = self
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
-                body = pages.render().encode("utf-8")
+                if self.path.split("?")[0] == "/state":
+                    body, kind = json.dumps(pages.state()).encode("utf-8"), "application/json"
+                else:
+                    body, kind = pages.render().encode("utf-8"), "text/html"
                 self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Type", f"{kind}; charset=utf-8")
                 self.send_header("Cache-Control", "no-store")
                 self.send_header("Content-Length", str(len(body)))
                 self.end_headers()

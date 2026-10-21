@@ -1,14 +1,22 @@
 """Pairing with the server before the first token (spec section 3)."""
+import http.client
 import json
 import logging
+import threading
 import time
 import urllib.error
 import urllib.request
+from .config import backoff_delays
 from datetime import datetime, timedelta, timezone
 
 log = logging.getLogger("stagedesk_agent.pairing")
 POLL_INTERVAL = 5
 DEFAULT_LIFETIME = timedelta(minutes=15)
+MAX_LIFETIME = timedelta(hours=1)
+
+
+class ServerBusy(Exception):
+    """The server answered, but not usefully (429, 5xx): not a network problem."""
 
 
 def http_post(url, payload, timeout=15):
@@ -37,28 +45,39 @@ def _parse_time(value):
 
 
 class PairingClient:
-    def __init__(self, config, http_post=http_post, serial="unknown", model="unknown", now=None):
+    def __init__(self, config, http_post=http_post, serial="unknown", model="unknown", now=None,
+                 monotonic=time.monotonic):
         self.config = config
         self.http_post = http_post
         self.serial = serial
         self.model = model
         self.now = now or (lambda: datetime.now(timezone.utc))
-        self._stopped = False
-        self._expires_at = None
+        self.monotonic = monotonic
+        self._stop_event = threading.Event()
+        self._deadline = 0.0
 
     def stop(self):
-        self._stopped = True
+        self._stop_event.set()
 
     def _url(self, name):
         return f"{self.config.server.rstrip('/')}/api/monitor/agent/pair/{name}"
 
+    def _lifetime(self, value):
+        """Seconds the code stays valid, measured at receipt (immune to a wrong device clock)."""
+        expires = _parse_time(value)
+        lifetime = (expires - self.now()) if expires else DEFAULT_LIFETIME
+        if not timedelta(0) < lifetime <= MAX_LIFETIME:
+            lifetime = DEFAULT_LIFETIME
+        return lifetime.total_seconds()
+
     def start(self):
         status, body = self.http_post(self._url("start"), {"serial": self.serial, "model": self.model})
-        if status != 200 or "code" not in body:
-            raise OSError(f"pair/start answered {status}")
+        if status != 200:
+            raise ServerBusy(f"pair/start answered {status}")
+        code, pairing_id = body["code"], body["pairing_id"]
         expires = _parse_time(body.get("expires_at")) or self.now() + DEFAULT_LIFETIME
-        self._expires_at = expires
-        return body["code"], body["pairing_id"], expires
+        self._deadline = self.monotonic() + self._lifetime(body.get("expires_at"))
+        return code, pairing_id, expires
 
     def poll(self, pairing_id):
         """None while waiting, {"status": "paired"} on success, {"status": "expired"} when a new code is needed."""
@@ -73,21 +92,29 @@ class PairingClient:
             self.config.key = body["key"]
             self.config.save()
             return {"status": "paired", "slug": body["slug"]}
-        raise OSError(f"pair/poll answered {status}")
+        raise ServerBusy(f"pair/poll answered {status}")
 
-    def run(self, on_code, on_unreachable=None, sleep=time.sleep, poll_interval=POLL_INTERVAL):
+    def run(self, on_code, on_unreachable=None, sleep=None, poll_interval=POLL_INTERVAL):
         """Block until paired (True) or stopped (False). Shows a new code after expiry."""
-        pairing_id = None
-        while not self._stopped:
+        sleep = sleep or self._stop_event.wait
+        delays = backoff_delays(jitter=False)
+        pairing_id = code = None
+        unreachable = False
+        while not self._stop_event.is_set():
+            wait = poll_interval
             try:
                 if pairing_id is None:
                     code, pairing_id, _ = self.start()
                     on_code(code)
-                elif self.now() >= self._expires_at:
+                    unreachable = False
+                elif self.monotonic() >= self._deadline:
                     pairing_id = None
                     continue
                 else:
                     result = self.poll(pairing_id)
+                    if unreachable and code is not None:
+                        on_code(code)  # network is back: show the code again
+                    unreachable = False
                     if result is None:
                         pass
                     elif result["status"] == "paired":
@@ -95,9 +122,19 @@ class PairingClient:
                     else:
                         pairing_id = None
                         continue
-            except OSError as exc:
+                delays = backoff_delays(jitter=False)
+            except ServerBusy as exc:
                 log.warning("pairing: %s", exc)
-                if on_unreachable:
+                wait = next(delays)
+            except (OSError, http.client.HTTPException) as exc:
+                log.warning("pairing: %s", exc)
+                if on_unreachable and not unreachable:
                     on_unreachable()
-            sleep(poll_interval)
+                unreachable = True
+                wait = next(delays)
+            except (KeyError, ValueError, TypeError) as exc:
+                log.warning("pairing: malformed answer (%r)", exc)
+                pairing_id = None
+                wait = next(delays)
+            sleep(wait)
         return False

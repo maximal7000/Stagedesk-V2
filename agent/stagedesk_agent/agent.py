@@ -1,6 +1,8 @@
 """Wires pairing, connection and local pages together."""
 import logging
 import re
+import signal
+from urllib.parse import urlencode
 
 from .config import Config
 from .connection import Connection
@@ -67,11 +69,12 @@ class Agent:
 
     def on_auth_failed(self):
         log.warning("token rejected, starting pairing again")
-        self.config.clear_pairing()
         self.state = "pairing"
 
     def run_once(self):
         """One phase: pairing if there is no token, otherwise the connection until it ends."""
+        if self._stopped:
+            return
         if not self.config.token:
             self.state = "pairing"
             self._set_kiosk(LOCAL_URL)
@@ -83,6 +86,10 @@ class Agent:
             self.state = "connecting"
             return
         self.state = "connecting"
+        if not self.config.kiosk_url and self.config.slug and self.config.key:
+            query = urlencode({"screen": self.config.slug, "key": self.config.key})
+            self.config.kiosk_url = f"{self.config.server.rstrip('/')}/monitor?{query}"
+            self.config.save()
         if self.config.kiosk_url:
             self._set_kiosk(self.config.kiosk_url)
         self.connection = self.connection_factory(self.config, self.on_message, self.on_auth_failed)
@@ -100,6 +107,7 @@ def main():
     pages = LocalPages()
     pages.start()
     agent = Agent(config, pages)
+    signal.signal(signal.SIGTERM, lambda *_: agent.stop())
     try:
         agent.run()
     except KeyboardInterrupt:

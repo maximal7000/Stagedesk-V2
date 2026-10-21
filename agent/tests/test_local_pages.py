@@ -1,3 +1,4 @@
+import json
 import unittest
 import urllib.request
 
@@ -48,6 +49,33 @@ class LocalPageTests(unittest.TestCase):
         pages = LocalPages()
         pages.show_test_pattern("<b>x</b>", "1x1")
         self.assertNotIn("<b>x</b>", pages.render())
+
+    def test_page_polls_local_state(self):
+        html = LocalPages().render()
+        self.assertIn("setInterval", html)
+        self.assertIn("/state", html)
+        self.assertIn("2000", html)
+
+    def test_state_reflects_changes(self):
+        now = [0.0]
+        pages = LocalPages(clock=lambda: now[0])
+        pages.show_code("482913")
+        self.assertIn("482 913", pages.state()["body"])
+        pages.show_no_server()
+        self.assertIn("Keine Verbindung zum Server. Netzwerk prüfen.", pages.state()["body"])
+        pages.show_test_pattern("Mensa", "1920x1080", seconds=60)
+        self.assertIn("Mensa", pages.state()["body"])
+        now[0] = 61
+        self.assertNotIn("Mensa", pages.state()["body"])
+
+    def test_state_endpoint_over_http(self):
+        pages = LocalPages(port=0)
+        pages.start()
+        self.addCleanup(pages.stop)
+        pages.show_no_server()
+        with urllib.request.urlopen(f"http://127.0.0.1:{pages.port}/state") as resp:
+            data = json.loads(resp.read())
+        self.assertIn("Keine Verbindung", data["body"])
 
     def test_serves_over_http(self):
         pages = LocalPages(port=0)

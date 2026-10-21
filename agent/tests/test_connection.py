@@ -92,11 +92,6 @@ class ConnectionTests(unittest.TestCase):
         self.assertEqual(len(f.calls), 3)
 
     def test_backoff_resets_after_successful_connect(self):
-        seq = iter([5, 10, 20])
-
-        def gen():
-            return seq
-
         f = Factory([OSError("x"), FakeTransport(["{}", ConnectionClosed(1006)]),
                      OSError("y"), FakeTransport([ConnectionClosed(4003)])])
         c = Connection(self.cfg, self.messages.append, lambda: None, transport_factory=f,
@@ -104,6 +99,29 @@ class ConnectionTests(unittest.TestCase):
         c.run_forever()
         # fail(5), drop after a good connect (reset -> 5), fail (10)
         self.assertEqual(self.sleeps, [5, 5, 10])
+
+    def test_backoff_not_reset_when_no_message_arrived(self):
+        f = Factory([FakeTransport([ConnectionClosed(1006)]), OSError("x"),
+                     FakeTransport([ConnectionClosed(4003)])])
+        c = Connection(self.cfg, self.messages.append, lambda: None, transport_factory=f,
+                       delays=lambda: iter([5, 10, 20]), sleep=self.sleeps.append)
+        c.run_forever()
+        self.assertEqual(self.sleeps, [5, 10])
+
+    def test_stop_interrupts_backoff_wait(self):
+        import threading
+        import time
+        f = Factory([OSError("x")])
+        c = Connection(self.cfg, self.messages.append, lambda: None, transport_factory=f,
+                       delays=lambda: iter([60]))
+        worker = threading.Thread(target=c.run_forever)
+        worker.start()
+        time.sleep(0.1)
+        started = time.monotonic()
+        c.stop()
+        worker.join(5)
+        self.assertFalse(worker.is_alive())
+        self.assertLess(time.monotonic() - started, 2)
 
     def test_bad_json_ignored(self):
         t = FakeTransport(["not json", ConnectionClosed(4003)])
