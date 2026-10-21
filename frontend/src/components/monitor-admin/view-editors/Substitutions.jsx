@@ -68,7 +68,7 @@ function NextDayField({ draft, set }) {
         <input type="checkbox" aria-label="Nächsten Schultag zeigen ab" checked={on} className="w-4 h-4 accent-accent"
           onChange={(e) => set('substitutions_next_day_from', e.target.checked ? DEFAULT_NEXT_DAY_FROM : '')} />
         <input id={id} type="time" aria-label="Uhrzeit für den nächsten Schultag" value={value} disabled={!on}
-          onChange={(e) => set('substitutions_next_day_from', e.target.value)} className={`${fieldClass} max-w-32 tabular-nums`} />
+          onChange={(e) => { if (e.target.value) set('substitutions_next_day_from', e.target.value) }} className={`${fieldClass} max-w-32 tabular-nums`} />
         {!on && <span className="text-xs text-fg-subtle">Aus: die Anzeige bleibt beim heutigen Tag.</span>}
       </div>
     </Field>
@@ -113,13 +113,17 @@ export default function SubstitutionsEditor({ draft, set }) {
           <Checkbox label="Abwesenheiten anzeigen" checked={draft.substitutions_show_absences !== false}
             onChange={(v) => set('substitutions_show_absences', v)} help="Abwesende und betroffene Lehrkräfte und Klassen über der Tabelle." />
         )}
-        <Field label="Klausuren anzeigen">
-          <div className="max-w-sm">
-            <Segmented label="Klausuren anzeigen" options={EXAM_OPTIONS} value={examValue}
-              onChange={(v) => set('substitutions_show_exams', EXAM_OPTIONS.find((o) => o.value === v).exams)} />
-          </div>
-        </Field>
-        <NextDayField draft={draft} set={set} />
+        {source !== 'embed' && (
+          <>
+            <Field label="Klausuren anzeigen">
+              <div className="max-w-sm">
+                <Segmented label="Klausuren anzeigen" options={EXAM_OPTIONS} value={examValue}
+                  onChange={(v) => set('substitutions_show_exams', EXAM_OPTIONS.find((o) => o.value === v).exams)} />
+              </div>
+            </Field>
+            <NextDayField draft={draft} set={set} />
+          </>
+        )}
         <PageSecondsField draft={draft} set={set} />
         {source === 'embed' && (
           <>

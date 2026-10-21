@@ -41,6 +41,8 @@ describe('SubstitutionsEditor', () => {
     expect(text()).toContain('Die Vertretungen, wie WebUntis sie für Bildschirme bereitstellt. Kein Konto nötig.')
     expect(text()).toContain('Ausgabe')
     expect(text()).toContain('Abwesenheiten anzeigen')
+    expect(text()).toContain('Klausuren anzeigen')
+    expect(text()).toContain('Nächsten Schultag zeigen ab')
     expect(text()).not.toContain('Formatname')
     expect(text()).not.toContain('Rückfall-Link')
     expect(text()).not.toContain('Morgen zeigen')
@@ -58,6 +60,7 @@ describe('SubstitutionsEditor', () => {
     expect(text()).not.toContain('Abwesenheiten anzeigen')
     expect(text()).not.toContain('Rückfall-Link')
     expect(text()).toContain('Klausuren anzeigen')
+    expect(text()).toContain('Nächsten Schultag zeigen ab')
     expect(text()).toContain('Blättertakt')
   })
 
@@ -66,6 +69,9 @@ describe('SubstitutionsEditor', () => {
     expect(text()).toContain('Zeigt die Originalseite von WebUntis statt der eigenen Darstellung.')
     expect(text()).toContain('Rückfall-Link')
     expect(text()).not.toContain('Ausgabe')
+    expect(text()).not.toContain('Klausuren anzeigen')
+    expect(text()).not.toContain('Nächsten Schultag zeigen ab')
+    expect(text()).toContain('Blättertakt')
   })
 
   it('setzt die Quelle und die Ausgabe', async () => {
@@ -96,5 +102,15 @@ describe('SubstitutionsEditor', () => {
     expect(input('Uhrzeit für den nächsten Schultag').disabled).toBe(true)
     await act(async () => container.querySelector('input[type="checkbox"][aria-label="Nächsten Schultag zeigen ab"]').click())
     expect(calls).toEqual([['substitutions_next_day_from', '16:00']])
+  })
+
+  it('ignoriert eine geleerte Uhrzeit und übernimmt eine neue', async () => {
+    const calls = await mount()
+    const time = input('Uhrzeit für den nächsten Schultag')
+    const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    for (const v of ['', '15:30']) {
+      await act(async () => { setValue.call(time, v); time.dispatchEvent(new Event('input', { bubbles: true })) })
+    }
+    expect(calls).toEqual([['substitutions_next_day_from', '15:30']])
   })
 })
