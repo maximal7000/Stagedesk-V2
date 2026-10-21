@@ -96,6 +96,17 @@ describe('telemetryGroups', () => {
     expect(rows(groups, 'System').Seriennummer).toBeUndefined()
   })
 
+  it('versteht die Werte des Agents für Netz und Bildschirm', () => {
+    const agent = (network, power) => telemetryGroups({
+      ...device, telemetry: { network, display: { power } },
+    })
+    expect(rows(agent({ kind: 'lan', ip: '192.0.2.1' }, 'aus'), 'Netz').Verbindung.value).toBe('LAN')
+    expect(rows(agent({ kind: 'lan' }, 'aus'), 'Anzeige').Bildschirm.value).toBe('aus')
+    expect(rows(agent({ kind: 'ethernet' }, 'standby'), 'Netz').Verbindung.value).toBe('LAN')
+    expect(rows(agent({ kind: 'ethernet' }, 'standby'), 'Anzeige').Bildschirm.value).toBe('Standby')
+    expect(rows(agent({ kind: 'lan' }, 'an'), 'Anzeige').Bildschirm.value).toBe('an')
+  })
+
   it('formatiert System, Anzeige und Updates, Warnwerte sind markiert', () => {
     const groups = telemetryGroups(device)
     const sys = rows(groups, 'System')

@@ -152,7 +152,7 @@ function DevicesSection({ draft, set, disabled, readOnly, legacyNames }) {
   }
   const units = { device_offline_minutes: 'Minuten', warn_temperature_c: '°C', warn_disk_percent: '%', warn_wifi_dbm: 'dBm', warn_reboot_days: 'Tage' }
   const tokenHelp = legacyNames == null ? null
-    : legacyNames.length ? `Noch mit altem Skript: ${legacyNames.join(', ')}.` : 'Alle Bildschirme nutzen den Agent.'
+    : legacyNames.length ? `Noch mit altem Skript: ${legacyNames.join(', ')}.` : 'Aktuell meldet sich kein Bildschirm mit altem Skript. Ausgeschaltete Bildschirme mit altem Skript erscheinen hier nicht. Vor dem Einschalten prüfen, ob alle Pis den Agent nutzen.'
   return (
     <Section title="Geräte" data-section="devices" aside={readOnly ? readOnlyNote('die Einrichtung') : null}>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

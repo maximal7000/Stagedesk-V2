@@ -172,7 +172,7 @@ describe('Settings', () => {
     perms.add('monitor.view')
     api.getDevices.mockResolvedValue([])
     await mount()
-    expect(container.querySelector('[data-section="devices"]').textContent).toContain('Alle Bildschirme nutzen den Agent.')
+    expect(container.querySelector('[data-section="devices"]').textContent).toContain('Aktuell meldet sich kein Bildschirm mit altem Skript.')
     expect(byLabel('Warnung ab Temperatur').disabled).toBe(true)
   })
 

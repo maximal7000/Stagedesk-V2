@@ -76,8 +76,9 @@ const dayTime = (v) => {
   return d ? `${DAYS[d.getDay()]} ${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}., ${pad2(d.getHours())}:${pad2(d.getMinutes())}` : ''
 }
 
-const DISPLAY_POWER = { on: 'an', standby: 'Standby', off: 'aus' }
-const NETWORK_KIND = { wifi: 'WLAN', ethernet: 'LAN' }
+// Der Agent meldet an/aus/standby; on/off bleiben für ältere Meldungen
+const DISPLAY_POWER = { an: 'an', on: 'an', standby: 'Standby', aus: 'aus', off: 'aus' }
+const NETWORK_KIND = { wifi: 'WLAN', lan: 'LAN', ethernet: 'LAN' }
 
 // Telemetrie in vier Gruppen für die Geräte-Box: [{ title, rows: [{ label, value, warn }] }].
 // Fehlende Werte (null) erscheinen nicht; eine Gruppe ohne Werte entfällt.
