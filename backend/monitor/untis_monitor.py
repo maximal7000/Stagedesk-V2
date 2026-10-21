@@ -185,7 +185,7 @@ def _text(html):
 
 
 def _split_change(cell):
-    """(neu, alt) einer Zelle: "<span ...>KAA</span> (<span ...>MÜB</span>)" oder "204 (209)"."""
+    """(neu, alt) einer Zelle: "<span ...>ROT</span> (<span ...>ÖLZ</span>)" oder "204 (209)"."""
     cell = cell or ''
     span = _NEW_SPAN.search(cell)
     if span:

@@ -33,7 +33,7 @@ MODE_KEYS = {
 }
 
 SUBSTITUTION_ROW = {'classes': ['7b'], 'group': '', 'periods': '3.–4.', 'subject': 'Ma', 'teacher': 'MUE',
-                    'teacher_old': 'SCH', 'room': 'A12', 'room_old': '', 'kind': 'substitution',
+                    'teacher_old': 'HAX', 'room': 'A12', 'room_old': '', 'kind': 'substitution',
                     'kind_label': 'Vertretung', 'note': ''}
 
 

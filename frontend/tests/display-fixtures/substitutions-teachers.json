@@ -37,12 +37,12 @@
           "label": "Heute",
           "absent": [
             {
-              "name": "ASI",
+              "name": "ZEB",
               "kind": "teacher",
               "periods": ""
             },
             {
-              "name": "MÜB",
+              "name": "ÖLZ",
               "kind": "teacher",
               "periods": "1."
             },
@@ -85,20 +85,20 @@
               "Q2d"
             ],
             "teachers": [
-              "ASI",
+              "ZEB",
               "BEC",
-              "EHD",
-              "KAA",
+              "GUT",
+              "ROT",
               "KLM",
               "LOR",
-              "MÜB",
-              "P-G",
+              "ÖLZ",
+              "T-K",
               "ROS",
-              "SAC",
-              "SAF",
+              "FEN",
+              "JOR",
               "SNR",
               "WAG",
-              "WIE"
+              "VAN"
             ]
           },
           "messages": [
@@ -112,11 +112,11 @@
               "classes": [
                 "10b"
               ],
-              "group": "ASI",
+              "group": "ZEB",
               "periods": "4.",
               "subject": "Mu",
               "teacher": "",
-              "teacher_old": "ASI",
+              "teacher_old": "ZEB",
               "room": "",
               "room_old": "",
               "kind": "cancelled",
@@ -176,10 +176,10 @@
               "classes": [
                 "Ea"
               ],
-              "group": "EHD",
+              "group": "GUT",
               "periods": "8.–9.",
               "subject": "Geo",
-              "teacher": "EHD",
+              "teacher": "GUT",
               "teacher_old": "",
               "room": "180",
               "room_old": "",
@@ -192,11 +192,11 @@
               "classes": [
                 "5c"
               ],
-              "group": "KAA",
+              "group": "ROT",
               "periods": "1.",
               "subject": "De",
-              "teacher": "KAA",
-              "teacher_old": "MÜB",
+              "teacher": "ROT",
+              "teacher_old": "ÖLZ",
               "room": "179",
               "room_old": "",
               "kind": "substitution",
@@ -260,11 +260,11 @@
               "classes": [
                 "5c"
               ],
-              "group": "MÜB",
+              "group": "ÖLZ",
               "periods": "1.",
               "subject": "De",
-              "teacher": "KAA",
-              "teacher_old": "MÜB",
+              "teacher": "ROT",
+              "teacher_old": "ÖLZ",
               "room": "179",
               "room_old": "",
               "kind": "substitution",
@@ -278,10 +278,10 @@
                 "Q2c",
                 "Q2d"
               ],
-              "group": "P-G",
+              "group": "T-K",
               "periods": "8.–9.",
               "subject": "If",
-              "teacher": "P-G",
+              "teacher": "T-K",
               "teacher_old": "",
               "room": "G10",
               "room_old": "",
@@ -310,10 +310,10 @@
               "classes": [
                 "7a"
               ],
-              "group": "SAC",
+              "group": "FEN",
               "periods": "1.–2.",
               "subject": "Ma",
-              "teacher": "SAC",
+              "teacher": "FEN",
               "teacher_old": "",
               "room": "204",
               "room_old": "209",
@@ -330,10 +330,10 @@
                 "Q2b",
                 "Q2d"
               ],
-              "group": "SAF",
+              "group": "JOR",
               "periods": "8.–9.",
               "subject": "Gr",
-              "teacher": "SAF",
+              "teacher": "JOR",
               "teacher_old": "",
               "room": "062",
               "room_old": "",
@@ -378,10 +378,10 @@
               "classes": [
                 "Ed"
               ],
-              "group": "WIE",
+              "group": "VAN",
               "periods": "8.–9.",
               "subject": "Geo",
-              "teacher": "WIE",
+              "teacher": "VAN",
               "teacher_old": "",
               "room": "179",
               "room_old": "",
@@ -419,7 +419,7 @@
               "Q2b"
             ],
             "teachers": [
-              "ABH",
+              "QUI",
               "BEC",
               "DOR",
               "HRT",
@@ -434,10 +434,10 @@
                 "Q2a",
                 "Q2b"
               ],
-              "group": "ABH",
+              "group": "QUI",
               "periods": "1.–2.",
               "subject": "De",
-              "teacher": "ABH",
+              "teacher": "QUI",
               "teacher_old": "",
               "room": "171",
               "room_old": "",

@@ -9,7 +9,7 @@ const LONG_NOTE = 'Klausur unter Aufsicht im Raum 062, Materialien bitte vorab i
 
 const row = (over) => ({
   classes: ['5c'], classes_label: '5c', grade: '5', group: '5c', periods: '1.', subject: 'De',
-  teacher: 'KAA', teacher_old: 'MÜB', room: '179', room_old: '', kind: 'substitution', kind_label: 'Vertretung',
+  teacher: 'ROT', teacher_old: 'ÖLZ', room: '179', room_old: '', kind: 'substitution', kind_label: 'Vertretung',
   note: '', ...over,
 })
 
@@ -56,12 +56,12 @@ describe('SubstitutionsView', () => {
   it('Lehrkräfte-Ansicht: Kürzel vorn, Klasse nach der Stunde', () => {
     const data = { group_by: 'teacher', days: [{
       date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
-      rows: [row({ group: 'SAF', classes: ['Q1c', 'Q1d', 'Q2a'], classes_label: 'Q1c, d, Q2a', grade: undefined })],
+      rows: [row({ group: 'JOR', classes: ['Q1c', 'Q1d', 'Q2a'], classes_label: 'Q1c, d, Q2a', grade: undefined })],
     }] }
     const el = render(<SubstitutionsView view={view(data)} />)
     expect(headers(el)).toEqual(['Kürzel', 'Std.', 'Klasse', 'Fach', 'Lehrkraft', 'Raum', 'Art', 'Hinweis'])
     const cells = [...visible(el).querySelectorAll('[data-substitution-row] > *')].map((c) => c.textContent)
-    expect(cells.slice(0, 3)).toEqual(['SAF', '1.', 'Q1c, d, Q2a'])
+    expect(cells.slice(0, 3)).toEqual(['JOR', '1.', 'Q1c, d, Q2a'])
   })
 
   it('Hinweis wird nie abgeschnitten', () => {
@@ -102,8 +102,8 @@ describe('SubstitutionsView', () => {
     }] }
     const el = render(<SubstitutionsView view={view(data)} />)
     const teacher = visible(el).querySelector('[data-column="teacher"]')
-    expect(teacher.querySelector('s').textContent).toBe('MÜB')
-    expect(teacher.textContent).toBe('MÜB KAA')
+    expect(teacher.querySelector('s').textContent).toBe('ÖLZ')
+    expect(teacher.textContent).toBe('ÖLZ ROT')
     const kinds = [...visible(el).querySelectorAll('[data-column="kind"]')]
     expect(kinds.map((k) => k.textContent)).toEqual(['Raumänderung', 'Entfall'])
     expect(kinds[0].className).toContain('text-(--d-info)')
@@ -113,18 +113,18 @@ describe('SubstitutionsView', () => {
   it('Kopf zeigt Abwesend und Betroffen', () => {
     const data = { days: [{
       date: '2026-10-21', label: 'Heute',
-      absent: [{ name: 'ASI', kind: 'teacher', periods: '' }, { name: 'BEC', kind: 'teacher', periods: '3.–4.' },
+      absent: [{ name: 'ZEB', kind: 'teacher', periods: '' }, { name: 'BEC', kind: 'teacher', periods: '3.–4.' },
         { name: '8b', kind: 'class', periods: '5.' }],
-      affected: { classes: ['5c', '7a'], teachers: ['KAA', 'SAC'] },
+      affected: { classes: ['5c', '7a'], teachers: ['ROT', 'FEN'] },
       messages: [{ subject: 'Aula', body: 'Ab der 5. Stunde gesperrt.' }],
       rows: [row()],
     }] }
     const el = render(<SubstitutionsView view={view(data)} />)
     const head = el.querySelector('[data-day-head]')
     expect(head.textContent).toContain('Abwesend')
-    expect(head.textContent).toContain('ASI, BEC (3.–4.), 8b (5.)')
+    expect(head.textContent).toContain('ZEB, BEC (3.–4.), 8b (5.)')
     expect(head.textContent).toContain('Betroffen')
-    expect(head.textContent).toContain('5c, 7a, KAA, SAC')
+    expect(head.textContent).toContain('5c, 7a, ROT, FEN')
     expect(el.textContent).toContain('Ab der 5. Stunde gesperrt.')
   })
 

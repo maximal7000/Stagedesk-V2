@@ -11,13 +11,13 @@
      "9a",
      "De",
      "171",
-     "ABH",
+     "QUI",
      "Pr&uuml;fung",
      ""
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "ABH"
+    "group": "QUI"
    },
    {
     "data": [
@@ -25,13 +25,13 @@
      "Ea",
      "Geo",
      "180",
-     "EHD",
+     "GUT",
      "Text",
      "Klausur"
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "EHD"
+    "group": "GUT"
    },
    {
     "data": [
@@ -39,13 +39,13 @@
      "5c",
      "De",
      "179",
-     "<span class=\"substMonitorSubstElem\">KAA</span> (<span class=\"cancelStyle\">MÜB</span>)",
+     "<span class=\"substMonitorSubstElem\">ROT</span> (<span class=\"cancelStyle\">ÖLZ</span>)",
      "",
      ""
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "KAA"
+    "group": "ROT"
    },
    {
     "data": [
@@ -53,13 +53,13 @@
      "5c",
      "De",
      "179",
-     "<span class=\"substMonitorSubstElem\">KAA</span> (<span class=\"cancelStyle\">MÜB</span>)",
+     "<span class=\"substMonitorSubstElem\">ROT</span> (<span class=\"cancelStyle\">ÖLZ</span>)",
      "",
      ""
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "MÜB"
+    "group": "ÖLZ"
    },
    {
     "data": [
@@ -67,13 +67,13 @@
      "Q2b, Q2c, Q2d",
      "If",
      "G10",
-     "P-G",
+     "T-K",
      "Text",
      "Klausur"
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "P-G"
+    "group": "T-K"
    },
    {
     "data": [
@@ -81,13 +81,13 @@
      "Q1c, Q1d, Q2a, Q2b, Q2d",
      "Gr",
      "062",
-     "SAF",
+     "JOR",
      "Text",
      "Klausur"
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "SAF"
+    "group": "JOR"
    },
    {
     "data": [
@@ -95,13 +95,13 @@
      "7a",
      "Ma",
      "<span class=\"substMonitorSubstElem\">204</span> (209)",
-     "SAC",
+     "FEN",
      "Raum&auml;nderung",
      ""
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "SAC"
+    "group": "FEN"
    },
    {
     "data": [
@@ -109,13 +109,13 @@
      "Ed",
      "Geo",
      "179",
-     "WIE",
+     "VAN",
      "Text",
      "Klausur"
     ],
     "cssClasses": [],
     "cellClasses": {},
-    "group": "WIE"
+    "group": "VAN"
    }
   ],
   "lastUpdate": "19.10.2026 11:41:02",
@@ -123,7 +123,7 @@
    {
     "elementType": 2,
     "elementId": 11,
-    "elementName": "ASI",
+    "elementName": "ZEB",
     "startUnit": null,
     "endUnit": null,
     "absences": [
@@ -140,7 +140,7 @@
    {
     "elementType": 2,
     "elementId": 128,
-    "elementName": "MÜB",
+    "elementName": "ÖLZ",
     "startUnit": null,
     "endUnit": null,
     "absences": [
@@ -170,14 +170,14 @@
     "Q2d"
    ],
    "2": [
-    "ABH",
-    "EHD",
-    "KAA",
-    "MÜB",
-    "P-G",
-    "SAF",
-    "SAC",
-    "WIE"
+    "QUI",
+    "GUT",
+    "ROT",
+    "ÖLZ",
+    "T-K",
+    "JOR",
+    "FEN",
+    "VAN"
    ]
   },
   "messageData": {

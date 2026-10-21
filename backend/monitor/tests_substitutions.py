@@ -26,8 +26,8 @@ TODAY = date(2026, 10, 19)
 
 
 def row(classes, group='', periods='3.', **extra):
-    base = {'classes': classes, 'group': group, 'periods': periods, 'subject': 'MA', 'teacher': 'KAA',
-            'teacher_old': 'MÜB', 'room': '204', 'room_old': '', 'kind': 'substitution',
+    base = {'classes': classes, 'group': group, 'periods': periods, 'subject': 'MA', 'teacher': 'ROT',
+            'teacher_old': 'ÖLZ', 'room': '204', 'room_old': '', 'kind': 'substitution',
             'kind_label': 'Vertretung', 'note': ''}
     return {**base, **extra}
 
@@ -35,7 +35,7 @@ def row(classes, group='', periods='3.', **extra):
 def monitor_day(day, rows=None):
     return {'date': day, 'next_date': None, 'updated_at': '2026-10-19T07:42:00+02:00',
             'absent': [{'name': 'BEC', 'kind': 'teacher', 'periods': '3.–4.'}],
-            'affected': {'classes': ['7a'], 'teachers': ['KAA']}, 'messages': [{'subject': 'A', 'body': 'B'}],
+            'affected': {'classes': ['7a'], 'teachers': ['ROT']}, 'messages': [{'subject': 'A', 'body': 'B'}],
             'rows': rows if rows is not None else [row(['7a'])]}
 
 
@@ -114,12 +114,12 @@ class MonitorSourceTest(SubstitutionsTestBase):
 
     def test_teachers_group_by_teacher(self):
         self.load_days.return_value = monitor_result('teacher', [monitor_day('2026-10-19', [
-            row(['Q2a', 'Q2b'], group='KAA'), row(['Q2a', 'Q2b'], group='KAA'), row(['5a'], group='BEC')])])
+            row(['Q2a', 'Q2b'], group='ROT'), row(['Q2a', 'Q2b'], group='ROT'), row(['5a'], group='BEC')])])
         result = self.load(self.view(substitutions_format='teachers'))
         self.assertEqual(self.load_days.call_args.args[2], 'vplan-lehrer')
         rows = result['days'][0]['rows']
         self.assertEqual(result['group_by'], 'teacher')
-        self.assertEqual([(r['group'], r['classes_label']) for r in rows], [('BEC', '5a'), ('KAA', 'Q2a, b')])
+        self.assertEqual([(r['group'], r['classes_label']) for r in rows], [('BEC', '5a'), ('ROT', 'Q2a, b')])
         self.assertNotIn('grade', rows[0])
 
     def test_student_rows_split_by_grade(self):

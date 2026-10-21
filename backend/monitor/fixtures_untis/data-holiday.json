@@ -10,7 +10,7 @@
    {
     "elementType": 2,
     "elementId": 1,
-    "elementName": "AAA",
+    "elementName": "YAK",
     "startUnit": null,
     "endUnit": null,
     "absences": [
@@ -28,9 +28,9 @@
   "affectedElements": {
    "1": [],
    "2": [
-    "BBB",
-    "CCC",
-    "DDD"
+    "PUL",
+    "IMO",
+    "OXE"
    ]
   },
   "messageData": {

@@ -81,7 +81,7 @@ class SubstitutionsTest(WebUntisTestBase):
             subst(20261019, 950, 1035, 'cancel', te=[{'id': 5, 'name': 'MUE'}]),
             subst(20261019, 1035, 1120, 'rmchg', ro=[{'id': 9, 'name': 'R12', 'orgname': 'R07'}]),
             subst(20261020, 800, 845, 'subst', kl='9b', su='DE',
-                  te=[{'id': 6, 'name': 'SCH', 'orgname': 'MEY'}], ro=[{'id': 3, 'name': 'R01'}],
+                  te=[{'id': 6, 'name': 'HAX', 'orgname': 'MEY'}], ro=[{'id': 3, 'name': 'R01'}],
                   txt='Aufgaben im Moodle'),
         ])
         result = self.run_with(fake)
@@ -94,7 +94,7 @@ class SubstitutionsTest(WebUntisTestBase):
         self.assertEqual(today[1]['room_old'], 'R07')
         self.assertEqual(today[0]['periods'], '3')
         self.assertEqual(result['days'][1]['rows'], [{
-            'classes': ['9b'], 'group': '', 'periods': '1', 'subject': 'DE', 'teacher': 'SCH', 'teacher_old': 'MEY',
+            'classes': ['9b'], 'group': '', 'periods': '1', 'subject': 'DE', 'teacher': 'HAX', 'teacher_old': 'MEY',
             'room': 'R01', 'room_old': '', 'kind': 'substitution', 'kind_label': 'Vertretung',
             'note': 'Aufgaben im Moodle',
         }])
@@ -112,7 +112,7 @@ class SubstitutionsTest(WebUntisTestBase):
                  'ro': [{'id': 3, 'name': 'R01'}]},
                 {'id': 101, 'date': 20261019, 'startTime': 1225, 'endTime': 1310, 'code': 'irregular',
                  'kl': [{'id': 11}], 'su': [{'id': 2, 'name': 'EN'}],
-                 'te': [{'id': 6, 'name': 'SCH', 'orgid': 5, 'orgname': 'MUE'}],
+                 'te': [{'id': 6, 'name': 'HAX', 'orgid': 5, 'orgname': 'MUE'}],
                  'ro': [{'id': 3, 'name': 'R01'}], 'substText': 'Vertretung'},
                 {'id': 102, 'date': 20261019, 'startTime': 800, 'endTime': 845,
                  'kl': [{'id': 11}], 'su': [{'id': 2, 'name': 'EN'}], 'te': [], 'ro': []},

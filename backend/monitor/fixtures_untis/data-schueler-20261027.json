@@ -11,7 +11,7 @@
      "5c",
      "De",
      "179",
-     "<span class=\"substMonitorSubstElem\">KAA</span> (<span class=\"cancelStyle\">MÜB</span>)",
+     "<span class=\"substMonitorSubstElem\">ROT</span> (<span class=\"cancelStyle\">ÖLZ</span>)",
      "",
      ""
     ],
@@ -25,7 +25,7 @@
      "7a",
      "Ma",
      "<span class=\"substMonitorSubstElem\">204</span> (209)",
-     "SAC",
+     "FEN",
      "Raum&auml;nderung",
      ""
     ],
@@ -39,7 +39,7 @@
      "Ea",
      "Geo",
      "180",
-     "EHD",
+     "GUT",
      "Text",
      "Klausur"
     ],
@@ -53,7 +53,7 @@
      "Ed",
      "Geo",
      "179",
-     "WIE",
+     "VAN",
      "Text",
      "Klausur"
     ],
@@ -67,7 +67,7 @@
      "Q1c, Q1d, Q2a, Q2b, Q2d",
      "Gr",
      "062",
-     "SAF",
+     "JOR",
      "Text",
      "Klausur"
     ],
@@ -81,7 +81,7 @@
      "Q1c, Q1d, Q2a, Q2b, Q2d",
      "Gr",
      "062",
-     "SAF",
+     "JOR",
      "Text",
      "Klausur"
     ],
@@ -95,7 +95,7 @@
      "Q1c, Q1d, Q2a, Q2b, Q2d",
      "Gr",
      "062",
-     "SAF",
+     "JOR",
      "Text",
      "Klausur"
     ],
@@ -109,7 +109,7 @@
      "Q1c, Q1d, Q2a, Q2b, Q2d",
      "Gr",
      "062",
-     "SAF",
+     "JOR",
      "Text",
      "Klausur"
     ],
@@ -123,7 +123,7 @@
      "Q2b, Q2c, Q2d",
      "If",
      "G10",
-     "P-G",
+     "T-K",
      "Text",
      "Klausur"
     ],
@@ -137,7 +137,7 @@
      "Q2b, Q2c, Q2d",
      "If",
      "G10",
-     "P-G",
+     "T-K",
      "Text",
      "Klausur"
     ],
@@ -151,7 +151,7 @@
      "Q1c, Q1d, Q2a, Q2b, Q2d",
      "Gr",
      "062",
-     "SAF",
+     "JOR",
      "Text",
      "Klausur"
     ],
@@ -165,7 +165,7 @@
      "Q2b, Q2c, Q2d",
      "If",
      "G10",
-     "P-G",
+     "T-K",
      "Text",
      "Klausur"
     ],
@@ -179,7 +179,7 @@
    {
     "elementType": 2,
     "elementId": 11,
-    "elementName": "ASI",
+    "elementName": "ZEB",
     "startUnit": null,
     "endUnit": null,
     "absences": [
@@ -196,7 +196,7 @@
    {
     "elementType": 2,
     "elementId": 128,
-    "elementName": "MÜB",
+    "elementName": "ÖLZ",
     "startUnit": null,
     "endUnit": null,
     "absences": [
@@ -225,13 +225,13 @@
     "Q2d"
    ],
    "2": [
-    "EHD",
-    "KAA",
-    "MÜB",
-    "P-G",
-    "SAF",
-    "SAC",
-    "WIE"
+    "GUT",
+    "ROT",
+    "ÖLZ",
+    "T-K",
+    "JOR",
+    "FEN",
+    "VAN"
    ]
   },
   "messageData": {

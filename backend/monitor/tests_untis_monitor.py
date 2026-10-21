@@ -38,15 +38,15 @@ class ParseHeaderTests(SimpleTestCase):
         h = untis_monitor.parse_header(load('data-holiday.json')['payload'], show_absences=True)
         self.assertEqual(h['date'], '2026-10-26')
         self.assertEqual(h['next_date'], '2026-10-27')
-        self.assertEqual(h['absent'], [{'name': 'AAA', 'kind': 'teacher', 'periods': ''}])
-        self.assertEqual(h['affected']['teachers'], ['BBB', 'CCC', 'DDD'])
+        self.assertEqual(h['absent'], [{'name': 'YAK', 'kind': 'teacher', 'periods': ''}])
+        self.assertEqual(h['affected']['teachers'], ['PUL', 'IMO', 'OXE'])
         self.assertEqual(h['affected']['classes'], [])
         self.assertEqual(h['updated_at'], '2026-10-19T11:41:02+02:00')
 
     def test_partial_absence_periods(self):
         h = untis_monitor.parse_header(load('data-schueler-20261027.json')['payload'], show_absences=True)
-        self.assertEqual(h['absent'], [{'name': 'ASI', 'kind': 'teacher', 'periods': ''},
-                                       {'name': 'MÜB', 'kind': 'teacher', 'periods': '1.'}])
+        self.assertEqual(h['absent'], [{'name': 'ZEB', 'kind': 'teacher', 'periods': ''},
+                                       {'name': 'ÖLZ', 'kind': 'teacher', 'periods': '1.'}])
         self.assertEqual(h['affected']['classes'][:3], ['5c', '7a', 'Ea'])
 
     def test_period_range_and_class_kind(self):
@@ -85,13 +85,13 @@ class ParseRowsTests(SimpleTestCase):
         first = rows[0]
         self.assertEqual((first['periods'], first['classes'], first['subject'], first['room'],
                           first['teacher'], first['teacher_old'], first['kind'], first['kind_label']),
-                         ('1.', ['5c'], 'De', '179', 'KAA', 'MÜB', 'substitution', 'Vertretung'))
+                         ('1.', ['5c'], 'De', '179', 'ROT', 'ÖLZ', 'substitution', 'Vertretung'))
         self.assertEqual(sorted(first), sorted(untis_monitor.ROW_KEYS))
 
     def test_room_change(self):
         row = untis_monitor.parse_rows(load('data-schueler-20261027.json')['payload'], STUDENT_FORMAT)[1]
         self.assertEqual((row['classes'], row['room'], row['room_old'], row['teacher'], row['teacher_old']),
-                         (['7a'], '204', '209', 'SAC', ''))
+                         (['7a'], '204', '209', 'FEN', ''))
         self.assertEqual((row['kind'], row['kind_label'], row['periods']),
                          ('room_change', 'Raumänderung', '1.–2.'))
 
@@ -105,7 +105,7 @@ class ParseRowsTests(SimpleTestCase):
     def test_teachers_fixture(self):
         rows = untis_monitor.parse_rows(load('data-lehrer-20261027.json')['payload'], TEACHER_FORMAT)
         self.assertEqual(len(rows), 8)
-        self.assertEqual([r['group'] for r in rows[2:4]], ['KAA', 'MÜB'])
+        self.assertEqual([r['group'] for r in rows[2:4]], ['ROT', 'ÖLZ'])
         self.assertEqual(rows[2]['teacher'], rows[3]['teacher'])
         self.assertEqual(rows[0]['kind_label'], 'Prüfung')
         self.assertEqual(rows[0]['classes'], ['9a'])
