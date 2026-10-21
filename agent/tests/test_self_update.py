@@ -205,8 +205,9 @@ class SelfUpdateTests(unittest.TestCase):
         timer = (self.paths.systemd_dir / "stagedesk-agent-rollback.timer").read_text()
         service = (self.paths.systemd_dir / "stagedesk-agent-rollback.service").read_text()
         self.assertIn("OnActiveSec=2min", timer)
-        self.assertIn("OnBootSec=5min", timer)
+        self.assertNotIn("OnBootSec", timer)
         self.assertIn(f"PYTHONPATH={self.paths.opt_prev}", service)
+        self.assertIn(f"WorkingDirectory=-{self.paths.opt_prev}", service)
         self.assertIn("stagedesk_agent.self_update rollback", service)
 
     def test_pending_file_has_sha_and_versions(self):
@@ -267,8 +268,36 @@ class SelfUpdateTests(unittest.TestCase):
     def test_boot_timer_is_five_minutes(self):
         self.updater.check(self.hello())
         timer = (self.paths.systemd_dir / "stagedesk-agent-rollback.timer").read_text()
-        self.assertIn("OnBootSec=5min", timer)
+        self.assertNotIn("OnBootSec", timer)
         self.assertIn("OnActiveSec=2min", timer)
+
+
+    def test_rollback_waits_for_boot_uptime_then_proceeds(self):
+        self.updater.check(self.hello())
+        slept = []
+        self.assertTrue(rollback(self.paths, self.runner, sleep=slept.append, uptime=lambda: 100.0))
+        self.assertEqual(slept, [200.0])
+        self.assertEqual((self.paths.opt_dir / "VERSION").read_text(), "1.0.0\n")
+
+    def test_rollback_aborts_when_confirmed_during_wait(self):
+        self.updater.check(self.hello())
+        new = self.restarted()
+        self.assertFalse(rollback(self.paths, self.runner, sleep=lambda s: new.confirm(), uptime=lambda: 10.0))
+        self.assertEqual((self.paths.opt_dir / "VERSION").read_text().strip(), "1.1.0")
+
+    def test_rollback_does_not_wait_with_high_uptime(self):
+        self.updater.check(self.hello())
+        slept = []
+        rollback(self.paths, self.runner, sleep=slept.append, uptime=lambda: 4000.0)
+        self.assertEqual(slept, [])
+
+    def test_uptime_read_from_proc(self):
+        self.updater.check(self.hello())
+        self.paths.proc.mkdir(parents=True, exist_ok=True)
+        (self.paths.proc / "uptime").write_text("299.0 100.0\n")
+        slept = []
+        rollback(self.paths, self.runner, sleep=slept.append)
+        self.assertEqual(slept, [1.0])
 
 
 if __name__ == "__main__":

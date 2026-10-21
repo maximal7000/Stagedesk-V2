@@ -22,7 +22,7 @@ log = logging.getLogger("stagedesk_agent.self_update")
 SERVICE = "stagedesk-agent"
 ROLLBACK_UNIT = "stagedesk-agent-rollback"
 ROLLBACK_MINUTES = 2
-BOOT_MINUTES = 5  # counted from kernel boot: after a power cut WLAN and hello need longer
+BOOT_MINUTES = 5  # after a power cut WLAN and hello need longer: rollback waits for this uptime
 DOWNLOAD_TIMEOUT = 30  # per read
 DOWNLOAD_DEADLINE = 600  # whole download
 MAX_PACKAGE = 50 * 1024 * 1024
@@ -255,10 +255,10 @@ class SelfUpdater:
         paths = self.paths
         timer_name = f"{ROLLBACK_UNIT}.timer"
         service = (f"[Unit]\nDescription=Stagedesk Agent: Rückfall auf die letzte Version\n\n[Service]\nType=oneshot\n"
-                   f"Environment=PYTHONPATH={paths.opt_prev}\nWorkingDirectory={paths.opt_prev}\n"
+                   f"Environment=PYTHONPATH={paths.opt_prev}\nWorkingDirectory=-{paths.opt_prev}\n"
                    f"ExecStart=/usr/bin/python3 -m stagedesk_agent.self_update rollback\n")
         timer = (f"[Unit]\nDescription=Stagedesk Agent: Rückfall nach {ROLLBACK_MINUTES} Minuten ohne Bestätigung\n\n"
-                 f"[Timer]\nOnActiveSec={ROLLBACK_MINUTES}min\nOnBootSec={BOOT_MINUTES}min\n\n"
+                 f"[Timer]\nOnActiveSec={ROLLBACK_MINUTES}min\n\n"
                  "[Install]\nWantedBy=timers.target\n")
         _write_if_changed(paths.systemd_dir / f"{ROLLBACK_UNIT}.service", service)
         _write_if_changed(paths.systemd_dir / timer_name, timer)
@@ -287,8 +287,21 @@ class SelfUpdater:
         return {"from": event.get("from"), "to": event.get("to"), "at": event.get("at")}
 
 
-def rollback(paths, runner):
-    """Restore .prev when the new version was never confirmed. True if a rollback happened."""
+def _uptime(paths):
+    try:
+        return float(_read(paths.proc / "uptime").split()[0])
+    except (IndexError, ValueError):
+        return None
+
+
+def rollback(paths, runner, sleep=time.sleep, uptime=None):
+    """Restore .prev when the new version was never confirmed. True if a rollback happened.
+
+    Shortly after boot (power cut during the trial) the new version gets until BOOT_MINUTES of uptime;
+    pending-confirm is re-checked under the lock afterwards."""
+    current = (uptime or (lambda: _uptime(paths)))()
+    if current is not None and current < BOOT_MINUTES * 60 and paths.pending_confirm.exists():
+        sleep(BOOT_MINUTES * 60 - current)
     with _locked(paths):
         event = _read_json(paths.pending_confirm)  # re-checked under the lock: a confirm may have won
         if _abandoned(paths, event):
