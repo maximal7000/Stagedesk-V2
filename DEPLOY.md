@@ -76,7 +76,7 @@ bash /opt/stagedesk/scripts/deploy.sh
 bash /opt/stagedesk/scripts/deploy.sh
 ```
 
-Das Script macht: `git pull` → `pip install` → `migrate` → `collectstatic` → `npm ci && build` → `systemctl restart tag-backend && reload nginx`.
+Das Script macht: `git pull` → `pip install` → `npm ci && build` → `collectstatic` → `signage_rename_from_monitor` + `migrate` → `systemctl restart tag-backend` → Geräte-Überwachung-Unit aktualisieren (falls installiert, siehe unten) → `reload nginx`. Build und `collectstatic` laufen vor `migrate`, damit zwischen Migration und Neustart nur wenige Sekunden liegen.
 
 ---
 
@@ -101,6 +101,47 @@ pg_dump -U stagedesk stagedesk > /root/stagedesk-$(date +%F).sql
 
 `frontend/.env.production` ist in `.gitignore`. Vorlage: `frontend/.env.production.example`.
 Das Deploy-Script kopiert beim ersten Lauf die Vorlage nach `.env.production`. Für Änderungen entweder die Vorlage committen und löschen der realen Datei auf dem Server (wird beim nächsten Deploy neu erstellt), oder direkt auf dem Server editieren.
+
+---
+
+## Umbenennung monitor → signage
+
+Das Modul heißt jetzt `signage` (App, Tabellen, Befehle, Rechte, Adressen). Die neuen Adressen sind `/signage`, `/signage-admin`, `/api/signage/…`, `/ws/signage/pi|display/<slug>/`. Die alten Adressen (`/monitor?screen=…`, `/monitor-admin/…`, `/api/monitor/…`, beide `/ws/monitor/…`-Präfixe, `…/api/monitor/agent/install.sh`, `/bildschirm/…`, `/notfall`) bleiben dauerhaft erhalten (Middleware `backend/signage/legacy_paths.py`, im Frontend eine Weiterleitung). Gespeicherte Medien behalten ihren Pfad `media/monitor/…`. Der Agent nutzt die neuen Pfade; seine `VERSION` ist unverändert, bereits installierte Pis bleiben bis zum nächsten Agent-Update auf den alten Pfaden.
+
+Die älteren Abschnitte unten (bis "Geräte-Agent" und "Vertretungsplan") nennen noch die damaligen Namen (`monitor_*`-Befehle, `monitor.*`-Rechte, `migrate monitor …`). Seit der Umbenennung gilt:
+
+| Alt | Neu |
+|---|---|
+| `monitor_render_media`, `monitor_webuntis_check`, `monitor_webuntis_record`, `monitor_device_watch` | `signage_render_media`, `signage_webuntis_check`, `signage_webuntis_record`, `signage_device_watch` |
+| Rechte `monitor.view/setup/exams/media/power/onair/emergency/devices` | `signage.view/setup/exams/media/power/onair/emergency/devices` (Migration `users` 0017) |
+| `migrate monitor <n>` | `migrate signage <n>` |
+
+Das Datenbank-Umbenennen übernimmt `python manage.py signage_rename_from_monitor [--reverse]`. Es benennt Tabellen und Migrationseinträge um und läuft in `deploy.sh` vor `migrate`; ein zweiter Lauf ändert nichts.
+
+### Umgebungsvariablen
+
+Alle in `/opt/stagedesk/backend/.env` (Werte nie committen).
+
+| Variable | Zweck | Herkunft |
+|---|---|---|
+| `DB_TT_CLIENT_ID`, `DB_TT_API_KEY` | Zugfahrten mit Gleisen (Abfahrten-Ansicht) | DB API Marketplace: App anlegen, API "Timetables" abonnieren (kostenloser Plan). Fehlen sie, schreibt das Backend beim Start eine Warnung ins Log. |
+| `NAHSH_HAFAS_AID` | Busse und Züge in Schleswig-Holstein | Zugangskennung (HAFAS access id) von NAH.SH |
+| `SWHL_STORYBLOK_TOKEN` | Störungsmeldungen Stadtverkehr Lübeck | Storyblok-Token des Stadtverkehrs |
+| `PUBLIC_BASE_URL` | Basis-URL in Kiosk-URLs und im Install-Skript | Standard `https://stagedesk.t410.de` |
+| `REDIS_URL` | Channel-Layer (WebSockets); optional | z. B. `redis://127.0.0.1:6379/0`; ohne Wert nur im Speicher und nur mit `DJANGO_DEBUG=True` |
+
+### Ablauf
+
+1. **Backup:** Backup-Tag setzen, Tarball und DB-Dump nach `~/stagedesk-backups/` (`pg_dump`, siehe oben).
+2. **Probelauf auf einer Kopie der Produktions-DB (Postgres):** Dump in eine Test-Datenbank einspielen, `.env` darauf zeigen lassen, dann im venv: `python manage.py signage_rename_from_monitor`, `python manage.py migrate`, Stichprobe (Ansichten, Bildschirme, Klausuren, Medien, Gruppenrechte `signage.*`). Danach den Rückweg: `python manage.py migrate users 0016` und `python manage.py signage_rename_from_monitor --reverse`; die Tabellen heißen wieder `monitor_*` und der Stand 0046 stimmt. Dann erneut vorwärts.
+3. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`. Während des Deploys den ATEM nicht schalten. `deploy.sh` baut das Frontend und sammelt die statischen Dateien vor der Migration und startet den Dienst direkt danach neu, damit das alte Backend nicht länger als nötig gegen umbenannte Tabellen läuft.
+4. **Geräte-Überwachung:** Existiert `/etc/systemd/system/stagedesk-device-watch.service`, kopiert `deploy.sh` die Version aus dem Repo darüber und führt `systemctl daemon-reload` aus (die installierte Unit ruft sonst noch den alten Befehl `monitor_device_watch` auf). Prüfen: `systemctl status stagedesk-device-watch.timer` und `journalctl -u stagedesk-device-watch -n 20`.
+5. **Prüfen nach dem Deploy:**
+   - Anzeige auf glocke und mensa: läuft weiter (alte Kiosk-URLs `/monitor?screen=…&key=…` gehen weiter), nach spätestens einem Neuladen auch mit den neuen Pfaden.
+   - Admin unter `https://stagedesk.t410.de/signage-admin` erreichbar; `/monitor-admin` leitet dorthin.
+   - Geräte-Timer läuft (siehe Schritt 4), Geräte melden sich im Admin.
+   - Log enthält keine Warnung zu `DB_TT_CLIENT_ID` / `DB_TT_API_KEY`, falls Zugfahrten gewünscht sind.
+6. **Rückweg (Reihenfolge):** Vorher im Admin Notfall und On-Air ausschalten. Im venv: `python manage.py migrate users 0016`, dann `python manage.py signage_rename_from_monitor --reverse`. Danach den vorherigen Commit auschecken (`git checkout <sha>`) und `systemctl restart tag-backend.service`. Die Unit der Geräte-Überwachung muss dabei mit zurück: `cp scripts/stagedesk-device-watch.service /etc/systemd/system/ && systemctl daemon-reload` (aus dem alten Stand). Nicht `deploy.sh` des neuen Stands benutzen, der die Umbenennung wieder vorwärts fährt.
 
 ---
 

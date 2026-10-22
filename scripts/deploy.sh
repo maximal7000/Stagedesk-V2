@@ -19,14 +19,6 @@ fi
 "$VENV/bin/pip" install --quiet --upgrade pip
 "$VENV/bin/pip" install --quiet -r backend/requirements.txt
 
-echo "→ migrate"
-cd "$APP_DIR/backend"
-"$VENV/bin/python" manage.py signage_rename_from_monitor
-"$VENV/bin/python" manage.py migrate --noinput
-
-echo "→ collectstatic"
-"$VENV/bin/python" manage.py collectstatic --noinput
-
 echo "→ frontend build"
 cd "$APP_DIR/frontend"
 if [ ! -f .env.production ]; then
@@ -36,8 +28,28 @@ fi
 npm ci --silent
 npm run build --silent
 
+echo "→ collectstatic"
+cd "$APP_DIR/backend"
+"$VENV/bin/python" manage.py collectstatic --noinput
+
+# Nach der Umbenennung läuft das alte Backend gegen umbenannte Tabellen:
+# Bau und collectstatic liegen deshalb davor, der Neustart direkt danach.
+echo "→ migrate"
+cd "$APP_DIR/backend"
+"$VENV/bin/python" manage.py signage_rename_from_monitor
+"$VENV/bin/python" manage.py migrate --noinput
+
 echo "→ systemctl restart $SERVICE"
 systemctl restart "$SERVICE"
+
+UNIT_SRC="$APP_DIR/scripts/stagedesk-device-watch.service"
+UNIT_DST="/etc/systemd/system/stagedesk-device-watch.service"
+if [ -f "$UNIT_DST" ]; then
+    echo "→ stagedesk-device-watch.service aktualisieren"
+    cp "$UNIT_SRC" "$UNIT_DST"
+    systemctl daemon-reload
+fi
+
 systemctl reload nginx
 
 echo "✓ Deploy fertig"
