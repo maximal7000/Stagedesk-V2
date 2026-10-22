@@ -1,7 +1,7 @@
 """
 Monitor API, Geräte-Router: Kopplung per Code, Entkoppeln, Token zurückziehen.
 
-Wird in api.py per signage_router.add_router("", devices_router) eingebunden.
+Wird in api/__init__.py per signage_router.add_router("", router) eingebunden.
 Die beiden agent/pair-Routen sind öffentlich (auth=None): der Agent hat vor der Kopplung keinen Token.
 """
 import io
@@ -21,14 +21,14 @@ from ninja.errors import HttpError
 from ninja.files import UploadedFile
 
 from core.auth import keycloak_auth
-from . import agent_package, devices, push
-from .models import Device, DeviceCommand, DeviceEvent, MonitorSettings, Screen
-from .permissions import _require_perm
-from .schemas import (
+from .. import agent_package, devices, push
+from ..models import Device, DeviceCommand, DeviceEvent, MonitorSettings, Screen
+from ..permissions import _require_perm
+from ..schemas import (
     DeviceCommandCreateSchema, DeviceCommandSchema, DeviceEventSchema, DevicePairSchema, DeviceSchema,
     PairPollSchema, PairStartSchema)
 
-devices_router = Router()
+router = Router()
 
 MAX_SCREENSHOT_BYTES = 15 * 1024 * 1024
 PNG_MAGIC = b'\x89PNG\r\n\x1a\n'
@@ -39,13 +39,13 @@ MAX_FAILED_ATTEMPTS = 5
 ATTEMPT_WINDOW = 60  # Sekunden
 
 
-@devices_router.post("/agent/pair/start", auth=None)
+@router.post("/agent/pair/start", auth=None)
 def pair_start(request, payload: PairStartSchema):
     req, pairing_id = devices.start_pairing(payload.serial.strip(), payload.model.strip())
     return {"code": req.code, "pairing_id": pairing_id, "expires_at": req.expires_at}
 
 
-@devices_router.post("/agent/pair/poll", auth=None, response={200: dict, 202: dict, 404: dict, 410: dict})
+@router.post("/agent/pair/poll", auth=None, response={200: dict, 202: dict, 404: dict, 410: dict})
 def pair_poll(request, payload: PairPollSchema):
     try:
         result = devices.poll_pairing(payload.pairing_id)
@@ -59,7 +59,7 @@ def pair_poll(request, payload: PairPollSchema):
                  "slug": result["slug"], "key": result["key"]}
 
 
-@devices_router.get("/agent/install.sh", auth=None)
+@router.get("/agent/install.sh", auth=None)
 def agent_install_script(request):
     """Installationsskript mit eingesetzter Server-URL; öffentlich, enthält keine Geheimnisse."""
     try:
@@ -70,13 +70,13 @@ def agent_install_script(request):
     return HttpResponse(text, content_type="text/plain; charset=utf-8")
 
 
-@devices_router.get("/agent/version", auth=None)
+@router.get("/agent/version", auth=None)
 def agent_version(request):
     version, sha256 = agent_package.agent_package_info()
     return {"version": version, "sha256": sha256}
 
 
-@devices_router.get("/agent/stagedesk-agent-{version}.tar.gz", auth=None)
+@router.get("/agent/stagedesk-agent-{version}.tar.gz", auth=None)
 def agent_tarball(request, version: str):
     current, _ = agent_package.agent_package_info()
     if version != current:
@@ -138,7 +138,7 @@ def _legacy_row(screen, cfg, now) -> dict:
             'warnings': [], 'last_screenshot_url': None, 'last_screenshot_at': None, 'legacy': True}
 
 
-@devices_router.get("/devices", response=list[DeviceSchema], auth=keycloak_auth)
+@router.get("/devices", response=list[DeviceSchema], auth=keycloak_auth)
 def list_devices(request):
     _require_perm(request, 'signage.view')
     can_see_ids = _can(request, 'signage.devices')
@@ -152,7 +152,7 @@ def list_devices(request):
     return rows
 
 
-@devices_router.post("/devices/pair", response=DeviceSchema, auth=keycloak_auth)
+@router.post("/devices/pair", response=DeviceSchema, auth=keycloak_auth)
 def pair_device(request, payload: DevicePairSchema):
     _require_perm(request, 'signage.devices')
     key = _failed_key(request)
@@ -181,14 +181,14 @@ def pair_device(request, payload: DevicePairSchema):
     return device_row(device, screen, MonitorSettings.load(), timezone.now(), True)
 
 
-@devices_router.post("/devices/{int:id}/unpair", auth=keycloak_auth)
+@router.post("/devices/{int:id}/unpair", auth=keycloak_auth)
 def unpair_device(request, id: int):
     _require_perm(request, 'signage.devices')
     devices.unpair(get_object_or_404(Device, id=id))
     return {"success": True}
 
 
-@devices_router.post("/devices/{int:id}/revoke", auth=keycloak_auth)
+@router.post("/devices/{int:id}/revoke", auth=keycloak_auth)
 def revoke_device(request, id: int):
     _require_perm(request, 'signage.devices')
     devices.revoke_token(get_object_or_404(Device, id=id))
@@ -201,7 +201,7 @@ def _author(request):
     return auth.get('sub', ''), name
 
 
-@devices_router.post("/devices/{int:id}/commands", response=DeviceCommandSchema, auth=keycloak_auth)
+@router.post("/devices/{int:id}/commands", response=DeviceCommandSchema, auth=keycloak_auth)
 def create_device_command(request, id: int, payload: DeviceCommandCreateSchema):
     _require_perm(request, 'signage.devices')
     if payload.kind in POWER_COMMANDS:
@@ -218,7 +218,7 @@ def create_device_command(request, id: int, payload: DeviceCommandCreateSchema):
     return command
 
 
-@devices_router.get("/devices/{int:id}/commands/{int:cid}", response=DeviceCommandSchema, auth=keycloak_auth)
+@router.get("/devices/{int:id}/commands/{int:cid}", response=DeviceCommandSchema, auth=keycloak_auth)
 def get_device_command(request, id: int, cid: int):
     _require_perm(request, 'signage.devices')
     device = get_object_or_404(Device, id=id)
@@ -226,7 +226,7 @@ def get_device_command(request, id: int, cid: int):
     return get_object_or_404(DeviceCommand, id=cid, device=device)
 
 
-@devices_router.get("/screens/{int:id}/events", response=list[DeviceEventSchema], auth=keycloak_auth)
+@router.get("/screens/{int:id}/events", response=list[DeviceEventSchema], auth=keycloak_auth)
 def list_screen_events(request, id: int, kind: str = '', limit: int = 100):
     _require_perm(request, 'signage.devices')
     get_object_or_404(Screen, id=id)
@@ -245,7 +245,7 @@ def _agent_device(request):
     return device
 
 
-@devices_router.post("/agent/screenshot", auth=None)
+@router.post("/agent/screenshot", auth=None)
 def upload_screenshot(request, file: UploadedFile = File(...), command_id: int = Form(None)):
     device = _agent_device(request)
     if file.size > MAX_SCREENSHOT_BYTES:

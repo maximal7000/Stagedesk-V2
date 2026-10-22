@@ -45,7 +45,7 @@ class UpdateViewApiTest(TestCase):
         view = DisplayView.objects.create(name='R', slug='r', kind='rotation')
         # Die Auth ist beim Dekorieren gebunden: Instanzmethode patchen, nicht den Namen.
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}), \
-                mock.patch('signage.api._require_perm'):
+                mock.patch('signage.api.views._require_perm'):
             r = self.client.put(f'/api/monitor/config?view_id={view.id}',
                                 {'rotation_items': [{'view_id': 999999, 'seconds': 10}]},
                                 content_type='application/json')
@@ -55,7 +55,7 @@ class UpdateViewApiTest(TestCase):
 
     def _put(self, view, body):
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}), \
-                mock.patch('signage.api._require_perm'):
+                mock.patch('signage.api.views._require_perm'):
             return self.client.put(f'/api/monitor/config?view_id={view.id}', body, content_type='application/json')
 
     def test_update_view_rejects_invalid_choices(self):
@@ -143,7 +143,7 @@ class UpdateViewApiTest(TestCase):
     def test_get_trashed_view_is_404(self):
         view = DisplayView.objects.create(name='T', slug='t', kind='info', deleted_at=timezone.now())
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}), \
-                mock.patch('signage.api._require_perm'):
+                mock.patch('signage.api.views._require_perm'):
             self.assertEqual(self.client.get(f'/api/monitor/config?view_id={view.id}').status_code, 404)
             view.deleted_at = None
             view.save()

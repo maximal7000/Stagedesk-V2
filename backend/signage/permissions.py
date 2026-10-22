@@ -1,7 +1,7 @@
 """
-Rechteprüfung für die Monitor-Router (api.py und api_setup.py).
+Rechteprüfung und Audit-Log für die Signage-Router (Paket api/).
 
-Eigenes Modul, damit api_setup nicht aus api importieren muss (Zirkelimport).
+Eigenes Modul, damit die Teil-Router nicht untereinander importieren müssen (Zirkelimport).
 """
 from ninja.errors import HttpError
 
@@ -21,3 +21,17 @@ def _require_perm(request, code: str):
         except UserProfile.DoesNotExist:
             pass
     raise HttpError(403, "Keine Berechtigung")
+
+
+def _log_audit(request, action, detail='', via_token=False):
+    """Schreibt in den globalen Audit-Log (core.audit → inventar.AuditLog)."""
+    from core.audit import log as _corelog
+    low = action.lower()
+    if 'deaktiv' in low or ' aus' in low:
+        a = 'status_geaendert'
+    elif 'aktiv' in low or ' an' in low:
+        a = 'aktiviert'
+    else:
+        a = 'status_geaendert'
+    name = f"{action}: {detail}" if detail else action
+    _corelog(request, a, 'monitor', 0, name, {'via': 'token'} if via_token else None)

@@ -1,12 +1,19 @@
 """Rechte-Aufteilung (Spec §3.5): users/0016 und die Zuordnung Endpunkt zu Recht."""
+import importlib
+import pkgutil
 from unittest import mock
 
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import SimpleTestCase
 
-from signage import api, api_setup
+from signage import api as api_package
+from signage.schemas import ScreenUpdateSchema
 from .tests_migrations import MigrationTestCase
+
+
+API_MODULES = [importlib.import_module(f'{api_package.__name__}.{info.name}')
+               for info in pkgutil.iter_modules(api_package.__path__)]
 
 
 class _Denied(Exception):
@@ -53,7 +60,7 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
     """Patcht _require_perm und prüft den Code, den der Endpunkt als Erstes verlangt."""
 
     def assertRequires(self, code, func_name, *args, **kwargs):
-        module = api if hasattr(api, func_name) else api_setup
+        module = next(m for m in API_MODULES if hasattr(m, func_name))
         with mock.patch.object(module, '_require_perm', side_effect=_Denied) as guard:
             with self.assertRaises(_Denied):
                 getattr(module, func_name)(object(), *args, **kwargs)
@@ -67,7 +74,7 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('restore_view_version', 1), ('regenerate_token', None),
                 ('create_webuntis_link', None), ('update_webuntis_link', 1, None),
                 ('delete_webuntis_link', 1), ('search_transit_stops',),
-                ('create_screen', None), ('update_screen', 1, api.ScreenUpdateSchema(name='Halle')),
+                ('create_screen', None), ('update_screen', 1, ScreenUpdateSchema(name='Halle')),
                 ('delete_screen', 1),
                 ('reload_screen', 1), ('regenerate_screen_key', 1), ('create_view_preview', None),
             ],
@@ -86,7 +93,7 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('list_holidays',), ('create_holiday', None), ('update_holiday', 1, None),
                 ('delete_holiday', 1), ('power_off_today', None), ('undo_power_off_today', None),
                 # gemischte Payloads: tests_power.ScreenUpdatePermissionSplitTest
-                ('update_screen', 1, api.ScreenUpdateSchema(power_mode='auto', off_until=None)),
+                ('update_screen', 1, ScreenUpdateSchema(power_mode='auto', off_until=None)),
             ],
             'signage.emergency': [
                 ('list_emergency_templates',), ('create_emergency_template', None),
@@ -107,7 +114,8 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
 
     def test_monitor_edit_is_gone(self):
         import inspect
-        self.assertNotIn('monitor.edit', inspect.getsource(api))
+        for module in API_MODULES:
+            self.assertNotIn('monitor.edit', inspect.getsource(module), module.__name__)
 
 
 class RenameToSignagePermissionsMigrationTest(MigrationTestCase):

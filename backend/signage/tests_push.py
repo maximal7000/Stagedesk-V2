@@ -6,7 +6,8 @@ from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator
 from django.test import TransactionTestCase, override_settings
 
-from . import api, api_setup, push
+from . import push
+from .api import screens as api_screens, setup as api_setup, views as api_views
 from .models import DisplayView, Screen
 from .routing import websocket_urlpatterns
 from .schemas import DisplayViewUpdateSchema
@@ -31,8 +32,8 @@ class DisplayPushTest(TransactionTestCase):
     def test_display_ws_receives_changed_on_view_update(self):
         async def run():
             comm = await _connect('glocke')
-            with mock.patch.object(api, '_require_perm'):
-                await sync_to_async(api.update_view)(object(), DisplayViewUpdateSchema(), view_id=self.view.id)
+            with mock.patch.object(api_views, '_require_perm'):
+                await sync_to_async(api_views.update_view)(object(), DisplayViewUpdateSchema(), view_id=self.view.id)
             self.assertEqual(await comm.receive_json_from(), {'type': 'changed'})
             await comm.disconnect()
         async_to_sync(run)()
@@ -41,8 +42,8 @@ class DisplayPushTest(TransactionTestCase):
         async def run():
             comm = await _connect('glocke')
             other = await _connect('anderer')
-            with mock.patch.object(api, '_require_perm'):
-                await sync_to_async(api.reload_screen)(object(), self.screen.id)
+            with mock.patch.object(api_screens, '_require_perm'):
+                await sync_to_async(api_screens.reload_screen)(object(), self.screen.id)
             self.assertEqual(await comm.receive_json_from(), {'type': 'reload'})
             self.assertTrue(await other.receive_nothing())
             await comm.disconnect()

@@ -10,9 +10,10 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from core.auth import KeycloakAuth
-from signage import api
+from signage.api import screens as api_screens, settings as api_settings
 from . import power
 from .models import EmergencyTemplate, HolidayPeriod, MonitorSettings, Screen
+from .schemas import MonitorSettingsUpdateSchema, ScreenUpdateSchema
 
 WEEKDAYS = [0, 1, 2, 3, 4]
 OFFICE_HOURS = [{'days': WEEKDAYS, 'from': '07:00', 'until': '17:00'}]
@@ -116,9 +117,9 @@ class PowerOffTodayEndpointTest(TestCase):
     def setUp(self):
         self.a = Screen.objects.create(name='A', slug='a', schedule=OFFICE_HOURS)
         self.b = Screen.objects.create(name='B', slug='b', schedule=[])
-        patches = [_auth(), mock.patch('signage.api_setup._require_perm'),
-                   mock.patch('signage.api_setup.push_power_to_all'),
-                   mock.patch('signage.api_setup.timezone.now', return_value=local(2026, 10, 19, 15))]
+        patches = [_auth(), mock.patch('signage.api.setup._require_perm'),
+                   mock.patch('signage.api.setup.push_power_to_all'),
+                   mock.patch('signage.api.setup.timezone.now', return_value=local(2026, 10, 19, 15))]
         mocks = [p.start() for p in patches]
         self.push = mocks[2]
         for p in patches:
@@ -154,7 +155,7 @@ class PowerOffTodayEndpointTest(TestCase):
         self.assertIsNotNone(self.b.off_until)
 
     def test_existing_screen_routes_still_resolve(self):
-        with mock.patch('signage.api._require_perm'):
+        with mock.patch('signage.api.screens._require_perm'):
             r = self.client.delete(f'/api/monitor/screens/{self.b.id}')
         self.assertEqual(r.status_code, 200)
         self.assertFalse(Screen.objects.filter(id=self.b.id).exists())
@@ -163,8 +164,8 @@ class PowerOffTodayEndpointTest(TestCase):
 class HolidayAndTemplateCrudTest(TestCase):
 
     def setUp(self):
-        patches = [_auth(), mock.patch('signage.api_setup._require_perm'),
-                   mock.patch('signage.api_setup.push_power_to_all')]
+        patches = [_auth(), mock.patch('signage.api.setup._require_perm'),
+                   mock.patch('signage.api.setup.push_power_to_all')]
         mocks = [p.start() for p in patches]
         self.guard, self.push = mocks[1], mocks[2]
         for p in patches:
@@ -209,8 +210,8 @@ class HolidayAndTemplateCrudTest(TestCase):
 class EmergencyEndpointTest(TestCase):
 
     def test_emergency_endpoint_pushes_power(self):
-        with _auth(), mock.patch('signage.api._require_perm'), \
-                mock.patch('signage.api.push_power_to_all') as push:
+        with _auth(), mock.patch('signage.api.settings._require_perm'), \
+                mock.patch('signage.api.settings.push_power_to_all') as push:
             r = self.client.post('/api/monitor/emergency',
                                  {'active': True, 'text': 'Feueralarm', 'note': 'Sammelplatz Hof'},
                                  content_type='application/json')
@@ -230,7 +231,7 @@ class EmergencyEndpointTest(TestCase):
         from .models import DisplayView
         DisplayView.objects.create(name='V', slug='v', api_token='tok')
         MonitorSettings.objects.update_or_create(pk=1, defaults={'emergency_note': 'alt'})
-        with mock.patch('signage.api.push_power_to_all') as push:
+        with mock.patch('signage.api.settings.push_power_to_all') as push:
             r = self.client.post('/api/monitor/notfall', {'aktiv': True, 'text': 'Probe'},
                                  content_type='application/json', HTTP_X_MONITOR_TOKEN='tok')
         self.assertEqual(r.status_code, 200)
@@ -261,9 +262,9 @@ class ScreenPowerPushTest(TestCase):
     def test_push_failure_after_save_is_logged_not_500(self):
         """Final-Review 4: der gespeicherte Strommodus gilt, auch wenn der Push scheitert."""
         screen = Screen.objects.create(name='A', slug='a')
-        with _auth(), mock.patch('signage.api._require_perm'), \
+        with _auth(), mock.patch('signage.api.screens._require_perm'), \
                 mock.patch('signage.consumers.push_power_to_screen', side_effect=ConnectionError), \
-                self.assertLogs('signage.api', 'ERROR'):
+                self.assertLogs('signage.api.screens', 'ERROR'):
             r = self.client.put(f'/api/monitor/screens/{screen.id}', {'power_mode': 'manual_off'},
                                 content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 200, r.content)
@@ -279,10 +280,10 @@ class SettingsPermissionSplitTest(SimpleTestCase):
     """PUT /settings: On-Air-Darstellung braucht onair, alles andere setup (Spec §4.5)."""
 
     def required(self, **fields):
-        payload = api.MonitorSettingsUpdateSchema(**fields)
-        with mock.patch.object(api, '_require_perm', side_effect=_Denied) as guard:
+        payload = MonitorSettingsUpdateSchema(**fields)
+        with mock.patch.object(api_settings, '_require_perm', side_effect=_Denied) as guard:
             with self.assertRaises(_Denied):
-                api.update_settings(object(), payload)
+                api_settings.update_settings(object(), payload)
         return guard.call_args.args[1]
 
     def test_on_air_fields_need_onair(self):
@@ -296,13 +297,13 @@ class SettingsPermissionSplitTest(SimpleTestCase):
 
 
 class FreshImportTest(SimpleTestCase):
-    """api_setup muss sich in einem frischen Prozess als erstes Modul importieren lassen."""
+    """signage.api.setup muss sich in einem frischen Prozess als erstes Modul importieren lassen."""
 
     def test_api_setup_imports_standalone(self):
         import subprocess
         import sys
         from pathlib import Path
-        code = 'import django; django.setup(); import signage.api_setup'
+        code = 'import django; django.setup(); import signage.api.setup'
         env = {**__import__('os').environ, 'DJANGO_SETTINGS_MODULE': 'core.settings'}
         result = subprocess.run([sys.executable, '-c', code], cwd=Path(__file__).resolve().parent.parent,
                                 env=env, capture_output=True, text=True, timeout=60)
@@ -313,11 +314,11 @@ class ScreenUpdatePermissionSplitTest(SimpleTestCase):
     """PUT /screens/{id}: Power-Felder brauchen power, alles andere setup (Spec §3.5)."""
 
     def required(self, **fields):
-        payload = api.ScreenUpdateSchema(**fields)
-        with mock.patch.object(api, '_require_perm') as guard, \
-                mock.patch.object(api, 'get_object_or_404', side_effect=_Denied):
+        payload = ScreenUpdateSchema(**fields)
+        with mock.patch.object(api_screens, '_require_perm') as guard, \
+                mock.patch.object(api_screens, 'get_object_or_404', side_effect=_Denied):
             with self.assertRaises(_Denied):
-                api.update_screen(object(), 1, payload)
+                api_screens.update_screen(object(), 1, payload)
         return [c.args[1] for c in guard.call_args_list]
 
     def test_power_only_needs_power(self):

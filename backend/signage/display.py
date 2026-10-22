@@ -6,6 +6,7 @@ Die Datenquellen (Wetter, ÖPNV, Störungen) cachen ihre Ergebnisse an der Ansic
 eine Vorschau-Ansicht (Entwurf) schreibt nie in die Datenbank.
 """
 import json
+import logging
 import re
 import secrets
 import urllib.parse
@@ -17,6 +18,8 @@ from django.utils import timezone
 from . import color_scheme, substitutions, transit
 from .models import Announcement, DisplayView, MediaFile, MonitorSettings
 from .power import compute_power_state
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_MAX_DEPARTURES = 10
 PREVIEW_CACHE_PREFIX = 'signage:preview:'
@@ -119,7 +122,7 @@ def _fetch_transit(view):
         _store_cache(view, ['transit_cache', 'transit_cache_at'])
         return result
     except Exception as e:
-        print(f"ÖPNV-Fehler: {e}")
+        logger.warning(f"ÖPNV-Fehler: {e}")
         # Auch bei Fehler Timestamp setzen → nächster Retry frühestens in 60s
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache_at'])
@@ -151,7 +154,7 @@ def _fetch_disruptions(view):
             result += bus
     except Exception as e:
         all_sources_ok = False
-        print(f"Störungs-Fehler: {e}")
+        logger.warning(f"Störungs-Fehler: {e}")
     # Manuelle Meldungen voranstellen
     for m in (view.transit_disruption_manual or []):
         if isinstance(m, dict) and (m.get('title') or m.get('text')):

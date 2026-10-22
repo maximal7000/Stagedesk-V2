@@ -139,7 +139,7 @@ class RegenerateScreenKeyTest(TestCase):
     def test_key_changes_and_is_returned(self):
         self.grant('signage.setup')
         old = self.screen.access_key
-        with mock.patch('signage.api.push.notify_changed') as notify, \
+        with mock.patch('signage.push.notify_changed') as notify, \
                 self.captureOnCommitCallbacks(execute=True):
             r = self.regenerate()
         self.assertEqual(r.status_code, 200)

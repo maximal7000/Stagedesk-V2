@@ -8,7 +8,9 @@ from django.utils import timezone
 from ninja.errors import HttpError
 
 from .models import DisplayView, Screen, DisplayEvent, DisplayEventScreen
-from .api import _validate_view_data, _validate_exam_data, _fetch_disruptions
+from .api.exams import _validate_exam_data
+from .display import _fetch_disruptions
+from .validation import validate_view_data as _validate_view_data
 from . import transit
 from .transit import nahsh
 

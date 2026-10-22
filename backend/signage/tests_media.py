@@ -13,8 +13,10 @@ from django.test import TestCase, override_settings
 from ninja.errors import HttpError
 from PIL import Image
 
-from . import api, media
+from . import media
+from .api import media as api_media
 from .models import DisplayView, MediaFile, MediaPage
+from .schemas import MediaFileSchema
 
 
 def make_pdf(sizes):
@@ -156,19 +158,19 @@ class UploadTest(MediaTestBase):
 
     def test_upload_too_large_rejected(self):
         upload = SimpleUploadedFile('big.pdf', b'x' * 20)
-        with mock.patch.object(api, '_require_perm'), mock.patch.object(media, 'MAX_BYTES', 10):
+        with mock.patch.object(api_media, '_require_perm'), mock.patch.object(media, 'MAX_BYTES', 10):
             with self.assertRaises(HttpError) as ctx:
-                api.upload_file(self._request(), upload, 'Gross', 'pdf')
+                api_media.upload_file(self._request(), upload, 'Gross', 'pdf')
         self.assertEqual(ctx.exception.status_code, 422)
         self.assertEqual(str(ctx.exception), 'Datei zu groß: höchstens 50 MB.')
         self.assertEqual(MediaFile.objects.count(), 0)
 
     def test_upload_sets_processing_and_starts_render(self):
         upload = SimpleUploadedFile('a.pdf', make_pdf([(100, 100)]))
-        with mock.patch.object(api, '_require_perm'), \
+        with mock.patch.object(api_media, '_require_perm'), \
                 mock.patch.object(media, 'render_async') as started:
             with self.captureOnCommitCallbacks(execute=False) as callbacks:
-                result = api.upload_file(self._request(), upload, 'A', 'pdf')
+                result = api_media.upload_file(self._request(), upload, 'A', 'pdf')
             started.assert_not_called()
             self.assertEqual(len(callbacks), 1)
             callbacks[0]()
@@ -194,8 +196,8 @@ class GetFileTest(MediaTestBase):
         DisplayView.objects.create(name='Andere', slug='andere', media_items=[f.id + 100])
         DisplayView.objects.create(name='Geloescht', slug='weg', media_items=[f.id],
                                    deleted_at='2026-01-01T00:00:00Z')
-        with mock.patch.object(api, '_require_perm'):
-            data = api.get_file(mock.Mock(), f.id)
+        with mock.patch.object(api_media, '_require_perm'):
+            data = api_media.get_file(mock.Mock(), f.id)
         self.assertEqual((data['status'], data['page_count'], data['error']), ('ready', 1, ''))
         self.assertEqual(data['pages'][0]['orientation'], 'portrait')
         self.assertEqual(data['pages'][0]['index'], 0)
@@ -212,9 +214,9 @@ class ListFilesTest(MediaTestBase):
         with self.assertLogs('signage.media', 'WARNING'):
             media.render_file(failed)
         processing = self.make('image', make_exif_jpeg(), 'jpg')
-        with mock.patch.object(api, '_require_perm'):
+        with mock.patch.object(api_media, '_require_perm'):
             rows = {r['id']: r for r in
-                    (api.MediaFileSchema.from_orm(o).dict() for o in api.list_files(mock.Mock()))}
+                    (MediaFileSchema.from_orm(o).dict() for o in api_media.list_files(mock.Mock()))}
         first = rows[ready.id]
         self.assertEqual((first['status'], first['page_count'], first['orientation']), ('ready', 2, 'portrait'))
         self.assertTrue(first['first_page_url'].endswith('.webp'))
@@ -226,12 +228,12 @@ class ListFilesTest(MediaTestBase):
     def test_list_skips_trash(self):
         f = self.make('image', make_exif_jpeg(), 'jpg')
         MediaFile.objects.filter(id=f.id).update(deleted_at='2026-01-01T00:00:00Z')
-        with mock.patch.object(api, '_require_perm'):
-            self.assertEqual(list(api.list_files(mock.Mock())), [])
+        with mock.patch.object(api_media, '_require_perm'):
+            self.assertEqual(list(api_media.list_files(mock.Mock())), [])
 
     def test_detail_of_trashed_file_is_404(self):
         f = self.make('image', make_exif_jpeg(), 'jpg')
         MediaFile.objects.filter(id=f.id).update(deleted_at='2026-01-01T00:00:00Z')
         from django.http import Http404
-        with mock.patch.object(api, '_require_perm'), self.assertRaises(Http404):
-            api.get_file(mock.Mock(), f.id)
+        with mock.patch.object(api_media, '_require_perm'), self.assertRaises(Http404):
+            api_media.get_file(mock.Mock(), f.id)

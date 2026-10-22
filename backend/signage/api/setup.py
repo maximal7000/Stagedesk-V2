@@ -1,7 +1,7 @@
 """
 Monitor API, zweiter Router: Ferien, Notfall-Vorlagen, "bis Tagesende aus", WebUntis-Test, Vorschau.
 
-Wird in api.py per signage_router.add_router("", setup_router) eingebunden.
+Wird in api/__init__.py per signage_router.add_router("", router) eingebunden.
 """
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -9,18 +9,18 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
-from . import display, push, webuntis
-from .permissions import _require_perm
-from .consumers import push_power_to_all
-from .models import DisplayView, EmergencyTemplate, HolidayPeriod, Screen
-from .power import next_on_time
-from .validation import validate_view_data
-from .schemas import (
+from .. import display, push, webuntis
+from ..permissions import _require_perm
+from ..consumers import push_power_to_all
+from ..models import DisplayView, EmergencyTemplate, HolidayPeriod, Screen
+from ..power import next_on_time
+from ..validation import validate_view_data
+from ..schemas import (
     EmergencyTemplateCreateSchema, EmergencyTemplateSchema,
     HolidayPeriodCreateSchema, HolidayPeriodSchema, ScreenSelectionSchema, ViewPreviewSchema,
 )
 
-setup_router = Router()
+router = Router()
 
 
 # ═══ Ferienzeiträume ══════════════════════════════════════════════
@@ -30,13 +30,13 @@ def _validate_holiday(payload: HolidayPeriodCreateSchema):
         raise HttpError(422, "Das Enddatum liegt vor dem Startdatum. Bitte das Enddatum anpassen.")
 
 
-@setup_router.get("/holidays", response=list[HolidayPeriodSchema], auth=keycloak_auth)
+@router.get("/holidays", response=list[HolidayPeriodSchema], auth=keycloak_auth)
 def list_holidays(request):
     _require_perm(request, 'signage.power')
     return HolidayPeriod.objects.all()
 
 
-@setup_router.post("/holidays", response=HolidayPeriodSchema, auth=keycloak_auth)
+@router.post("/holidays", response=HolidayPeriodSchema, auth=keycloak_auth)
 def create_holiday(request, payload: HolidayPeriodCreateSchema):
     _require_perm(request, 'signage.power')
     _validate_holiday(payload)
@@ -46,7 +46,7 @@ def create_holiday(request, payload: HolidayPeriodCreateSchema):
     return holiday
 
 
-@setup_router.put("/holidays/{id}", response=HolidayPeriodSchema, auth=keycloak_auth)
+@router.put("/holidays/{id}", response=HolidayPeriodSchema, auth=keycloak_auth)
 def update_holiday(request, id: int, payload: HolidayPeriodCreateSchema):
     _require_perm(request, 'signage.power')
     _validate_holiday(payload)
@@ -59,7 +59,7 @@ def update_holiday(request, id: int, payload: HolidayPeriodCreateSchema):
     return holiday
 
 
-@setup_router.delete("/holidays/{id}", auth=keycloak_auth)
+@router.delete("/holidays/{id}", auth=keycloak_auth)
 def delete_holiday(request, id: int):
     _require_perm(request, 'signage.power')
     get_object_or_404(HolidayPeriod, id=id).delete()
@@ -70,19 +70,19 @@ def delete_holiday(request, id: int):
 
 # ═══ Notfall-Vorlagen ═════════════════════════════════════════════
 
-@setup_router.get("/emergency-templates", response=list[EmergencyTemplateSchema], auth=keycloak_auth)
+@router.get("/emergency-templates", response=list[EmergencyTemplateSchema], auth=keycloak_auth)
 def list_emergency_templates(request):
     _require_perm(request, 'signage.emergency')
     return EmergencyTemplate.objects.all()
 
 
-@setup_router.post("/emergency-templates", response=EmergencyTemplateSchema, auth=keycloak_auth)
+@router.post("/emergency-templates", response=EmergencyTemplateSchema, auth=keycloak_auth)
 def create_emergency_template(request, payload: EmergencyTemplateCreateSchema):
     _require_perm(request, 'signage.emergency')
     return EmergencyTemplate.objects.create(**payload.dict())
 
 
-@setup_router.put("/emergency-templates/{id}", response=EmergencyTemplateSchema, auth=keycloak_auth)
+@router.put("/emergency-templates/{id}", response=EmergencyTemplateSchema, auth=keycloak_auth)
 def update_emergency_template(request, id: int, payload: EmergencyTemplateCreateSchema):
     _require_perm(request, 'signage.emergency')
     template = get_object_or_404(EmergencyTemplate, id=id)
@@ -92,7 +92,7 @@ def update_emergency_template(request, id: int, payload: EmergencyTemplateCreate
     return template
 
 
-@setup_router.delete("/emergency-templates/{id}", auth=keycloak_auth)
+@router.delete("/emergency-templates/{id}", auth=keycloak_auth)
 def delete_emergency_template(request, id: int):
     _require_perm(request, 'signage.emergency')
     get_object_or_404(EmergencyTemplate, id=id).delete()
@@ -108,7 +108,7 @@ def _selected_screens(payload: ScreenSelectionSchema):
     return screens
 
 
-@setup_router.post("/screens/power-off-today", auth=keycloak_auth)
+@router.post("/screens/power-off-today", auth=keycloak_auth)
 def power_off_today(request, payload: ScreenSelectionSchema):
     """Setzt off_until auf den Beginn des nächsten Zeitplan-Fensters (Spec §3.2)."""
     _require_perm(request, 'signage.power')
@@ -123,7 +123,7 @@ def power_off_today(request, payload: ScreenSelectionSchema):
     return {"off_until": result}
 
 
-@setup_router.delete("/screens/power-off-today", auth=keycloak_auth)
+@router.delete("/screens/power-off-today", auth=keycloak_auth)
 def undo_power_off_today(request, payload: ScreenSelectionSchema):
     """Rückgängig: off_until wieder leeren."""
     _require_perm(request, 'signage.power')
@@ -135,7 +135,7 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
 
 # ═══ WebUntis ═════════════════════════════════════════════════════
 
-@setup_router.post("/webuntis/check", auth=keycloak_auth)
+@router.post("/webuntis/check", auth=keycloak_auth)
 def check_webuntis(request):
     """Quelle neu erkennen (Spec §4.3). Nur Ja/Nein pro Weg und die Quelle, keine Daten."""
     _require_perm(request, 'signage.setup')
@@ -146,7 +146,7 @@ def check_webuntis(request):
 
 # ═══ Vorschau ═════════════════════════════════════════════════════
 
-@setup_router.post("/views/preview", auth=keycloak_auth)
+@router.post("/views/preview", auth=keycloak_auth)
 def create_view_preview(request, payload: ViewPreviewSchema):
     """Entwurf ablegen (nichts wird gespeichert) → Token für GET /display?preview= (Spec §4.5)."""
     _require_perm(request, 'signage.setup')

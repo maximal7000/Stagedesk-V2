@@ -12,7 +12,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from . import api_setup, webuntis
+from . import webuntis
+from .api import setup as api_setup
 from .models import HolidayPeriod, MonitorSettings
 from .webuntis import WebUntisError, WebUntisSession
 
