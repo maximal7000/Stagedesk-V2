@@ -15,7 +15,8 @@ Setzt auf der Umbenennung `monitor` → `signage` auf (Spec `2026-10-22-signage-
 
 ### 1.2 Hauptbahnhof
 
-Am ZOB stehen in **einer Spalte oben die Busse, unten die Züge**. Umsetzung mit den vorhandenen Mitteln: zwei Haltestellen-Einträge in derselben Spalte, oben „ZOB/Hauptbahnhof“ nur mit Bussen (NAH.SH), darunter „Lübeck Hbf“ nur mit Zügen (DB, damit Gleise kommen). Die bisherige Unterteilung „Züge/Busse“ innerhalb einer Haltestelle dreht sich ebenfalls um: Busse oben, Züge unten.
+- Neue Einstellung **pro Haltestelle: „Busse und Züge getrennt“** (Feld `split_modes`, Standard an). An: innerhalb der Haltestelle oben ein Abschnitt „Busse“, darunter „Züge“, die Höhe gleich verteilt. Aus: alle Abfahrten gemischt nach Zeit.
+- Am ZOB stehen so in **einer Spalte oben die Busse, unten die Züge**. Damit die Züge Gleise bekommen, kann der Bahnhof alternativ als zwei Einträge in derselben Spalte angelegt werden: oben „ZOB/Hauptbahnhof“ nur mit Bussen (NAH.SH), darunter „Lübeck Hbf“ nur mit Zügen (DB).
 
 ### 1.3 Störungsspalte
 
@@ -55,7 +56,7 @@ Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22
 ## 3. Admin
 
 Im Abfahrten-Editor:
-- Spaltenzahl (1 bis 5), pro Haltestelle Auswahl „Spalte“.
+- Spaltenzahl (1 bis 5), pro Haltestelle Auswahl „Spalte“ und Schalter „Busse und Züge getrennt“.
 - „Zeitangabe“ (Minuten, Uhrzeit, Gemischt), „Störungen anzeigen“, „Ortsnamen kürzen“.
 - Fußweg pro Haltestelle (gibt es schon) mit Hinweis „Abfahrten, die man zu Fuß nicht mehr schafft, werden ausgeblendet.“
 - Eine kleine Spaltenübersicht im Editor zeigt, welche Haltestellen in welcher Spalte stehen.
