@@ -36,7 +36,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "11",
@@ -48,7 +49,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "5",
@@ -60,7 +62,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": true,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "11",
@@ -72,7 +75,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "31",
@@ -84,7 +88,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "5",
@@ -96,7 +101,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "11",
@@ -108,7 +114,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "5",
@@ -120,7 +127,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "31",
@@ -132,7 +140,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "11",
@@ -144,11 +153,15 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             }
           ],
           "max_departures": 10,
-          "walk_minutes": 1
+          "walk_minutes": 1,
+          "index": 0,
+          "column": null,
+          "split_modes": true
         },
         {
           "station_name": "Kohlmarkt",
@@ -164,7 +177,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "7",
@@ -176,7 +190,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "12",
@@ -188,7 +203,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "9",
@@ -200,7 +216,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "1",
@@ -212,7 +229,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "1",
@@ -224,7 +242,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "7",
@@ -236,7 +255,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "12",
@@ -248,7 +268,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "9",
@@ -260,7 +281,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "1",
@@ -272,11 +294,15 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             }
           ],
           "max_departures": 10,
-          "walk_minutes": 4
+          "walk_minutes": 4,
+          "index": 1,
+          "column": null,
+          "split_modes": true
         },
         {
           "station_name": "Wahmstraße",
@@ -292,7 +318,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "15",
@@ -304,7 +331,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "40",
@@ -316,7 +344,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "4",
@@ -328,7 +357,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "4",
@@ -340,7 +370,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "15",
@@ -352,7 +383,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "40",
@@ -364,7 +396,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "4",
@@ -376,7 +409,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "4",
@@ -388,7 +422,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "15",
@@ -400,11 +435,15 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             }
           ],
           "max_departures": 10,
-          "walk_minutes": 2
+          "walk_minutes": 2,
+          "index": 2,
+          "column": null,
+          "split_modes": true
         },
         {
           "station_name": "Sandstraße",
@@ -420,7 +459,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "6",
@@ -432,7 +472,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "17",
@@ -444,7 +485,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "6",
@@ -456,7 +498,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "3",
@@ -468,7 +511,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "6",
@@ -480,7 +524,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "17",
@@ -492,7 +537,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "6",
@@ -504,7 +550,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "3",
@@ -516,7 +563,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "6",
@@ -528,11 +576,15 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             }
           ],
           "max_departures": 10,
-          "walk_minutes": 3
+          "walk_minutes": 3,
+          "index": 3,
+          "column": null,
+          "split_modes": true
         },
         {
           "station_name": "Lübeck Hbf",
@@ -548,7 +600,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RE8",
@@ -560,7 +613,8 @@
               "kind": "regionalExpress",
               "kind_icon": "re",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "30",
@@ -572,7 +626,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RB85",
@@ -584,7 +639,8 @@
               "kind": "regional",
               "kind_icon": "rb",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "17",
@@ -596,7 +652,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "40",
@@ -608,7 +665,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RE83",
@@ -620,7 +678,8 @@
               "kind": "regionalExpress",
               "kind_icon": "re",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "18",
@@ -632,7 +691,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RB86",
@@ -644,7 +704,8 @@
               "kind": "regional",
               "kind_icon": "rb",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "30",
@@ -656,7 +717,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RE8",
@@ -668,7 +730,8 @@
               "kind": "regionalExpress",
               "kind_icon": "re",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "17",
@@ -680,7 +743,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "31",
@@ -692,7 +756,8 @@
               "kind": "bus",
               "kind_icon": "bus",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RB84",
@@ -704,7 +769,8 @@
               "kind": "regional",
               "kind_icon": "rb",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RE83",
@@ -716,7 +782,8 @@
               "kind": "regionalExpress",
               "kind_icon": "re",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             },
             {
               "line": "RB81",
@@ -728,11 +795,15 @@
               "kind": "regional",
               "kind_icon": "rb",
               "cancelled": false,
-              "remarks": []
+              "remarks": [],
+              "realtime": true
             }
           ],
           "max_departures": 18,
-          "walk_minutes": 14
+          "walk_minutes": 14,
+          "index": 4,
+          "column": null,
+          "split_modes": true
         }
       ],
       "disruptions": [
@@ -753,7 +824,18 @@
           "suggestion": "",
           "highlighted": true
         }
-      ]
+      ],
+      "columns": 4,
+      "time_format": "minutes",
+      "show_disruptions": true,
+      "strip_city": true,
+      "status": {
+        "fetched_at": "2026-10-19T10:41:30+02:00",
+        "sources": {
+          "db": "ok",
+          "nahsh": "ok"
+        }
+      }
     }
   }
 }

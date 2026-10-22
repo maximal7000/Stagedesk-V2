@@ -1,0 +1,162 @@
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
+import DeparturesView from './DeparturesView'
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
+
+const bus = (departure, line, direction, extra) => ({
+  line, direction, departure, departure_actual: departure, delay: 0, platform: '', kind: 'bus', kind_icon: 'bus',
+  cancelled: false, realtime: true, remarks: [], ...extra,
+})
+const train = (departure, line, direction, platform, extra) => ({
+  line, direction, departure, departure_actual: departure, delay: 0, platform, kind: 'regionalExpress', kind_icon: 're',
+  cancelled: false, realtime: true, remarks: [], ...extra,
+})
+const station = (index, name, departures, extra) => ({
+  station_name: name, station_id: String(8000000 + index), index, column: null, split_modes: true,
+  walk_minutes: 3, departures, max_departures: 10, ...extra,
+})
+
+function view(data, extra) {
+  return {
+    id: 2, kind: 'departures', layout: 'wide', page_seconds: 15, show_weather: false, weather: null,
+    data: {
+      stations: [], disruptions: [], columns: 4, time_format: 'minutes', show_disruptions: true, strip_city: true,
+      status: { fetched_at: '2026-10-22T22:11:00', sources: { db: 'ok', nahsh: 'ok' } },
+      ...data,
+    },
+    ...extra,
+  }
+}
+
+let root
+function render(element) {
+  const host = document.createElement('div')
+  root = createRoot(host)
+  act(() => { root.render(element) })
+  return host
+}
+
+const rows = (el) => [...el.querySelectorAll('[data-departure-row]')]
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval', 'setTimeout', 'clearTimeout'] })
+  vi.setSystemTime(new Date(2026, 9, 22, 22, 11, 18))
+})
+
+afterEach(() => {
+  act(() => root.unmount())
+  vi.useRealTimers()
+})
+
+describe('DeparturesView', () => {
+  it('feste Spalten: Haltestellen landen in ihrer Spalte, Ortsname gekürzt', () => {
+    const stations = [
+      station(0, 'Lübeck Wahmstraße', [], { column: 1 }),
+      station(1, 'Lübeck Sandstraße', [], { column: 1 }),
+      station(2, 'Lübeck Hbf', [], { column: 4 }),
+    ]
+    const el = render(<DeparturesView view={view({ stations })} />)
+    const columns = [...el.querySelectorAll('[data-station-column]')]
+    expect(columns).toHaveLength(4)
+    const names = columns.map((c) => [...c.querySelectorAll('h2')].map((h) => h.textContent))
+    expect(names).toEqual([['Wahmstraße', 'Sandstraße'], [], [], ['Lübeck Hbf']])
+    expect(columns[0].style.gridTemplateRows).toBe('repeat(2, minmax(0, 1fr))')
+    expect(el.textContent).toContain('Keine Abfahrten')
+  })
+
+  it('Ortsnamen bleiben ohne strip_city', () => {
+    const stations = [station(0, 'Lübeck Wahmstraße', []), station(1, 'Lübeck Sandstraße', [])]
+    const el = render(<DeparturesView view={view({ stations, strip_city: false })} />)
+    expect([...el.querySelectorAll('h2')].map((h) => h.textContent)).toEqual(['Lübeck Wahmstraße', 'Lübeck Sandstraße'])
+  })
+
+  it('getrennt: Busse oben, Züge unten; ohne Trennung gemischt nach Zeit', () => {
+    const deps = [train('22:14', 'RE8', 'Hamburg Hbf', '5'), bus('22:15', '11', 'Schlutup'), train('22:20', 'RB84', 'Kiel Hbf', '4')]
+    let el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps)] })} />)
+    const sections = [...el.querySelectorAll('[data-section]')]
+    expect(sections.map((s) => s.dataset.section)).toEqual(['bus', 'train'])
+    expect(sections.map((s) => s.querySelector('[data-section-label]').textContent)).toEqual(['Busse', 'Züge'])
+    expect(sections[1].querySelectorAll('[data-departure-row]')).toHaveLength(2)
+    act(() => root.unmount())
+
+    el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps, { split_modes: false })] })} />)
+    expect(el.querySelector('[data-section-label]')).toBeNull()
+    expect(rows(el).map((r) => r.querySelector('[data-chip]').textContent)).toEqual(['RE 8', '11', 'RB 84'])
+  })
+
+  it('eine Zeitangabe vorn mit Verspätung, keine Minutenspalte rechts', () => {
+    const deps = [bus('22:14', '5', 'Eichholz', { departure_actual: '22:20', delay: 6 }), bus('22:40', '8710', 'Mölln')]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)], time_format: 'mixed' })} />)
+    const [first, second] = rows(el)
+    expect(first.children).toHaveLength(3)
+    expect(first.firstChild.textContent).toBe('3 min+6')
+    expect(first.querySelector('[data-delay]').className).toContain('text-(--d-warn)')
+    expect(second.firstChild.textContent).toBe('22:40')
+    expect(second.lastChild.textContent).toBe('Mölln')
+    expect(second.querySelector('[data-chip]').style.background).toBe('rgb(149, 39, 110)')
+  })
+
+  it('Ausfall: Zeit durchgestrichen, „fällt aus“ in Rot', () => {
+    const deps = [bus('22:14', '30', 'Travemünde', { cancelled: true, delay: 3 })]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)] })} />)
+    const [row] = rows(el)
+    expect(row.firstChild.textContent).toBe('3 min')
+    expect(row.firstChild.className).toContain('line-through')
+    expect(row.lastChild.textContent).toBe('fällt aus')
+    expect(row.lastChild.className).toContain('text-(--d-red)')
+  })
+
+  it('Gleis bei Zügen, Gleiswechsel mit altem Gleis durchgestrichen', () => {
+    const deps = [
+      train('22:23', 'RE8', 'Hamburg Hbf', '6', { platform_planned: '5' }),
+      train('22:30', 'RB84', 'Kiel Hbf', '4'),
+    ]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps)] })} />)
+    const [changed, plain] = rows(el).map((r) => r.querySelector('[data-platform]'))
+    expect(changed.querySelector('s').textContent).toBe('Gl. 5')
+    expect(changed.className).toContain('text-(--d-warn)')
+    expect(changed.textContent).toBe('Gl. 5 Gl. 6')
+    expect(plain.textContent).toBe('Gl. 4')
+    expect(plain.querySelector('s')).toBeNull()
+  })
+
+  it('lange Linien bekommen kleinere Schrift', () => {
+    const deps = [train('22:15', 'SEV RE83', 'Büchen', ''), train('22:16', 'RE8', 'Hamburg', '5')]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps)] })} />)
+    const [long, short] = rows(el).map((r) => r.querySelector('[data-chip]'))
+    expect(long.textContent).toBe('SEV RE83')
+    expect(long.className).toContain('text-[0.8em]')
+    expect(short.className).not.toContain('text-[0.8em]')
+  })
+
+  it('Störungsspalte nur mit show_disruptions', () => {
+    const disruptions = [{ id: 'a', kind: 'disruption', title: 'Umleitung', text: 'Ersatzhalt Possehlstraße.', lines: ['5'], image: '/media/x.png' }]
+    let el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', [])], disruptions })} />)
+    const column = el.querySelector('[data-disruptions]')
+    expect(column).not.toBeNull()
+    expect(column.textContent).toContain('Störung · Linie 5')
+    expect(column.textContent).toContain('Umleitung')
+    expect(column.querySelector('img').getAttribute('src')).toBe('/media/x.png')
+    act(() => root.unmount())
+
+    el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', [])], disruptions, show_disruptions: false })} />)
+    expect(el.querySelector('[data-disruptions]')).toBeNull()
+  })
+
+  it('Footer: Datum, Wetter und Stand, Quellen-Ausfall dahinter', () => {
+    const weather = { temperature: 12.4, description: 'Regen' }
+    const status = { fetched_at: '2026-10-22T22:11:00', sources: { db: 'error', nahsh: 'ok' } }
+    const el = render(<DeparturesView.Footer view={view({ status }, { show_weather: true, weather })} />)
+    const items = [...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)
+    expect(items).toEqual(['Donnerstag, 22. Oktober', '12 °C Regen', 'Stand 22:11', 'DB nicht erreichbar'])
+  })
+
+  it('Footer ohne Wetterdaten und ohne Ausfall', () => {
+    const status = { fetched_at: '2026-10-22T22:11:00', sources: { db: 'off', nahsh: 'ok' } }
+    const el = render(<DeparturesView.Footer view={view({ status }, { show_weather: true, weather: null })} />)
+    const items = [...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)
+    expect(items).toEqual(['Donnerstag, 22. Oktober', 'Stand 22:11'])
+  })
+})

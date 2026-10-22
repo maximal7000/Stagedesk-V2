@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { disruptionLabel, isBus, lineColor, lineLabel, minutesUntil, visibleDisruptions } from './transit'
+import {
+  BUS_FALLBACK_COLOR, assignColumns, delayLabel, disruptionLabel, formatDepartureTime, isBus, lineColor, lineLabel,
+  minutesUntil, stripCommonCity, visibleDisruptions,
+} from './transit'
 
 const at = (hh, mm) => new Date(2026, 9, 19, hh, mm, 30)
 
@@ -40,5 +43,57 @@ describe('transit', () => {
     expect(disruptionLabel({ kind: 'disruption', lines: ['5'] })).toBe('Störung · Linie 5')
     expect(disruptionLabel({ kind: 'construction', lines: ['11', '31'] })).toBe('Baustelle · Linien 11, 31')
     expect(disruptionLabel({ kind: 'other', all_lines: true, lines: ['5'] })).toBe('Hinweis')
+  })
+
+  describe('Zeitangabe', () => {
+    const dep = (departure, extra) => ({ departure, departure_actual: departure, delay: 0, ...extra })
+    const at = (hms) => {
+      const [h, m, sec = 0] = hms.split(':').map(Number)
+      return new Date(2026, 9, 22, h, m, sec)
+    }
+
+    it('Minuten, Uhrzeit und Gemischt mit Grenze 20 min', () => {
+      expect(formatDepartureTime(dep('22:11'), at('22:11:30'), 'minutes')).toBe('jetzt')
+      expect(formatDepartureTime(dep('22:14'), at('22:11'), 'minutes')).toBe('3 min')
+      expect(formatDepartureTime(dep('22:31'), at('22:11'), 'mixed')).toBe('20 min')
+      expect(formatDepartureTime(dep('22:32'), at('22:11'), 'mixed')).toBe('22:32')
+      expect(formatDepartureTime(dep('22:14'), at('22:11'), 'clock')).toBe('22:14')
+    })
+
+    it('rechnet ab der geplanten Abfahrt, auch über Mitternacht', () => {
+      expect(formatDepartureTime(dep('22:03', { departure_actual: '22:12', delay: 9 }), at('22:11'), 'minutes')).toBe('jetzt')
+      expect(formatDepartureTime(dep('22:14', { departure_actual: '22:20', delay: 6 }), at('22:11'), 'minutes')).toBe('3 min')
+      expect(formatDepartureTime(dep('00:05'), at('23:58'), 'minutes')).toBe('7 min')
+      expect(formatDepartureTime(dep('22:14'), at('22:11'), undefined)).toBe('3 min')
+    })
+
+    it('Verspätung als +N, ohne bei 0', () => {
+      expect(delayLabel({ delay: 6 })).toBe('+6')
+      expect(delayLabel({ delay: 0 })).toBeNull()
+      expect(delayLabel({})).toBeNull()
+    })
+  })
+
+  it('Bus-Lila nur für Busse ohne eigene Linienfarbe', () => {
+    expect(BUS_FALLBACK_COLOR).toBe('#95276E')
+    expect(lineColor({ kind_icon: 'bus', line: '8710' })).toBe('#95276E')
+    expect(lineColor({ kind_icon: 'bus', line: '11', line_color: '#e30613' })).toBe('#e30613')
+    expect(lineColor({ kind_icon: 're', line: 'SEV RE83' })).toBeNull()
+  })
+
+  it('verteilt Haltestellen auf feste Spalten', () => {
+    const st = (index, column) => ({ index, column, station_name: `S${index}` })
+    expect(assignColumns([st(0, 1), st(1, 6), st(2, null)], 4).map((c) => c.map((s) => s.index))).toEqual([[0], [], [2], [1]])
+    expect(assignColumns([st(3, 2), st(1, 2), st(0, 1)], 2).map((c) => c.map((s) => s.index))).toEqual([[0], [1, 3]])
+    expect(assignColumns([{ station_name: 'a' }, { station_name: 'b' }], 2).map((c) => c.map((s) => s.station_name))).toEqual([['a'], ['b']])
+  })
+
+  it('kürzt einen gemeinsamen Ortsnamen', () => {
+    const strip = stripCommonCity(['Lübeck Wahmstraße', 'Lübeck Hbf'])
+    expect(strip('Lübeck Wahmstraße')).toBe('Wahmstraße')
+    expect(strip('Lübeck Hbf')).toBe('Lübeck Hbf')
+    expect(stripCommonCity(['Lübeck Kohlmarkt'])('Lübeck Kohlmarkt')).toBe('Lübeck Kohlmarkt')
+    expect(stripCommonCity(['Lübeck Kohlmarkt', 'Bad Schwartau'])('Lübeck Kohlmarkt')).toBe('Lübeck Kohlmarkt')
+    expect(stripCommonCity(['Lübeck Kohlmarkt', 'Lübeck'])('Lübeck Kohlmarkt')).toBe('Lübeck Kohlmarkt')
   })
 })
