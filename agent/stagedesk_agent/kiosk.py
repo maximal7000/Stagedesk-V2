@@ -18,7 +18,7 @@ class Kiosk:
             return None
 
     def apply(self, url):
-        """False also when nothing changed."""
+        """Schreibt die Kiosk-URL und startet den Kiosk neu; False, wenn sich nichts geändert hat."""
         if "\n" in url or "\r" in url:
             raise ValueError("Kiosk-URL enthält einen Zeilenumbruch")
         content = f"KIOSK_URL={url}\n"

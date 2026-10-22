@@ -193,7 +193,7 @@ export function overrideProblem(viewId, untilLocal, now = new Date()) {
   if (!viewId) return 'Keine Ansicht gewählt.'
   if (untilLocal) {
     const until = new Date(untilLocal)
-    if (Number.isNaN(until.getTime()) || until <= now) return '„Bis“ liegt in der Vergangenheit.'
+    if (Number.isNaN(until.getTime()) || until <= now) return '„Bis“ muss in der Zukunft liegen.'
   }
   return ''
 }

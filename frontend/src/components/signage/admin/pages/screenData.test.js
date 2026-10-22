@@ -108,7 +108,7 @@ describe('overridePayload / overrideProblem', () => {
   })
   it('meldet fehlende Ansicht und vergangene Zeit', () => {
     expect(overrideProblem('', '', now)).toMatch(/Ansicht/)
-    expect(overrideProblem(4, '2026-10-20T09:00', now)).toMatch(/Vergangenheit/)
+    expect(overrideProblem(4, '2026-10-20T09:00', now)).toMatch(/Zukunft/)
     expect(overrideProblem(4, '2026-10-20T14:00', now)).toBe('')
     expect(overrideProblem(4, '', now)).toBe('')
   })
