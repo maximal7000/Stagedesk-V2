@@ -1,8 +1,7 @@
 #!/bin/bash
-# Stagedesk Geräte-Agent: Installation auf einem Raspberry Pi (Bookworm).
-# Aufruf: curl -fsSL <Server>/api/signage/agent/install.sh | sudo bash
-# Idempotent: ein zweiter Lauf aktualisiert Paket und Dienste und behält die Kopplung.
-# Eine andere Server-Adresse (z. B. zum Testen): sudo STAGEDESK_SERVER=https://server bash install.sh
+# Usage: curl -fsSL <server>/api/signage/agent/install.sh | sudo bash
+# Idempotent: a second run updates package and services and keeps the pairing.
+# Another server address (e.g. for testing): sudo STAGEDESK_SERVER=https://server bash install.sh
 set -euo pipefail
 
 PLACEHOLDER="__STAGEDESK_""SERVER__"
@@ -41,7 +40,7 @@ install_packages() {
   say "1/6 Pakete installieren"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update </dev/null
-  # Auf Bookworm heißt das Paket chromium; chromium-browser nur als Rückfall für andere Quellen.
+  # On Bookworm the package is chromium; chromium-browser only as a fallback for other sources.
   local browser=chromium
   apt-cache show chromium >/dev/null 2>&1 || browser=chromium-browser
   apt-get install -y --no-install-recommends "${PACKAGES[@]}" "$browser" </dev/null
@@ -77,7 +76,7 @@ install_package() {
     mv "$OPT_DIR.install" "$OPT_DIR"
     rm -rf "$OPT_DIR.prev"
     PACKAGE_CHANGED=1
-    # Eine manuelle Installation ersetzt ein halb fertiges Selbst-Update: Rückfall-Zustand verwerfen.
+    # A manual install replaces a half-finished self-update: drop the rollback state.
     systemctl disable --now stagedesk-agent-rollback.timer >/dev/null 2>&1 || true
     rm -f "$STATE_DIR/pending-confirm" "$STATE_DIR/failed-version"
     rm -rf "$OPT_DIR.new"
@@ -89,7 +88,7 @@ write_config() {
   say "3/6 Konfiguration und Dienste anlegen"
   install -d -m 700 -o root -g root "$CONFIG_DIR"
   install -d -m 755 -o root -g root "$STATE_DIR"
-  # config.json: nur die Server-Adresse setzen, eine bestehende Kopplung bleibt erhalten.
+  # config.json: only set the server address, an existing pairing is kept.
   STAGEDESK_CONFIG="$CONFIG_DIR/config.json" STAGEDESK_SERVER_URL="$SERVER" python3 - <<'PY'
 import json, os
 path, server = os.environ["STAGEDESK_CONFIG"], os.environ["STAGEDESK_SERVER_URL"]
@@ -125,12 +124,12 @@ prepare_kiosk_user() {
   say "4/6 Kiosk-Benutzer vorbereiten"
   usermod -aG video,render,input,tty pi
   systemctl mask getty@tty1.service
-  # Der Bildschirm soll nie dunkel werden (consoleblank=0), die Zeile in cmdline.txt bleibt eine Zeile.
+  # The screen must never blank (consoleblank=0); cmdline.txt must stay a single line.
   local cmdline=/boot/firmware/cmdline.txt
   if [ -f "$cmdline" ] && ! grep -q 'consoleblank=0' "$cmdline"; then
     sed -i '1 s/[[:space:]]*$/ consoleblank=0/' "$cmdline"
   fi
-  # Unsichtbarer Mauszeiger für cage (Doku: Mauszeiger ausblenden).
+  # Invisible mouse cursor for cage.
   local home icons
   home="$(getent passwd pi | cut -d: -f6)"
   icons="$home/.icons"
@@ -168,7 +167,7 @@ disable_old_setup() {
     systemctl disable --now stagedesk-reboot.timer || true
     say "    stagedesk-reboot.timer abgeschaltet."
   fi
-  # Der alte 04:00-Neustart (cron.d oder root-Crontab). Den täglichen Neustart plant jetzt der Agent.
+  # The old 04:00 reboot (cron.d or root crontab). The agent schedules the daily reboot now.
   if [ -f /etc/cron.d/stagedesk-reboot ]; then
     mv /etc/cron.d/stagedesk-reboot /etc/cron.d/stagedesk-reboot.disabled
     say "    /etc/cron.d/stagedesk-reboot abgeschaltet."
@@ -187,7 +186,7 @@ start_services() {
   say "6/6 Agent und Kiosk starten"
   systemctl daemon-reload
   systemctl enable --now stagedesk-agent.service stagedesk-kiosk.service
-  # Beim ersten Lauf startet enable --now beide Dienste; bei einem erneuten Lauf nur bei Änderungen neu starten.
+  # On the first run enable --now starts both services; on a rerun restart only on changes.
   if [ "$PACKAGE_CHANGED" = "1" ] || [ "$UNITS_CHANGED_AGENT" = "1" ]; then
     systemctl restart stagedesk-agent.service
   fi

@@ -1,4 +1,3 @@
-"""Wires pairing, connection and local pages together."""
 import json
 import logging
 import queue
@@ -167,8 +166,6 @@ class Agent:
             pass
         self._power_queue.put(None)  # wakes the worker, which then exits
 
-    # commands
-
     def _drop_command_jobs(self):
         try:
             while True:
@@ -256,8 +253,6 @@ class Agent:
     def send(self, msg):
         return bool(self.connection and self.connection.send(msg))
 
-    # power
-
     def _power_controller(self, target=None):
         """Controller for the last applied (method, config); rebuilt when it changes. Hold _power_lock.
 
@@ -292,7 +287,7 @@ class Agent:
                 return self._power_error
             current = controller.status()
             if (on and current == "an") or (not on and current in ("standby", "aus")):
-                return current  # already in the wanted state
+                return current
             return controller.set(on)
 
     def _enqueue_power(self, job):
@@ -321,8 +316,6 @@ class Agent:
     def _on_power_command(self, message):
         status = self._apply_power(bool(message.get("power", True)))
         self.send({"type": "power_status", "status": status})
-
-    # telemetry
 
     def _send_telemetry(self):
         status = self._power_status()
@@ -386,7 +379,6 @@ class Agent:
             self._enqueue_power(lambda: self._on_power_command(message))
 
     def _after_hello(self, hello):
-        """Confirm a self-update, rewrite the update timers, then look for a newer agent version."""
         wake = self._telemetry_wake
         if self.self_updater:
             try:
@@ -415,7 +407,6 @@ class Agent:
         self.state = "pairing"
 
     def run_once(self):
-        """One phase: pairing if there is no token, otherwise the connection until it ends."""
         if self._stopped:
             return
         if not self.config.token:

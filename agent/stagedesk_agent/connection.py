@@ -1,4 +1,3 @@
-"""WebSocket connection to the server with automatic reconnect."""
 import json
 import logging
 import struct

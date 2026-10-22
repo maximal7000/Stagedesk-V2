@@ -73,6 +73,6 @@ def write_timers(update_window, auto_updates, daily_reboot, runner, paths):
         if wanted and not enabled:
             runner.run(["systemctl", "enable", "--now", name])
         elif wanted and changed[name]:
-            runner.run(["systemctl", "restart", name])  # pick up the new schedule
+            runner.run(["systemctl", "restart", name])
         elif not wanted and enabled:
             runner.run(["systemctl", "disable", "--now", name])

@@ -53,8 +53,6 @@ class Updater:
                 return False, NO_ANSWER
             return self._gate_reply
 
-    # update
-
     def run(self, manual=False):
         if not self._lock.acquire(blocking=False):
             text = "Ein Update läuft bereits"

@@ -1,4 +1,3 @@
-"""Self-update of the agent: download, verify, unpack, swap, restart; roll back if not confirmed."""
 import hashlib
 import contextlib
 import fcntl
@@ -43,7 +42,6 @@ def _file_sha256(path):
 
 
 def download(url, dest, deadline=DOWNLOAD_DEADLINE):
-    """Stream to `dest`, hashing on the way. Returns the SHA-256 hex digest."""
     digest = hashlib.sha256()
     end = time.monotonic() + deadline
     size = 0

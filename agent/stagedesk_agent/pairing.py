@@ -1,4 +1,3 @@
-"""Pairing with the server before the first token (spec section 3)."""
 import http.client
 import json
 import logging

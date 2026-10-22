@@ -23,8 +23,6 @@ UPLOAD_TIMEOUT = 60
 
 
 class PlaceholderUpdater:
-    """Stands in until the real updater is wired in."""
-
     def run(self, manual=False):
         return {"ok": False, "text": "Updates folgen mit dem nächsten Agent-Update"}
 
