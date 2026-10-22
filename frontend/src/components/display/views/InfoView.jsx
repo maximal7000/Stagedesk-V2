@@ -7,7 +7,7 @@ import { usePager } from '../lib/pager'
 import { useClockMinute } from '../lib/useClock'
 import { Heading, PageCount } from './parts'
 
-// Info (Stil A, Entwurf display-info.png): Ankündigungen links, Termine und Countdown rechts,
+// Info (Aufteilung "Normal", Entwurf display-info.png): Ankündigungen links, Termine und Countdown rechts,
 // QR-Code in der Ecke. Uhr, Datum und Wetter kommen aus dem Rahmen.
 
 const STACK_BELOW_REM = 70

@@ -7,13 +7,15 @@
     "location": "Pausenhalle",
     "scale": "auto",
     "orientation": "landscape",
-    "power": false
+    "power": false,
+    "scheme": "light"
   },
+  "scheme": "light",
   "mode": null,
   "view": {
     "id": 1,
     "kind": "info",
-    "style": "ci",
+    "layout": "normal",
     "page_seconds": 15,
     "show_weather": true,
     "weather": {

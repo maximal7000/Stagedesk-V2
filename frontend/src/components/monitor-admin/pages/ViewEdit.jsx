@@ -23,8 +23,8 @@ import MediaEditor from '../view-editors/Media'
 import InfoEditor from '../view-editors/Info'
 import RotationEditor from '../view-editors/Rotation'
 import {
-  KIND_OPTIONS, ON_AIR_OPTIONS, SIDE_OPTIONS, STYLE_OPTIONS, changedKeys, draftFromView, kindLabel, previewPayload,
-  styleHelp, usedOn, viewPayload, viewProblems,
+  KIND_OPTIONS, ON_AIR_OPTIONS, SIDE_OPTIONS, LAYOUT_OPTIONS, changedKeys, draftFromView, kindChangeProblem, kindLabel, previewPayload,
+  layoutHelp, usedOn, viewPayload, viewProblems,
 } from './viewData'
 import * as api from '../shared/api'
 
@@ -122,8 +122,8 @@ function NewView() {
 
 // ── Ansicht bearbeiten ─────────────────────────────────────────────
 
-function GeneralSection({ draft, set, kind }) {
-  const ids = { name: useId(), city: useId(), qrUrl: useId(), qrLabel: useId() }
+function GeneralSection({ draft, set, kindProblem }) {
+  const ids = { name: useId(), kind: useId(), city: useId(), qrUrl: useId(), qrLabel: useId() }
   const nameMissing = !String(draft.name ?? '').trim()
   return (
     <Section title="Allgemein" data-editor-section="general">
@@ -136,9 +136,19 @@ function GeneralSection({ draft, set, kind }) {
             {nameMissing ? 'Der Name fehlt. Bitte einen Namen eintragen.' : 'Nur im Admin sichtbar.'}
           </p>
         </div>
-        <Field label="Stil" className="sm:col-span-2" help={styleHelp(draft.style, kind)}>
+        <div>
+          <label htmlFor={ids.kind} className="block text-sm font-medium text-fg mb-1.5">Typ</label>
+          <select id={ids.kind} aria-label="Typ" value={draft.kind ?? ''} onChange={(e) => set('kind', e.target.value)}
+            aria-invalid={Boolean(kindProblem)} className={fieldClass}>
+            {KIND_OPTIONS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+          </select>
+          <p className={`text-xs mt-1.5 ${kindProblem ? 'text-bad' : 'text-fg-subtle'}`} role={kindProblem ? 'alert' : undefined}>
+            {kindProblem || 'Die Einstellungen der anderen Typen bleiben gespeichert.'}
+          </p>
+        </div>
+        <Field label="Aufteilung" className="sm:col-span-2" help={layoutHelp(draft.layout)}>
           <div className="max-w-md">
-            <Segmented label="Stil" options={STYLE_OPTIONS} value={draft.style ?? 'auto'} onChange={(v) => set('style', v)} />
+            <Segmented label="Aufteilung" options={LAYOUT_OPTIONS} value={draft.layout ?? 'auto'} onChange={(v) => set('layout', v)} />
           </div>
         </Field>
         <div className="sm:col-span-2 space-y-3">
@@ -219,6 +229,7 @@ function EditView({ viewId }) {
   const [error, setError] = useState(null)
   const [missing, setMissing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmKind, setConfirmKind] = useState(false)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
@@ -243,13 +254,22 @@ function EditView({ viewId }) {
   const { confirmLeave } = useUnsavedGuard(draft.changedCount > 0)
   const payload = useMemo(() => (view && draft.draft ? previewPayload(view.id, base, draft.draft) : null), [view, base, draft.draft])
   const used = useMemo(() => usedOn(viewId, screens), [viewId, screens])
+  const kind = draft.draft?.kind ?? view?.kind
+  const kindChanged = Boolean(view) && kind !== view.kind
+  const kindProblem = kindChanged ? kindChangeProblem(viewId, kind, views) : null
 
-  const save = async () => {
-    const problems = viewProblems({ ...draft.draft, kind: view.kind }, changedKeys(base, draft.draft))
+  const save = () => {
+    const problems = [...(kindProblem ? [kindProblem] : []), ...viewProblems(draft.draft, changedKeys(base, draft.draft))]
     if (problems.length) {
       toast.error(problems[0])
       return
     }
+    if (kindChanged && used.length > 0) setConfirmKind(true)
+    else persist()
+  }
+
+  const persist = async () => {
+    setConfirmKind(false)
     try {
       const saved = await draft.save((d) => api.updateView(viewId, viewPayload(d, changedKeys(base, d))))
       setView(saved)
@@ -309,15 +329,14 @@ function EditView({ viewId }) {
     )
   }
 
-  const Editor = view ? EDITORS[view.kind] : null
+  const Editor = view ? EDITORS[kind] : null
   return (
-    <div data-admin-page="view-edit" data-state={state} data-view-kind={view?.kind}>
+    <div data-admin-page="view-edit" data-state={state} data-view-kind={kind}>
       <Breadcrumb current={view?.name} confirmLeave={confirmLeave} />
       {view && base && (
         <>
           <PageHeader
             title={view.name}
-            meta={<span className="inline-block rounded-md border border-line px-2 py-0.5 text-xs text-fg-muted">Typ: {kindLabel(view.kind)}</span>}
             actions={(
               <>
                 <Button icon={Copy} onClick={duplicate} disabled={busy}>Duplizieren</Button>
@@ -327,7 +346,7 @@ function EditView({ viewId }) {
           />
           <div className="grid gap-4 lg:grid-cols-2 items-start">
             <div className="space-y-4 min-w-0">
-              <GeneralSection draft={draft.draft} set={draft.set} kind={view.kind} />
+              <GeneralSection draft={draft.draft} set={draft.set} kindProblem={kindProblem} />
               {Editor && <Editor draft={draft.draft} set={draft.set} views={views} viewId={view.id} />}
             </div>
             <div className="space-y-4 min-w-0 lg:sticky lg:top-4">
@@ -337,6 +356,17 @@ function EditView({ viewId }) {
           </div>
           <SaveBar count={draft.changedCount} onSave={save} onDiscard={draft.reset} saving={draft.saving} />
         </>
+      )}
+      {confirmKind && (
+        <ConfirmDialog
+          title="Typ ändern?"
+          body={used.length === 1
+            ? 'Die Ansicht läuft auf einem Bildschirm. Nach dem Speichern zeigt er den neuen Typ.'
+            : `Die Ansicht läuft auf ${used.length} Bildschirmen. Nach dem Speichern zeigen sie den neuen Typ.`}
+          confirmLabel="Typ ändern"
+          onConfirm={persist}
+          onCancel={() => setConfirmKind(false)}
+        />
       )}
       {confirmDelete && view && (
         <ConfirmDialog

@@ -74,6 +74,29 @@ describe('Overview', () => {
     expect([...container.querySelectorAll('button')].some((b) => b.textContent === 'Auslösen…')).toBe(true)
   })
 
+  it('On-Air und Notfall: Unterzeilen nennen nur den Zustand', async () => {
+    const mountOverview = async () => {
+      container = document.createElement('div')
+      root = createRoot(container)
+      await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
+      return container.textContent
+    }
+    api.getSettings.mockImplementation(() => Promise.resolve({ on_air_active: false, emergency_active: false }))
+    let text = await mountOverview()
+    expect(text).toContain('Aus')
+    expect(text).not.toContain('ATEM')
+    expect(text).not.toContain('Brandmeldeanlage')
+    act(() => root.unmount())
+    api.getSettings.mockImplementation(() => Promise.resolve({
+      on_air_active: true, on_air_since: '2026-10-21T08:05:00Z', emergency_active: true, emergency_since: '2026-10-21T09:10:00Z', emergency_text: 'Evakuierung',
+    }))
+    text = await mountOverview()
+    expect(text).toMatch(/An seit \d{2}:\d{2}/)
+    expect(text).toMatch(/Aktiv seit \d{2}:\d{2}/)
+    expect(text).not.toContain('ATEM')
+    api.getSettings.mockImplementation(() => Promise.resolve({ on_air_active: false }))
+  })
+
   it('hebt eine manuelle Ansicht über das Zeilenmenü auf und bietet Rückgängig', async () => {
     const until = '2099-01-01T12:00:00Z'
     api.getScreens.mockImplementation(() => Promise.resolve([{ ...screen('Glocke'), override_view_id: 3, override_until: until }]))

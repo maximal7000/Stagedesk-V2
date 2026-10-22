@@ -6,7 +6,7 @@ const now = new Date(2026, 9, 20, 10, 0)
 
 const screen = (extra = {}) => ({
   id: 1, name: 'Glocke', default_view_id: 1, override_view_id: null, override_until: null,
-  schedule: [], power_schedule: [], power_exceptions: [], power_mode: 'auto',
+  schedule: [], power_exceptions: [], power_mode: 'auto',
   off_during_holidays: true, off_until: null, ...extra,
 })
 const payload = (extra = {}) => ({ screen: { power: true }, mode: null, view: { id: 1, kind: 'departures' }, ...extra })
@@ -19,6 +19,13 @@ describe('explainScreen', () => {
   it('laut Zeitplan bis HH:MM', () => {
     const s = screen({ schedule: [{ view_id: 2, days: [1], from: '08:00', until: '13:00' }] })
     expect(explainScreen(s, payload({ view: { id: 2, kind: 'info' } }), { now })).toBe('laut Zeitplan bis 13:00')
+  })
+
+  it('Zeitplan: die obere Zeile gilt, über Mitternacht zählt der Teil nach 0 Uhr zum Folgetag', () => {
+    const covered = screen({ schedule: [{ view_id: null, days: [1], from: '07:00', until: '17:00' }, { view_id: 2, days: [1], from: '08:00', until: '13:00' }] })
+    expect(explainScreen(covered, payload({ view: { id: 2, kind: 'info' } }), { now })).toBe('Standard-Ansicht')
+    const night = screen({ schedule: [{ view_id: 2, days: [0], from: '22:00', until: '11:00' }] })
+    expect(explainScreen(night, payload({ view: { id: 2, kind: 'info' } }), { now })).toBe('laut Zeitplan bis 11:00')
   })
 
   it('weil Termin „X“ läuft', () => {

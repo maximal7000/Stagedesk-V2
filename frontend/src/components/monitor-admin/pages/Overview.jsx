@@ -11,7 +11,7 @@ import ScreenStatus, { DeviceCell } from '../shared/ScreenStatus'
 import { Cell, ScreenNameCell, ScreenRow, ScreenTable, iconButton } from '../shared/ScreenTable'
 import PairDialog from '../shared/PairDialog'
 import ConfirmDialog from '../shared/ConfirmDialog'
-import EmergencyDialog, { EMERGENCY_HINT } from '../shared/EmergencyDialog'
+import EmergencyDialog from '../shared/EmergencyDialog'
 import UndoToast from '../shared/UndoToast'
 import { describeShown, explainScreen, formatDayTime } from '../shared/explain'
 import { errorText } from '../shared/errorText'
@@ -31,7 +31,8 @@ function BoxText({ title, children }) {
   return (
     <div className="min-w-0 flex-1">
       <div className="text-sm font-semibold text-fg">{title}</div>
-      <div className="text-xs text-fg-muted mt-0.5">{children}</div>
+      {/* Unterzeile bleibt als Platz erhalten, damit die Titel der drei Kästen auf einer Linie stehen */}
+      <div className="text-xs text-fg-muted mt-0.5 min-h-4">{children}</div>
     </div>
   )
 }
@@ -334,17 +335,17 @@ export default function Overview() {
         <div className="grid gap-3 md:grid-cols-3 mb-6">
           <Box>
             <BoxText title="On-Air">
-              {onAir ? `An seit ${formatTime(settings.on_air_since) || 'gerade'}` : 'Aus'} · wird auch über ATEM geschaltet
+              {onAir ? (formatTime(settings.on_air_since) ? `An seit ${formatTime(settings.on_air_since)}` : 'An') : 'Aus'}
             </BoxText>
             {can.onair && <Switch on={onAir} onChange={toggleOnAir} disabled={onAirBusy} label="On-Air" />}
           </Box>
           <Box className={emergencyActive ? 'ring-1 ring-bad' : ''}>
             {emergencyActive ? (
               <BoxText title={<span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-bad" aria-hidden="true" />Notfall aktiv</span>}>
-                {settings.emergency_text || 'Ohne Text'}{settings.emergency_since ? ` · seit ${formatTime(settings.emergency_since)}` : ''}
+                {formatTime(settings.emergency_since) ? `Aktiv seit ${formatTime(settings.emergency_since)}` : 'Aktiv'}
               </BoxText>
             ) : (
-              <BoxText title="Notfall">{EMERGENCY_HINT}</BoxText>
+              <BoxText title="Notfall" />
             )}
             {can.emergency && (
               <Button variant="danger" className="ring-1 ring-inset ring-bad" onClick={openEmergency}>

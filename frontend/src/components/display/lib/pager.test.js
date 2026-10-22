@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { paginate } from './pager'
+import { paginate, paginateByHeight } from './pager'
 
 describe('paginate', () => {
   it('teilt 25 Einträge bei 10 pro Seite in 3 Seiten', () => {
@@ -12,5 +12,17 @@ describe('paginate', () => {
   })
   it('behandelt ungültige perPage als eine Seite', () => {
     expect(paginate([1, 2, 3], 0)).toEqual([[1, 2, 3]])
+  })
+})
+
+describe('paginateByHeight', () => {
+  it('füllt Seiten nach gemessener Höhe', () => {
+    expect(paginateByHeight([10, 10, 10], 25)).toEqual([[0, 1], [2]])
+  })
+  it('gibt einer zu hohen Zeile eine eigene Seite', () => {
+    expect(paginateByHeight([10, 40, 10], 25)).toEqual([[0], [1], [2]])
+  })
+  it('liefert bei leerer Liste keine Seite', () => {
+    expect(paginateByHeight([], 25)).toEqual([])
   })
 })

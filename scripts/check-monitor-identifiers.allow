@@ -19,3 +19,4 @@ bild  # Upload-Ordnername in _UPLOAD_DIRS, Upload-Pfade aendern sich nicht
 hintergrund  # Upload-Ordnername in _UPLOAD_DIRS, Upload-Pfade aendern sich nicht
 bahn  # Hash-Eingabe von _disruption_id (Spec 5.4)
 linien  # Externes Storyblok-Feld in oepnv.py
+bis  # Sichtbares Feldlabel "bis" im Farbschema-Zeitplan (Spec 3.2), Test sucht danach

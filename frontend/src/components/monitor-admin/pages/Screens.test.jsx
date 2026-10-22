@@ -11,7 +11,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('../shared/api', () => ({
   getScreens: vi.fn(() => Promise.resolve([{
     id: 1, name: 'Glocke', slug: 'glocke', location: '', default_view_id: null, power_mode: 'auto',
-    power_schedule: [], off_during_holidays: true, cec_status_at: null,
+    schedule: [], off_during_holidays: true, cec_status_at: null,
   }])),
   getViews: vi.fn(() => Promise.resolve([])),
   createScreen: vi.fn(),

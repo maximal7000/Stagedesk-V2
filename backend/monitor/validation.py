@@ -15,7 +15,7 @@ from .models import DisplayView, validate_rotation_items
 # Auswahlfelder der Ansicht → Bezeichnung in der Fehlermeldung
 CHOICE_FIELDS = {
     'kind': 'Typ',
-    'style': 'Stil',
+    'layout': 'Aufteilung',
     'on_air_behavior': 'On-Air-Verhalten',
     'on_air_split_side': 'On-Air-Seite',
     'split_left': 'Split links',
@@ -23,7 +23,10 @@ CHOICE_FIELDS = {
     'pdf_mode': 'Medien-Modus',
     'transit_font_size': 'Schriftgröße der Abfahrten',
     'transit_disruption_position': 'Position der Störungen',
+    'substitutions_source': 'Datenquelle',
+    'substitutions_format': 'Ausgabe',
 }
+NEXT_DAY_FROM_MESSAGE = "Uhrzeit ungültig: bitte im Format HH:MM eintragen oder leer lassen"
 
 
 # Zahlenfelder → (Bezeichnung, kleinster, größter Wert); Bereiche wie in den Editoren des Admin
@@ -84,6 +87,28 @@ def _check_stops(stops):
                 raise HttpError(422, f"Haltestelle „{name}“: {number_message(label, lo, hi)}")
 
 
+def _check_next_day_from(data):
+    """„Nächsten Schultag zeigen ab“: leer (aus) oder HH:MM."""
+    if 'substitutions_next_day_from' not in data:
+        return
+    value = data['substitutions_next_day_from']
+    if value is None:
+        value = ''
+    if not isinstance(value, str) or (value.strip() and not _HHMM.match(value.strip())):
+        raise HttpError(422, NEXT_DAY_FROM_MESSAGE)
+    data['substitutions_next_day_from'] = value.strip()
+
+
+def _check_custom_format(data):
+    """Eigenes Format: Formatname aus WebUntis, leer erlaubt (dann gilt die nächste Quelle)."""
+    if 'substitutions_custom_format' not in data:
+        return
+    value = (data['substitutions_custom_format'] or '').strip()
+    if len(value) > 100:
+        raise HttpError(422, "Eigenes Format: bitte einen Formatnamen mit höchstens 100 Zeichen eintragen.")
+    data['substitutions_custom_format'] = value
+
+
 def _clamp_int(v, lo, hi):
     try:
         return max(lo, min(hi, int(v)))
@@ -122,11 +147,22 @@ def parse_countdown_date(value):
     return parsed
 
 
+def _check_not_in_rotation(view_id):
+    """Eine Ansicht, die in einem Wechsel steckt, kann nicht selbst zum Wechsel werden."""
+    rotations = DisplayView.objects.filter(kind='rotation', deleted_at__isnull=True).order_by('id')
+    for rotation in rotations:
+        items = rotation.rotation_items if isinstance(rotation.rotation_items, list) else []
+        if any(isinstance(i, dict) and i.get('view_id') == view_id for i in items):
+            raise HttpError(422, f"Diese Ansicht ist Teil des Wechsels „{rotation.name}“. Erst dort entfernen.")
+
+
 def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     """Serverseitige Validierung/Sanitisierung der Ansicht-Daten.
     Prüft Auswahlwerte, klemmt Zahlenbereiche, prüft Zeitfenster, Countdown und Rotationseinträge."""
     _check_choices(data)
     _check_numbers(data)
+    _check_next_day_from(data)
+    _check_custom_format(data)
     if 'transit_stops' in data:
         _check_stops(data['transit_stops'])
     for key, lo, hi in [
@@ -148,6 +184,8 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
                     raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
     # Leere Liste ist nur bei Rotations-Ansichten ein Fehler; andere Ansichten tragen sie mit.
     kind = data.get('kind', current_kind)
+    if kind == 'rotation' and kind != current_kind and own_id is not None:
+        _check_not_in_rotation(own_id)
     if 'rotation_items' in data and (data['rotation_items'] or kind == 'rotation'):
         try:
             data['rotation_items'] = validate_rotation_items(data['rotation_items'], own_id=own_id)
@@ -213,6 +251,39 @@ def validate_screen_device_data(data: dict, current_method: str, current_config:
         validate_power_config(method, current_config or {})
 
 
+# ── Zeitplan pro Bildschirm (Spec §2.2) ─────────────────────────────
+
+SCHEDULE_INVALID_MESSAGE = "Der Zeitplan ist ungültig. Bitte die Seite neu laden."
+
+
+def validate_screen_schedule(rows) -> list:
+    """Prüft die Zeilen des Bildschirm-Zeitplans und gibt sie bereinigt zurück
+    ({days, from, until, view_id}, Tage sortiert). Fehler nennen die Zeilennummer."""
+    if not isinstance(rows, list):
+        raise HttpError(422, SCHEDULE_INVALID_MESSAGE)
+    clean = []
+    for number, row in enumerate(rows, start=1):
+        if not isinstance(row, dict):
+            raise HttpError(422, SCHEDULE_INVALID_MESSAGE)
+        days = row.get('days')
+        if not isinstance(days, list) or not days:
+            raise HttpError(422, f"Zeile {number}: Bitte mindestens einen Wochentag wählen.")
+        if not all(_is_int(d) and 0 <= d <= 6 for d in days):
+            raise HttpError(422, f"Zeile {number}: Wochentag ungültig. Bitte Tage von Montag bis Sonntag wählen.")
+        for key, label in (('from', 'Beginn'), ('until', 'Ende')):
+            if not isinstance(row.get(key), str) or not _HHMM.match(row[key]):
+                raise HttpError(422, f"Zeile {number}: {label} ungültig. "
+                                     "Bitte eine Uhrzeit im Format HH:MM eintragen.")
+        if row['from'] == row['until']:
+            raise HttpError(422, f"Zeile {number}: Beginn und Ende sind gleich.")
+        view_id = row.get('view_id')
+        if view_id is not None and not (
+                _is_int(view_id) and DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).exists()):
+            raise HttpError(422, f"Zeile {number}: Die gewählte Ansicht gibt es nicht mehr.")
+        clean.append({'days': sorted(set(days)), 'from': row['from'], 'until': row['until'], 'view_id': view_id})
+    return clean
+
+
 # Geräte-Felder der Einstellungen → (Bezeichnung, kleinster, größter Wert)
 SETTINGS_DEVICE_FIELDS = {
     'device_offline_minutes': ('Offline nach (Minuten)', 2, 240),
@@ -227,3 +298,17 @@ def validate_settings_device_data(data: dict) -> None:
     for key, (label, lo, hi) in SETTINGS_DEVICE_FIELDS.items():
         if key in data and not (_is_int(data[key]) and lo <= data[key] <= hi):
             raise HttpError(422, number_message(label, lo, hi))
+
+
+# ── Farbschema (Spec §3.2) ───────────────────────────────────────────
+
+LIGHT_ORDER_MESSAGE = "Die helle Zeit muss vor ihrem Ende beginnen."
+
+
+def validate_settings_light_times(data: dict, current_from: str, current_until: str) -> None:
+    """Zeitplan hell von/bis: HH:MM, Beginn vor Ende (gespeicherter Wert, wenn nur eines kommt)."""
+    for key, label in (('light_from', 'Hell ab'), ('light_until', 'Hell bis')):
+        if key in data and not (isinstance(data[key], str) and _HHMM.match(data[key])):
+            raise HttpError(422, f"{label}: Uhrzeit ungültig. Bitte im Format HH:MM eintragen.")
+    if data.get('light_from', current_from) >= data.get('light_until', current_until):
+        raise HttpError(422, LIGHT_ORDER_MESSAGE)

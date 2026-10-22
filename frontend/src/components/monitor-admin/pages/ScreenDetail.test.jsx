@@ -31,7 +31,7 @@ const { default: ScreenDetail } = await import('./ScreenDetail')
 const glocke = () => ({
   id: 1, name: 'Glocke', slug: 'glocke', location: 'Eingangshalle', default_view_id: 1, scale: 'auto',
   orientation: 'landscape', access_key: 'alt-key', power_mode: 'auto', off_during_holidays: true, off_until: null,
-  power_schedule: [{ days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00' }], power_exceptions: [],
+  schedule: [{ days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00', view_id: null }], power_exceptions: [], color_scheme: 'inherit',
   cec_status: 'on', cec_status_at: null,
   power_method: 'cec', power_config: { cec_device: '0' }, auto_updates: true,
   update_window: { weekday: 6, from: '03:00', until: '05:00' }, daily_reboot: true,
@@ -100,9 +100,11 @@ describe('ScreenDetail', () => {
     await click(button('Speichern'))
     expect(api.updateScreen).toHaveBeenCalledTimes(2)
     const [displayCall, powerCall] = api.updateScreen.mock.calls
-    expect(displayCall[1]).toEqual({ name: 'Glocke', location: 'Eingangshalle Nord', default_view_id: 1, scale: 'auto', orientation: 'landscape' })
-    expect(Object.keys(powerCall[1]).sort()).toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'power_schedule'])
-    expect(powerCall[1].power_schedule).toEqual([{ days: [0, 1, 2, 3, 4, 5], from: '07:00', until: '17:00' }])
+    expect(displayCall[1]).toEqual({
+      name: 'Glocke', location: 'Eingangshalle Nord', default_view_id: 1, scale: 'auto', orientation: 'landscape', color_scheme: 'inherit',
+    })
+    expect(Object.keys(powerCall[1]).sort()).toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'schedule'])
+    expect(powerCall[1].schedule).toEqual([{ days: [0, 1, 2, 3, 4, 5], from: '07:00', until: '17:00', view_id: null }])
     expect(container.textContent).not.toContain('ungespeicherte')
   })
 
@@ -132,8 +134,118 @@ describe('ScreenDetail', () => {
     await click(button('Speichern'))
     expect(api.updateScreen).toHaveBeenCalledTimes(1)
     expect(Object.keys(api.updateScreen.mock.calls[0][1]).sort())
-      .toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'power_schedule'])
+      .toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'schedule'])
     expect(api.updateScreen.mock.calls[0][1].power_mode).toBe('manual_off')
+  })
+
+  describe('Zeitplan', () => {
+    const section = () => container.querySelector('[data-section="schedule"]')
+    const withSchedule = (schedule) => api.getScreens.mockImplementation(() => Promise.resolve([{ ...glocke(), schedule }]))
+
+    it('steht als eigener Abschnitt zwischen Anzeige und Ein- und Ausschalten', async () => {
+      perms.add('monitor.setup').add('monitor.power')
+      await mount()
+      const order = [...container.querySelectorAll('[data-section]')].map((el) => el.dataset.section)
+      expect(order.indexOf('display')).toBeLessThan(order.indexOf('schedule'))
+      expect(order.indexOf('schedule')).toBeLessThan(order.indexOf('power'))
+      expect(section().textContent).toContain('Zu diesen Zeiten ist der Bildschirm an und zeigt die gewählte Ansicht. Außerhalb ist er aus.')
+      expect(container.querySelector('[data-section="power"] [data-schedule-editor]')).toBeNull()
+    })
+
+    it('leerer Zeitplan ist kompakt', async () => {
+      perms.add('monitor.setup').add('monitor.power')
+      withSchedule([])
+      await mount()
+      expect(section().textContent).toBe('ZeitplanKein Zeitplan·Zeitplan hinzufügen')
+      expect(section().querySelector('[data-week-overview]')).toBeNull()
+      expect(section().querySelector('input, select')).toBeNull()
+    })
+
+    it('Zeitplan ohne Recht power nur lesend', async () => {
+      perms.add('monitor.setup')
+      await mount()
+      expect(section().textContent).toContain('Nur lesend')
+      expect(button('Zeile hinzufügen', section())).toBeUndefined()
+      expect(section().querySelector('[aria-label^="Zeile 1 verschieben"]')).toBeNull()
+      expect(section().querySelector('[aria-label="Zeile 1 entfernen"]')).toBeNull()
+      expect([...section().querySelectorAll('input, select')].every((el) => el.disabled)).toBe(true)
+
+      withSchedule([])
+      act(() => root.unmount())
+      await mount()
+      expect(button('Zeitplan hinzufügen', section())).toBeUndefined()
+      expect(section().textContent).toContain('Kein Zeitplan')
+    })
+
+    it('speichert schedule mit view_id null für Standard-Ansicht', async () => {
+      perms.add('monitor.power')
+      withSchedule([])
+      await mount()
+      await click(button('Zeitplan hinzufügen', section()))
+      const viewSelect = section().querySelector('select')
+      expect([...viewSelect.options].map((o) => o.textContent)).toEqual(['Standard-Ansicht', 'Abfahrten'])
+      expect(section().querySelector('[data-week-overview]')).not.toBeNull()
+      await click(button('Zeile hinzufügen', section()))
+      const second = section().querySelectorAll('select')[1]
+      await act(async () => {
+        second.value = '1'
+        second.dispatchEvent(new Event('change', { bubbles: true }))
+      })
+      const from = section().querySelectorAll('input[aria-label="Von"]')[1]
+      await act(async () => { typeInto(from, '12:00') })
+
+      await click(button('Speichern'))
+      expect(api.updateScreen).toHaveBeenCalledTimes(1)
+      expect(api.updateScreen.mock.calls[0][1].schedule).toEqual([
+        { days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00', view_id: null },
+        { days: [0, 1, 2, 3, 4], from: '12:00', until: '17:00', view_id: 1 },
+      ])
+    })
+
+    it('zeigt unter überschneidenden Zeilen, welche Vorrang hat', async () => {
+      perms.add('monitor.power')
+      withSchedule([
+        { days: [0], from: '07:00', until: '13:00', view_id: 1 },
+        { days: [0], from: '12:00', until: '15:00', view_id: null },
+        { days: [0], from: '15:00', until: '18:00', view_id: null },
+      ])
+      await mount()
+      const rows = section().querySelectorAll('[data-schedule-editor] > ol > li')
+      expect(rows).toHaveLength(3)
+      expect(rows[1].textContent).toContain('Überschneidet sich mit Zeile 1, Zeile 1 hat Vorrang.')
+      expect(rows[2].textContent).not.toContain('Überschneidet')
+      expect(section().querySelector('[data-week-overview]').textContent).toContain('Abfahrten')
+      expect(section().querySelector('[data-week-overview]').textContent).toContain('Standard-Ansicht')
+      // Wechsel der Ansicht ohne Lücke: keine Fläche in Hintergrundfarbe, höchstens eine dunklere Linie im Balken
+      const bars = [...section().querySelectorAll('[data-week-day="0"] [data-view-id]')]
+      expect(bars.map((b) => b.dataset.viewId)).toEqual(['1', 'default'])
+      expect(bars.some((b) => b.className.includes('border-surface'))).toBe(false)
+      expect(bars[1].className).toContain('border-l border-black/30')
+      expect(bars[0].className).not.toContain('border-l')
+    })
+
+    it('verschiebt Zeilen mit dem Griff per Tastatur', async () => {
+      perms.add('monitor.power')
+      withSchedule([
+        { days: [0], from: '07:00', until: '13:00', view_id: 1 },
+        { days: [1], from: '12:00', until: '15:00', view_id: null },
+      ])
+      await mount()
+      const handle = section().querySelector('[aria-label="Zeile 2 verschieben"]')
+      await act(async () => { handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true })) })
+      await click(button('Speichern'))
+      expect(api.updateScreen.mock.calls[0][1].schedule.map((r) => r.view_id)).toEqual([null, 1])
+    })
+  })
+
+  it('Farbschema pro Bildschirm wird mit der Anzeige gespeichert', async () => {
+    perms.add('monitor.setup')
+    await mount()
+    const group = container.querySelector('[role="radiogroup"][aria-label="Farbschema"]')
+    expect([...group.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Wie eingestellt', 'Immer hell', 'Immer dunkel'])
+    await click(button('Immer dunkel', group))
+    await click(button('Speichern'))
+    expect(api.updateScreen.mock.calls[0][1].color_scheme).toBe('dark')
   })
 
   it('verwirft Stand und Entwurf beim Wechsel zu einem anderen Bildschirm', async () => {

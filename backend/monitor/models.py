@@ -7,6 +7,8 @@ import uuid
 from django.db import models
 from django.utils import timezone
 
+from .screen_schedule import active_row
+
 
 # Upload-Ordner bleiben die bisherigen (Spec-Vorgabe: Upload-Pfade ändern sich nicht),
 # auch nachdem die gespeicherten kind-Werte englisch sind.
@@ -90,7 +92,7 @@ class DisplayView(models.Model):
         help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
 
-    # ─── Ansichtsart und Stil ───
+    # ─── Ansichtsart und Aufteilung ───
     KIND_CHOICES = [
         ('departures', 'Abfahrten'),
         ('substitutions', 'Vertretungsplan'),
@@ -100,13 +102,12 @@ class DisplayView(models.Model):
         ('rotation', 'Rotation'),
     ]
     kind = models.CharField(max_length=20, choices=KIND_CHOICES, default='info')
-    STYLE_CHOICES = [
+    LAYOUT_CHOICES = [
         ('auto', 'Automatisch'),
-        ('ci', 'CI'),
-        ('dense', 'Dicht'),
-        ('dark', 'Dunkel'),
+        ('normal', 'Normal'),
+        ('wide', 'Breit'),
     ]
-    style = models.CharField(max_length=10, choices=STYLE_CHOICES, default='auto')
+    layout = models.CharField(max_length=10, choices=LAYOUT_CHOICES, default='auto')
     ON_AIR_BEHAVIOR_CHOICES = [
         ('fullscreen', 'Vollbild'),
         ('split', 'Geteilt'),
@@ -117,7 +118,29 @@ class DisplayView(models.Model):
         help_text='[{"view_id": 3, "seconds": 15}]')
     media_items = models.JSONField(default=list, blank=True)
     media_seconds = models.IntegerField(default=10, help_text="Sekunden pro Medium")
+    # Nur noch für den Rückweg nach 0043; ersetzt durch substitutions_format.
     substitutions_next_day = models.BooleanField(default=True)
+    SUBSTITUTIONS_SOURCE_CHOICES = [
+        ('monitor', 'WebUntis-Vertretungsplan'),
+        ('account', 'WebUntis-Konto'),
+        ('embed', 'WebUntis-Seite einbetten'),
+    ]
+    substitutions_source = models.CharField(max_length=10, choices=SUBSTITUTIONS_SOURCE_CHOICES,
+                                            default='monitor')
+    SUBSTITUTIONS_FORMAT_CHOICES = [
+        ('students_2', 'Schüler, 2 Tage'),
+        ('students_1', 'Schüler, 1 Tag'),
+        ('teachers', 'Lehrkräfte'),
+        ('custom', 'Eigenes Format'),
+    ]
+    substitutions_format = models.CharField(max_length=12, choices=SUBSTITUTIONS_FORMAT_CHOICES,
+                                            default='students_2')
+    substitutions_custom_format = models.CharField(max_length=100, blank=True, default='')
+    substitutions_show_absences = models.BooleanField(default=True)
+    # None = wie im WebUntis-Format (showExamSupervision)
+    substitutions_show_exams = models.BooleanField(null=True, blank=True, default=None)
+    # Ab dieser Uhrzeit (HH:MM) beginnt die Anzeige mit dem nächsten Schultag; leer = aus
+    substitutions_next_day_from = models.CharField(max_length=5, blank=True, default='16:00')
     page_seconds = models.IntegerField(default=15, help_text="Sekunden pro Seite")
 
     # ─── Splitscreen (kind='split') ───
@@ -320,11 +343,11 @@ class DisplayView(models.Model):
             return self.webuntis_link_next_day.url
         return self.webuntis_url_next_day
 
-    def effective_style(self):
-        """Stil der Anzeige: 'auto' wird aus der Ansichtsart abgeleitet."""
-        if self.style != 'auto':
-            return self.style
-        return 'dense' if self.kind in ('departures', 'substitutions', 'split') else 'ci'
+    def effective_layout(self):
+        """Aufteilung der Anzeige: 'auto' heißt Normal für Info und Medien, sonst Breit."""
+        if self.layout != 'auto':
+            return self.layout
+        return 'normal' if self.kind in ('info', 'media') else 'wide'
 
     def __str__(self):
         return f"{self.name} ({self.slug})"
@@ -383,7 +406,8 @@ class Screen(models.Model):
         help_text="Fallback-Profil wenn kein Zeitplan greift"
     )
     schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"view_id": 3, "days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
+        help_text='Zeitplan: [{"days": [0-6], "from": "HH:MM", "until": "HH:MM", "view_id": 3 | null}]. '
+                  'null = Standard-Ansicht, until < from = über Mitternacht. Leer = immer an.')
     # Manueller Sofort-Override (Cockpit): zeigt bis zum Zurücksetzen/Ablauf diese Ansicht.
     override_view = models.ForeignKey(
         DisplayView, on_delete=models.SET_NULL, null=True, blank=True,
@@ -391,8 +415,6 @@ class Screen(models.Model):
         help_text="Sofort-Override: erzwingt diese Ansicht (vor Event/Zeitplan)")
     override_until = models.DateTimeField(null=True, blank=True,
         help_text="Optionales Ablaufdatum des Overrides; leer = bis manuell zurückgesetzt")
-    power_schedule = models.JSONField(default=list, blank=True,
-        help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]. Leer = immer an.')
     power_exceptions = models.JSONField(default=list, blank=True,
         help_text='[{"from_date": "YYYY-MM-DD", "until_date": "YYYY-MM-DD", "from": "HH:MM", "until": "HH:MM", "note": ""}]')
     reload_requested_at = models.DateTimeField(null=True, blank=True,
@@ -421,6 +443,14 @@ class Screen(models.Model):
     update_window = models.JSONField(default=default_update_window, blank=True,
         help_text='{"weekday": 0-6 (0=Montag), "from": "HH:MM", "until": "HH:MM"}')
     daily_reboot = models.BooleanField(default=True)
+
+    # ─── Farbschema: Ausnahme vor der Einstellung für alle ───
+    COLOR_SCHEME_CHOICES = [
+        ('inherit', 'Wie eingestellt'),
+        ('light', 'Immer hell'),
+        ('dark', 'Immer dunkel'),
+    ]
+    color_scheme = models.CharField(max_length=10, choices=COLOR_SCHEME_CHOICES, default='inherit')
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -463,24 +493,12 @@ class Screen(models.Model):
         if event_view and event_view.deleted_at is None:
             return event_view
 
-        now = timezone.localtime()
-        weekday = now.weekday()
-        time = now.strftime('%H:%M')
-
-        if self.schedule and isinstance(self.schedule, list):
-            for entry in self.schedule:
-                if not isinstance(entry, dict):
-                    continue
-                days = entry.get('days', [])
-                start = entry.get('from', '00:00')
-                end = entry.get('until', '23:59')
-                view_id = entry.get('view_id')
-                if (isinstance(days, list) and weekday in days
-                        and start <= time <= end and view_id):
-                    try:
-                        return DisplayView.objects.get(id=view_id, deleted_at__isnull=True)
-                    except DisplayView.DoesNotExist:
-                        continue
+        # Zeitplan-Zeile: Ansicht der oberen passenden Zeile; Standard-Ansicht oder fehlende Ansicht -> Default
+        row = active_row(self.schedule, timezone.localtime())
+        if row and row.get('view_id'):
+            view = DisplayView.objects.filter(id=row['view_id'], deleted_at__isnull=True).first()
+            if view is not None:
+                return view
 
         if self.default_view and self.default_view.deleted_at is None:
             return self.default_view
@@ -744,6 +762,17 @@ class MonitorSettings(models.Model):
     warn_wifi_dbm = models.IntegerField(default=-75)
     warn_reboot_days = models.PositiveIntegerField(default=7)
     require_device_token = models.BooleanField(default=False)
+
+    # ─── Farbschema (alle Bildschirme) ───
+    COLOR_SCHEME_CHOICES = [
+        ('light', 'Hell'),
+        ('dark', 'Dunkel'),
+        ('daylight', 'Tageslicht'),
+        ('schedule', 'Zeitplan'),
+    ]
+    color_scheme = models.CharField(max_length=10, choices=COLOR_SCHEME_CHOICES, default='light')
+    light_from = models.CharField(max_length=5, default='07:00', help_text="Zeitplan: hell ab HH:MM")
+    light_until = models.CharField(max_length=5, default='18:00', help_text="Zeitplan: hell bis HH:MM")
 
     class Meta:
         verbose_name = 'Globale Monitor-Einstellung'

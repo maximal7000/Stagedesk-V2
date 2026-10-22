@@ -1,34 +1,13 @@
 // Editor für den Wechsel (Spec §3.1): Liste aus Ansicht und Sekunden, sortierbar per Ziehen.
 // Wechsel-Ansichten und die eigene Ansicht sind nicht wählbar (Backend: validate_rotation_items).
-import { useState } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../ui'
 import { Section, fieldClass } from '../shared/form'
 import DragHandle from '../shared/DragHandle'
-import { dragRowClass, useListDrag } from '../shared/useListDrag'
+import { dragRowClass, useListDrag, useRowKeys } from '../shared/useListDrag'
 import {
   MAX_ROTATION_SECONDS, MIN_ROTATION_SECONDS, kindLabel, moveItem, rotationChoices, rotationProblems,
 } from '../pages/viewData'
-
-// Stabile Schlüssel je Zeile (Einträge haben keine id): Verschieben, Entfernen und Hinzufügen führen sie
-// mit, damit React die Zeile samt Fokus mitnimmt. Passt die Anzahl nicht (Verwerfen, neu geladen), neu vergeben.
-let nextRowKey = 0
-const freshKey = () => `row-${++nextRowKey}`
-
-function useRowKeys(count) {
-  const [keys, setKeys] = useState(() => Array.from({ length: count }, freshKey))
-  let current = keys
-  if (keys.length !== count) {
-    current = Array.from({ length: count }, freshKey)
-    setKeys(current)
-  }
-  return {
-    keys: current,
-    move: (a, b) => setKeys((k) => moveItem(k, a, b)),
-    remove: (i) => setKeys((k) => k.filter((_, j) => j !== i)),
-    add: () => setKeys((k) => [...k, freshKey()]),
-  }
-}
 
 // Typ nur nennen, wenn der Name ihn nicht schon enthält ("Abfahrten (Abfahrten)" vermeiden)
 function optionLabel(view) {

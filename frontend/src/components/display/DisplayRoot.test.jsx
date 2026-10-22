@@ -6,7 +6,7 @@ import DisplayRoot from './DisplayRoot'
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 const screen = { slug: 'glocke', name: 'Glocke', orientation: 'landscape', scale: 'auto', power: true }
-const view = { id: 1, kind: 'info', style: 'ci', page_seconds: 15, show_weather: false, weather: null, qr: null,
+const view = { id: 1, kind: 'info', layout: 'normal', page_seconds: 15, show_weather: false, weather: null, qr: null,
   data: { announcements: [], events: [], countdown: null } }
 const emergency = { kind: 'emergency', text: 'Bitte das Gebäude verlassen', note: 'Sammelplatz Schulhof',
   since: '2026-10-19T08:38:00+00:00' }
@@ -53,6 +53,25 @@ describe('DisplayRoot', () => {
     const el = render({ payload: { screen, view, mode: onAir }, state: 'stale', lastOkAt })
     expect(el.querySelector('[data-mode-kind="on_air"]')).not.toBeNull()
     expect(el.textContent).toContain('Stand')
+  })
+
+  it('wechselt das Schema ohne Neuladen', () => {
+    const el = render({ payload: { screen, view, mode: null, scheme: 'light' }, state: 'ok', lastOkAt })
+    const before = el.querySelector('.d-root')
+    expect(before.classList.contains('d-scheme-light')).toBe(true)
+    act(() => { root.render(<DisplayRoot payload={{ screen, view, mode: null, scheme: 'dark' }} state="ok" lastOkAt={lastOkAt} />) })
+    const after = el.querySelector('.d-root')
+    // derselbe Knoten: nur die Klasse wechselt, nichts wird neu aufgebaut oder geladen
+    expect(after).toBe(before)
+    expect(after.classList.contains('d-scheme-dark')).toBe(true)
+    expect(after.classList.contains('d-scheme-light')).toBe(false)
+  })
+
+  it('ohne Schema im Payload gilt Hell, die Aufteilung kommt aus der Ansicht', () => {
+    const el = render({ payload: { screen, view: { ...view, layout: 'wide' }, mode: null }, state: 'ok', lastOkAt })
+    const rootEl = el.querySelector('.d-root')
+    expect(rootEl.classList.contains('d-scheme-light')).toBe(true)
+    expect(rootEl.classList.contains('d-layout-wide')).toBe(true)
   })
 
   it('On-Air zeigt kein "seit"', () => {

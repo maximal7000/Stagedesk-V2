@@ -22,7 +22,10 @@ from .models import (
     generate_access_key, Device,
 )
 from .validation import validate_view_data as _validate_view_data
-from .validation import validate_screen_device_data, validate_settings_device_data
+from .validation import (
+    validate_screen_device_data, validate_screen_schedule, validate_settings_device_data,
+    validate_settings_light_times,
+)
 
 
 def _log_audit(request, action, detail='', via_token=False):
@@ -628,7 +631,10 @@ def get_screen_power(request, slug: str):
         return {
             'slug': screen.slug,
             'power': screen.get_power_state(),
-            'power_schedule': screen.power_schedule,
+            # Alte Form für Pi-Skripte: Zeilen mit Standard-Ansicht als Einschaltzeiten
+            'power_schedule': [{'days': row.get('days', []), 'from': row.get('from', ''),
+                                'until': row.get('until', '')}
+                               for row in (screen.schedule or []) if isinstance(row, dict) and not row.get('view_id')],
             # Der Ferienmodus-Schalter ist entfallen (jetzt power_mode='manual_off'); Schlüssel bleibt für Pi-Skripte.
             'holiday_mode': False,
             'power_exceptions': screen.power_exceptions,
@@ -692,9 +698,11 @@ def create_screen(request, payload: ScreenCreateSchema):
 
 # Felder, die ins `hello` des Geräte-Agenten gehören (Kiosk-URL, Power-Methode, Updates)
 AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
-SCREEN_POWER_FIELDS = {'power_mode', 'power_schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
+SCREEN_POWER_FIELDS = {'power_mode', 'schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
 # Geräte-Felder gehören zum Recht devices (Spec §3.4)
 NON_NULL_DEVICE_FIELDS = ('power_method', 'auto_updates', 'daily_reboot')
+# Felder, die nie leer sind: ein ausdrückliches null gilt als nicht gesendet
+NON_NULL_SCREEN_FIELDS = NON_NULL_DEVICE_FIELDS + ('color_scheme',)
 SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
 
 
@@ -710,10 +718,12 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
         _require_perm(request, 'monitor.devices')
     screen = get_object_or_404(Screen, id=id)
     # Ein ausdrückliches null hieße "leeren"; diese Felder sind nie leer, also wie nicht gesendet behandeln.
-    for key in NON_NULL_DEVICE_FIELDS:
+    for key in NON_NULL_SCREEN_FIELDS:
         if key in data and data[key] is None:
             del data[key]
     validate_screen_device_data(data, screen.power_method, screen.power_config)
+    if 'schedule' in data:
+        data['schedule'] = validate_screen_schedule(data['schedule'] or [])
     if 'default_view_id' in data:
         val = data.pop('default_view_id')
         screen.default_view_id = val if val else None
@@ -959,6 +969,7 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
         _require_perm(request, 'monitor.onair')
     validate_settings_device_data(data)
     settings = MonitorSettings.load()
+    validate_settings_light_times(data, settings.light_from, settings.light_until)
     for key, value in data.items():
         setattr(settings, key, value)
     settings.save()

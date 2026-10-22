@@ -17,17 +17,6 @@ class ScreenAccessKeyTest(TestCase):
         self.assertNotEqual(a.access_key, b.access_key)
 
 
-class EffectiveStyleTest(TestCase):
-    def test_effective_style_auto(self):
-        v = DisplayView(kind='departures')
-        self.assertEqual(v.effective_style(), 'dense')
-        self.assertEqual(DisplayView(kind='substitutions').effective_style(), 'dense')
-        self.assertEqual(DisplayView(kind='split').effective_style(), 'dense')
-        self.assertEqual(DisplayView(kind='info').effective_style(), 'ci')
-        self.assertEqual(DisplayView(kind='info', style='dark').effective_style(), 'dark')
-        self.assertEqual(DisplayView(kind='departures', style='ci').effective_style(), 'ci')
-
-
 class RotationItemsTest(TestCase):
     def setUp(self):
         self.view = DisplayView.objects.create(name='V', slug='v', kind='info')
@@ -71,13 +60,13 @@ class UpdateViewApiTest(TestCase):
 
     def test_update_view_rejects_invalid_choices(self):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')
-        for body, fragment in [({'kind': 'tabelle'}, 'Typ'), ({'style': 'bunt'}, 'Stil'),
+        for body, fragment in [({'kind': 'tabelle'}, 'Typ'), ({'layout': 'bunt'}, 'Aufteilung'),
                                ({'on_air_split_side': 'oben'}, 'On-Air'), ({'pdf_mode': 'zufall'}, 'Modus')]:
             r = self._put(view, body)
             self.assertEqual(r.status_code, 422, r.content)
             self.assertIn(fragment, r.json()['detail'])
         view.refresh_from_db()
-        self.assertEqual((view.kind, view.style, view.on_air_split_side, view.pdf_mode),
+        self.assertEqual((view.kind, view.layout, view.on_air_split_side, view.pdf_mode),
                          ('info', 'auto', 'right', 'cycle'))
 
     def test_update_view_countdown_date(self):
@@ -136,9 +125,9 @@ class UpdateViewApiTest(TestCase):
 
     def test_update_view_missing_choice_wording(self):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')
-        r = self._put(view, {'style': None})
+        r = self._put(view, {'layout': None})
         self.assertEqual(r.status_code, 422, r.content)
-        self.assertEqual(r.json()['detail'], 'Für Stil fehlt die Auswahl. Bitte einen der angebotenen Werte wählen.')
+        self.assertEqual(r.json()['detail'], 'Für Aufteilung fehlt die Auswahl. Bitte einen der angebotenen Werte wählen.')
 
     def test_update_view_own_url_replaces_saved_link(self):
         link = WebUntisLink.objects.create(name='Bibliothek', url='https://bibliothek.example/untis')

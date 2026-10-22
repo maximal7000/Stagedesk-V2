@@ -649,3 +649,168 @@ class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
 
         executor = MigrationExecutor(connection)
         executor.migrate(executor.loader.graph.leaf_nodes())
+
+
+class SubstitutionSourcesMigrationTest(MigrationTestCase):
+    """0044: Vertretungsplan-Quelle und Ausgabe aus dem alten Schalter „Morgen zeigen“."""
+    migrate_from = ('monitor', '0043_device_agent')
+    migrate_to = ('monitor', '0044_substitution_sources')
+
+    def setUpBeforeMigration(self, apps):
+        View = apps.get_model('monitor', 'DisplayView')
+        _make_view(View, 'heute', kind='substitutions', substitutions_next_day=False)
+        _make_view(View, 'zwei', kind='substitutions', substitutions_next_day=True)
+
+    def test_0044_existing_views(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        today = View.objects.get(slug='heute')
+        self.assertEqual((today.substitutions_source, today.substitutions_format,
+                          today.substitutions_custom_format, today.substitutions_show_absences,
+                          today.substitutions_show_exams, today.substitutions_next_day_from),
+                         ('monitor', 'students_1', '', True, None, '16:00'))
+        self.assertEqual(View.objects.get(slug='zwei').substitutions_format, 'students_2')
+
+    def test_0044_backward(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        View.objects.filter(slug='zwei').update(substitutions_format='students_1')
+        _make_view(View, 'lehrer', kind='substitutions', substitutions_format='teachers')
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        OldView = executor.loader.project_state([self.migrate_from]).apps.get_model('monitor', 'DisplayView')
+        self.assertEqual(dict(OldView.objects.values_list('slug', 'substitutions_next_day')),
+                         {'heute': False, 'zwei': False, 'lehrer': True})
+        self.assertNotIn('substitutions_source', {f.name for f in OldView._meta.get_fields()})
+
+
+OFFICE = [{'days': [0, 1, 2, 3, 4], 'from': '07:00', 'until': '18:00'}]
+FULL_DAY = {'days': [0, 1, 2, 3, 4, 5, 6], 'from': '00:00', 'until': '23:59', 'view_id': None}
+FRIDAY_NIGHT = [{'days': [4], 'from': '22:00', 'until': '06:00'}]
+
+
+class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
+    """0045: Einschaltzeiten und Ansichten-Zeitplan werden eine Liste (Spec §2.2), Wirkung unverändert."""
+    migrate_from = ('monitor', '0044_substitution_sources')
+    migrate_to = ('monitor', '0045_unified_screen_schedule')
+
+    def setUpBeforeMigration(self, apps):
+        View = apps.get_model('monitor', 'DisplayView')
+        Screen = apps.get_model('monitor', 'Screen')
+        self.view_id = _make_view(View, 'frueh').pk
+        gone_id = _make_view(View, 'weg', deleted_at='2026-10-01T00:00:00Z').pk
+        self.early = [{'view_id': self.view_id, 'days': [0], 'from': '06:00', 'until': '09:00'}]
+        # griffen nie: ohne Ansicht, Ansicht gelöscht oder fehlt, von >= bis
+        never = [{'view_id': None, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': gone_id, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': 999, 'days': [0], 'from': '06:00', 'until': '09:00'},
+                 {'view_id': self.view_id, 'days': [0], 'from': '16:00', 'until': '08:00'},
+                 {'view_id': self.view_id, 'days': [0], 'from': '08:00', 'until': '08:00'}]
+        Screen.objects.create(name='Beide', slug='both', schedule=self.early + never, power_schedule=OFFICE)
+        Screen.objects.create(name='Power', slug='power', schedule=[], power_schedule=OFFICE)
+        Screen.objects.create(name='Ansicht', slug='view', schedule=self.early + never, power_schedule=[])
+        Screen.objects.create(name='Nie', slug='never', schedule=never, power_schedule=[])
+        Screen.objects.create(name='Leer', slug='empty', schedule=[], power_schedule=[])
+        Screen.objects.create(name='Nacht', slug='night', schedule=[
+            {'view_id': self.view_id, 'days': [4], 'from': '04:00', 'until': '23:00'}], power_schedule=FRIDAY_NIGHT)
+        # Ansicht als Ziffern-Text ("3") griff im alten Code ebenfalls
+        Screen.objects.create(name='Ziffern', slug='digits', schedule=[
+            {'view_id': str(self.view_id), 'days': [0], 'from': '06:00', 'until': '09:00'},
+            {'view_id': 'x3', 'days': [0], 'from': '06:00', 'until': '09:00'}], power_schedule=[])
+
+    def schedules(self, apps):
+        return {s.slug: s.schedule for s in apps.get_model('monitor', 'Screen').objects.all()}
+
+    def test_0045_forward(self):
+        Screen = self.apps.get_model('monitor', 'Screen')
+        self.assertNotIn('power_schedule', {f.name for f in Screen._meta.get_fields()})
+        self.assertEqual(self.schedules(self.apps), {
+            'both': [{'days': [0], 'from': '07:00', 'until': '09:00', 'view_id': self.view_id},
+                      {**OFFICE[0], 'view_id': None}],
+            'power': [{**OFFICE[0], 'view_id': None}],
+            'view': [*self.early, FULL_DAY],
+            'never': [],
+            'empty': [],
+            'night': [{'days': [4], 'from': '04:00', 'until': '06:00', 'view_id': self.view_id},
+                      {'days': [4], 'from': '22:00', 'until': '23:00', 'view_id': self.view_id},
+                      {'days': [4], 'from': '22:00', 'until': '23:59', 'view_id': None},
+                      {'days': [4], 'from': '00:00', 'until': '06:00', 'view_id': None}],
+            'digits': [*self.early, FULL_DAY],
+        })
+
+    def test_0045_overnight_power_keeps_same_day_effect(self):
+        from django.utils import timezone
+        from datetime import datetime
+        from monitor.screen_schedule import is_on
+        rows = self.schedules(self.apps)['night']
+        at = lambda d, h: timezone.localtime(timezone.make_aware(datetime(2026, 10, d, h)))  # noqa: E731
+        self.assertTrue(is_on(rows, at(23, 5)))    # Freitag 05:00
+        self.assertTrue(is_on(rows, at(23, 23)))   # Freitag 23:00
+        self.assertFalse(is_on(rows, at(24, 5)))   # Samstag 05:00
+
+    def test_0045_backward(self):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        old = {s.slug: (s.schedule, s.power_schedule) for s in apps.get_model('monitor', 'Screen').objects.all()}
+        vid = self.view_id
+        self.assertEqual(old, {
+            'both': ([{'view_id': vid, 'days': [0], 'from': '07:00', 'until': '09:00'}], OFFICE),
+            'power': ([], OFFICE),
+            # die angehängte Standard-Zeile ganztags hält den Bildschirm wie vorher immer an
+            'view': (self.early, [{k: v for k, v in FULL_DAY.items() if k != 'view_id'}]),
+            'never': ([], []),
+            'empty': ([], []),
+            # gleiche Wirkung wie das alte Fr 22:00–06:00 (am selben Tag)
+            'night': ([{'view_id': vid, 'days': [4], 'from': '04:00', 'until': '06:00'},
+                       {'view_id': vid, 'days': [4], 'from': '22:00', 'until': '23:00'}],
+                      [{'days': [4], 'from': '22:00', 'until': '23:59'},
+                       {'days': [4], 'from': '00:00', 'until': '06:00'}]),
+            'digits': (self.early, [{k: v for k, v in FULL_DAY.items() if k != 'view_id'}]),
+        })
+
+
+class LayoutColorSchemeMigrationTest(MigrationTestCase):
+    """0046: Stil wird Aufteilung, „Dunkel“ wandert als Ausnahme an den Bildschirm (Spec §3.2)."""
+    migrate_from = ('monitor', '0045_unified_screen_schedule')
+    migrate_to = ('monitor', '0046_layout_color_scheme')
+
+    def setUpBeforeMigration(self, apps):
+        View = apps.get_model('monitor', 'DisplayView')
+        Screen = apps.get_model('monitor', 'Screen')
+        Version = apps.get_model('monitor', 'DisplayViewVersion')
+        for style in ('auto', 'ci', 'dense', 'dark'):
+            _make_view(View, style, style=style)
+        dark = View.objects.get(slug='dark')
+        Screen.objects.create(name='Dunkel', slug='s-dark', default_view=dark)
+        Screen.objects.create(name='Hell', slug='s-ci', default_view=View.objects.get(slug='ci'))
+        Screen.objects.create(name='Ohne', slug='s-none')
+        Version.objects.create(view=dark, data={'kind': 'info', 'style': 'ci'})
+
+    def test_0046_forward(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        Screen = self.apps.get_model('monitor', 'Screen')
+        self.assertEqual(dict(View.objects.values_list('slug', 'layout')),
+                         {'auto': 'auto', 'ci': 'normal', 'dense': 'wide', 'dark': 'wide'})
+        self.assertNotIn('style', {f.name for f in View._meta.get_fields()})
+        self.assertEqual(dict(Screen.objects.values_list('slug', 'color_scheme')),
+                         {'s-dark': 'dark', 's-ci': 'inherit', 's-none': 'inherit'})
+        settings = self.apps.get_model('monitor', 'MonitorSettings').objects.create()
+        self.assertEqual((settings.color_scheme, settings.light_from, settings.light_until),
+                         ('light', '07:00', '18:00'))
+        version = self.apps.get_model('monitor', 'DisplayViewVersion').objects.get()
+        self.assertEqual(version.data, {'kind': 'info', 'layout': 'normal'})
+
+    def test_0046_backward(self):
+        View = self.apps.get_model('monitor', 'DisplayView')
+        _make_view(View, 'neu-breit', layout='wide')
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        OldView = apps.get_model('monitor', 'DisplayView')
+        self.assertEqual(dict(OldView.objects.values_list('slug', 'style')),
+                         {'auto': 'auto', 'ci': 'ci', 'dense': 'dense', 'dark': 'dark', 'neu-breit': 'dense'})
+        self.assertNotIn('color_scheme', {f.name for f in apps.get_model('monitor', 'Screen')._meta.get_fields()})
+        version = apps.get_model('monitor', 'DisplayViewVersion').objects.get()
+        self.assertEqual(version.data, {'kind': 'info', 'style': 'ci'})

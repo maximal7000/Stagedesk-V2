@@ -6,7 +6,7 @@ import { disruptionLabel, isBus, lineColor, lineLabel, minutesUntil, visibleDisr
 import { useClockMinute } from '../lib/useClock'
 import { Heading } from './parts'
 
-// Abfahrten (Stil B, Entwurf departures.png): ein Block pro Haltestelle. Haltestellen mit Zügen
+// Abfahrten (Aufteilung "Breit", Entwurf departures.png): ein Block pro Haltestelle. Haltestellen mit Zügen
 // (Hauptbahnhof/ZOB) stehen in einer eigenen hohen Spalte, die übrigen in einem Raster mit zwei Reihen.
 
 const LINE = 1.64 // Zeilenhöhe / Zeilenschrift

@@ -19,7 +19,7 @@ export default function OnAirMode({ mode, panel = null, staleSince = null }) {
     <div
       data-display-state="mode"
       data-mode-kind="on_air"
-      className="d-root d-tone-dark absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#111]"
+      className="d-root d-scheme-dark absolute inset-0 flex flex-col items-center justify-center overflow-hidden bg-[#111]"
     >
       <div
         className={`flex max-w-[90%] items-center justify-center bg-(--d-red) ${ANIMATION[mode.animation] ?? ''} ${panel

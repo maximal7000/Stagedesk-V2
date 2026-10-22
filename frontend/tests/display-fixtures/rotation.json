@@ -7,13 +7,15 @@
     "location": "Pausenhalle",
     "scale": "auto",
     "orientation": "landscape",
-    "power": true
+    "power": true,
+    "scheme": "light"
   },
+  "scheme": "light",
   "mode": null,
   "view": {
     "id": 6,
     "kind": "rotation",
-    "style": "ci",
+    "layout": "normal",
     "page_seconds": 15,
     "show_weather": false,
     "weather": null,
@@ -25,7 +27,7 @@
           "view": {
             "id": 1,
             "kind": "info",
-            "style": "ci",
+            "layout": "normal",
             "page_seconds": 15,
             "show_weather": true,
             "weather": {
@@ -105,7 +107,7 @@
           "view": {
             "id": 2,
             "kind": "departures",
-            "style": "dense",
+            "layout": "wide",
             "page_seconds": 15,
             "show_weather": false,
             "weather": null,

@@ -40,6 +40,7 @@ ALLOWED_HOSTS = [h.strip() for h in os.getenv(
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',  # vor allem anderen: runserver läuft dann als ASGI (WebSockets)
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -90,14 +91,14 @@ TEMPLATES = [
 
 ASGI_APPLICATION = "core.asgi.application"
 
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
-        },
-    },
-}
+# REDIS_URL gesetzt: Redis dort. Sonst lokal (DEBUG) im Speicher, in Produktion Redis auf 127.0.0.1 wie bisher.
+_redis_url = os.getenv('REDIS_URL')
+if _redis_url:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [_redis_url]}}}
+elif DEBUG:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
+else:
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [("127.0.0.1", 6379)]}}}
 # Tests laufen ohne Redis (sonst wartet jeder Push auf Verbindungs-Retries)
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}

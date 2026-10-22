@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
-  DEVICE_FIELDS, POWER_CONFIG_DEFAULTS, deviceDefaults, deviceProblems, devicePayload, DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
+  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, POWER_CONFIG_DEFAULTS, deviceDefaults, deviceProblems, devicePayload, DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
   pickFields, powerSummary, sectionPayload,
 } from './screenData'
 
 const glocke = {
   id: 1, name: 'Glocke', slug: 'glocke', location: 'Eingangshalle', default_view_id: 1, scale: 'auto',
   orientation: 'landscape', access_key: 'k1/+?', power_mode: 'auto', off_during_holidays: true,
-  power_schedule: [{ days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00' }], power_exceptions: [],
+  schedule: [{ days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00', view_id: null }], power_exceptions: [], color_scheme: 'inherit',
 }
 
 describe('kioskUrl', () => {
@@ -21,31 +21,44 @@ describe('kioskUrl', () => {
 describe('Abschnitte', () => {
   it('pickFields nimmt nur die Felder des Abschnitts', () => {
     expect(pickFields(glocke, DISPLAY_FIELDS)).toEqual({
-      name: 'Glocke', location: 'Eingangshalle', default_view_id: 1, scale: 'auto', orientation: 'landscape',
+      name: 'Glocke', location: 'Eingangshalle', default_view_id: 1, scale: 'auto', orientation: 'landscape', color_scheme: 'inherit',
     })
     expect(Object.keys(pickFields(glocke, POWER_FIELDS)).sort())
-      .toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'power_schedule'])
+      .toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'schedule'])
   })
 
   it('sectionPayload normalisiert Zeitplan und Ausnahmen und kürzt Texte', () => {
     expect(sectionPayload('display', { ...pickFields(glocke, DISPLAY_FIELDS), name: ' Glocke 2 ', default_view_id: '' }))
-      .toEqual({ name: 'Glocke 2', location: 'Eingangshalle', default_view_id: null, scale: 'auto', orientation: 'landscape' })
+      .toEqual({ name: 'Glocke 2', location: 'Eingangshalle', default_view_id: null, scale: 'auto', orientation: 'landscape', color_scheme: 'inherit' })
+    expect(sectionPayload('display', { ...pickFields(glocke, DISPLAY_FIELDS), color_scheme: undefined }).color_scheme).toBe('inherit')
     expect(sectionPayload('power', {
       power_mode: 'auto', off_during_holidays: false,
-      power_schedule: [{ days: [2, 0], from: '07:00', until: '17:00' }],
+      schedule: [{ days: [2, 0], from: '07:00', until: '17:00', view_id: '2' }, { days: [5], from: '10:00', until: '14:00', view_id: '' }],
       power_exceptions: [{ from_date: '2026-11-03', until_date: '', from: '', until: '', note: '' }],
     })).toEqual({
       power_mode: 'auto', off_during_holidays: false,
-      power_schedule: [{ days: [0, 2], from: '07:00', until: '17:00' }],
+      schedule: [{ days: [0, 2], from: '07:00', until: '17:00', view_id: 2 }, { days: [5], from: '10:00', until: '14:00', view_id: null }],
       power_exceptions: [{ from_date: '2026-11-03', until_date: '2026-11-03', from: '', until: '', note: '' }],
     })
+  })
+})
+
+describe('Farbschema', () => {
+  it('bietet die drei Schemata pro Bildschirm', () => {
+    expect(COLOR_SCHEME_OPTIONS).toEqual([
+      { value: 'inherit', label: 'Wie eingestellt' },
+      { value: 'light', label: 'Immer hell' },
+      { value: 'dark', label: 'Immer dunkel' },
+    ])
   })
 })
 
 describe('powerSummary', () => {
   it('nennt Modus und Zeitplan', () => {
     expect(powerSummary(glocke)).toBe('Mo–Fr 07:00 bis 17:00')
-    expect(powerSummary({ ...glocke, power_schedule: [] })).toBe('Ohne Zeitplan')
+    expect(powerSummary({ ...glocke, schedule: [] })).toBe('Ohne Zeitplan')
+    expect(powerSummary({ ...glocke, schedule: [...glocke.schedule, { days: [0, 1, 2, 3, 4], from: '07:00', until: '17:00', view_id: 2 }] }))
+      .toBe('Mo–Fr 07:00 bis 17:00')
     expect(powerSummary({ ...glocke, power_mode: 'manual_on' })).toBe('Manuell immer an')
     expect(powerSummary({ ...glocke, power_mode: 'manual_off' })).toBe('Manuell immer aus')
   })

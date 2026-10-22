@@ -1,4 +1,4 @@
-/* Anzeige (öffentliche Monitore): eigene Palette je Ton, alle Maße in rem (Basis aus computeRootPx). */
+/* Anzeige (öffentliche Monitore): eigene Palette je Farbschema, alle Maße in rem (Basis aus computeRootPx). */
 
 .d-root {
   --d-red: #da1f3d;
@@ -9,7 +9,8 @@
   color: var(--d-fg);
 }
 
-.d-tone-light {
+/* Farbschema per Klasse am Rahmen (Umschalten ohne Neuladen) */
+.d-scheme-light {
   --d-bg: #ffffff;
   --d-surface: #ffffff;
   --d-fg: #222222;
@@ -19,21 +20,10 @@
   --d-line: #e3e3e3;
   --d-chip: #2b2b2b;
   --d-chip-fg: #ffffff;
+  --d-wheel: #e6e6e6;
 }
 
-.d-tone-dense {
-  --d-bg: #f2f2f2;
-  --d-surface: #ffffff;
-  --d-fg: #222222;
-  --d-fg-soft: #444444;
-  --d-muted: #6f6f6f;
-  --d-rule: #222222;
-  --d-line: #e3e3e3;
-  --d-chip: #2b2b2b;
-  --d-chip-fg: #ffffff;
-}
-
-.d-tone-dark {
+.d-scheme-dark {
   --d-bg: #111111;
   --d-surface: #181818;
   --d-fg: #f2f2f2;
@@ -43,6 +33,27 @@
   --d-line: #2c2c2c;
   --d-chip: #f2f2f2;
   --d-chip-fg: #111111;
+  --d-wheel: #2a2a2a;
+}
+
+/* Aufteilung "Breit": das Rad liegt unter dem Inhalt, die Kästen sind zu 80 % deckend.
+   Hell bekommt eine hellgraue Seite, damit sich die weißen Kästen und der Uhr-Kasten abheben. */
+.d-scheme-light.d-layout-wide {
+  --d-bg: #f2f2f2;
+  --d-surface: #ffffffcc;
+}
+
+.d-scheme-dark.d-layout-wide {
+  --d-surface: #181818cc;
+}
+
+/* Rad: Form aus der Maske (Inline-Stil), Farbe aus der Fläche */
+.d-wheel {
+  background: var(--d-wheel);
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
 }
 
 .d-oswald {
@@ -70,20 +81,19 @@
 }
 
 /* Signalfarben neben Rot: Verspätung (Warnung) und Raumänderung (Info) */
-.d-tone-light,
-.d-tone-dense {
+.d-scheme-light {
   --d-warn: #b26a00;
   --d-info: #1f5c99;
   --d-soft: #f2f2f2;
 }
 
-.d-tone-dark {
+.d-scheme-dark {
   --d-warn: #f0a83a;
   --d-info: #7fb3e6;
   --d-soft: #222222;
 }
 
-/* Flache Karte der dichten Ansichten: keine Schatten, keine Rundung */
+/* Flacher Kasten (auch der Uhr-Kasten): keine Schatten, keine Rundung */
 .d-card {
   background: var(--d-surface);
 }
@@ -96,13 +106,13 @@
   border-top: 0.125rem solid var(--d-rule);
 }
 
-/* Fußleiste in den Stilen A und C: nur sichtbar, wenn ein Eintrag (.d-footer-item) darin steht.
+/* Fußleiste bei "Normal": nur sichtbar, wenn ein Eintrag (.d-footer-item) darin steht.
    Auf Weiß bekommt die Karte die weiche Fläche, damit sie sich abhebt. */
 .d-footer:not(:has(.d-footer-item)) {
   display: none;
 }
 
-.d-tone-light .d-footer .d-card {
+.d-scheme-light .d-footer .d-card {
   background: var(--d-soft);
 }
 

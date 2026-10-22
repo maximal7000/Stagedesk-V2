@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { packByHeight } from './fit'
 
 export function paginate(items, perPage) {
   if (!items.length) return []
@@ -6,6 +7,12 @@ export function paginate(items, perPage) {
   const pages = []
   for (let i = 0; i < items.length; i += size) pages.push(items.slice(i, i + size))
   return pages
+}
+
+// Seiten aus gemessenen Zeilenhöhen: Indizes je Seite, die in `available` passen.
+// Eine Zeile, die höher ist als `available`, bekommt eine eigene Seite.
+export function paginateByHeight(heights, available) {
+  return packByHeight(heights, available)
 }
 
 // Wechselt alle `seconds` Sekunden die Seite. Kein Timer bei höchstens einer Seite.

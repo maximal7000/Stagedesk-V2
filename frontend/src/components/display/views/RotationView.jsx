@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Frame } from '../frame'
 
 // Wechsel: zeigt die Unteransichten nacheinander, jede `items[i].seconds` lang, jede in ihrem eigenen
-// effektiven Stil und Rahmen. Bringt den Rahmen selbst mit (ownFrame); screen ist ViewScreen aus
+// Aufteilung und Rahmen, alle im Farbschema des Bildschirms. Bringt den Rahmen selbst mit (ownFrame); screen ist ViewScreen aus
 // DisplayRoot (als Prop, damit kein Import-Kreis entsteht).
 export default function RotationView({ view, orientation, frame = {}, screen }) {
   const Screen = screen
@@ -21,7 +21,7 @@ export default function RotationView({ view, orientation, frame = {}, screen }) 
   const item = items[index]
   if (!item?.view) {
     return (
-      <Frame style={view.style} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
+      <Frame layout={view.layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
         <div data-display-state="view" data-view-kind="rotation" className="flex h-full items-center">
           <p className="d-lato max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
             Dieser Wechsel ist leer. Im Admin unter Monitore → Ansichten den Wechsel öffnen und Einträge hinzufügen.

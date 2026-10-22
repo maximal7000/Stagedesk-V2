@@ -160,7 +160,7 @@ class PowerStateTest(TestCase):
 
     def test_exception_with_english_keys(self):
         today = timezone.localdate().isoformat()
-        screen = Screen.objects.create(name='S', slug='s', power_schedule=[{'days': [], 'from': '07:00', 'until': '08:00'}], power_exceptions=[
+        screen = Screen.objects.create(name='S', slug='s', schedule=[{'days': [], 'from': '07:00', 'until': '08:00'}], power_exceptions=[
             {'from_date': today, 'until_date': today, 'from': '00:00', 'until': '23:59', 'note': 'x'}])
         self.assertTrue(screen.get_power_state())
 
