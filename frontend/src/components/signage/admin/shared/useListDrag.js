@@ -1,5 +1,3 @@
-// Native HTML5 drag (no library): rows get the handlers from rowProps(index); on drop the hook calls
-// onMove(from, to). handleKeyDown is the keyboard alternative (arrow up/down on the handle).
 import { useState } from 'react'
 import { moveItem } from '../pages/viewData'
 

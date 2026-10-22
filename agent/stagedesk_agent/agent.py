@@ -26,7 +26,6 @@ LOCAL_URL = "http://127.0.0.1:8765/"
 
 
 def read_identity(paths):
-    """(serial, model) of this Raspberry Pi; 'unknown' when not readable."""
     return read_cpu_serial(paths) or "unknown", read_model(paths) or "unknown"
 
 

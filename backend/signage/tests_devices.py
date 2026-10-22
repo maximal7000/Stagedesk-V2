@@ -641,7 +641,7 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
         self.grant('signage.devices')
         url = f'/screens/{self.screen.id}'
         self.assertEqual(self.put(url, {'power_method': 'ddc', 'power_config': {'vcp_on': '01', 'vcp_off': '04'}}).status_code, 200)
-        r = self.put(url, {'power_config': {'cec_device': '0'}})  # method stays ddc
+        r = self.put(url, {'power_config': {'cec_device': '0'}})
         self.assertEqual(r.status_code, 422)
         self.assertIn('cec_device', r.json()['detail'])
         self.assertEqual(self.put(url, {'power_method': 'hybrid',
@@ -649,7 +649,6 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
                                                          'monitor_id': 0, 'cec_device': '0'}}).status_code, 200)
         self.assertEqual(self.put(url, {'power_config': {'display_port': 70000}}).status_code, 422)
         self.assertEqual(self.put(url, {'power_config': {'display_ip': ['x']}}).status_code, 422)
-        # Method change without a matching config: the old keys stay disallowed
         self.assertEqual(self.put(url, {'power_method': 'cec'}).status_code, 422)
 
     def test_explicit_null_device_fields_are_ignored(self):

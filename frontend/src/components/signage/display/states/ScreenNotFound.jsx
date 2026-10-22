@@ -1,6 +1,5 @@
 import StateScreen, { StateText } from './StateScreen'
 
-// previewExpired: the admin preview token is no longer valid.
 export default function ScreenNotFound({ slug, orientation, previewExpired = false }) {
   if (previewExpired) {
     return (

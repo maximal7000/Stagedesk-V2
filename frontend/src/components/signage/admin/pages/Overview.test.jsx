@@ -129,7 +129,6 @@ describe('Overview', () => {
     root = createRoot(container)
     await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
     const cell = (slug) => container.querySelector(`[data-screen="${slug}"] [data-device-state]`)
-    // The device column only shows hardware facts; the status light is only in "Status"
     expect(cell('g').textContent).toBe('Agent 1.0.0WLAN -58 dBm · 83 °C')
     expect(cell('g').textContent).not.toContain('Warnung')
     expect(cell('g').querySelector('.text-warn').textContent).toBe('83 °C')

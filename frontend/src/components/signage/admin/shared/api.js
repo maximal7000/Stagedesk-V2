@@ -90,7 +90,6 @@ export const updateWebuntisLink = (id, body) => put(`/webuntis-links/${id}`, bod
 export const deleteWebuntisLink = (id) => del(`/webuntis-links/${id}`)
 
 export const getDevices = () => get('/devices')
-// body: { code, screen_id } or { code, new_screen: { name, location } }
 export const pairDevice = (body) => post('/devices/pair', body)
 export const unpairDevice = (id) => post(`/devices/${id}/unpair`)
 export const revokeDevice = (id) => post(`/devices/${id}/revoke`)

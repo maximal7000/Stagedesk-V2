@@ -2,7 +2,6 @@ import { ClockBox } from '../frame'
 
 const ANIMATION = { pulse: 'd-onair-pulse', blink: 'd-onair-blink' }
 
-// Font size by text length so a long custom text fits the sign
 function signFontRem(text, panel) {
   const len = Math.max(1, [...text].length)
   return panel ? Math.min(10.5, 68 / len) : Math.min(17, 150 / len)

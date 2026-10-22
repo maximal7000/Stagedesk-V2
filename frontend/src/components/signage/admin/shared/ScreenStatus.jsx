@@ -18,7 +18,6 @@ export default function ScreenStatus({ screen, now, device }) {
 }
 
 // Device column: hardware only, no second status light (that is in "Status").
-// unknown: the device list failed to load, so whether a device is paired is unknown.
 export function DeviceCell({ device, unknown = false }) {
   if (unknown) {
     return (

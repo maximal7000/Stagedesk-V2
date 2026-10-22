@@ -71,7 +71,6 @@ def _post(url, body, deadline):
 
 
 def request_format(server, school, format_name, deadline):
-    """Raw response of the format endpoint (uncached)."""
     query = f'school={urllib.parse.quote(school)}&formatName={urllib.parse.quote(format_name)}'
     url = f'{_base(server)}/format?{query}'
     return _post(url, {'formatName': format_name, 'schoolName': school}, deadline)
@@ -85,7 +84,6 @@ def request_day(server, school, format_name, options, day: date, deadline):
 
 
 def fetch_format(server, school, format_name, deadline) -> dict:
-    """Format options (payload), cached for an hour."""
     key = FORMAT_CACHE_PREFIX + format_name
     cached = cache.get(key)
     if cached is not None:

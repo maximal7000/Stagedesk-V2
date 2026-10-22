@@ -183,7 +183,6 @@ class ContractTest(DisplayTestBase):
                          (None, [], 'embed', 'https://example.org/untis'))
         data = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': 'falsch'}).json()
         self.assertEqual(data['view']['data']['days'], [])
-        # Another screen's key does not count
         other = Screen.objects.create(name='Andere', slug='andere')
         data = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': other.access_key}).json()
         self.assertEqual(data['view']['data']['days'], [])
@@ -217,7 +216,6 @@ class ContractTest(DisplayTestBase):
             data = self.client.get('/api/monitor/display', {'screen': 'halle'},
                                    HTTP_AUTHORIZATION='Bearer x').json()
         self.assertEqual(len(data['view']['data']['days']), 2)
-        # without permission: no error, only the fallback
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'fremd'}):
             r = self.client.get('/api/monitor/display', {'screen': 'halle'}, HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 200)
@@ -341,7 +339,6 @@ class PreviewTest(PreviewTestBase):
         settings.emergency_active = True
         settings.save()
         self.assertIsNone(self.client.get('/api/monitor/display', {'preview': token}).json()['mode'])
-        # a normal fetch stays unchanged
         live = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()
         self.assertEqual(live['mode']['kind'], 'emergency')
 
@@ -377,7 +374,6 @@ class PreviewValidationTest(PreviewTestBase):
                              'existiert nicht')
         self.assert_rejected({'view': {'id': rotation.id, 'rotation_items': [{'view_id': rotation.id, 'seconds': 10}]}},
                              'nicht selbst')
-        # saved rotation, the draft empties the list: the saved kind counts
         self.assert_rejected({'view': {'id': rotation.id, 'rotation_items': []}}, 'mindestens eine Ansicht')
         self.assert_rejected({'view': {'kind': 'rotation', 'rotation_items': [{'view_id': self.saved.id, 'seconds': 'x'}]}},
                              'Sekunden')

@@ -61,7 +61,6 @@ export const ORIENTATION_OPTIONS = [
   { value: 'portrait', label: 'Hoch' },
 ]
 
-// "Wie eingestellt" follows the setting for all screens
 export const COLOR_SCHEME_OPTIONS = [
   { value: 'inherit', label: 'Wie eingestellt' },
   { value: 'light', label: 'Immer hell' },
@@ -107,7 +106,6 @@ export function devicePayload(draft, original) {
 
 const timeOk = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v ?? '')
 
-// -> { window: text or '', config: { field: text } }; an unchanged value is not flagged
 export function deviceProblems(draft, original) {
   const problems = { window: '', config: {} }
   const w = draft?.update_window
@@ -165,7 +163,6 @@ export function powerSummary(screen) {
 const CEC_TEXT = { on: 'an', standby: 'Standby' }
 export const cecLabel = (status) => CEC_TEXT[status] ?? 'unbekannt'
 
-// Last report of the screen (without a device agent: the CEC status from the Pi)
 export function lastReport(value, now = new Date()) {
   const at = value ? new Date(value) : null
   if (!at || Number.isNaN(at.getTime())) return 'noch nie'
@@ -187,7 +184,6 @@ export function activeOverride(screen, now = new Date(), views = null) {
 
 export const OVERRIDE_CLEAR = { override_view_id: null, override_until: null }
 
-// untilLocal: datetime-local value ("2026-10-20T14:00", local time), empty = until further notice
 export function overridePayload(viewId, untilLocal) {
   return {
     override_view_id: Number(viewId),

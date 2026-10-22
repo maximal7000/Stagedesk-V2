@@ -8,7 +8,6 @@ import {
   MAX_ROTATION_SECONDS, MIN_ROTATION_SECONDS, kindLabel, moveItem, rotationChoices, rotationProblems,
 } from '../pages/viewData'
 
-// Name the kind only if the name does not already contain it (avoids "Abfahrten (Abfahrten)")
 function optionLabel(view) {
   const kind = kindLabel(view.kind)
   return view.name.toLowerCase().includes(kind.toLowerCase()) ? view.name : `${view.name} (${kind})`
@@ -16,7 +15,6 @@ function optionLabel(view) {
 
 export default function RotationEditor({ draft, set, views, viewId }) {
   const items = draft.rotation_items ?? []
-  // The empty list explains itself; incomplete rows are reported
   const problems = items.length ? rotationProblems(items) : []
   const choices = rotationChoices(views, viewId)
   const names = Object.fromEntries((views ?? []).map((v) => [v.id, v.name]))

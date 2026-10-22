@@ -1,5 +1,3 @@
-// The draft holds only editable fields; only the changed ones are saved and sent to the preview,
-// normalised via viewPayload.
 import { deepEqual } from '../shared/useDraft'
 
 export const KIND_OPTIONS = [
@@ -56,7 +54,6 @@ const numberMessage = (label, min, max) => `${label}: bitte eine ganze Zahl von 
 const inRange = (value, min, max) => value !== '' && value != null && Number.isInteger(Number(value))
   && Number(value) >= min && Number(value) <= max
 
-// Fields the admin edits (subset of DisplayViewUpdateSchema)
 export const EDITABLE_FIELDS = [
   'name', 'kind', 'layout', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
@@ -147,7 +144,6 @@ export function viewPayload(draft, keys) {
   return Object.fromEntries(keys.map((k) => [k, normalizeField(k, draft[k])]))
 }
 
-// Preview: the saved view (id) is the base, plus only the changed fields
 export function previewPayload(id, base, draft) {
   return { id, ...viewPayload(draft, changedKeys(base, draft)) }
 }

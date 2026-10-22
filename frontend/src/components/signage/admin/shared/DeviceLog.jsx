@@ -40,7 +40,6 @@ export default function DeviceLog({ screenId, reloadKey = 0 }) {
     setState({ loading: true, events: [], error: null, filter: value })
   }
 
-  // Filter change: loading indicator (changeFilter). Periodic reload (reloadKey): the table stays, an error appears as a row.
   useEffect(() => {
     let alive = true
     const group = LOG_GROUPS.find((g) => g.value === filter) ?? LOG_GROUPS[0]

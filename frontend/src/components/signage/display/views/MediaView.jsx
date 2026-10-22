@@ -5,7 +5,6 @@ import { paginate } from '../lib/pager'
 // If all pages match the screen orientation they run edge to edge with object-fit: contain on white
 // (black in the dark scheme). Otherwise (portrait page on a landscape screen) they sit centred in
 // the CI frame with the clock.
-// Brings its own frame (ownFrame): frame = {scheme, staleSince, wheel, stripe} from ViewScreen.
 
 const FADE_MS = 300
 

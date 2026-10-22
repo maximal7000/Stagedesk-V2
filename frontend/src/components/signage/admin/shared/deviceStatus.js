@@ -16,7 +16,6 @@ function fallbackDetail(device) {
   return ''
 }
 
-// -> { tone: 'ok' | 'warn' | 'bad' | 'off' | 'none', label, detail }
 export function deviceStatusView(device) {
   const status = device?.status
   const tone = TONES[status] ?? 'none'
@@ -30,7 +29,6 @@ export function deviceStatusView(device) {
 
 const number = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
-// `warn` marks the value that raised an active warning.
 export function deviceFacts(device) {
   const codes = new Set((device?.warnings || []).map((w) => w.code))
   const metrics = []
@@ -51,7 +49,6 @@ const asDate = (v) => {
   return d && !Number.isNaN(d.getTime()) ? d : null
 }
 
-// "Stand HH:MM": time of the device's last report
 export function reportTime(device) {
   const at = asDate(device?.last_seen_at)
   return at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : ''
@@ -78,8 +75,6 @@ const dayTime = (v) => {
 const DISPLAY_POWER = { an: 'an', on: 'an', standby: 'Standby', aus: 'aus', off: 'aus' }
 const NETWORK_KIND = { wifi: 'WLAN', lan: 'LAN', ethernet: 'LAN' }
 
-// Telemetry in four groups for the device box: [{ title, rows: [{ label, value, warn }] }].
-// Missing values (null) do not appear; a group without values is dropped.
 export function telemetryGroups(device) {
   const t = device?.telemetry || {}
   const codes = new Set((device?.warnings || []).map((w) => w.code))

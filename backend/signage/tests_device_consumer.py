@@ -149,7 +149,7 @@ class DeviceConsumerTest(TransactionTestCase):
             await comm.send_json_to({'type': 'telemetry', 'data': {'cpu_temp': 99}})
             await _sync_point(comm)
             second = await sync_to_async(Device.objects.get)(pk=self.device.pk)
-            self.assertEqual(second.last_telemetry['cpu_temp'], 40)  # throttled
+            self.assertEqual(second.last_telemetry['cpu_temp'], 40)
             self.assertGreater(second.last_seen_at, first.last_seen_at)
             await comm.disconnect()
         async_to_sync(run)()

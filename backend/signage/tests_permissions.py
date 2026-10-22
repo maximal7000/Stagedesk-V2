@@ -118,7 +118,6 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
 
 
 class RenameToSignagePermissionsMigrationTest(MigrationTestCase):
-    """users/0017: monitor.* becomes signage.*, group and user assignments stay."""
     migrate_from = ('users', '0016_split_monitor_edit')
     migrate_to = ('users', '0017_rename_monitor_permissions_to_signage')
     CODES = ['view', 'setup', 'exams', 'media', 'power', 'onair', 'emergency', 'devices']

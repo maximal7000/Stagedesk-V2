@@ -260,8 +260,8 @@ export default function Settings() {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [legacyNames, setLegacyNames] = useState(null)
-  const [templates, setTemplates] = useState(null)       // saved
-  const [templateList, setTemplateList] = useState([])   // draft
+  const [templates, setTemplates] = useState(null)
+  const [templateList, setTemplateList] = useState([])
   const [clearing, setClearing] = useState(null)
   const [busy, setBusy] = useState(false)
   // Counts successful saves: even if only a secret was saved (values stay ''), the draft
@@ -281,7 +281,6 @@ export default function Settings() {
     }
     setError(null)
     setSettings(settingsRes.value)
-    // Without a device list the hint under the switch is omitted
     if (devicesRes.status === 'fulfilled') setLegacyNames(legacyScreenNames(devicesRes.value[0], devicesRes.value[1]))
     if (templatesRes.status === 'fulfilled' && templatesRes.value) {
       const sorted = [...templatesRes.value].sort((x, y) => x.sort_order - y.sort_order)

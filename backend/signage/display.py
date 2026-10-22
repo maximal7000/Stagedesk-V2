@@ -20,7 +20,6 @@ DEFAULT_MAX_DEPARTURES = 10
 PREVIEW_CACHE_PREFIX = 'signage:preview:'
 PREVIEW_SECONDS = 600
 _PREVIEW_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{32}$')
-# Fields a draft may explicitly clear
 _NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date',
                           'substitutions_show_exams'}
 
@@ -400,7 +399,6 @@ def build_payload(screen, view, *, key_ok, now, preview=False):
         'generated_at': now.isoformat(),
         'reload_requested_at': _iso(screen.reload_requested_at) if screen else None,
         'screen': screen_data,
-        # no screen (preview, unknown screen): the setting without exception
         'scheme': screen_data['scheme'] if screen_data else color_scheme.resolve(None, settings, now),
         'mode': mode,
         'view': _view_object(view, key_ok, now, single_day) if view else None,
@@ -421,7 +419,6 @@ def load_preview(token):
 
 
 def draft_view(draft: dict) -> DisplayView:
-    """Unsaved view from a draft, based on the saved view (`id`) or a new one."""
     draft = dict(draft)
     view_id = draft.pop('id', None)
     view = None

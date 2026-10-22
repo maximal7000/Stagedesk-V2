@@ -19,7 +19,6 @@ const isoToday = () => {
   const d = new Date()
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
-// "Do 09.07.2026"
 const formatDate = (iso) => {
   const d = parseLocalDate(iso)
   return Number.isNaN(d.getTime()) ? '' : `${formatShortDate(d)}${d.getFullYear()}`
@@ -70,7 +69,7 @@ function HolidayEditRow({ row, onChange, onSave, onCancel, busy }) {
 }
 
 function Holidays({ holidays, onReload }) {
-  const [editing, setEditing] = useState(null)   // { id|null, name, start_date, end_date }
+  const [editing, setEditing] = useState(null)
   const [busy, setBusy] = useState(false)
   const [confirm, setConfirm] = useState(null)
   useUnsavedGuard(!!editing)

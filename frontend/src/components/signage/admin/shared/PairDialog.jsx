@@ -21,7 +21,6 @@ function CodeInput({ cells, onChange }) {
     el?.focus()
     el?.select?.()
   }
-  // Insert digits from position i (typing or paste); the other fields stay
   const put = (i, typed) => {
     if (!typed) return
     const next = [...cells]
@@ -60,7 +59,6 @@ function CodeInput({ cells, onChange }) {
   )
 }
 
-// screens: [{ id, name, hasDevice? }] (hasDevice null = unknown, the device list failed to load)
 export default function PairDialog({ screens, onClose, onPaired }) {
   const titleId = useId()
   const screenId = useId()
@@ -78,7 +76,6 @@ export default function PairDialog({ screens, onClose, onPaired }) {
   const dialogRef = useRef(null)
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  // Step 1: first empty digit field, after a code error the first field
   const codeFocus = useRef(null)
   useEffect(() => {
     const root = dialogRef.current
@@ -115,7 +112,6 @@ export default function PairDialog({ screens, onClose, onPaired }) {
     } catch (err) {
       if (mounted.current) {
         setError(errorText(err, 'Das Koppeln ist fehlgeschlagen. Bitte erneut versuchen.'))
-        // Code errors (invalid, expired, too many attempts): back to code entry
         if (err?.response?.status === 400 || err?.response?.status === 429) { codeFocus.current = 0; setStep(1) }
       }
     }

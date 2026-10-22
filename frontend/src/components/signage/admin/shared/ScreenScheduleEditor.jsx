@@ -1,6 +1,3 @@
-// The top row wins; the handle changes the order (drag or arrow keys). Without rows the screen is
-// always on. Controlled: value is the list, onChange gets the new list.
-// problems: message per row or null (schedule.scheduleProblems); the editor adds overlaps itself.
 import { useId } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'

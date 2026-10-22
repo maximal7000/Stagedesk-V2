@@ -41,8 +41,8 @@ function LargeScreenshot({ url, caption, onClose }) {
 
 // onReload: only for users with signage.setup without signage.devices (reload as before the device agent)
 export default function DeviceBox({ device, screen, can, onChanged, onReload }) {
-  const [busy, setBusy] = useState({}) // kind -> true while the command runs
-  const [confirm, setConfirm] = useState(null) // { kind, ... } | 'unpair' | 'revoke'
+  const [busy, setBusy] = useState({})
+  const [confirm, setConfirm] = useState(null)
   const [working, setWorking] = useState(false)
   const [large, setLarge] = useState(false)
   const stops = useRef(new Set())

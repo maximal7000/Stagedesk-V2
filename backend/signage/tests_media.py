@@ -128,7 +128,6 @@ class RenderFileTest(MediaTestBase):
         self.assertEqual([p.id for p in f.pages.all()], [p.id for p in old])
         for name in old_names:
             self.assertTrue(default_storage.exists(name))
-        # Partially written new files are gone
         stored = {n for n in default_storage.listdir('monitor/pages')[1]}
         self.assertEqual(stored, {n.split('/')[-1] for n in old_names})
 

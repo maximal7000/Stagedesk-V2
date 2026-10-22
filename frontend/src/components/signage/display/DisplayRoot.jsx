@@ -27,7 +27,6 @@ export default function DisplayRoot(props) {
 }
 
 // Does not re-render every second; only the clock and countdown do.
-// slug: screen or view slug from the URL, preview: preview token.
 function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '', preview = null }) {
   const screen = payload?.screen ?? null
   const scheme = payload?.scheme === 'dark' ? 'dark' : 'light'
@@ -61,8 +60,6 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
   return <ViewScreen view={payload.view} scheme={scheme} orientation={orientation} staleSince={staleSince} />
 }
 
-// Special mode on mode.side (default right), the view in its frame opposite.
-// CI wheel and stripe only at the screen edge; in portrait stacked (left = top).
 function ModeSplit({ mode, view, scheme, orientation, staleSince }) {
   const Mode = MODE_COMPONENTS[mode.kind]
   const side = mode.side === 'left' ? 'left' : 'right'
@@ -91,8 +88,6 @@ function ModeSplit({ mode, view, scheme, orientation, staleSince }) {
   )
 }
 
-// Views with their own frame (media, rotation) get the frame props and ViewScreen itself as screen
-// (for the rotation's sub-views).
 function ViewScreen({ view, scheme = 'light', orientation, staleSince = null, wheel = true, stripe = true }) {
   if (!view) return <Loading orientation={orientation} />
   const View = VIEW_COMPONENTS[view.kind]

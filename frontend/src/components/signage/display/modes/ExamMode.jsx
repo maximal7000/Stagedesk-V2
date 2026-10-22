@@ -3,7 +3,6 @@ import { CiStripe, CiWheel, frameRootClass } from '../frame/parts'
 import { formatTime } from '../lib/format'
 import { useClockMinute } from '../lib/useClock'
 
-// Title size: the longest word fits the width; full screen fits about 24 characters per line
 function titleFontRem(title, widthRem, maxRem, oneLine) {
   const words = String(title || '').split(/\s+/)
   const longest = Math.max(1, ...words.map((w) => [...w].length))

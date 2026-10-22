@@ -129,7 +129,6 @@ prepare_kiosk_user() {
   if [ -f "$cmdline" ] && ! grep -q 'consoleblank=0' "$cmdline"; then
     sed -i '1 s/[[:space:]]*$/ consoleblank=0/' "$cmdline"
   fi
-  # Invisible mouse cursor for cage.
   local home icons
   home="$(getent passwd pi | cut -d: -f6)"
   icons="$home/.icons"

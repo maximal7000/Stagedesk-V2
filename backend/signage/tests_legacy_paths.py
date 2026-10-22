@@ -1,4 +1,3 @@
-"""New addresses /api/signage/ and /ws/signage/ next to the permanent legacy /monitor addresses."""
 from asgiref.sync import async_to_sync
 from channels.routing import URLRouter
 from channels.testing import WebsocketCommunicator

@@ -1,6 +1,5 @@
 import StateScreen from './StateScreen'
 
-// No spinner, no animation. bare: text only, inside a view's frame.
 export default function Loading({ orientation, bare = false }) {
   if (bare) {
     return (

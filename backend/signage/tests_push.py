@@ -55,7 +55,7 @@ class DisplayPushTest(TransactionTestCase):
         async def run():
             comm = await _connect('gibt-es-nicht')
             self.assertTrue(await comm.receive_nothing())
-            await comm.send_to(text_data='{"type":"ping"}')  # incoming messages are ignored
+            await comm.send_to(text_data='{"type":"ping"}')
             self.assertTrue(await comm.receive_nothing())
             await comm.disconnect()
         async_to_sync(run)()

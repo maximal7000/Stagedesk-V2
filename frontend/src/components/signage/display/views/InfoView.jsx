@@ -34,7 +34,6 @@ export default function InfoView({ view }) {
   const [natural, setNatural] = useState({ a: null, b: null })
   const setA = useCallback((v) => setNatural((n) => (n.a === v ? n : { ...n, a: v })), [])
   const setB = useCallback((v) => setNatural((n) => (n.b === v ? n : { ...n, b: v })), [])
-  // Portrait and narrow areas: events below the announcements instead of in a too narrow column
   const stacked = width > 0 && width / remPx < STACK_BELOW_REM
   if (!announcements.length && !events.length && !countdown) {
     return <p className="d-oswald pt-[3.75rem] text-[2rem] text-(--d-muted)">Keine Ankündigungen oder Termine.</p>
@@ -81,7 +80,6 @@ function PagedSection({ title, items, seconds, renderItem, after = null, onNatur
       if (!el) return
       const next = [...el.children].map((c) => c.getBoundingClientRect().height)
       setHeights((prev) => (prev.length === next.length && prev.every((h, i) => h === next[i]) ? prev : next))
-      // Header, gap and padding of the section plus all items
       const section = sectionRef.current
       const body = bodyRef.current
       if (onNatural && section && body) {
@@ -147,7 +145,6 @@ function renderEvent(ev) {
 }
 
 // Re-renders only when the minute changes (day change)
-// first: without events above, the countdown is at the top, without a line
 function Countdown({ countdown, first = false }) {
   const now = useClockMinute()
   const days = daysUntil(countdown.date, now)

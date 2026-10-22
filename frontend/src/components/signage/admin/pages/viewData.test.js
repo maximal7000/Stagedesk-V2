@@ -59,7 +59,6 @@ describe('changedKeys / viewPayload / previewPayload', () => {
         id: '1', name: 'Katharineum', walk_minutes: 3, max_departures: 10, filter_lines: ['5', '11'],
         filter_direction: 'Moisling', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true,
       }],
-      // Rows without a chosen view are left out
       rotation_items: [{ view_id: 3, seconds: 20 }],
       media_items: [4, 5],
     })

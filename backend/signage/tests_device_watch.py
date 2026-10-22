@@ -72,7 +72,6 @@ class ComputeWarningsTest(WatchBase):
         s, now = self.settings, self.now
         self.assertEqual(devices.compute_warnings(telemetry(), s, now), [])
         self.assertEqual(devices.compute_warnings({}, s, now), [])
-        # Boundaries: exactly at the threshold there is no warning yet
         self.assertEqual(self.codes(telemetry(system={'temperature_c': s.warn_temperature_c})), [])
         self.assertEqual(self.codes(telemetry(system={'disk_percent': s.warn_disk_percent})), [])
         self.assertEqual(self.codes(telemetry(network={'signal_dbm': s.warn_wifi_dbm})), [])
@@ -86,19 +85,15 @@ class ComputeWarningsTest(WatchBase):
             ('disk', 'Speicher 93 % belegt'), ('wifi', 'WLAN schwach (-81 dBm)'),
             ('browser', 'Browser läuft nicht'), ('update_failed', 'Letztes Update fehlgeschlagen'),
             ('reboot_pending', 'Neustart seit 9 Tagen nötig')])
-        # missing values (null) produce nothing
         nulls = telemetry(system={'temperature_c': None, 'throttled_now': None, 'disk_percent': None},
                           network={'signal_dbm': None}, display={'browser_running': None},
                           updates={'last_ok': None, 'reboot_required_since': None})
         self.assertEqual(devices.compute_warnings(nulls, s, now), [])
-        # Wi-Fi only for connection type Wi-Fi
         self.assertEqual(self.codes(telemetry(network={'kind': 'lan', 'signal_dbm': -90})), [])
         self.assertEqual(self.codes(telemetry(network={'kind': None, 'signal_dbm': -90})), [])
-        # restart not needed for long enough yet, broken date
         recent = (now - timedelta(days=s.warn_reboot_days - 1)).isoformat()
         self.assertEqual(self.codes(telemetry(updates={'reboot_required_since': recent})), [])
         self.assertEqual(self.codes(telemetry(updates={'reboot_required_since': 'kaputt'})), [])
-        # parts missing or of the wrong type
         self.assertEqual(devices.compute_warnings({'system': None, 'network': 'x'}, s, now), [])
 
 
@@ -135,7 +130,7 @@ class WatchTest(WatchBase):
         self.assertIsNone(self.device.offline_notified_at)
 
     def test_back_online_notification_only_after_offline_notice(self):
-        self.go()  # online, never reported offline
+        self.go()
         self.notify.assert_not_called()
         self.seen_ago(15)
         self.go()
@@ -155,19 +150,16 @@ class WatchTest(WatchBase):
         self.go()
         self.assertEqual(self.bodies(), ['Glocke: Temperatur 83 °C.'])
         self.assertEqual([w['code'] for w in self.device.active_warnings], ['temperature'])
-        # same warning, different value: no new notification
         self.device.last_telemetry = telemetry(system={'temperature_c': 85})
         self.device.save()
         self.go()
         self.assertEqual(self.notify.call_count, 1)
-        # disappears: event, no notification
         self.device.last_telemetry = telemetry()
         self.device.save()
         self.go()
         self.assertEqual(self.notify.call_count, 1)
         self.assertEqual(self.device.active_warnings, [])
         self.assertEqual(DeviceEvent.objects.filter(device=self.device, kind='warning_cleared').count(), 1)
-        # comes back: notified again
         self.device.last_telemetry = telemetry(system={'temperature_c': 90})
         self.device.save()
         self.go()

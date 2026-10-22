@@ -5,8 +5,6 @@ from django.test import SimpleTestCase
 
 
 class CredentialsWarningTest(SimpleTestCase):
-    """SignageConfig.ready() warns once when the DB timetable credentials are missing."""
-
     def _ready(self):
         apps.get_app_config('signage').ready()
 

@@ -69,7 +69,6 @@ def get_file(request, id: int):
 def delete_file(request, id: int):
     _require_perm(request, 'signage.media')
     d = get_object_or_404(MediaFile, id=id)
-    # Soft delete: the file stays for restore.
     d.deleted_at = timezone.now()
     d.save(update_fields=['deleted_at'])
     push.notify_changed_on_commit()

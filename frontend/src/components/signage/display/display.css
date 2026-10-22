@@ -34,8 +34,6 @@
   --d-wheel: #2a2a2a;
 }
 
-/* "Breit": the wheel sits below the content, the boxes are 80 % opaque.
-   Light gets a light grey page so the white boxes and the clock box stand out. */
 .d-scheme-light.d-layout-wide {
   --d-bg: #f2f2f2;
   --d-surface: #ffffffcc;
@@ -45,7 +43,6 @@
   --d-surface: #181818cc;
 }
 
-/* Wheel: shape from the mask (inline style), colour from the surface */
 .d-wheel {
   background: var(--d-wheel);
   -webkit-mask-size: 100% 100%;
@@ -101,8 +98,6 @@
   border-top: 0.125rem solid var(--d-rule);
 }
 
-/* Footer in "Normal": only visible when it contains an item (.d-footer-item).
-   On white the card gets the soft surface so it stands out. */
 .d-footer:not(:has(.d-footer-item)) {
   display: none;
 }
@@ -120,8 +115,6 @@
   animation: d-fade-in 300ms ease-out both;
 }
 
-/* On-air sign: pulse only via opacity, hard blink at 1 s.
-   With reduced motion the sign stands still. */
 @keyframes d-onair-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.72; }

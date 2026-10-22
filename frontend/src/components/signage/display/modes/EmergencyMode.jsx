@@ -1,7 +1,6 @@
 import { ClockBox } from '../frame'
 import { formatTime } from '../lib/format'
 
-// Font size by length: short instructions as large as possible, long ones stay fully visible
 function textFontRem(text) {
   const len = [...(text || '')].length
   if (len <= 60) return 9.5
@@ -10,7 +9,6 @@ function textFontRem(text) {
   return 4.25
 }
 
-// staleSince: last valid data when data is stale or the connection is lost ("Stand HH:MM" at the clock)
 export default function EmergencyMode({ mode, staleSince = null }) {
   const since = formatTime(mode.since)
   return (

@@ -72,8 +72,6 @@ class LegacyAliasTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class GlobalStateApiTest(TestCase):
-    """On-air and emergency live in MonitorSettings; /display and /clock read them there."""
-
     def setUp(self):
         self.view = DisplayView.objects.create(name='V', slug='v', is_default=True, api_token='tok',
                                                kind='departures')
@@ -289,8 +287,6 @@ class SettingsSecretsTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ViewSecretsTest(TestCase):
-    """GET /config: never the old per-view weather key, api_token (ATEM) only with signage.setup."""
-
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', weather_api_key='alt-key',
                                                api_token='t' * 32)
@@ -339,8 +335,6 @@ class ViewSecretsTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ChangeViewKindTest(TestCase):
-    """PUT /config with a new kind: settings of the old kind stay, rotation members are protected."""
-
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', kind='departures', page_seconds=33)
         self.profile = UserProfile.objects.create(keycloak_id='tester')

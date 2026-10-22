@@ -17,7 +17,6 @@ function readParams(search) {
   }
 }
 
-// rem base from viewport width, screen scaling and ?zoom=. Recomputed only on resize.
 function useRootScale(scale, orientation) {
   useEffect(() => {
     const root = document.documentElement

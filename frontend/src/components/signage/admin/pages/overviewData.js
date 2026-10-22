@@ -8,7 +8,6 @@ function asDate(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-// All departure data of a view, also in split views and rotations
 function departuresBlocks(view, out = []) {
   if (!view) return out
   if (view.kind === 'departures' && view.data) out.push(view.data)
@@ -33,7 +32,6 @@ function sourceFrom(entries, isOk) {
   return last ? { tone: 'ok', text: `OK · ${formatTime(last)}` } : { tone: 'warn', text: 'keine Daten' }
 }
 
-// payloads: /display responses of the screens; settings: /settings (WebUntis check)
 export function dataSources(payloads, settings) {
   const entries = []
   for (const p of payloads || []) {
@@ -63,7 +61,6 @@ export function nextExam(exams, now) {
   return open[0] ?? null
 }
 
-// "Di 20.10., 08:00 bis 12:30" (on the same day only the end time)
 export function formatRange(from, until) {
   const a = asDate(from)
   const b = asDate(until)
@@ -91,7 +88,6 @@ export function upcoming(holidays, events, now) {
   return items
 }
 
-// Latest off_until if all screens are off until end of day; otherwise null
 export function allOffUntil(screens, now) {
   if (!screens?.length) return null
   const dates = screens.map((s) => asDate(s.off_until))
@@ -101,7 +97,6 @@ export function allOffUntil(screens, now) {
 
 export const EMERGENCY_POWER_HINT = 'Während des Notfalls sind alle Bildschirme an.'
 
-// isOn: current state per /display.
 // During an emergency the power rule switches everything on, so the entries are disabled.
 export function powerMenu(screen, { now, isOn, emergencyActive }) {
   const disabled = !!emergencyActive

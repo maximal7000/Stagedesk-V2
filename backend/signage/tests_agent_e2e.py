@@ -171,7 +171,6 @@ class AgentEndToEndTest(TransactionTestCase):
         return next((row for row in rows if row['id'] == device_id), None)
 
     def run_on_reactor(self, function, *args):
-        """Run a function in Daphne's reactor thread and wait for the result."""
         from twisted.internet import reactor, threads
         done = threading.Event()
         box = {}
@@ -189,7 +188,6 @@ class AgentEndToEndTest(TransactionTestCase):
         return box.get('value')
 
     def stop_server(self):
-        """Close the port and cut open connections, like a server outage."""
         server = _server['server']
 
         def stop():

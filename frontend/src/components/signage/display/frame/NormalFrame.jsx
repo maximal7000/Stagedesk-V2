@@ -1,7 +1,6 @@
 import ClockBox from './ClockBox'
 import { CiStripe, CiWheel, FrameFooter, frameRootClass } from './parts'
 
-// clock = null hides the header with the clock (state screens bring their own clock).
 export default function NormalFrame({ scheme, clock, footer, wheel = true, stripe = true, children }) {
   return (
     <div className={frameRootClass(scheme, 'normal')}>

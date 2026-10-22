@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 
 export const iconButton = 'p-2 rounded-md text-fg-muted hover:text-fg hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:text-fg-disabled disabled:pointer-events-none'
 
-// columns: [{ key, label, className? }]; label null = screen reader only ("Aktionen")
 export function ScreenTable({ columns, children }) {
   return (
     <div className="bg-surface rounded-lg">

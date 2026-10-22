@@ -63,7 +63,6 @@ class Config:
 
 
 def backoff_delays(jitter=True):
-    """5, 10, 20, 40, 60, 60, ... seconds (optionally +-10 percent)."""
     delay = 5
     while True:
         yield delay * random.uniform(0.9, 1.1) if jitter else delay

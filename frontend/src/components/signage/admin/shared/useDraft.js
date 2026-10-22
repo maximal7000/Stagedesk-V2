@@ -34,7 +34,6 @@ export function useDraft(original) {
   const [state, setState] = useState(() => ({ source: original, base: original, draft: original }))
   const [saving, setSaving] = useState(false)
 
-  // New original from outside (loaded or refetched): reset draft and baseline
   let current = state
   if (state.source !== original) {
     current = { source: original, base: original, draft: original }

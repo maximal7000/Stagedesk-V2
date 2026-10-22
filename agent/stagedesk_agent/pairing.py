@@ -19,7 +19,6 @@ class ServerBusy(Exception):
 
 
 def http_post(url, payload, timeout=15):
-    """POST JSON, return (status, parsed body). Network errors raise OSError."""
     request = urllib.request.Request(
         url, data=json.dumps(payload).encode(), method="POST",
         headers={"Content-Type": "application/json"})

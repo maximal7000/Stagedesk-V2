@@ -3,7 +3,6 @@ import { useClock } from '../lib/useClock'
 import { formatTime, formatTimeSeconds } from '../lib/format'
 import StateScreen, { StateText } from './StateScreen'
 
-// Longer outage (from 120 s without valid data). since: last valid data, otherwise start of this state.
 export default function ConnectionLost({ screenName, lastOkAt, nextRetryAt, orientation }) {
   const [shownAt] = useState(() => Date.now())
   const since = lastOkAt ?? shownAt

@@ -26,7 +26,6 @@ def _send(group: str, message_type: str) -> None:
 
 
 def notify_changed(screen_slugs=None) -> None:
-    """None = all screens."""
     if screen_slugs is None:
         _send(ALL_GROUP, "display_changed")
         return

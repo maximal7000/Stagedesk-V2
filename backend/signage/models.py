@@ -57,7 +57,6 @@ class MediaFile(models.Model):
 
 
 class WebUntisLink(models.Model):
-    """Named, reusable WebUntis link, referenced by views and exams via FK."""
     name = models.CharField(max_length=120)
     url = models.URLField(max_length=800)
     note = models.CharField(max_length=300, blank=True)
@@ -127,7 +126,6 @@ class DisplayView(models.Model):
     substitutions_show_absences = models.BooleanField(default=True)
     # None = as in the WebUntis format (showExamSupervision)
     substitutions_show_exams = models.BooleanField(null=True, blank=True, default=None)
-    # From this time (HH:MM) on the display starts with the next school day; empty = off
     substitutions_next_day_from = models.CharField(max_length=5, blank=True, default='16:00')
     page_seconds = models.IntegerField(default=15, help_text="Sekunden pro Seite")
 
@@ -307,13 +305,11 @@ class DisplayView(models.Model):
         return obj
 
     def get_webuntis_url(self):
-        """Saved link (2 days) wins over the free-text URL."""
         if self.webuntis_link and self.webuntis_link.url:
             return self.webuntis_link.url
         return self.webuntis_url
 
     def get_webuntis_url_next_day(self):
-        """Saved link (1 day) wins over the free-text URL."""
         if self.webuntis_link_next_day and self.webuntis_link_next_day.url:
             return self.webuntis_link_next_day.url
         return self.webuntis_url_next_day
@@ -329,7 +325,6 @@ class DisplayView(models.Model):
 
 
 def validate_rotation_items(items, own_id=None):
-    """Raises ValueError with a German message."""
     if not isinstance(items, list) or not items:
         raise ValueError('Die Rotation braucht mindestens eine Ansicht.')
     for item in items:
@@ -381,7 +376,6 @@ class Screen(models.Model):
     schedule = models.JSONField(default=list, blank=True,
         help_text='Zeitplan: [{"days": [0-6], "from": "HH:MM", "until": "HH:MM", "view_id": 3 | null}]. '
                   'null = Standard-Ansicht, until < from = über Mitternacht. Leer = immer an.')
-    # Manual override (cockpit): shows this view until reset or expiry.
     override_view = models.ForeignKey(
         DisplayView, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='as_override_screen',
@@ -393,7 +387,6 @@ class Screen(models.Model):
     reload_requested_at = models.DateTimeField(null=True, blank=True,
         help_text="Wird beim Reload-Knopf gesetzt; das Display lädt sich neu wenn dieser Wert steigt.")
 
-    # Manual override: disables the schedule and forces a state.
     POWER_MODE_CHOICES = [
         ('auto', 'Automatisch (Zeitplan)'),
         ('manual_on', 'Manuell — Immer An'),
@@ -434,7 +427,6 @@ class Screen(models.Model):
         return f"{self.name} ({self.slug})"
 
     def get_power_state(self, now=None):
-        """Rule and order: power.compute_power_state."""
         from .power import compute_power_state
         return compute_power_state(self, now or timezone.now())
 
@@ -462,7 +454,6 @@ class Screen(models.Model):
         if event_view and event_view.deleted_at is None:
             return event_view
 
-        # Schedule: view of the first matching row; default view or missing view -> default
         row = active_row(self.schedule, timezone.localtime())
         if row and row.get('view_id'):
             view = DisplayView.objects.filter(id=row['view_id'], deleted_at__isnull=True).first()
@@ -482,7 +473,6 @@ class Screen(models.Model):
 
 
 class HolidayPeriod(models.Model):
-    """Screens with off_during_holidays stay off during this period."""
     name = models.CharField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -612,8 +602,6 @@ class Announcement(models.Model):
 
 
 class DisplayEvent(models.Model):
-    """Named mode that can be activated. While active, the assigned screens show another view;
-    afterwards they return to their normal resolution (schedule/default)."""
     name = models.CharField(max_length=120)
     description = models.CharField(max_length=300, blank=True)
     color = models.CharField(max_length=7, default='#7c3aed', help_text="Akzentfarbe (Hex)")
@@ -681,7 +669,6 @@ class ExamTemplate(models.Model):
 
 
 class MonitorSettings(models.Model):
-    """Global singleton settings instead of per view: weather key, WebUntis login."""
     weather_api_key = models.CharField(max_length=64, blank=True, default='')
     webuntis_server = models.CharField(max_length=200, blank=True, default='')
     webuntis_school = models.CharField(max_length=200, blank=True, default='')
@@ -756,7 +743,6 @@ def _hash_secret(raw):
 
 
 class Device(models.Model):
-    """A Raspberry Pi running the Stagedesk agent; belongs to at most one screen."""
     screen = models.OneToOneField(Screen, on_delete=models.SET_NULL, null=True, blank=True,
                                   related_name='device')
     token_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)

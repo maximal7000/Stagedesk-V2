@@ -21,7 +21,6 @@ function asDate(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-// "Mi 21.10., 07:00"
 export function formatDayTime(value) {
   const d = asDate(value)
   return d ? `${formatShortDate(d)}, ${formatTime(d)}` : ''
@@ -83,8 +82,6 @@ function viewReason(screen, viewId, { now, events }) {
   return 'Standard-Ansicht'
 }
 
-// context: { now, events (/events), holidays (/holidays) }. Without display data only what follows
-// from the screen fields remains (off or '').
 export function explainScreen(screen, payload, context = {}) {
   const ctx = { now: context.now ?? new Date(), events: context.events, holidays: context.holidays }
   if (payload?.mode?.kind === 'emergency') return 'Notfall aktiv'
@@ -110,7 +107,6 @@ function viewLabel(view, viewNames) {
   return viewNames?.[view.id] || KIND_LABELS[view.kind] || 'Ansicht'
 }
 
-// viewNames: { [id]: name } from /views.
 export function describeShown(payload, viewNames) {
   const mode = payload?.mode
   if (mode?.kind === 'emergency') return 'Notfall'

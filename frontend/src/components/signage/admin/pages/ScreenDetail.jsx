@@ -276,7 +276,6 @@ function KioskSection({ screen, onRegenerate }) {
   )
 }
 
-// devicesError: the device list failed to load, so whether a device is paired is unknown.
 function DeviceSection({ screen, device, devicesError, now, onReload }) {
   // onReload is missing without signage.setup (backend: reload_screen needs setup)
   const legacy = !!device?.legacy
@@ -329,7 +328,7 @@ export default function ScreenDetail() {
   // reset the other section's draft
   const [originals, setOriginals] = useState(null)
   const [views, setViews] = useState([])
-  const [devices, setDevices] = useState(null) // list from GET /devices, null = not loaded
+  const [devices, setDevices] = useState(null)
   const [devicesError, setDevicesError] = useState(null)
   const [logKey, setLogKey] = useState(0)
   const [error, setError] = useState(null)
@@ -385,7 +384,7 @@ export default function ScreenDetail() {
       setDevices(list)
       setDevicesError(null)
     } catch (e) {
-      setDevicesError(e) // the last state stays
+      setDevicesError(e)
     }
     setNow(new Date())
     setLogKey((k) => k + 1)

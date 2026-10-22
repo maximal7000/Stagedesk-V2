@@ -2,7 +2,6 @@
 // would look like off time (the screen stays on).
 import { DAY_MINUTES, WEEKDAYS, seriesSlots, weekBars } from './schedule'
 
-// Categorical series from index.css (--color-series-1 … 6), fixed order; slot from schedule.seriesSlots
 const SERIES = ['bg-series-1', 'bg-series-2', 'bg-series-3', 'bg-series-4', 'bg-series-5', 'bg-series-6']
 const HOURS = [0, 6, 12, 18, 24]
 const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, var(--sd-line) 0 1px, transparent 1px 6px)' }

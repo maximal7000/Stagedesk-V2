@@ -14,7 +14,6 @@ export function paginateByHeight(heights, available) {
   return packByHeight(heights, available)
 }
 
-// No timer with at most one page.
 export function usePager(pages, seconds) {
   const count = pages.length
   const [raw, setRaw] = useState(0)

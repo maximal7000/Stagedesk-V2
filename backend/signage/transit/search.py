@@ -1,4 +1,3 @@
-"""Station search across DB Timetables and NAH.SH HAFAS."""
 import logging
 import urllib.parse
 
@@ -92,7 +91,6 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
             except Exception as e:
                 logger.warning(f"NAH.SH Stationssuche Fehler: {e}")
 
-    # Merge: DB first, NAH.SH fills in
     combined = {}
     for s in db_results:
         combined[s["id"]] = s

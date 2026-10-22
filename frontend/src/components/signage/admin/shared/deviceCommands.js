@@ -27,7 +27,6 @@ export const COMMANDS = [
 
 export const isPaired = (device) => !!device && device.id != null && !device.legacy
 
-// can: hasPermission(permission). -> { items: [{ kind, label, confirm? }], hint }
 // Without signage.devices or a paired device there are no commands. Offline they stay possible
 // (the server keeps them 5 minutes), with the hint.
 export function commandsFor(device, can) {
@@ -40,7 +39,6 @@ export const labelOf = (kind) => COMMANDS.find((c) => c.kind === kind)?.label ??
 
 export const isFinished = (status) => status === 'ok' || status === 'failed' || status === 'expired'
 
-// Result of a finished command as a sentence for the toast: { ok, text }
 export function commandResult(kind, command) {
   const label = labelOf(kind)
   if (command.status === 'ok') return { ok: true, text: `${label} ist ausgeführt.` }

@@ -16,7 +16,6 @@ class MediaFileSchema(Schema):
     status: str = 'ready'
     page_count: int = 0
     error: str = ''
-    # Admin tile: first page (empty until a page is prepared)
     first_page_url: str = ''
     orientation: str = ''
 

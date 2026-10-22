@@ -62,7 +62,6 @@ export function Checkbox({ label, help, checked, onChange, disabled }) {
   )
 }
 
-// SWL lines in their colour (as on the display)
 export function LineChip({ line, onRemove }) {
   const color = swlColorForLine(line)
   const style = color ? { backgroundColor: color, color: chipTextColor(color) } : undefined
@@ -79,7 +78,6 @@ export function LineChip({ line, onRemove }) {
   )
 }
 
-// Enter or comma adds an entry, Backspace in the empty field removes the last one
 export function ListInput({ id, value, onChange, placeholder, disabled, chips = true }) {
   const [text, setText] = useState('')
   const list = value ?? []

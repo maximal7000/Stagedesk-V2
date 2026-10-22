@@ -6,14 +6,14 @@ import { disruptionLabel, isBus, lineColor, lineLabel, minutesUntil, visibleDisr
 import { useClockMinute } from '../lib/useClock'
 import { Heading } from './parts'
 
-const LINE = 1.64 // row height / row font
-const MIN_REM = 0.95 // minimum row font
-const PREF_REM = 1.375 // row font per design
-const SUBHEAD_REM = 2.25 // subheading "Züge" / "Busse"
+const LINE = 1.64
+const MIN_REM = 0.95
+const PREF_REM = 1.375
+const SUBHEAD_REM = 2.25
 // Minimum row width in em of the row font so the destination stays readable. In narrow cards
 // (split screen) the font shrinks for it, down to MIN_REM at most.
 const ROW_EM = { bus: 21, train: 26 }
-const CARD_PAD_REM = 2.75 // horizontal card padding
+const CARD_PAD_REM = 2.75
 const GAP_REM = 1.25
 
 const hasTrains = (station) => (station.departures || []).some((d) => !isBus(d))
@@ -124,7 +124,6 @@ function StationCard({ station }) {
   )
 }
 
-// Columns: time, line, destination, (platform), minutes. All sizes in em of the row font.
 const ROW_COLUMNS = { bus: '3.4em 2.4em minmax(0,1fr) auto', train: '3.4em 3.4em minmax(0,1fr) auto auto' }
 
 function DepartureRow({ dep, trains }) {
@@ -170,7 +169,6 @@ function Minutes({ dep }) {
   )
 }
 
-// Disruption bar left of the clock box; pages every page_seconds
 function DisruptionBar({ view }) {
   const items = useMemo(() => visibleDisruptions(view.data?.disruptions), [view.data?.disruptions])
   const { index, count } = usePager(items, view.page_seconds)

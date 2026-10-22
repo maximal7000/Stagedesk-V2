@@ -27,7 +27,6 @@ export default function SplitView({ view }) {
   )
 }
 
-// Footers of both sides next to each other in the ratio of the sides (WebUntis data age left, disruptions right)
 function SplitFooter({ view }) {
   const data = view.data ?? {}
   const percent = clampPercent(data.left_percent)

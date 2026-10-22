@@ -53,7 +53,6 @@ class RowRulesTest(TestCase):
         self.assertTrue(is_on(rows, timezone.localtime(local(2026, 10, 23, 23))))
         self.assertTrue(is_on(rows, timezone.localtime(local(2026, 10, 24, 5, 59))))
         self.assertFalse(is_on(rows, timezone.localtime(local(2026, 10, 24, 6, 1))))
-        # the part after 00:00 counts for the next day, not for Friday itself
         self.assertFalse(is_on(rows, timezone.localtime(local(2026, 10, 23, 5))))
         self.assertTrue(row_matches(rows[0], 5, '06:00'))
         self.assertFalse(row_matches(rows[0], 4, '06:00'))
@@ -87,7 +86,7 @@ class ActiveViewFromScheduleTest(TestCase):
         self.morning.save()
         self.assertEqual(self.screen.get_active_view(), self.default)
         self.assertTrue(power.compute_power_state(self.screen, monday('09:00')))
-        self.screen.schedule = [r([0], '07:00', '10:00', 999)]  # the view does not exist at all
+        self.screen.schedule = [r([0], '07:00', '10:00', 999)]
         self.assertEqual(self.screen.get_active_view(), self.default)
 
     def test_override_and_event_still_win(self, _now):
@@ -174,7 +173,6 @@ class MergeLegacyTest(TestCase):
         self.assertEqual(split_legacy(rows), (
             [{'view_id': 3, 'days': [0], 'from': '07:00', 'until': '09:00'}],
             [{'days': [0, 1], 'from': '07:00', 'until': '18:00'}]))
-        # without a default row the rows themselves are the on-times
         self.assertEqual(split_legacy([r([0], '07:00', '09:00', 3)]), (
             [{'view_id': 3, 'days': [0], 'from': '07:00', 'until': '09:00'}],
             [{'days': [0], 'from': '07:00', 'until': '09:00'}]))

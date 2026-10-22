@@ -45,8 +45,6 @@ export function fitRows({ height, remPx, count, max, minRem, prefRem, lineFactor
   return { rows, fontPx: rows ? Math.min(pref, height / (rows * lineFactor)) : pref }
 }
 
-// Splits items with measured heights into pages that each fit `height` (at least one item per page).
-// Result: lists of indices.
 export function packByHeight(heights, height, gap = 0) {
   const pages = []
   let page = []

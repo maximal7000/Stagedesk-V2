@@ -144,7 +144,6 @@ def parse_countdown_date(value):
 
 
 def _check_not_in_rotation(view_id):
-    """A view that is part of a rotation cannot become a rotation itself."""
     rotations = DisplayView.objects.filter(kind='rotation', deleted_at__isnull=True).order_by('id')
     for rotation in rotations:
         items = rotation.rotation_items if isinstance(rotation.rotation_items, list) else []
@@ -245,7 +244,6 @@ SCHEDULE_INVALID_MESSAGE = "Der Zeitplan ist ungültig. Bitte die Seite neu lade
 
 
 def validate_screen_schedule(rows) -> list:
-    """Returns the cleaned rows ({days, from, until, view_id}, days sorted). Errors name the row number."""
     if not isinstance(rows, list):
         raise HttpError(422, SCHEDULE_INVALID_MESSAGE)
     clean = []

@@ -28,9 +28,7 @@ export function formatTemperature(value) {
 const DAY_MONTH = new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit' })
 const WEEKDAY_SHORT = new Intl.DateTimeFormat('de-DE', { weekday: 'short' })
 
-// "19.10."
 export const formatDayMonth = formatWith(DAY_MONTH)
-// "Do 22.10."
 export function formatShortDate(value) {
   const d = asDate(value)
   return d ? `${WEEKDAY_SHORT.format(d).replace(/\.$/, '')} ${DAY_MONTH.format(d)}` : ''

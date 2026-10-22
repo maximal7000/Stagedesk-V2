@@ -307,8 +307,6 @@ class RecordCommandTests(TestCase):
 
 
 class CheckCommandTest(TestCase):
-    """signage_webuntis_check also checks the public monitor endpoint: only status and cause."""
-
     WEBUNTIS_OK = {'login': True, 'substitutions': True, 'timetable': True, 'news': True,
                    'source': 'substitutions'}
 

@@ -39,7 +39,6 @@ function render(element) {
   return host
 }
 
-// Visible table (without the hidden measuring layer)
 const visible = (el) => el.querySelector('[data-substitutions-table]')
 const headers = (el) => [...el.querySelectorAll('[data-column-head]')].map((h) => h.textContent)
 

@@ -121,7 +121,6 @@ export function examDraft(exam, now = new Date()) {
   }
 }
 
-// "From template": template values, time range from now (full minute) with the template's duration
 export function examFromTemplate(template, now = new Date()) {
   const start = new Date(Math.floor(now.getTime() / 60000) * 60000)
   return {

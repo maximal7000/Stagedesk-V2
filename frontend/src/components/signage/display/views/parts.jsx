@@ -7,7 +7,6 @@ export function Heading({ children, aside, size = 'text-[1.75rem]', className = 
   )
 }
 
-// "Seite n / m", only with more than one page (page only what does not fit)
 export function PageCount({ index, count, className = 'text-[1.375rem]' }) {
   if (count <= 1) return null
   return (

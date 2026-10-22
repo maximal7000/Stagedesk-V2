@@ -3,7 +3,6 @@ import { deepEqual } from '../shared/useDraft'
 import { errorText } from '../shared/errorText'
 
 export const SECRET_FIELDS = ['webuntis_password', 'weather_api_key']
-// Device monitoring: number fields with ranges as in the backend, plus the token switch
 export const DEVICE_NUMBER_FIELDS = [
   { key: 'device_offline_minutes', label: 'Offline melden nach', min: 2, max: 240 },
   { key: 'warn_temperature_c', label: 'Warnung ab Temperatur', min: 50, max: 95 },
@@ -50,7 +49,6 @@ export function credentialsComplete(settings, draft = {}) {
   return !!(value('webuntis_server') && value('webuntis_school') && value('webuntis_username') && password)
 }
 
-// Result of POST /webuntis/check (webuntis.check: login, substitutions, timetable, source) as a sentence
 export function checkSentence(result, error, settings) {
   if (error) return { tone: 'bad', text: `Keine Verbindung: ${sentence(errorText(error))}` }
   if (SOURCE_SENTENCES[result?.source]) return { tone: 'ok', text: SOURCE_SENTENCES[result.source] }
@@ -71,7 +69,6 @@ export function sourceSentence(source) {
   return 'Noch nicht getestet.'
 }
 
-// Changed fields of a section; secrets only when something was entered
 export function settingsPayload(base, draft, fields) {
   const out = {}
   for (const key of fields) {
@@ -95,7 +92,6 @@ export const changedIn = (base, draft, fields) => Object.keys(settingsPayload(ba
 
 const templateBody = (t, index) => ({ title: text(t.title), text: text(t.text), note: text(t.note), sort_order: index })
 
-// Draft (order = sort_order) against the saved state: create, update, delete
 export function templateChanges(original, draft) {
   const byId = new Map((original || []).map((t) => [t.id, t]))
   const create = []
@@ -137,7 +133,6 @@ export function deviceProblems(base, draft) {
   return null
 }
 
-// Screens still reporting without a token (GET /devices: legacy), named from the screen list
 export function legacyScreenNames(devices, screens) {
   const names = new Map((screens || []).map((s) => [s.id, s.name]))
   return (devices || []).filter((d) => d.legacy)

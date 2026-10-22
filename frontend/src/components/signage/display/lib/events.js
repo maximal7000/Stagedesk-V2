@@ -3,12 +3,10 @@ import { formatShortDate, formatTime } from './format'
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime()
 
-// Calendar days from `now` to `value` (today = 0, yesterday = -1)
 export function daysUntil(value, now) {
   return Math.round((startOfDay(new Date(value)) - startOfDay(now)) / 86400000)
 }
 
-// Second line of an event: time, "ganztägig", "bis Fr 23.10." or "läuft bis 21:00"
 export function eventDetail(ev) {
   const start = new Date(ev.date_from)
   // An end exactly at midnight counts for the previous day

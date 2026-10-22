@@ -260,9 +260,9 @@ export default function Exams() {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [now, setNow] = useState(() => new Date())
-  const [panel, setPanel] = useState(null)       // { kind, id, original, draft }
+  const [panel, setPanel] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [confirm, setConfirm] = useState(null)   // { title, body, action }
+  const [confirm, setConfirm] = useState(null)
 
   const apply = useCallback(([exams, events, announcements, screens, views, templates]) => {
     setNow(new Date())

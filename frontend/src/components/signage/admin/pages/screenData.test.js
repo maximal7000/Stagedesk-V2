@@ -91,7 +91,6 @@ describe('activeOverride', () => {
     const views = [{ id: 4, name: 'Info' }]
     expect(activeOverride({ override_view_id: 3, override_until: null }, now, views)).toBeNull()
     expect(activeOverride({ override_view_id: 4, override_until: null }, now, views)).toEqual({ viewId: 4, until: null })
-    // Views not loaded yet: discard nothing
     expect(activeOverride({ override_view_id: 3, override_until: null }, now, [])).toEqual({ viewId: 3, until: null })
   })
 })
@@ -165,7 +164,6 @@ describe('Geräte-Felder', () => {
     expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '03:00', until: '03:00' } }, orig).window).not.toBe('')
     expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '', until: '03:00' } }, orig).window).toMatch(/Von und bis/)
     expect(deviceProblems(orig, orig).window).toBe('')
-    // An unchanged window is not flagged
     expect(deviceProblems(bad, bad).window).toBe('')
   })
 

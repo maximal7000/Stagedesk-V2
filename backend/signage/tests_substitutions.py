@@ -366,8 +366,6 @@ class AccountDeadlineTest(TestCase):
 
 
 class AccountSingleDayTest(TestCase):
-    """Fallback to the real account query with one day from today (start=None, count=1)."""
-
     def test_single_day_fallback_through_real_account(self):
         cache.clear()
         settings = MonitorSettings.load()

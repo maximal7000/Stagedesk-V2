@@ -55,8 +55,6 @@ ELEMENT_FIELDS = ['id', 'name']
 
 
 class WebUntisError(Exception):
-    """Error response of the JSON-RPC server (code such as -8509)."""
-
     def __init__(self, code, message=''):
         super().__init__(f'{code}: {message}')
         self.code = code
@@ -83,7 +81,6 @@ class WebUntisSession:
         return max(0.1, min(TIMEOUT, self.deadline - time.monotonic()))
 
     def call(self, method, params=None):
-        """Returns `result`; raises WebUntisError on an error response."""
         body = json.dumps({"id": "1", "method": method, "params": params or {}, "jsonrpc": "2.0"}).encode()
         req = urllib.request.Request(self.rpc_url, data=body, headers={"Content-Type": "application/json"})
         with self.opener.open(req, timeout=self._timeout()) as resp:
@@ -139,7 +136,6 @@ def _logout(session):
 
 
 def _save_source(source, now=None):
-    """Always with a new webuntis_checked_at."""
     from .models import MonitorSettings
     MonitorSettings.load()
     MonitorSettings.objects.filter(pk=1).update(webuntis_source=source,
@@ -162,7 +158,6 @@ def _is_school_day(day: date, holidays=()) -> bool:
 
 
 def next_school_day(day: date, holidays=()) -> date:
-    """Next school day after `day`: skips weekends, HolidayPeriod and `holidays`."""
     candidate = day
     for _ in range(MAX_LOOKAHEAD_DAYS):
         candidate += timedelta(days=1)
@@ -172,7 +167,6 @@ def next_school_day(day: date, holidays=()) -> date:
 
 
 def school_days(start: date, count: int = 2, holidays=()) -> list:
-    """`count` school days from `start` (if `start` is not a school day, from the next one)."""
     days = []
     day = start if _is_school_day(start, holidays) else next_school_day(start, holidays)
     for _ in range(max(count, 0)):
@@ -285,7 +279,6 @@ def _call_substitutions(session, start: date, end: date):
 
 
 def _fetch_substitution_entries(session, start: date, end: date):
-    """[(date, start, end, row)] from getSubstitutions."""
     result = _call_substitutions(session, start, end)
     entries = []
     for item in result or []:

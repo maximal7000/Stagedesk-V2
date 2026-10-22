@@ -115,7 +115,6 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
     }
   }, [screen, view, key, preview, slugKey])
 
-  // Browser online status: reload immediately on return
   useEffect(() => {
     const on = () => { setOnline(true); loadRef.current() }
     const off = () => setOnline(false)

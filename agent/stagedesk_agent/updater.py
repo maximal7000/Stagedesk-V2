@@ -27,7 +27,7 @@ class Updater:
     def __init__(self, paths, runner, send, gate_timeout=GATE_TIMEOUT, clock=time.monotonic):
         self.paths, self.runner, self.send = paths, runner, send
         self.gate_timeout, self.clock = gate_timeout, clock
-        self._lock = threading.Lock()  # one update at a time
+        self._lock = threading.Lock()
         self._gate_lock = threading.Lock()
         self._gate_event = None
         self._gate_reply = None

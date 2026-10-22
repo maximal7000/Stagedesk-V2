@@ -164,7 +164,6 @@ class SubstitutionsTest(WebUntisTestBase):
         self.assertIsNone(result['updated_at'])
 
     def test_single_day_from_today(self):
-        """start=None, count=1 (single-day view without switching to the next school day)."""
         fake = FakeUntis(getSubstitutions=[subst(20261019, 800, 845, 'cancel')])
         news = mock.Mock(return_value={'data': {'messagesOfDay': []}})
         with mock.patch.object(WebUntisSession, 'call', autospec=True, side_effect=fake), \
@@ -244,8 +243,6 @@ class SubstitutionsTest(WebUntisTestBase):
 
 
 class ResilienceTest(WebUntisTestBase):
-    """Budget, single flight, last good result, failure counter, logout."""
-
     GOOD = [subst(20261019, 1140, 1225, 'cancel'), subst(20261020, 800, 845, 'cancel', kl='9b')]
 
     def prime_last_good(self):
@@ -282,7 +279,6 @@ class ResilienceTest(WebUntisTestBase):
         tuesday = local(2026, 10, 20, 8)
         result = self.run_with(FakeUntis(authenticate=OSError('timeout')), now=tuesday)
         self.assertEqual([(d['date'], d['label']) for d in result['days']], [('2026-10-20', 'Heute')])
-        # The state stays that of the original fetch
         self.assertEqual(result['fetched_at'], MONDAY_8.isoformat())
         cache.delete(webuntis.CACHE_KEY)
         result = self.run_with(FakeUntis(authenticate=OSError('timeout')), now=local(2026, 10, 21, 8))

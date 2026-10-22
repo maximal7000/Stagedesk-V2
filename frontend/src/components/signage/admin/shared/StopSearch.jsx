@@ -1,4 +1,3 @@
-// Combobox pattern; stale responses are ignored.
 import { useEffect, useId, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { searchStops } from './api'

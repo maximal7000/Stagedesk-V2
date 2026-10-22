@@ -88,7 +88,6 @@ def disruption_id(source, title, text):
 
 
 def fetch_disruptions_nahsh(line_filter=None, max_num=200):
-    """Uses HAFAS HimSearch; filtered by line."""
     wanted = {_normalize_line(x) for x in (line_filter or []) if x}
     try:
         res = _nahsh_rpc('HimSearch', {'maxNum': max_num}) or {}

@@ -1,5 +1,3 @@
-// Controlled: value is the list, onChange gets the new list. problems: message per row or null
-// (from schedule.js), shown under the row.
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'
 import { iconButton } from './ScreenTable'

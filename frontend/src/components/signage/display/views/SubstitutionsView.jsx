@@ -4,9 +4,6 @@ import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../li
 import { paginateByHeight, usePager } from '../lib/pager'
 import { Heading, PageCount } from './parts'
 
-// Rows are measured in a hidden layer and then paged.
-// mode 'embed': the WebUntis page in the frame (chosen, fallback or no key).
-
 const ROW_MIN_REM = 2.1875
 const KIND_TONE = { cancelled: 'text-(--d-red)', room_change: 'text-(--d-info)' }
 const KIND_FALLBACK = { substitution: 'Vertretung', cancelled: 'Entfall', room_change: 'Raumänderung', other: 'Änderung' }
@@ -55,7 +52,6 @@ function tableColumns(data) {
     const flag = COLUMN_DEFS[key].flag
     return !flag || flags[flag] !== false
   })
-  // Student view: the class heads the group (shown only on change)
   const lead = groupBy === 'teacher' ? 'group' : 'class'
   return {
     keys,
@@ -123,7 +119,6 @@ function dayTitle(day) {
 
 const withPeriods = (entry) => (entry.periods ? `${entry.name} (${entry.periods})` : entry.name)
 
-// "Abwesend" (teachers, then classes) and "Betroffen" (classes, then teachers); only rows with entries
 function DayHead({ day }) {
   const list = day.absent ?? []
   const absent = [...list.filter((a) => a.kind !== 'class'), ...list.filter((a) => a.kind === 'class')].map(withPeriods)
@@ -164,7 +159,6 @@ function DayCard({ day, news, columns, seconds, onDone }) {
   }, [rows, heights, height])
   const { index, count } = usePager(pages, seconds)
   const page = (pages[index] ?? []).map((i) => rows[i])
-  // One day after the other: after all pages of this day on to the next
   useEffect(() => {
     if (!onDone || !(seconds > 0)) return undefined
     const id = setTimeout(onDone, Math.max(1, count) * seconds * 1000)
@@ -264,7 +258,6 @@ function EmbedFrame({ url }) {
   )
 }
 
-// "WebUntis · 21.10. 07:42" from the monitor endpoint's timestamp, otherwise the fetch time "07:42"
 function stamp(data) {
   if (data.updated_at) {
     const day = formatDayMonth(data.updated_at)

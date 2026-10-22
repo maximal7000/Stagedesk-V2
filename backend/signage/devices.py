@@ -352,7 +352,6 @@ def _aware(value):
 
 
 def compute_warnings(telemetry: dict, settings, now) -> list:
-    """Missing values (null) produce no warning."""
     network, system = _group(telemetry, 'network'), _group(telemetry, 'system')
     display, updates = _group(telemetry, 'display'), _group(telemetry, 'updates')
     out = []

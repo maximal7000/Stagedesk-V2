@@ -42,7 +42,6 @@ class ComputePowerStateTest(TestCase):
     def test_off_until_future_is_off(self):
         screen = self.screen(off_until=MONDAY_10 + timedelta(hours=1))
         self.assertFalse(power.compute_power_state(screen, MONDAY_10))
-        # expired: schedule again
         self.assertTrue(power.compute_power_state(screen, MONDAY_10 + timedelta(hours=2)))
 
     def test_exception_before_holiday(self):
@@ -256,7 +255,6 @@ class PushPowerToAllTest(TestCase):
 class ScreenPowerPushTest(TestCase):
 
     def test_push_failure_after_save_is_logged_not_500(self):
-        """The saved power mode applies even if the push fails."""
         screen = Screen.objects.create(name='A', slug='a')
         with _auth(), mock.patch('signage.api.screens._require_perm'), \
                 mock.patch('signage.consumers.push_power_to_screen', side_effect=ConnectionError), \
@@ -326,6 +324,5 @@ class ScreenUpdatePermissionSplitTest(SimpleTestCase):
         self.assertEqual(self.required(name='Halle', power_mode='auto'), ['signage.setup', 'signage.power'])
 
     def test_override_needs_setup(self):
-        # A temporary other view belongs to screens (setup), not to power
         self.assertEqual(self.required(override_view_id=3, override_until=None), ['signage.setup'])
         self.assertEqual(self.required(override_view_id=None, override_until=None), ['signage.setup'])

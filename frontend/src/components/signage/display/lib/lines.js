@@ -8,7 +8,6 @@ export const SWL_LINE_COLORS = {
   '40': '#a2bf1a', '41': '#e7343f', '50': '#a2bf1a',
 };
 
-// Readable text colour on a coloured chip (relative luminance)
 export function chipTextColor(hex) {
   try {
     const h = String(hex).replace('#', '');

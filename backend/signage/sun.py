@@ -28,7 +28,6 @@ def _utc_minutes(day: date):
 
 
 def sun_times(day: date) -> tuple[datetime, datetime]:
-    """(sunrise, sunset) on `day` as aware local time (settings.TIME_ZONE)."""
     local = ZoneInfo(settings.TIME_ZONE)
     midnight = datetime(day.year, day.month, day.day, tzinfo=dt_timezone.utc)
     rise, set_ = _utc_minutes(day)

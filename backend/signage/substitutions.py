@@ -47,7 +47,6 @@ def empty(source=None) -> dict:
 
 
 def _past_cutoff(value, local_now) -> bool:
-    """True from time `value` (HH:MM) on; empty or invalid = never."""
     try:
         hour, minute = (int(part) for part in (value or '').split(':'))
     except ValueError:
@@ -77,7 +76,6 @@ def _label(day_iso, today):
 
 
 def _current_days(days, today):
-    """Only days from today (a day without a date stays)."""
     return [d for d in days if not d.get('date') or date.fromisoformat(d['date']) >= today]
 
 
@@ -120,7 +118,6 @@ def _store_monitor(data, now):
 
 
 def _present_monitor(stored, view, today):
-    """None if no day is current any more."""
     if not stored or stored.get('failed'):
         return None
     days = _current_days(stored['days'], today)
@@ -190,7 +187,6 @@ def _account(view, now, today, next_day, count, deadline, chosen):
 
 
 def load(view, now, *, single_day: bool) -> dict:
-    """`single_day`: only one day (split view, special mode)."""
     deadline = time.monotonic() + webuntis.DEADLINE_SECONDS
     local_now = timezone.localtime(now)
     today = local_now.date()

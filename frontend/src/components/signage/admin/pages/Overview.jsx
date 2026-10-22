@@ -122,10 +122,10 @@ export default function Overview() {
   const [extra, setExtra] = useState({ settings: null, views: [], exams: [], events: [], holidays: null })
   const [displays, setDisplays] = useState(null)
   const [devicesError, setDevicesError] = useState(null)
-  const [devices, setDevices] = useState({}) // screen_id -> device (legacy script too); empty on error
+  const [devices, setDevices] = useState({})
   const [now, setNow] = useState(() => new Date())
   const [undo, setUndo] = useState(null)
-  const [dialog, setDialog] = useState(null) // 'all-off' | 'emergency'
+  const [dialog, setDialog] = useState(null)
   const [templates, setTemplates] = useState(null)
   const [busy, setBusy] = useState(false)
   const [onAirBusy, setOnAirBusy] = useState(false)

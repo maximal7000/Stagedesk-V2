@@ -216,7 +216,6 @@ describe('ScreenDetail', () => {
       expect(rows[2].textContent).not.toContain('Überschneidet')
       expect(section().querySelector('[data-week-overview]').textContent).toContain('Abfahrten')
       expect(section().querySelector('[data-week-overview]').textContent).toContain('Standard-Ansicht')
-      // View change without a gap: no background-coloured area, at most a darker line in the bar
       const bars = [...section().querySelectorAll('[data-week-day="0"] [data-view-id]')]
       expect(bars.map((b) => b.dataset.viewId)).toEqual(['1', 'default'])
       expect(bars.some((b) => b.className.includes('border-surface'))).toBe(false)
@@ -268,7 +267,6 @@ describe('ScreenDetail', () => {
     await act(async () => { typeInto(byLabel('Ort'), 'Geändert') })
     expect(container.textContent).toContain('1 ungespeicherte Änderung')
     await click(container.querySelector('[data-go]'))
-    // While Aula loads, nothing of Glocke remains
     expect(container.textContent).not.toContain('Glocke')
     expect(container.textContent).not.toContain('ungespeicherte')
     await act(async () => { resolveSecond([glocke(), aula]) })

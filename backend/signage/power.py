@@ -7,12 +7,10 @@ from . import screen_schedule
 
 # "Off until end of day" without a schedule: back on at this time the next day.
 FALLBACK_ON_TIME = time(5, 0)
-# Search at most this many days for a schedule window.
 MAX_LOOKAHEAD_DAYS = 14
 
 
 def time_in_window(hhmm: str, start: str, end: str) -> bool:
-    """Whether HH:MM lies in [start, end], also across midnight."""
     if not start and not end:
         return True
     start = start or '00:00'
@@ -52,7 +50,6 @@ def _schedule_entries(screen):
 
 
 def compute_power_state(screen, now: datetime) -> bool:
-    """Whether the screen should be on at `now`. The checks run in priority order."""
     if _emergency_active():
         return True
     if screen.power_mode == 'manual_on':

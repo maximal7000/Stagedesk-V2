@@ -116,7 +116,6 @@ describe('ViewEdit', () => {
     await act(async () => rows()[2].dispatchEvent(dragEvent('dragover')))
     await act(async () => rows()[2].dispatchEvent(dragEvent('drop')))
     expect(stopNames()).toEqual(['b', 'c', 'a'])
-    // Keyboard on the handle: Kohlmarkt down
     const handle = button('Kohlmarkt verschieben')
     await act(async () => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
     expect(stopNames()).toEqual(['c', 'b', 'a'])

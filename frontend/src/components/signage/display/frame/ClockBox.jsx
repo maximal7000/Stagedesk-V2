@@ -2,12 +2,6 @@ import { useClock } from '../lib/useClock'
 import { formatLongDate, formatTemperature, formatTime, formatTimeSeconds, formatWeekday } from '../lib/format'
 
 // The only per-second rendering besides useClock users such as the retry countdown.
-//   variant "header":  large clock left, date (and weather) right, line below (layout "Normal");
-//                      stacked stacks date and weather (portrait)
-//   variant "box":     box bottom right (layout "Breit"); same colour as all boxes (.d-card)
-// All variants show HH:MM:SS; "Stand HH:MM" has no seconds.
-//   variant "compact": time only (state screens, idle)
-// staleSince sets the "Stand HH:MM" hint (last valid data).
 export default function ClockBox({ now, weather, staleSince, variant = 'header', stacked = false, className = '' }) {
   const tick = useClock()
   const time = now ?? tick

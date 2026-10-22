@@ -38,7 +38,6 @@ export function scheduleProblems(entries, views = null) {
   })
 }
 
-// Three or more consecutive days become "Mo–Fr", otherwise listed with commas
 export function formatDays(days) {
   const sorted = [...new Set(days)].sort((a, b) => a - b)
   const parts = []
@@ -55,7 +54,6 @@ export function formatDays(days) {
 export function describeSchedule(entries) {
   const list = normalizeSchedule(entries)
   if (!list.length) return 'Ohne Zeitplan'
-  // Rows with the same times for different views are listed once
   return [...new Set(list.map((e) => `${formatDays(e.days)} ${e.from} bis ${e.until}`))].join(' · ')
 }
 
@@ -104,7 +102,6 @@ function toMinutes(hhmm) {
 
 const validDays = (row) => (Array.isArray(row.days) ? row.days : []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
 
-// Pieces of a row: [{ day, start, end }]
 function segments(row) {
   if (!isEntry(row)) return []
   const [from, until] = windowOf(row)
@@ -145,8 +142,6 @@ function subtract(range, covered) {
   return pieces
 }
 
-// Effective bars of the week: [{ day, start, end, viewId }], no overlap (the top row wins),
-// sorted by day and start; touching pieces of the same view merged
 export function weekBars(rows) {
   const covered = Array.from({ length: 7 }, () => [])
   const bars = []

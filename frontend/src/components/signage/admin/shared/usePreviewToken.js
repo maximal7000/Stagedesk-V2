@@ -32,7 +32,6 @@ export function usePreviewToken(payload, screenId, { request = previewView, dela
     return () => clearTimeout(timer)
   }, [key, request, delay])
 
-  // After unmount no response counts
   useEffect(() => () => { seq.current += 1 }, [])
 
   if (key == null) return { token: null, error: null, pending: false }
@@ -40,7 +39,6 @@ export function usePreviewToken(payload, screenId, { request = previewView, dela
   return { token: result.token, error: result.error, pending: result.key !== key }
 }
 
-// "Vorschau nicht verfügbar: <Grund>." with the reason from the server message (no double period)
 export function previewErrorText(error) {
   const reason = errorText(error, 'Bitte später erneut versuchen.').replace(/[.\s]+$/, '')
   return `Vorschau nicht verfügbar: ${reason}.`

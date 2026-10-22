@@ -11,7 +11,6 @@ export function mediaStatus(file) {
   return 'Fertig'
 }
 
-// "PDF · 3 Seiten · Hochformat"; list (orientation) or detail (pages[0])
 export function fileMeta(file) {
   const parts = [KIND_LABELS[file.kind] ?? file.kind]
   if (file.page_count > 0) parts.push(file.page_count === 1 ? '1 Seite' : `${file.page_count} Seiten`)
