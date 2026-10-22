@@ -42,6 +42,8 @@ cd "$APP_DIR/backend"
 echo "→ systemctl restart $SERVICE"
 systemctl restart "$SERVICE"
 
+systemctl reload nginx
+
 UNIT_SRC="$APP_DIR/scripts/stagedesk-device-watch.service"
 UNIT_DST="/etc/systemd/system/stagedesk-device-watch.service"
 if [ -f "$UNIT_DST" ]; then
@@ -49,7 +51,5 @@ if [ -f "$UNIT_DST" ]; then
     cp "$UNIT_SRC" "$UNIT_DST"
     systemctl daemon-reload
 fi
-
-systemctl reload nginx
 
 echo "✓ Deploy fertig"
