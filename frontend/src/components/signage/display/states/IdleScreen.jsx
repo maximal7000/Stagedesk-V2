@@ -1,0 +1,11 @@
+import { ClockBox, Frame } from '../frame'
+
+export default function IdleScreen({ orientation }) {
+  return (
+    <Frame layout="wide" scheme="dark" orientation={orientation}>
+      <div data-display-state="idle" className="relative h-full">
+        <ClockBox variant="compact" className="absolute bottom-0 right-0 text-[4.5rem] text-(--d-muted)" />
+      </div>
+    </Frame>
+  )
+}

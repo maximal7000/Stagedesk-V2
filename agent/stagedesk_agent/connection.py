@@ -1,4 +1,3 @@
-"""WebSocket connection to the server with automatic reconnect."""
 import json
 import logging
 import struct
@@ -19,7 +18,7 @@ class ConnectionClosed(Exception):
 
 
 class WebsocketTransport:
-    """Adapter around websocket-client (imported lazily, so tests need no package)."""
+    """websocket-client is imported lazily so tests need no package."""
 
     def __init__(self, url, headers):
         import websocket
@@ -55,7 +54,7 @@ class WebsocketTransport:
 def ws_url(server, slug):
     parts = urlsplit(server)
     scheme = "wss" if parts.scheme == "https" else "ws"
-    return f"{scheme}://{parts.netloc}/ws/monitor/pi/{slug}/"
+    return f"{scheme}://{parts.netloc}/ws/signage/pi/{slug}/"
 
 
 class Connection:
@@ -78,7 +77,7 @@ class Connection:
         return self._stop_event.is_set()
 
     def stop(self):
-        """Stop and close the transport. Not for signal handlers (takes the lock); they set the event."""
+        """Not for signal handlers (takes the lock); they set the event."""
         self._stop_event.set()
         with self._lock:
             transport = self._transport

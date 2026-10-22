@@ -11,7 +11,7 @@ class RunResult(NamedTuple):
 
 class Runner:
     def run(self, args, timeout=30, user=None, input=None):
-        """Run `args` (a list, never a shell string); optionally as another user and with text on stdin."""
+        """`args` is a list, never a shell string."""
         command = list(args)
         if user:
             command = ["runuser", "-u", user, "--"] + command

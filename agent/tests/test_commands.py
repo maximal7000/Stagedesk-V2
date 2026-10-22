@@ -233,7 +233,7 @@ class UploadTests(unittest.TestCase):
             return FakeResponse(200)
         self.assertEqual(upload_screenshot("https://srv.example/", "TOK", b"PNGDATA", opener=opener), (True, "Screenshot hochgeladen"))
         request = seen["request"]
-        self.assertEqual(request.full_url, "https://srv.example/api/monitor/agent/screenshot")
+        self.assertEqual(request.full_url, "https://srv.example/api/signage/agent/screenshot")
         self.assertEqual(request.get_method(), "POST")
         self.assertEqual(request.get_header("Authorization"), "Bearer TOK")
         self.assertTrue(request.get_header("Content-type").startswith("multipart/form-data; boundary="))

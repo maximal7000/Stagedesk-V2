@@ -1,4 +1,3 @@
-"""Pairing with the server before the first token (spec section 3)."""
 import http.client
 import json
 import logging
@@ -20,7 +19,6 @@ class ServerBusy(Exception):
 
 
 def http_post(url, payload, timeout=15):
-    """POST JSON, return (status, parsed body). Network errors raise OSError."""
     request = urllib.request.Request(
         url, data=json.dumps(payload).encode(), method="POST",
         headers={"Content-Type": "application/json"})
@@ -60,10 +58,10 @@ class PairingClient:
         self._stop_event.set()
 
     def _url(self, name):
-        return f"{self.config.server.rstrip('/')}/api/monitor/agent/pair/{name}"
+        return f"{self.config.server.rstrip('/')}/api/signage/agent/pair/{name}"
 
     def _lifetime(self, value):
-        """Seconds the code stays valid, measured at receipt (immune to a wrong device clock)."""
+        """Measured at receipt (immune to a wrong device clock)."""
         expires = _parse_time(value)
         lifetime = (expires - self.now()) if expires else DEFAULT_LIFETIME
         if not timedelta(0) < lifetime <= MAX_LIFETIME:
@@ -80,7 +78,6 @@ class PairingClient:
         return code, pairing_id, expires
 
     def poll(self, pairing_id):
-        """None while waiting, {"status": "paired"} on success, {"status": "expired"} when a new code is needed."""
         status, body = self.http_post(self._url("poll"), {"pairing_id": pairing_id})
         if status == 202:
             return None
@@ -95,7 +92,6 @@ class PairingClient:
         raise ServerBusy(f"pair/poll answered {status}")
 
     def run(self, on_code, on_unreachable=None, sleep=None, poll_interval=POLL_INTERVAL):
-        """Block until paired (True) or stopped (False). Shows a new code after expiry."""
         sleep = sleep or self._stop_event.wait
         delays = backoff_delays(jitter=False)
         pairing_id = code = None

@@ -1,4 +1,3 @@
-"""Local HTML pages for the kiosk (pairing code, no connection, test pattern) on 127.0.0.1."""
 import html
 import json
 import threading

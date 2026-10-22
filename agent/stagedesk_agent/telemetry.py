@@ -1,4 +1,4 @@
-"""Collects the telemetry groups of spec section 4.1. A missing source gives None, never an exception."""
+"""A missing source gives None, never an exception."""
 import json
 import logging
 import re
@@ -35,7 +35,6 @@ def _read(path):
 
 
 def _output(runner, args, user=None, timeout=10):
-    """stdout of a command, None when it is missing or fails."""
     result = runner.run(args, timeout=timeout, user=user)
     return result.out if result.code == 0 else None
 
@@ -51,8 +50,6 @@ def read_model(paths):
     except OSError:
         return None
 
-
-# network
 
 def _interfaces(runner):
     out = _output(runner, ["ip", "-j", "addr"])
@@ -94,8 +91,6 @@ def _network(runner):
             result["kind"] = "lan"
     return result
 
-
-# system
 
 def _temperature(runner):
     match = re.search(r"temp=(-?[\d.]+)", _output(runner, ["vcgencmd", "measure_temp"]) or "")
@@ -152,8 +147,6 @@ def _system(runner, paths):
     }
 
 
-# display
-
 def _resolution(runner, paths):
     out = _output(runner, wayland_command(["wlr-randr"], paths.root), user=KIOSK_USER) or ""
     match = re.search(r"(\d+x\d+)\s+px[^\n]*\bcurrent\b", out)
@@ -174,8 +167,6 @@ def _display(runner, paths, power_status):
         "power": power_status,
     }
 
-
-# updates
 
 def _state(paths):
     data = json.loads(_read(paths.state_dir / "update-state.json"))
@@ -215,7 +206,7 @@ def _updates(runner, paths, now):
 
 
 def collect(runner, paths, now, power_status=None):
-    """The four telemetry groups; `power_status` is the last known status text of the power module."""
+    """`power_status` is the last known status text of the power module."""
     return {
         "network": _safe(_network, runner) or {"kind": None, "ssid": None, "signal_dbm": None, "ip": None, "mac": None},
         "system": _system(runner, paths),

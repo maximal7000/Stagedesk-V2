@@ -4,7 +4,7 @@ Der Pi zeigt nach dem Einschalten (auch nach Stromausfall) automatisch im
 Vollbild die Stagedesk-Monitorseite, ohne Mauszeiger. Der **Stagedesk-Agent**
 richtet Kiosk, Neustart und TV-Steuerung selbst ein, meldet Zustand und
 Telemetrie an den Server und führt Befehle und Updates aus. Gesteuert wird
-alles im Monitor-Admin (`/monitor-admin`).
+alles im Signage-Admin (`/signage-admin`; `/monitor-admin` leitet dorthin).
 
 Neuer Weg: SD-Karte schreiben, ein Befehl auf dem Pi, im Admin koppeln.
 Wer den Agent nicht nutzen kann, findet die Handeinrichtung ab Abschnitt
@@ -16,7 +16,7 @@ Wer den Agent nicht nutzen kann, findet die Handeinrichtung ab Abschnitt
 
 - Raspberry Pi (3/4/5) + Netzteil, microSD-Karte **mind. 16 GB**
 - HDMI-Monitor/TV, der **eingeschaltet** ist (sonst findet `cage` keinen Ausgang)
-- Recht `monitor.devices` im Admin (zum Koppeln und für Befehle)
+- Recht `signage.devices` im Admin (zum Koppeln und für Befehle)
 
 ### 1. SD-Karte schreiben
 
@@ -35,8 +35,12 @@ Wer den Agent nicht nutzen kann, findet die Handeinrichtung ab Abschnitt
 ### 2. Agent installieren
 
 ```bash
-curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
+curl -fsSL https://stagedesk.t410.de/api/signage/agent/install.sh | sudo bash
 ```
+
+Die alte URL `…/api/monitor/agent/install.sh` funktioniert weiter. Bereits
+installierte Pis nutzen bis zum nächsten Agent-Update die alten Pfade
+(`/api/monitor/…`, `/ws/monitor/…`); das geht dauerhaft.
 
 Das Skript installiert die Pakete (`cage`, `chromium`, `cec-utils`, `ddcutil`,
 `wlr-randr`, `grim`, `iw` und weitere), lädt das Agent-Paket vom Server und
@@ -49,7 +53,7 @@ behält die Kopplung. Ein neuer Pi braucht danach keine Handarbeit mehr.
 Zum Testen gegen einen anderen Server:
 
 ```bash
-curl -fsSL https://<server>/api/monitor/agent/install.sh | sudo STAGEDESK_SERVER=https://<server> bash
+curl -fsSL https://<server>/api/signage/agent/install.sh | sudo STAGEDESK_SERVER=https://<server> bash
 ```
 
 ### 3. Koppeln
@@ -114,8 +118,8 @@ Dienste ab.
 - HDMI-Monitor/TV, der **eingeschaltet** ist (sonst findet `cage` keinen Ausgang)
 - Die öffentliche Stagedesk-URL, z. B. `https://stagedesk.t410.de`
   - Aufgaben-Monitor: `…/aufgaben-monitor`
-  - Allgemeiner Monitor: `…/monitor?screen=<slug>&key=<key>`. Die fertige
-    URL steht im Monitor-Admin unter Bildschirme → Bildschirm → **Kiosk-URL**
+  - Allgemeine Anzeige: `…/signage?screen=<slug>&key=<key>` (alt `…/monitor?screen=…` geht weiter). Die fertige
+    URL steht im Signage-Admin unter Bildschirme → Bildschirm → **Kiosk-URL**
     (Knopf „Kopieren"). Der Schlüssel gibt den Vertretungsplan frei; ohne ihn
     erscheint der Vertretungsplan nur als iframe wie bisher.
   - „Neu erzeugen" im Admin macht den alten Schlüssel ungültig, danach die
@@ -169,7 +173,7 @@ nano /home/pi/kiosk.sh
 
 ```bash
 #!/bin/bash
-URL="https://stagedesk.t410.de/aufgaben-monitor"   # <-- eigene URL, für /monitor die Kiosk-URL aus dem Admin
+URL="https://stagedesk.t410.de/aufgaben-monitor"   # <-- eigene URL, für /signage die Kiosk-URL aus dem Admin
 
 # Auf Netzwerk warten (max ~60s), damit Chromium nicht die Fehlerseite lädt
 for i in $(seq 1 30); do
@@ -284,7 +288,7 @@ greifen zusammen – beide einbauen, dann ist er garantiert weg:
 
 ### a) Per CSS in der Stagedesk-App (bereits im Code)
 
-Die öffentlichen Monitorseiten (`AufgabenMonitorPage`, `MonitorPage`) setzen
+Die öffentlichen Anzeigeseiten (`AufgabenMonitorPage`, `SignagePage`) setzen
 beim Laden `* { cursor: none !important }`. Damit verschwindet Chromiums
 eigener Cursor.
 
@@ -336,9 +340,9 @@ wird winzig. `cage 0.2.0` kann die Anzeige **nicht skalieren**, und
 `--force-device-scale-factor` verarbeitet das falsch (es zeigt dann nur das
 obere linke Viertel und wird mit höherem Faktor immer kleiner).
 
-**`/monitor`: Skalierung im Admin.** Die Anzeige rechnet ihre Größe aus der
+**`/signage`: Skalierung im Admin.** Die Anzeige rechnet ihre Größe aus der
 Bildschirmbreite (Basis 1920 px quer, 1080 px hoch) und füllt damit auch einen
-4K-Schirm richtig. Feinjustiert wird im Monitor-Admin unter Bildschirme →
+4K-Schirm richtig. Feinjustiert wird im Signage-Admin unter Bildschirme →
 Bildschirm → **Skalierung** (Automatisch oder 75 bis 200 %), dort auch die
 **Ausrichtung** (Quer/Hoch). Die Änderung wirkt nach dem Speichern ohne Eingriff
 am Pi. Die Kiosk-URL aus dem Admin enthält deshalb **kein** `zoom`.
@@ -348,7 +352,7 @@ Faktor und **überstimmt** die Skalierung aus dem Admin. Nur nutzen, wenn das
 Admin nicht reicht, und danach wieder entfernen:
 
 ```bash
-URL="https://stagedesk.t410.de/monitor?screen=mensa&key=<key>&zoom=2"
+URL="https://stagedesk.t410.de/signage?screen=mensa&key=<key>&zoom=2"
 ```
 
 - `zoom=2` entspricht auf 4K etwa der Full-HD-Größe
@@ -433,7 +437,7 @@ Zusätzliche Zeile (Prüfung jede Minute):
 
 ## 9. (Optional) TV per HDMI-CEC an-/ausschalten
 
-Stagedesk kann den Fernseher über den Monitor-Admin bzw. per Zeitplan
+Stagedesk kann den Fernseher über den Signage-Admin bzw. per Zeitplan
 ein-/ausschalten. Dafür läuft auf dem Pi ein kleiner WebSocket-Client
 (`scripts/stagedesk-power.py`), der per HDMI-CEC schaltet.
 
@@ -471,7 +475,7 @@ sudo systemctl status stagedesk-power.service --no-pager
 ```
 
 > In `stagedesk-power.py` muss `WS_URL` zum Monitor passen, z. B.
-> `wss://stagedesk.t410.de/ws/monitor/pi/mensa/`.
+> `wss://stagedesk.t410.de/ws/signage/pi/mensa/` (alt `/ws/monitor/pi/mensa/` geht weiter).
 
 ### CEC-Verbindung testen
 
@@ -600,7 +604,7 @@ Vorlage im Repo: **`scripts/stagedesk-power-ddc.py`** (Klasse `DdcDisplay`):
 gewünschter Zustand, plus 60-s-Heartbeat. Oben anpassen:
 
 ```python
-WS_URL  = "wss://stagedesk.t410.de/ws/monitor/pi/<SLUG>/"
+WS_URL  = "wss://stagedesk.t410.de/ws/signage/pi/<SLUG>/"
 VAL_OFF = "04"      # ggf. "02" (Standby), falls Aufwecken zickt
 ```
 
@@ -702,7 +706,7 @@ nmap -sn 192.168.1.0/24 | grep -i -B2 raspberry
 | Schwarzer Bildschirm, `Failed to spawn client: Permission denied` | `chmod +x /home/pi/kiosk.sh` |
 | Mauszeiger sichtbar | `default`-Cursor-Theme blank machen (Abschnitt 5b) + Service neu starten |
 | Seite hängt nach WLAN-Ausfall | `netwatch.sh` (Abschnitt 8) |
-| Alles winzig oder zu groß | `/monitor`: Skalierung im Admin einstellen und `?zoom=` aus der URL entfernen (Abschnitt 5a); Aufgaben-Monitor: `?zoom=2`. **Nicht** `--force-device-scale-factor` |
+| Alles winzig oder zu groß | `/signage`: Skalierung im Admin einstellen und `?zoom=` aus der URL entfernen (Abschnitt 5a); Aufgaben-Monitor: `?zoom=2`. **Nicht** `--force-device-scale-factor` |
 | Vertretungsplan nur als iframe | Kiosk-URL ohne oder mit veraltetem `key` → URL aus dem Admin neu eintragen |
 | Neue IP nach WLAN-Wechsel unbekannt | über `pi@<hostname>.local` verbinden (Abschnitt 11) |
 | CEC schaltet TV **ein** aber nicht **aus** | Panel unterstützt CEC-Standby nicht → LAN→RS232 / SICP nutzen (Abschnitt 9a) |

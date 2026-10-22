@@ -1,7 +1,4 @@
-"""Switching the display on and off: CEC, HDMI (wlr-randr), hybrid (SICP + CEC) or DDC/CI.
-
-Logic ported from scripts/stagedesk-power*.py. Status texts: "an", "standby", "aus", "Fehler: <Text>".
-"""
+"""Logic ported from scripts/stagedesk-power*.py. Status texts: "an", "standby", "aus", "Fehler: <Text>"."""
 import glob
 import logging
 import os
@@ -23,7 +20,6 @@ class PowerError(Exception):
 
 
 def wayland_command(args, root="/"):
-    """Prefix `args` so they run inside the kiosk's Wayland session (use with user='pi')."""
     sockets = sorted(os.path.basename(p) for p in glob.glob(os.path.join(root, RUNTIME_DIR.lstrip("/"), "wayland-*"))
                      if not p.endswith(".lock"))
     display = sockets[0] if sockets else "wayland-0"
@@ -35,7 +31,7 @@ def _text(value, default):
 
 
 class PowerController:
-    """Shared plumbing: `set` and `status` never raise, they return a status text."""
+    """`set` and `status` never raise; they return a status text."""
 
     def __init__(self, config, runner, sleep=time.sleep):
         self.config = config if isinstance(config, dict) else {}
@@ -135,7 +131,7 @@ class HdmiPower(PowerController):
 
 
 class HybridPower(PowerController):
-    """Off via SICP over TCP (CEC standby does not work on this panel), on via CEC."""
+    """CEC standby does not work on this panel, so off goes via SICP over TCP."""
 
     def __init__(self, config, runner, connect=socket.create_connection, **kw):
         super().__init__(config, runner, **kw)
@@ -151,7 +147,6 @@ class HybridPower(PowerController):
         return bytes(packet)
 
     def _sicp(self, data, timeout=2):
-        """Reply bytes (possibly empty); None when the display cannot be reached."""
         try:
             sock = self.connect((self.ip, self.port), timeout=timeout)
             try:
@@ -223,7 +218,6 @@ METHODS = {"cec": CecPower, "hdmi": HdmiPower, "hybrid": HybridPower, "ddc": Ddc
 
 
 def make_power(method, config, runner, **options):
-    """Build the controller for `method`; options (sleep, connect, watchdog_interval) are for tests."""
     try:
         cls = METHODS[method]
     except KeyError:

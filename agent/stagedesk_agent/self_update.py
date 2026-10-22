@@ -1,4 +1,3 @@
-"""Self-update of the agent: download, verify, unpack, swap, restart; roll back if not confirmed."""
 import hashlib
 import contextlib
 import fcntl
@@ -43,7 +42,6 @@ def _file_sha256(path):
 
 
 def download(url, dest, deadline=DOWNLOAD_DEADLINE):
-    """Stream to `dest`, hashing on the way. Returns the SHA-256 hex digest."""
     digest = hashlib.sha256()
     end = time.monotonic() + deadline
     size = 0
@@ -53,7 +51,7 @@ def download(url, dest, deadline=DOWNLOAD_DEADLINE):
             if not chunk:
                 return digest.hexdigest()
             if time.monotonic() > end:
-                raise TimeoutError("Download dauert länger als 10 Minuten, Netz prüfen")
+                raise TimeoutError("Download länger als 10 Minuten, abgebrochen")
             size += len(chunk)
             if size > MAX_PACKAGE:
                 raise ValueError("Paket ist größer als 50 MB")
@@ -181,7 +179,6 @@ class SelfUpdater:
         return parse_version(_read(self.paths.opt_dir / "VERSION"))
 
     def check(self, hello):
-        """None when nothing to do; {"updated": v} after the swap (the service restarts); {"error": text}."""
         version = hello.get("agent_version")
         sha256 = str(hello.get("agent_sha256") or "").lower()
         wanted, own = parse_version(version), self.current_version()
@@ -207,7 +204,7 @@ class SelfUpdater:
         archive = paths.opt_new.with_name("stagedesk-agent.download")
         archive.parent.mkdir(parents=True, exist_ok=True)
         try:
-            digest = self.fetch(f"{self.server}/api/monitor/agent/stagedesk-agent-{version}.tar.gz", archive)
+            digest = self.fetch(f"{self.server}/api/signage/agent/stagedesk-agent-{version}.tar.gz", archive)
             digest = digest or _file_sha256(archive)
             if not sha256 or not hmac.compare_digest(digest.encode(), sha256.encode()):
                 raise ValueError("Prüfsumme des Pakets stimmt nicht, Update abgebrochen")
@@ -268,9 +265,7 @@ class SelfUpdater:
         _checked(self.runner, ["systemctl", "is-active", timer_name])
 
     def confirm(self):
-        """Call after a successful hello. Returns the agent_updated event once, then None.
-
-        Only the version that is running right now can be confirmed."""
+        """Call after a successful hello. Only the version that is running right now can be confirmed."""
         with _locked(self.paths):
             event = _read_json(self.paths.pending_confirm)
             if not event:
@@ -295,9 +290,7 @@ def _uptime(paths):
 
 
 def rollback(paths, runner, sleep=time.sleep, uptime=None):
-    """Restore .prev when the new version was never confirmed. True if a rollback happened.
-
-    Shortly after boot (power cut during the trial) the new version gets until BOOT_MINUTES of uptime;
+    """Shortly after boot (power cut during the trial) the new version gets until BOOT_MINUTES of uptime;
     pending-confirm is re-checked under the lock afterwards."""
     current = (uptime or (lambda: _uptime(paths)))()
     if current is not None and current < BOOT_MINUTES * 60 and paths.pending_confirm.exists():

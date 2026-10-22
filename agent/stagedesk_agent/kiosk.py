@@ -1,4 +1,3 @@
-"""Kiosk control: the URL lives in kiosk.env, stagedesk-kiosk.service (cage + Chromium as pi) shows it."""
 import logging
 import os
 
@@ -19,8 +18,7 @@ class Kiosk:
             return None
 
     def apply(self, url):
-        """Write the URL and restart the kiosk, only when the URL changed. Returns the result of the restart;
-        False also when nothing changed."""
+        """Return False when the URL is unchanged and no restart is pending."""
         if "\n" in url or "\r" in url:
             raise ValueError("Kiosk-URL enthält einen Zeilenumbruch")
         content = f"KIOSK_URL={url}\n"

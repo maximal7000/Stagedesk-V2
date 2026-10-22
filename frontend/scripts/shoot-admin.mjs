@@ -5,15 +5,15 @@
 // Baut die App (außer mit --no-build), startet `vite preview` auf einem freien Port und meldet vor dem
 // Laden einen Testnutzer an: Er liegt im Storage-Schlüssel, den oidc-client-ts über `userStore` aus
 // src/authConfig.js liest (`oidc.user:<authority>:<client_id>`). Keycloak wird nie kontaktiert.
-// Jede Anfrage an /api/** wird aus frontend/tests/admin-fixtures/ beantwortet: GET /api/monitor/screens
-// liest monitor-screens.json (Pfad ohne /api/, "/" wird zu "-"). Mit Query gilt zuerst die Datei mit "@query"
-// (GET /api/monitor/display?screen=aula → monitor-display@screen=aula.json). Eine Aufnahme mit `variant` liest
-// zuerst aus tests/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
-// nennt den Pfad. Schreibende Anfragen lesen <pfad>.<methode>.json (POST /api/monitor/views/preview →
-// monitor-views-preview.post.json), sonst antworten sie mit {"success": true}. Fehlerfälle beschreibt
+// Jede Anfrage an /api/** wird aus frontend/tests/signage/admin-fixtures/ beantwortet: GET /api/signage/screens
+// liest signage-screens.json (Pfad ohne /api/, "/" wird zu "-"). Mit Query gilt zuerst die Datei mit "@query"
+// (GET /api/signage/display?screen=aula → signage-display@screen=aula.json). Eine Aufnahme mit `variant` liest
+// zuerst aus tests/signage/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
+// nennt den Pfad. Schreibende Anfragen lesen <pfad>.<methode>.json (POST /api/signage/views/preview →
+// signage-views-preview.post.json), sonst antworten sie mit {"success": true}. Fehlerfälle beschreibt
 // fulfillFixture (Testdatei mit "__status" oder "__abort").
-// Live-Vorschau: Eine Aufnahme mit `preview` beantwortet GET /api/monitor/display?preview=… (das iframe der
-// Vorschau) mit tests/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
+// Live-Vorschau: Eine Aufnahme mit `preview` beantwortet GET /api/signage/display?preview=… (das iframe der
+// Vorschau) mit tests/signage/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
 // Bilder: docs/superpowers/screenshots/2026-10-19-monitor/admin-<seite>.png (oder --out <dir>).
 // Schlägt eine Seite fehl, laufen die übrigen weiter; der Exit-Code ist am Ende 1.
 // Chromium: CHROMIUM_PATH oder /opt/pw-browsers/chromium (mit --headless=new).
@@ -26,8 +26,8 @@ import { chromium } from 'playwright-core'
 import { loadEnv } from 'vite'
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const FIXTURES = join(FRONTEND, 'tests', 'admin-fixtures')
-const DISPLAY_FIXTURES = join(FRONTEND, 'tests', 'display-fixtures')
+const FIXTURES = join(FRONTEND, 'tests', 'signage', 'admin-fixtures')
+const DISPLAY_FIXTURES = join(FRONTEND, 'tests', 'signage', 'display-fixtures')
 const OUT = resolve(FRONTEND, '..', 'docs', 'superpowers', 'screenshots', '2026-10-19-monitor')
 const VITE = join(FRONTEND, 'node_modules', '.bin', 'vite')
 const T0 = new Date('2026-10-20T10:00:00+02:00')
@@ -37,16 +37,16 @@ const ALLOWED_HOSTS = new Set(['127.0.0.1', 'fonts.googleapis.com', 'fonts.gstat
 // eigener Fensterhöhe (height) für lange Seiten; `preview` wählt die Anzeige-Testdaten der Live-Vorschau.
 // Weitere Seiten kommen mit den folgenden Bauschritten hinzu.
 const PAGES = {
-  overview: { path: '/monitor-admin' },
+  overview: { path: '/signage-admin' },
   'overview-emergency-dialog': {
-    path: '/monitor-admin',
+    path: '/signage-admin',
     action: async (page) => {
       await page.getByRole('button', { name: 'Auslösen…' }).click()
       await page.waitForSelector('[data-emergency-dialog] input[type="radio"]:checked')
     },
   },
   'overview-pair-dialog': {
-    path: '/monitor-admin',
+    path: '/signage-admin',
     action: async (page) => {
       await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
       await page.getByLabel('Ziffer 1 von 6').click()
@@ -56,7 +56,7 @@ const PAGES = {
     },
   },
   'overview-pair-new-screen': {
-    path: '/monitor-admin',
+    path: '/signage-admin',
     action: async (page) => {
       await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
       await page.getByLabel('Ziffer 1 von 6').click()
@@ -67,9 +67,9 @@ const PAGES = {
       await page.getByLabel('Ort', { exact: true }).fill('Eingangshalle Nord')
     },
   },
-  'overview-day-off': { path: '/monitor-admin', variant: 'day-off' },
+  'overview-day-off': { path: '/signage-admin', variant: 'day-off' },
   'overview-emergency-menu': {
-    path: '/monitor-admin',
+    path: '/signage-admin',
     variant: 'emergency',
     action: async (page) => {
       await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click()
@@ -77,17 +77,17 @@ const PAGES = {
     },
   },
   'overview-undo': {
-    path: '/monitor-admin',
+    path: '/signage-admin',
     action: async (page) => {
       await page.getByRole('switch', { name: 'On-Air' }).click()
       await page.waitForSelector('[data-undo-toast]')
     },
   },
-  screens: { path: '/monitor-admin/screens' },
-  'screen-detail': { path: '/monitor-admin/screens/1', height: 2900 },
+  screens: { path: '/signage-admin/screens' },
+  'screen-detail': { path: '/signage-admin/screens/1', height: 2900 },
   // Gerät gekoppelt: Telemetrie, Befehle, Screenshot; Ein- und Ausschalten mit Methode, Updates, Protokoll
   'screen-detail-device': {
-    path: '/monitor-admin/screens/1', height: 1250,
+    path: '/signage-admin/screens/1', height: 1250,
     action: async (page) => {
       await page.locator('[data-section="device"] [data-telemetry-group]').first().waitFor()
       await page.locator('[data-section="device"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
@@ -95,28 +95,28 @@ const PAGES = {
   },
   // Gerät offline: Befehle mit Hinweis
   'screen-detail-device-offline': {
-    path: '/monitor-admin/screens/1', variant: 'device-offline', height: 1250,
+    path: '/signage-admin/screens/1', variant: 'device-offline', height: 1250,
     action: async (page) => {
       await page.locator('[data-section="device"] [data-device-commands]').waitFor()
       await page.locator('[data-section="device"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
     },
   },
   'screen-detail-log': {
-    path: '/monitor-admin/screens/1', height: 900,
+    path: '/signage-admin/screens/1', height: 900,
     action: async (page) => {
       await page.locator('[data-section="log"] tbody tr').first().waitFor()
       await page.locator('[data-section="log"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
     },
   },
   'screen-detail-reboot-confirm': {
-    path: '/monitor-admin/screens/1', height: 1200,
+    path: '/signage-admin/screens/1', height: 1200,
     action: async (page) => {
       await page.getByRole('button', { name: 'Pi neu starten', exact: true }).click()
       await page.waitForSelector('[role="alertdialog"]')
     },
   },
   'screen-detail-dirty': {
-    path: '/monitor-admin/screens/1',
+    path: '/signage-admin/screens/1',
     action: async (page) => {
       await page.getByLabel('Ort', { exact: true }).fill('Eingangshalle Nord')
       await page.locator('[data-schedule-editor] li').nth(1).getByRole('button', { name: 'So', exact: true }).click()
@@ -125,7 +125,7 @@ const PAGES = {
   },
   // Zeitplan mit drei Zeilen, Zeile 2 überschneidet sich mit Zeile 1; Wochenübersicht darüber
   'screen-detail-schedule': {
-    path: '/monitor-admin/screens/1', height: 1000,
+    path: '/signage-admin/screens/1', height: 1000,
     action: async (page) => {
       await page.locator('[data-section="schedule"] [data-week-overview]').waitFor()
       await page.locator('[data-section="schedule"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
@@ -133,30 +133,30 @@ const PAGES = {
   },
   // Leerer Zeitplan: nur eine Zeile
   'screen-detail-schedule-empty': {
-    path: '/monitor-admin/screens/2', height: 1000,
+    path: '/signage-admin/screens/2', height: 1000,
     action: async (page) => {
       await page.locator('[data-section="schedule"]').evaluate((el) => el.scrollIntoView({ block: 'center' }))
     },
   },
-  // Nur Ein- und Ausschalten (ohne monitor.setup): Anzeige lesend, keine Kiosk-URL
-  'screen-detail-power-only': { path: '/monitor-admin/screens/1', variant: 'power-only', height: 1100 },
+  // Nur Ein- und Ausschalten (ohne signage.setup): Anzeige lesend, keine Kiosk-URL
+  'screen-detail-power-only': { path: '/signage-admin/screens/1', variant: 'power-only', height: 1100 },
   'screen-detail-key': {
-    path: '/monitor-admin/screens/1',
+    path: '/signage-admin/screens/1',
     action: async (page) => {
       await page.getByRole('button', { name: 'Neu erzeugen' }).click()
       await page.waitForSelector('[role="alertdialog"]')
     },
   },
-  views: { path: '/monitor-admin/views' },
+  views: { path: '/signage-admin/views' },
   'view-new': {
-    path: '/monitor-admin/views/new',
+    path: '/signage-admin/views/new',
     action: async (page) => {
       await page.getByRole('radio', { name: /^Abfahrten/ }).click()
       await page.getByLabel('Name', { exact: true }).waitFor()
     },
   },
   'view-edit-departures': {
-    path: '/monitor-admin/views/1', preview: 'departures', height: 2450,
+    path: '/signage-admin/views/1', preview: 'departures', height: 2450,
     action: async (page) => {
       await page.getByLabel('Max. Zeilen Kohlmarkt').fill('8')
       await page.waitForSelector('[data-disruptions]')
@@ -164,16 +164,16 @@ const PAGES = {
     },
   },
   'view-edit-rotation': {
-    path: '/monitor-admin/views/4', preview: 'rotation', height: 1060,
+    path: '/signage-admin/views/4', preview: 'rotation', height: 1060,
     action: waitForPreview,
   },
-  'view-edit-info': { path: '/monitor-admin/views/3', preview: 'info', action: waitForPreview },
-  'view-edit-split': { path: '/monitor-admin/views/5', preview: 'split', height: 1300, action: waitForPreview },
+  'view-edit-info': { path: '/signage-admin/views/3', preview: 'info', action: waitForPreview },
+  'view-edit-split': { path: '/signage-admin/views/5', preview: 'split', height: 1300, action: waitForPreview },
   // Vertretungsplan: Datenquelle, Ausgabe, Aufteilung; Typwahl mit Bestätigung
-  'view-edit-substitutions': { path: '/monitor-admin/views/2', preview: 'substitutions', height: 1500, action: waitForPreview },
-  'view-edit-substitutions-fallback': { path: '/monitor-admin/views/2', preview: 'substitutions-fallback-source', height: 1500, action: waitForPreview },
+  'view-edit-substitutions': { path: '/signage-admin/views/2', preview: 'substitutions', height: 1500, action: waitForPreview },
+  'view-edit-substitutions-fallback': { path: '/signage-admin/views/2', preview: 'substitutions-fallback-source', height: 1500, action: waitForPreview },
   'view-edit-kind-change': {
-    path: '/monitor-admin/views/2', preview: 'substitutions', height: 1200,
+    path: '/signage-admin/views/2', preview: 'substitutions', height: 1200,
     action: async (page) => {
       await waitForPreview(page)
       await page.getByLabel('Typ', { exact: true }).selectOption('info')
@@ -181,55 +181,55 @@ const PAGES = {
       await page.waitForSelector('[role="alertdialog"]')
     },
   },
-  'view-edit-media': { path: '/monitor-admin/views/6', preview: 'media-landscape', height: 1100, action: waitForPreview },
-  exams: { path: '/monitor-admin/exams', height: 1240 },
+  'view-edit-media': { path: '/signage-admin/views/6', preview: 'media-landscape', height: 1100, action: waitForPreview },
+  exams: { path: '/signage-admin/exams', height: 1240 },
   'exam-form': {
-    path: '/monitor-admin/exams',
+    path: '/signage-admin/exams',
     action: async (page) => {
       await page.getByRole('button', { name: 'Abitur Mathematik bearbeiten' }).click()
       await page.waitForSelector('[data-exam-panel="exam"]')
     },
   },
   'exam-template-menu': {
-    path: '/monitor-admin/exams',
+    path: '/signage-admin/exams',
     action: async (page) => {
       await page.getByRole('button', { name: 'Aus Vorlage' }).click()
       await page.waitForSelector('[role="menu"]')
     },
   },
   'event-form': {
-    path: '/monitor-admin/exams',
+    path: '/signage-admin/exams',
     action: async (page) => {
       await page.getByRole('button', { name: 'Elternsprechtag bearbeiten' }).click()
       await page.waitForSelector('[data-exam-panel="event"]')
     },
   },
-  media: { path: '/monitor-admin/media' },
-  'media-processing': { path: '/monitor-admin/media', variant: 'media-processing' },
+  media: { path: '/signage-admin/media' },
+  'media-processing': { path: '/signage-admin/media', variant: 'media-processing' },
   'media-detail': {
-    path: '/monitor-admin/media',
+    path: '/signage-admin/media',
     action: async (page) => {
       await page.locator('[data-media="11"] button').click()
       await page.waitForSelector('[data-media-panel] img')
     },
   },
-  schedules: { path: '/monitor-admin/schedules', variant: 'schedules', height: 1380 },
+  schedules: { path: '/signage-admin/schedules', variant: 'schedules', height: 1380 },
   settings: {
-    path: '/monitor-admin/settings', height: 2000,
+    path: '/signage-admin/settings', height: 2000,
     action: async (page) => {
       await page.getByRole('button', { name: 'Verbindung testen' }).click()
       await page.waitForSelector('[data-check-result]')
     },
   },
   // Zustände: nur lesend, leer, Fehler, Dialoge
-  'overview-view-only': { path: '/monitor-admin', variant: 'view-only' },
-  'overview-error': { path: '/monitor-admin', variant: 'error' },
-  'overview-empty': { path: '/monitor-admin', variant: 'empty' },
-  'screens-empty': { path: '/monitor-admin/screens', variant: 'empty' },
-  'views-empty': { path: '/monitor-admin/views', variant: 'empty' },
-  'view-edit-missing': { path: '/monitor-admin/views/1', variant: 'missing' },
+  'overview-view-only': { path: '/signage-admin', variant: 'view-only' },
+  'overview-error': { path: '/signage-admin', variant: 'error' },
+  'overview-empty': { path: '/signage-admin', variant: 'empty' },
+  'screens-empty': { path: '/signage-admin/screens', variant: 'empty' },
+  'views-empty': { path: '/signage-admin/views', variant: 'empty' },
+  'view-edit-missing': { path: '/signage-admin/views/1', variant: 'missing' },
   'view-delete-dialog': {
-    path: '/monitor-admin/views/1', preview: 'departures',
+    path: '/signage-admin/views/1', preview: 'departures',
     action: async (page) => {
       await waitForPreview(page)
       await page.getByRole('button', { name: 'Löschen', exact: true }).click()
@@ -237,47 +237,47 @@ const PAGES = {
     },
   },
   'overview-override-menu': {
-    path: '/monitor-admin',
+    path: '/signage-admin',
     variant: 'override',
     action: async (page) => {
       await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click()
       await page.waitForSelector('[role="menu"]')
     },
   },
-  'screen-detail-override': { path: '/monitor-admin/screens/1', variant: 'override' },
+  'screen-detail-override': { path: '/signage-admin/screens/1', variant: 'override' },
   'screen-delete-dialog': {
-    path: '/monitor-admin/screens/1',
+    path: '/signage-admin/screens/1',
     action: async (page) => {
       await page.getByRole('button', { name: 'Löschen', exact: true }).click()
       await page.waitForSelector('[role="alertdialog"]')
     },
   },
-  'exams-empty': { path: '/monitor-admin/exams', variant: 'empty' },
-  'exams-offline': { path: '/monitor-admin/exams', variant: 'offline' },
-  'media-empty': { path: '/monitor-admin/media', variant: 'empty' },
-  'schedules-empty': { path: '/monitor-admin/schedules', variant: 'empty' },
+  'exams-empty': { path: '/signage-admin/exams', variant: 'empty' },
+  'exams-offline': { path: '/signage-admin/exams', variant: 'offline' },
+  'media-empty': { path: '/signage-admin/media', variant: 'empty' },
+  'schedules-empty': { path: '/signage-admin/schedules', variant: 'empty' },
   'settings-color-scheme': {
-    path: '/monitor-admin/settings', height: 1000,
+    path: '/signage-admin/settings', height: 1000,
     action: async (page) => {
       await page.locator('[data-section="color-scheme"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
     },
   },
   'screen-detail-color-scheme': {
-    path: '/monitor-admin/screens/1', height: 1000,
+    path: '/signage-admin/screens/1', height: 1000,
     action: async (page) => {
       await page.locator('[data-section="display"]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
     },
   },
   'settings-devices': {
-    path: '/monitor-admin/settings', height: 2000,
+    path: '/signage-admin/settings', height: 2000,
     action: async (page) => {
       await page.waitForSelector('[data-section="devices"]')
       await page.locator('[data-section="devices"]').scrollIntoViewIfNeeded()
     },
   },
-  'settings-onair-only': { path: '/monitor-admin/settings', variant: 'onair-only', height: 1180 },
+  'settings-onair-only': { path: '/signage-admin/settings', variant: 'onair-only', height: 1180 },
   'stop-filter-dialog': {
-    path: '/monitor-admin/views/1', preview: 'departures',
+    path: '/signage-admin/views/1', preview: 'departures',
     action: async (page) => {
       await page.getByRole('button', { name: 'Filter für Hauptbahnhof / ZOB' }).click()
       await page.waitForSelector('[data-stop-filter-dialog]')
@@ -391,7 +391,7 @@ async function answerApi(route, missing, shot) {
     const posted = fixtureFor(`${apiPath}.${req.method().toLowerCase()}`, '', variant)
     return fulfillFixture(route, posted ? readFileSync(posted, 'utf8') : '{"success":true}')
   }
-  if (apiPath === 'monitor/display' && searchParams.has('preview') && shot.preview) {
+  if (apiPath === 'signage/display' && searchParams.has('preview') && shot.preview) {
     const body = readFileSync(join(DISPLAY_FIXTURES, `${shot.preview}.json`), 'utf8')
     return route.fulfill({ status: 200, contentType: 'application/json', body })
   }
@@ -434,7 +434,7 @@ async function shoot(context, baseUrl, name, storageKey, outDir) {
       window.WebSocket = SilentSocket
     }, [storageKey, JSON.stringify(testUser())])
     await page.route('**/api/**', (route) => answerApi(route, missing, shot))
-    // Seitenbilder der Medien-Vorschau aus tests/display-fixtures/assets/
+    // Seitenbilder der Medien-Vorschau aus tests/signage/display-fixtures/assets/
     await page.route('**/media/monitor/**', (route) => route.fulfill({
       status: 200, contentType: 'image/svg+xml',
       body: readFileSync(join(DISPLAY_FIXTURES, 'assets', new URL(route.request().url()).pathname.split('/').pop())),

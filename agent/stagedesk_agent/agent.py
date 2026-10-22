@@ -1,4 +1,3 @@
-"""Wires pairing, connection and local pages together."""
 import json
 import logging
 import queue
@@ -27,7 +26,6 @@ LOCAL_URL = "http://127.0.0.1:8765/"
 
 
 def read_identity(paths):
-    """(serial, model) of this Raspberry Pi; 'unknown' when not readable."""
     return read_cpu_serial(paths) or "unknown", read_model(paths) or "unknown"
 
 
@@ -167,8 +165,6 @@ class Agent:
             pass
         self._power_queue.put(None)  # wakes the worker, which then exits
 
-    # commands
-
     def _drop_command_jobs(self):
         try:
             while True:
@@ -256,12 +252,9 @@ class Agent:
     def send(self, msg):
         return bool(self.connection and self.connection.send(msg))
 
-    # power
-
     def _power_controller(self, target=None):
-        """Controller for the last applied (method, config); rebuilt when it changes. Hold _power_lock.
-
-        `target` comes from a hello job, so queued commands see the config of their time, not a later one."""
+        """Hold _power_lock. `target` comes from a hello job, so queued commands see the config of their
+        time, not a later one."""
         if target is not None:
             self._power_target = target
         elif self._power_target is None:
@@ -292,7 +285,7 @@ class Agent:
                 return self._power_error
             current = controller.status()
             if (on and current == "an") or (not on and current in ("standby", "aus")):
-                return current  # already in the wanted state
+                return current
             return controller.set(on)
 
     def _enqueue_power(self, job):
@@ -322,8 +315,6 @@ class Agent:
         status = self._apply_power(bool(message.get("power", True)))
         self.send({"type": "power_status", "status": status})
 
-    # telemetry
-
     def _send_telemetry(self):
         status = self._power_status()
         data = self.collect(self.runner, self.config.paths, datetime.now(timezone.utc), power_status=status)
@@ -340,7 +331,7 @@ class Agent:
         return True if check is None else check()
 
     def _telemetry_loop(self, ended, wake):
-        """Send after each hello, then every interval while connected. Offline: no collecting at all."""
+        """Offline: no collecting at all."""
         while not ended.is_set() and not self.stop_event.is_set():
             triggered = wake.wait(self.telemetry_interval)
             if ended.is_set() or self.stop_event.is_set():
@@ -386,7 +377,6 @@ class Agent:
             self._enqueue_power(lambda: self._on_power_command(message))
 
     def _after_hello(self, hello):
-        """Confirm a self-update, rewrite the update timers, then look for a newer agent version."""
         wake = self._telemetry_wake
         if self.self_updater:
             try:
@@ -415,7 +405,6 @@ class Agent:
         self.state = "pairing"
 
     def run_once(self):
-        """One phase: pairing if there is no token, otherwise the connection until it ends."""
         if self._stopped:
             return
         if not self.config.token:
@@ -431,7 +420,7 @@ class Agent:
         self.state = "connecting"
         if not self.config.kiosk_url and self.config.slug and self.config.key:
             query = urlencode({"screen": self.config.slug, "key": self.config.key})
-            self.config.kiosk_url = f"{self.config.server.rstrip('/')}/monitor?{query}"
+            self.config.kiosk_url = f"{self.config.server.rstrip('/')}/signage?{query}"
             self.config.save()
         if self.config.kiosk_url:
             self._set_kiosk(self.config.kiosk_url)

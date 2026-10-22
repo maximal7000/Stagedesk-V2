@@ -61,14 +61,14 @@ class ConnectionTests(unittest.TestCase):
         f = Factory([t])
         self.conn(f).run_forever()
         url, headers = f.calls[0]
-        self.assertEqual(url, "wss://stagedesk.t410.de/ws/monitor/pi/mensa/")
+        self.assertEqual(url, "wss://stagedesk.t410.de/ws/signage/pi/mensa/")
         self.assertEqual(headers, {"Authorization": "Bearer TOK"})
 
     def test_http_server_uses_ws_scheme(self):
         self.cfg.server = "http://127.0.0.1:8000"
         f = Factory([FakeTransport([ConnectionClosed(4003)])])
         self.conn(f).run_forever()
-        self.assertEqual(f.calls[0][0], "ws://127.0.0.1:8000/ws/monitor/pi/mensa/")
+        self.assertEqual(f.calls[0][0], "ws://127.0.0.1:8000/ws/signage/pi/mensa/")
 
     def test_auth_failed_4003_clears_token_and_restarts_pairing(self):
         f = Factory([FakeTransport([ConnectionClosed(4003)])])

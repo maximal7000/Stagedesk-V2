@@ -4,7 +4,7 @@
  *
  * <PermissionRoute permission="inventar.view"><InventarPage/></PermissionRoute>
  * <PermissionRoute adminOnly><AdminPage/></PermissionRoute>
- * <PermissionRoute anyOf={['monitor.view']} adminOnly><Page/></PermissionRoute>
+ * <PermissionRoute anyOf={['signage.view']} adminOnly><Page/></PermissionRoute>
  *   (adminOnly + anyOf/permission = Admin oder eine der Permissions reicht)
  */
 import { Loader2, ShieldOff } from 'lucide-react';

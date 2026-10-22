@@ -1,4 +1,3 @@
-"""apt updates inside the update window and the daily reboot, both guarded by the server's gate."""
 import json
 import logging
 import re
@@ -27,7 +26,7 @@ class Updater:
     def __init__(self, paths, runner, send, gate_timeout=GATE_TIMEOUT, clock=time.monotonic):
         self.paths, self.runner, self.send = paths, runner, send
         self.gate_timeout, self.clock = gate_timeout, clock
-        self._lock = threading.Lock()  # one update at a time
+        self._lock = threading.Lock()
         self._gate_lock = threading.Lock()
         self._gate_event = None
         self._gate_reply = None
@@ -42,7 +41,7 @@ class Updater:
             event.set()
 
     def gate(self):
-        """(allowed, reason). No answer or no connection means not allowed."""
+        """No answer or no connection means not allowed."""
         with self._gate_lock:
             event = self._gate_event = threading.Event()
             self._gate_reply = None
@@ -52,8 +51,6 @@ class Updater:
             if not event.wait(self.gate_timeout) or self._gate_reply is None:
                 return False, NO_ANSWER
             return self._gate_reply
-
-    # update
 
     def run(self, manual=False):
         if not self._lock.acquire(blocking=False):
@@ -80,7 +77,7 @@ class Updater:
         for args, tool in _STEPS:
             result = self._apt(args, deadline)
             if result is None or result.code == 124:
-                error = "Zeitlimit von 60 Minuten überschritten, Paketquellen und Netz prüfen"
+                error = "Zeitlimit von 60 Minuten überschritten"
             elif result.code != 0:
                 detail = (result.err or result.out).strip()[-300:] or f"Code {result.code}"
                 error = f"{tool} fehlgeschlagen: {detail}"

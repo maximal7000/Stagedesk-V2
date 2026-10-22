@@ -12,13 +12,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 # Django ASGI-App initialisieren (Models etc. sind dann verfügbar)
 django_asgi_app = get_asgi_application()
 
-from monitor.routing import websocket_urlpatterns as monitor_ws  # noqa: E402
+from signage.routing import websocket_urlpatterns as signage_ws  # noqa: E402
 from anwesenheit.routing import websocket_urlpatterns as anwesenheit_ws  # noqa: E402
 from aufgaben.routing import websocket_urlpatterns as aufgaben_ws  # noqa: E402
 
 application = ProtocolTypeRouter({
     "http": django_asgi_app,
     "websocket": AllowedHostsOriginValidator(
-        URLRouter(monitor_ws + anwesenheit_ws + aufgaben_ws)
+        URLRouter(signage_ws + anwesenheit_ws + aufgaben_ws)
     ),
 })

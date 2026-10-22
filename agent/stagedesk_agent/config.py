@@ -1,4 +1,4 @@
-"""Persistent agent configuration (config.json, mode 600) and reconnect backoff."""
+"""config.json is written with mode 600."""
 import json
 import os
 import random
@@ -55,7 +55,7 @@ class Config:
         self.save()
 
     def apply_hello(self, message):
-        """Take over the server's view (the slug may have changed) and persist it."""
+        """The server may rename the slug, so the stored value must follow the hello."""
         for name in _HELLO_FIELDS:
             if name in message and message[name] is not None:
                 setattr(self, name, message[name])
@@ -63,7 +63,6 @@ class Config:
 
 
 def backoff_delays(jitter=True):
-    """5, 10, 20, 40, 60, 60, ... seconds (optionally +-10 percent)."""
     delay = 5
     while True:
         yield delay * random.uniform(0.9, 1.1) if jitter else delay

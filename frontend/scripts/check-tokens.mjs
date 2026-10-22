@@ -4,9 +4,9 @@ import { join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 export const EXCLUDE = [
-  'src/pages/MonitorPage.jsx',
+  'src/pages/SignagePage.jsx',
   'src/pages/AufgabenMonitorPage.jsx',
-  'src/components/display/',
+  'src/components/signage/display/',
   'src/pages/DesignTestPage.jsx',
 ]
 

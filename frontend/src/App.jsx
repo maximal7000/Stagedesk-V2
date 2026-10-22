@@ -2,21 +2,21 @@
  * Main App Component mit Routing
  */
 import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import { setAuthContext } from './lib/api';
 import { UserProvider } from './contexts/UserContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import PermissionRoute from './components/PermissionRoute';
 import { MaintenanceBanner } from './components/MaintenanceBanner';
-import UnsavedChangesProvider from './components/monitor-admin/shared/UnsavedChangesProvider';
+import UnsavedChangesProvider from './components/signage/admin/shared/UnsavedChangesProvider';
 import { Toaster } from 'sonner';
 import './App.css';
 // Kiosk-Seiten der Pis direkt laden: kein nachgeladener Chunk, der beim Start ausfallen kann
-import MonitorPage from './pages/MonitorPage';
+import SignagePage from './pages/SignagePage';
 import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
 
-// Seiten werden erst bei Bedarf geladen: die Anzeige /monitor (Raspberry Pi) lädt so kein Admin.
+// Seiten werden erst bei Bedarf geladen: die Anzeige /signage (Raspberry Pi) lädt so kein Admin.
 const DashboardLayout = lazy(() => import('./components/DashboardLayout'));
 // Root pages
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -46,22 +46,28 @@ const AuditLogPage = lazy(() => import('./pages/admin/AuditLogPage'));
 const SystemAdminPage = lazy(() => import('./pages/admin/SystemAdminPage'));
 const AufgabenPage = lazy(() => import('./pages/admin/AufgabenPage'));
 // Monitor-Admin
-const MonitorAdminLayout = lazy(() => import('./components/monitor-admin/MonitorAdminLayout'));
-const MonitorOverview = lazy(() => import('./components/monitor-admin/pages/Overview'));
-const MonitorScreens = lazy(() => import('./components/monitor-admin/pages/Screens'));
-const MonitorScreenDetail = lazy(() => import('./components/monitor-admin/pages/ScreenDetail'));
-const MonitorViews = lazy(() => import('./components/monitor-admin/pages/Views'));
-const MonitorViewEdit = lazy(() => import('./components/monitor-admin/pages/ViewEdit'));
-const MonitorExams = lazy(() => import('./components/monitor-admin/pages/Exams'));
-const MonitorMedia = lazy(() => import('./components/monitor-admin/pages/Media'));
-const MonitorSchedules = lazy(() => import('./components/monitor-admin/pages/Schedules'));
-const MonitorSettings = lazy(() => import('./components/monitor-admin/pages/Settings'));
+const SignageAdminLayout = lazy(() => import('./components/signage/admin/SignageAdminLayout'));
+const SignageOverview = lazy(() => import('./components/signage/admin/pages/Overview'));
+const SignageScreens = lazy(() => import('./components/signage/admin/pages/Screens'));
+const SignageScreenDetail = lazy(() => import('./components/signage/admin/pages/ScreenDetail'));
+const SignageViews = lazy(() => import('./components/signage/admin/pages/Views'));
+const SignageViewEdit = lazy(() => import('./components/signage/admin/pages/ViewEdit'));
+const SignageExams = lazy(() => import('./components/signage/admin/pages/Exams'));
+const SignageMedia = lazy(() => import('./components/signage/admin/pages/Media'));
+const SignageSchedules = lazy(() => import('./components/signage/admin/pages/Schedules'));
+const SignageSettings = lazy(() => import('./components/signage/admin/pages/Settings'));
 // Anwesenheit
 const AnwesenheitPage = lazy(() => import('./pages/anwesenheit/AnwesenheitPage'));
 // Kompetenzen
 const KompetenzenPage = lazy(() => import('./pages/kompetenzen/KompetenzenPage'));
 // Notifications
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+
+// Old admin addresses (bookmarks, notification links) keep working: same rest of path and query.
+function LegacyAdminRedirect() {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`/signage-admin${pathname.slice('/monitor-admin'.length)}${search}${hash}`} replace />;
+}
 
 function AppContent() {
   const auth = useAuth();
@@ -83,7 +89,10 @@ function AppContent() {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/design-test" element={<DesignTestPage />} />
-      <Route path="/monitor" element={<MonitorPage />} />
+      <Route path="/signage" element={<SignagePage />} />
+      {/* Old address of installed Pis and kiosk URLs, permanently the same page */}
+      <Route path="/monitor" element={<SignagePage />} />
+      <Route path="/monitor-admin/*" element={<LegacyAdminRedirect />} />
       <Route path="/aufgaben-monitor" element={<AufgabenMonitorPage />} />
 
       {/* Protected Routes: Dashboard */}
@@ -123,18 +132,18 @@ function AppContent() {
                     <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
                     <Route path="/admin/system" element={<PermissionRoute adminOnly><SystemAdminPage /></PermissionRoute>} />
                     <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
-                    <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminLayout /></PermissionRoute>}>
-                      <Route index element={<MonitorOverview />} />
-                      <Route path="screens" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power', 'monitor.devices']}><MonitorScreens /></PermissionRoute>} />
-                      <Route path="screens/:id" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power', 'monitor.devices']}><MonitorScreenDetail /></PermissionRoute>} />
-                      <Route path="views" element={<PermissionRoute permission="monitor.setup"><MonitorViews /></PermissionRoute>} />
-                      <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
-                      <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
-                      <Route path="exams" element={<PermissionRoute permission="monitor.exams"><MonitorExams /></PermissionRoute>} />
-                      <Route path="media" element={<PermissionRoute permission="monitor.media"><MonitorMedia /></PermissionRoute>} />
-                      <Route path="schedules" element={<PermissionRoute permission="monitor.power"><MonitorSchedules /></PermissionRoute>} />
-                      <Route path="settings" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.onair', 'monitor.emergency']}><MonitorSettings /></PermissionRoute>} />
-                      <Route path="*" element={<Navigate to="/monitor-admin" replace />} />
+                    <Route path="/signage-admin" element={<PermissionRoute permission="signage.view"><SignageAdminLayout /></PermissionRoute>}>
+                      <Route index element={<SignageOverview />} />
+                      <Route path="screens" element={<PermissionRoute anyOf={['signage.setup', 'signage.power', 'signage.devices']}><SignageScreens /></PermissionRoute>} />
+                      <Route path="screens/:id" element={<PermissionRoute anyOf={['signage.setup', 'signage.power', 'signage.devices']}><SignageScreenDetail /></PermissionRoute>} />
+                      <Route path="views" element={<PermissionRoute permission="signage.setup"><SignageViews /></PermissionRoute>} />
+                      <Route path="views/new" element={<PermissionRoute permission="signage.setup"><SignageViewEdit /></PermissionRoute>} />
+                      <Route path="views/:id" element={<PermissionRoute permission="signage.setup"><SignageViewEdit /></PermissionRoute>} />
+                      <Route path="exams" element={<PermissionRoute permission="signage.exams"><SignageExams /></PermissionRoute>} />
+                      <Route path="media" element={<PermissionRoute permission="signage.media"><SignageMedia /></PermissionRoute>} />
+                      <Route path="schedules" element={<PermissionRoute permission="signage.power"><SignageSchedules /></PermissionRoute>} />
+                      <Route path="settings" element={<PermissionRoute anyOf={['signage.setup', 'signage.onair', 'signage.emergency']}><SignageSettings /></PermissionRoute>} />
+                      <Route path="*" element={<Navigate to="/signage-admin" replace />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

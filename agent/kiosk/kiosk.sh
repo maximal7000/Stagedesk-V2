@@ -1,17 +1,17 @@
 #!/bin/bash
-# Startet Chromium im Vollbild. Die URL steht in KIOSK_URL (EnvironmentFile /etc/stagedesk-agent/kiosk.env).
-# Vor der Kopplung ist das die lokale Seite des Agents (http://127.0.0.1:8765/).
+# KIOSK_URL comes from the EnvironmentFile /etc/stagedesk-agent/kiosk.env; before pairing it is the
+# agent's local page (http://127.0.0.1:8765/).
 set -u
 
 URL="${KIOSK_URL:-http://127.0.0.1:8765/}"
 
-# Auf das Netz warten (höchstens etwa 60 s), damit Chromium nicht die Fehlerseite lädt.
+# Wait for the network (about 60 s at most) so Chromium does not load its error page.
 for _ in $(seq 1 30); do
   curl -sf --max-time 3 "$URL" -o /dev/null && break
   sleep 2
 done
 
-# Die Meldung "Wiederherstellen?" nach einem Stromausfall verhindern.
+# Prevent the "Restore pages?" prompt after a power cut.
 PREF="$HOME/.config/chromium/Default/Preferences"
 [ -f "$PREF" ] && sed -i 's/"exit_type":"[^"]*"/"exit_type":"Normal"/' "$PREF"
 
