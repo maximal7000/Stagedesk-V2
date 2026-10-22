@@ -54,11 +54,11 @@ export function checkSentence(result, error, settings) {
   if (SOURCE_SENTENCES[result?.source]) return { tone: 'ok', text: SOURCE_SENTENCES[result.source] }
   let reason
   if (!credentialsComplete(settings)) {
-    reason = 'Die Zugangsdaten sind unvollständig. Bitte Server, Schule, Benutzer und Passwort eintragen und speichern.'
+    reason = 'Zugangsdaten unvollständig.'
   } else if (!result?.login) {
-    reason = 'Die Anmeldung ist fehlgeschlagen. Bitte Server, Schule, Benutzer und Passwort prüfen.'
+    reason = 'Anmeldung fehlgeschlagen.'
   } else {
-    reason = 'Der Benutzer darf weder Vertretungen noch Stundenpläne abrufen. Bitte die Rechte in WebUntis prüfen.'
+    reason = 'Benutzer darf weder Vertretungen noch Stundenpläne abrufen.'
   }
   return { tone: 'bad', text: `Keine Verbindung: ${reason}` }
 }
@@ -117,7 +117,7 @@ export const templateChangeCount = (original, draft) => {
 
 export function templateProblems(list) {
   const index = (list || []).findIndex((t) => !text(t.title) || !text(t.text))
-  return index < 0 ? null : `Vorlage ${index + 1}: Titel und Text eintragen.`
+  return index < 0 ? null : `Vorlage ${index + 1}: Titel oder Text fehlt.`
 }
 
 export function deviceProblems(base, draft) {
@@ -127,7 +127,7 @@ export function deviceProblems(base, draft) {
     const raw = String(draft[key] ?? '').trim()
     const n = Number(raw)
     if (raw === '' || !Number.isInteger(n) || n < min || n > max) {
-      return `${label}: Bitte eine ganze Zahl von ${min} bis ${max} eintragen.`
+      return `${label} ungültig (ganze Zahl von ${min} bis ${max}).`
     }
   }
   return null

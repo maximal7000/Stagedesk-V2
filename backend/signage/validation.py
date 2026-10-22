@@ -1,6 +1,6 @@
 """View data validation, shared by save (PUT /config) and preview (POST /views/preview) so a draft
-never fails only when displayed. Errors are HttpError 422 with a German message that names the
-cause and the next step."""
+never fails only when displayed. Errors are HttpError 422 with a short German message that names the
+cause."""
 import re
 from datetime import datetime
 
@@ -23,7 +23,7 @@ CHOICE_FIELDS = {
     'substitutions_source': 'Datenquelle',
     'substitutions_format': 'Ausgabe',
 }
-NEXT_DAY_FROM_MESSAGE = "Uhrzeit ungültig: bitte im Format HH:MM eintragen oder leer lassen"
+NEXT_DAY_FROM_MESSAGE = "Uhrzeit ungültig (HH:MM oder leer)."
 
 
 # Ranges as in the admin editors
@@ -50,7 +50,7 @@ def _is_int(value):
 
 
 def number_message(label, lo, hi):
-    return f"{label}: bitte eine ganze Zahl von {lo} bis {hi} eintragen."
+    return f"{label} ungültig (ganze Zahl von {lo} bis {hi})."
 
 
 def _check_numbers(data):
@@ -59,11 +59,11 @@ def _check_numbers(data):
             raise HttpError(422, number_message(label, lo, hi))
     for key, label in BOOL_FIELDS.items():
         if key in data and not isinstance(data[key], bool):
-            raise HttpError(422, f"{label}: bitte ein- oder ausschalten.")
+            raise HttpError(422, f"{label} ungültig (an oder aus).")
     if 'transit_disruption_hidden' in data:
         hidden = data['transit_disruption_hidden']
         if not isinstance(hidden, list) or not all(isinstance(h, str) for h in hidden):
-            raise HttpError(422, "Ausgeblendete Meldungen sind ungültig. Bitte die Seite neu laden.")
+            raise HttpError(422, "Ausgeblendete Meldungen ungültig.")
     # Left width: clamped into the range as before, but never empty
     if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
         raise HttpError(422, number_message('Breite links', 20, 80))
@@ -71,10 +71,10 @@ def _check_numbers(data):
 
 def _check_stops(stops):
     if not isinstance(stops, list):
-        raise HttpError(422, "Die Haltestellen sind ungültig. Bitte die Seite neu laden.")
+        raise HttpError(422, "Haltestellen ungültig.")
     for stop in stops:
         if not isinstance(stop, dict):
-            raise HttpError(422, "Die Haltestellen sind ungültig. Bitte die Seite neu laden.")
+            raise HttpError(422, "Haltestellen ungültig.")
         name = stop.get('name') or stop.get('id') or 'ohne Namen'
         if _is_int(stop.get('max_departures')) and stop['max_departures'] == 0:
             stop['max_departures'] = DEFAULT_MAX_DEPARTURES  # legacy data: 0 meant "no limit"
@@ -101,7 +101,7 @@ def _check_custom_format(data):
         return
     value = (data['substitutions_custom_format'] or '').strip()
     if len(value) > 100:
-        raise HttpError(422, "Eigenes Format: bitte einen Formatnamen mit höchstens 100 Zeichen eintragen.")
+        raise HttpError(422, "Eigenes Format: höchstens 100 Zeichen.")
     data['substitutions_custom_format'] = value
 
 
@@ -118,9 +118,9 @@ def _check_choices(data):
             continue
         valid = {value for value, _ in DisplayView._meta.get_field(key).choices}
         if data[key] in (None, ''):
-            raise HttpError(422, f"Für {label} fehlt die Auswahl. Bitte einen der angebotenen Werte wählen.")
+            raise HttpError(422, f"{label} fehlt.")
         if data[key] not in valid:
-            raise HttpError(422, f"Ungültiger Wert für {label}: „{data[key]}“. Bitte einen der angebotenen Werte wählen.")
+            raise HttpError(422, f"{label}: ungültiger Wert „{data[key]}“.")
 
 
 def parse_countdown_date(value):
@@ -137,7 +137,7 @@ def parse_countdown_date(value):
         except ValueError:
             parsed = None
     if parsed is None:
-        raise HttpError(422, "Das Countdown-Datum ist ungültig. Bitte Datum und Uhrzeit neu wählen.")
+        raise HttpError(422, "Countdown-Datum ungültig.")
     if timezone.is_naive(parsed):
         parsed = timezone.make_aware(parsed, timezone.get_current_timezone())
     return parsed
@@ -173,7 +173,7 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
             if isinstance(e, dict):
                 start, end = e.get('from'), e.get('until')
                 if start and end and str(start) >= str(end):
-                    raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen")
+                    raise HttpError(422, f"Zeitfenster ungültig: {start} muss vor {end} liegen.")
     # An empty list is only an error for rotation views; other views carry it along.
     kind = data.get('kind', current_kind)
     if kind == 'rotation' and kind != current_kind and own_id is not None:
@@ -200,33 +200,31 @@ _HHMM = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 
 def validate_update_window(value):
     if not isinstance(value, dict) or set(value) != {'weekday', 'from', 'until'}:
-        raise HttpError(422, "Das Update-Fenster ist unvollständig. Bitte Wochentag, Beginn und Ende angeben.")
+        raise HttpError(422, "Update-Fenster unvollständig.")
     weekday = value['weekday']
     if not _is_int(weekday) or not 0 <= weekday <= 6:
-        raise HttpError(422, "Update-Fenster: Wochentag ungültig. Bitte einen Tag von Montag bis Sonntag wählen.")
+        raise HttpError(422, "Update-Fenster: Wochentag ungültig.")
     for key, label in (('from', 'Beginn'), ('until', 'Ende')):
         if not isinstance(value[key], str) or not _HHMM.match(value[key]):
-            raise HttpError(422, f"Update-Fenster: {label} ungültig. Bitte eine Uhrzeit im Format HH:MM eintragen.")
+            raise HttpError(422, f"Update-Fenster: {label} ungültig (HH:MM).")
     if value['from'] >= value['until']:
-        raise HttpError(422, f"Update-Fenster: {value['from']} muss vor {value['until']} liegen. "
-                             "Ein Fenster über Mitternacht ist nicht möglich.")
+        raise HttpError(422, f"Update-Fenster: {value['from']} muss vor {value['until']} liegen.")
 
 
 def validate_power_config(method, config):
     if not isinstance(config, dict):
-        raise HttpError(422, "Die Steuerung des Bildschirms ist ungültig. Bitte die Seite neu laden.")
+        raise HttpError(422, "Steuerung des Bildschirms ungültig.")
     known = POWER_CONFIG_KEYS[method]
     unknown = sorted(set(config) - known)
     if unknown:
-        raise HttpError(422, f"Für {POWER_METHOD_LABELS[method]} passt „{unknown[0]}“ nicht. "
-                             "Bitte die Felder der gewählten Methode ausfüllen.")
+        raise HttpError(422, f"{POWER_METHOD_LABELS[method]}: unbekanntes Feld „{unknown[0]}“.")
     for key, value in config.items():
         if key in POWER_CONFIG_INTS:
             lo, hi = POWER_CONFIG_INTS[key]
             if not (_is_int(value) and lo <= value <= hi):
-                raise HttpError(422, f"{key}: bitte eine ganze Zahl von {lo} bis {hi} eintragen.")
+                raise HttpError(422, number_message(key, lo, hi))
         elif not isinstance(value, str) or len(value) > 64:
-            raise HttpError(422, f"{key}: bitte einen Text mit höchstens 64 Zeichen eintragen.")
+            raise HttpError(422, f"{key}: höchstens 64 Zeichen.")
 
 
 def validate_screen_device_data(data: dict, current_method: str, current_config: dict) -> None:
@@ -240,7 +238,7 @@ def validate_screen_device_data(data: dict, current_method: str, current_config:
         validate_power_config(method, current_config or {})
 
 
-SCHEDULE_INVALID_MESSAGE = "Der Zeitplan ist ungültig. Bitte die Seite neu laden."
+SCHEDULE_INVALID_MESSAGE = "Zeitplan ungültig."
 
 
 def validate_screen_schedule(rows) -> list:
@@ -252,19 +250,18 @@ def validate_screen_schedule(rows) -> list:
             raise HttpError(422, SCHEDULE_INVALID_MESSAGE)
         days = row.get('days')
         if not isinstance(days, list) or not days:
-            raise HttpError(422, f"Zeile {number}: Bitte mindestens einen Wochentag wählen.")
+            raise HttpError(422, f"Zeile {number}: kein Wochentag gewählt.")
         if not all(_is_int(d) and 0 <= d <= 6 for d in days):
-            raise HttpError(422, f"Zeile {number}: Wochentag ungültig. Bitte Tage von Montag bis Sonntag wählen.")
+            raise HttpError(422, f"Zeile {number}: Wochentag ungültig.")
         for key, label in (('from', 'Beginn'), ('until', 'Ende')):
             if not isinstance(row.get(key), str) or not _HHMM.match(row[key]):
-                raise HttpError(422, f"Zeile {number}: {label} ungültig. "
-                                     "Bitte eine Uhrzeit im Format HH:MM eintragen.")
+                raise HttpError(422, f"Zeile {number}: {label} ungültig (HH:MM).")
         if row['from'] == row['until']:
             raise HttpError(422, f"Zeile {number}: Beginn und Ende sind gleich.")
         view_id = row.get('view_id')
         if view_id is not None and not (
                 _is_int(view_id) and DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).exists()):
-            raise HttpError(422, f"Zeile {number}: Die gewählte Ansicht gibt es nicht mehr.")
+            raise HttpError(422, f"Zeile {number}: Ansicht nicht mehr vorhanden.")
         clean.append({'days': sorted(set(days)), 'from': row['from'], 'until': row['until'], 'view_id': view_id})
     return clean
 
@@ -284,13 +281,13 @@ def validate_settings_device_data(data: dict) -> None:
             raise HttpError(422, number_message(label, lo, hi))
 
 
-LIGHT_ORDER_MESSAGE = "Die helle Zeit muss vor ihrem Ende beginnen."
+LIGHT_ORDER_MESSAGE = "„Hell ab“ muss vor „Hell bis“ liegen."
 
 
 def validate_settings_light_times(data: dict, current_from: str, current_until: str) -> None:
     """Uses the stored value if only one of from/until is sent."""
     for key, label in (('light_from', 'Hell ab'), ('light_until', 'Hell bis')):
         if key in data and not (isinstance(data[key], str) and _HHMM.match(data[key])):
-            raise HttpError(422, f"{label}: Uhrzeit ungültig. Bitte im Format HH:MM eintragen.")
+            raise HttpError(422, f"{label}: Uhrzeit ungültig (HH:MM).")
     if data.get('light_from', current_from) >= data.get('light_until', current_until):
         raise HttpError(422, LIGHT_ORDER_MESSAGE)

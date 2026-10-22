@@ -159,7 +159,7 @@ function CurrentMessages({ viewId, hidden, onChange }) {
     return () => { alive = false }
   }, [viewId])
   if (viewId == null || state.viewId !== viewId) return null
-  if (state.error) return <p className="text-sm text-bad">Meldungen konnten nicht geladen werden. {errorText(state.error, 'Bitte später erneut versuchen.')}</p>
+  if (state.error) return <p className="text-sm text-bad">Meldungen konnten nicht geladen werden. {errorText(state.error, '')}</p>
   if (!state.list.length) return <p className="text-sm text-fg-subtle">Aktuell keine Meldungen.</p>
   const toggle = (id) => onChange(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])
   return (

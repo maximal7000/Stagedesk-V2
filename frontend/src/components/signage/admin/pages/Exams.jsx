@@ -383,7 +383,7 @@ export default function Exams() {
 
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-          Klausuren und Termine konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+          Klausuren und Termine konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : groups ? (
         <div className="space-y-4">

@@ -143,7 +143,7 @@ describe('DeviceBox', () => {
     await mount()
     await click(button('Browser neu starten'))
     await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
-    expect(toast.error).toHaveBeenCalledWith('Browser neu starten ist fehlgeschlagen: Dienst nicht gefunden')
+    expect(toast.error).toHaveBeenCalledWith('Browser neu starten fehlgeschlagen: Dienst nicht gefunden')
   })
 
   it('Screenshot: nach ok lädt die Seite die Geräteliste neu', async () => {
@@ -201,7 +201,7 @@ describe('DeviceBox', () => {
     await mount()
     await click(button('Neu laden'))
     await act(async () => { await vi.advanceTimersByTimeAsync(120000) })
-    expect(toast.error).toHaveBeenCalledWith('Neu laden: noch keine Antwort des Geräts. Der Befehl läuft weiter, das Ergebnis steht im Protokoll.')
+    expect(toast.error).toHaveBeenCalledWith('Neu laden: noch keine Antwort vom Gerät. Ergebnis folgt im Protokoll.')
     expect(button('Neu laden').disabled).toBe(false)
     const calls = api.getDeviceCommand.mock.calls.length
     await act(async () => { await vi.advanceTimersByTimeAsync(10000) })

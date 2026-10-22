@@ -19,11 +19,11 @@ describe('checkSentence', () => {
 
   it('keine Verbindung mit Grund', () => {
     expect(checkSentence({ source: 'unavailable', login: false }, null, { ...saved, webuntis_password_set: false }).text)
-      .toBe('Keine Verbindung: Die Zugangsdaten sind unvollständig. Bitte Server, Schule, Benutzer und Passwort eintragen und speichern.')
+      .toBe('Keine Verbindung: Zugangsdaten unvollständig.')
     expect(checkSentence({ source: 'unavailable', login: false }, null, saved).text)
-      .toBe('Keine Verbindung: Die Anmeldung ist fehlgeschlagen. Bitte Server, Schule, Benutzer und Passwort prüfen.')
+      .toBe('Keine Verbindung: Anmeldung fehlgeschlagen.')
     expect(checkSentence({ source: 'unavailable', login: true }, null, saved).text)
-      .toBe('Keine Verbindung: Der Benutzer darf weder Vertretungen noch Stundenpläne abrufen. Bitte die Rechte in WebUntis prüfen.')
+      .toBe('Keine Verbindung: Benutzer darf weder Vertretungen noch Stundenpläne abrufen.')
     expect(checkSentence({ source: 'unavailable', login: true }, null, saved).tone).toBe('bad')
   })
 
@@ -32,7 +32,7 @@ describe('checkSentence', () => {
     expect(checkSentence(null, forbidden, saved).text).toBe('Keine Verbindung: Keine Berechtigung.')
     const network = { message: 'Network Error' }
     expect(checkSentence(null, network, saved).text)
-      .toBe('Keine Verbindung: Keine Verbindung zum Server. Bitte die Verbindung prüfen und erneut versuchen.')
+      .toBe('Keine Verbindung: Server nicht erreichbar.')
   })
 
   it('gespeicherte Quelle', () => {
@@ -96,7 +96,7 @@ describe('Notfall-Vorlagen', () => {
 
   it('Titel und Text sind Pflicht', () => {
     expect(templateProblems([{ title: 'A', text: 'B' }])).toBeNull()
-    expect(templateProblems([{ title: 'A', text: 'B' }, { title: ' ', text: 'B' }])).toBe('Vorlage 2: Titel und Text eintragen.')
+    expect(templateProblems([{ title: 'A', text: 'B' }, { title: ' ', text: 'B' }])).toBe('Vorlage 2: Titel oder Text fehlt.')
   })
 })
 
@@ -115,7 +115,7 @@ describe('Geräte-Einstellungen', () => {
   it('Bereichsprüfung nennt Feld und Bereich auf Deutsch', () => {
     expect(deviceProblems(base, base)).toBeNull()
     expect(deviceProblems(base, { ...base, device_offline_minutes: '1' }))
-      .toBe('Offline melden nach: Bitte eine ganze Zahl von 2 bis 240 eintragen.')
+      .toBe('Offline melden nach ungültig (ganze Zahl von 2 bis 240).')
     expect(deviceProblems(base, { ...base, warn_temperature_c: '' })).toContain('Warnung ab Temperatur')
     expect(deviceProblems(base, { ...base, warn_wifi_dbm: '-30' })).toContain('-95 bis -40')
     expect(deviceProblems(base, { ...base, warn_disk_percent: '90.5' })).toContain('50 bis 99')

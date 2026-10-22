@@ -43,14 +43,14 @@ describe('commandsFor', () => {
 })
 
 describe('commandResult', () => {
-  it('nennt Ergebnis, Ursache und nächsten Schritt', () => {
+  it('nennt Ergebnis und Ursache', () => {
     expect(commandResult('reload', { status: 'ok', result: '' })).toEqual({ ok: true, text: 'Neu laden ist ausgeführt.' })
     expect(commandResult('reboot', { status: 'failed', result: 'systemctl: Zugriff verweigert' }).text)
-      .toBe('Pi neu starten ist fehlgeschlagen: systemctl: Zugriff verweigert')
+      .toBe('Pi neu starten fehlgeschlagen: systemctl: Zugriff verweigert')
     expect(commandResult('screenshot', { status: 'expired', result: '' }).text)
-      .toBe('Screenshot aufnehmen wurde nicht ausgeführt, weil das Gerät 5 Minuten nicht verbunden war. Bitte Netzwerk und Strom des Pi prüfen und den Befehl erneut senden.')
+      .toBe('Screenshot aufnehmen nicht ausgeführt: Gerät 5 Minuten nicht verbunden.')
     expect(commandResult('update_now', { status: 'expired', result: 'Keine Rückmeldung vom Gerät.' }).text)
-      .toBe('Jetzt aktualisieren: Keine Rückmeldung vom Gerät. Ob der Befehl lief, steht im Protokoll. Bitte Netzwerk und Strom des Pi prüfen und den Befehl bei Bedarf erneut senden.')
+      .toBe('Jetzt aktualisieren: Keine Rückmeldung vom Gerät.')
   })
 })
 

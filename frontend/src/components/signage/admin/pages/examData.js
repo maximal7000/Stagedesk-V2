@@ -145,16 +145,16 @@ export function examPayload(draft) {
 }
 
 function rangeProblem(from, until, required) {
-  if (!from || !until) return required ? 'Beginn und Ende angeben.' : null
-  if (fromLocalInput(until) <= fromLocalInput(from)) return 'Das Ende muss nach dem Beginn liegen. Bitte die Zeiten prüfen.'
+  if (!from || !until) return required ? 'Beginn oder Ende fehlt.' : null
+  if (fromLocalInput(until) <= fromLocalInput(from)) return 'Ende muss nach dem Beginn liegen.'
   return null
 }
 
 export function examProblems(draft) {
-  if (!text(draft.title)) return 'Der Titel fehlt. Bitte einen Titel eintragen.'
+  if (!text(draft.title)) return 'Titel fehlt.'
   const range = rangeProblem(draft.active_from, draft.active_until, true)
   if (range) return range
-  if (!draft.screen_ids?.length) return 'Mindestens einen Bildschirm wählen.'
+  if (!draft.screen_ids?.length) return 'Kein Bildschirm gewählt.'
   return null
 }
 
@@ -202,14 +202,14 @@ export function eventPayload(draft) {
 }
 
 export function eventProblems(draft) {
-  if (!text(draft.name)) return 'Der Name fehlt. Bitte einen Namen eintragen.'
+  if (!text(draft.name)) return 'Name fehlt.'
   // Without a time range the event is only activated by hand; a single time would have no effect
-  if (!draft.active_from !== !draft.active_until) return 'Beginn und Ende angeben oder beide leer lassen.'
+  if (!draft.active_from !== !draft.active_until) return 'Nur Beginn oder nur Ende angegeben.'
   const range = rangeProblem(draft.active_from, draft.active_until, false)
   if (range) return range
   const rows = draft.assignments || []
-  if (!rows.length) return 'Zuordnung fehlt: mindestens einen Bildschirm mit Ansicht wählen.'
-  if (!rows.every(completeAssignment)) return 'Zuordnung unvollständig: in jeder Zeile Bildschirm und Ansicht wählen.'
+  if (!rows.length) return 'Zuordnung fehlt.'
+  if (!rows.every(completeAssignment)) return 'Zuordnung unvollständig.'
   return null
 }
 
@@ -236,6 +236,6 @@ export function announcementPayload(draft) {
 }
 
 export function announcementProblems(draft) {
-  if (!text(draft.title)) return 'Der Titel fehlt. Bitte einen Titel eintragen.'
+  if (!text(draft.title)) return 'Titel fehlt.'
   return rangeProblem(draft.active_from, draft.active_until, false)
 }

@@ -24,8 +24,8 @@ say() { printf '%s\n' "$*"; }
 die() { printf 'Fehler: %s\n' "$*" >&2; exit 1; }
 
 check_system() {
-  [ "$(id -u)" -eq 0 ] || die "Das Skript braucht root. Mit sudo bash ausführen."
-  [ -r /etc/os-release ] || die "/etc/os-release fehlt. Das Skript läuft nur auf Raspberry Pi OS Bookworm."
+  [ "$(id -u)" -eq 0 ] || die "Root-Rechte nötig (sudo)."
+  [ -r /etc/os-release ] || die "/etc/os-release fehlt. Nur für Raspberry Pi OS Bookworm."
   local codename
   codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME:-}")"
   [ "$codename" = "bookworm" ] || die "Raspberry Pi OS Bookworm erwartet, gefunden: ${codename:-unbekannt}. Mit Bookworm Lite neu aufsetzen."
@@ -50,9 +50,9 @@ install_package() {
   say "2/6 Agent-Paket laden und prüfen"
   install -d -m 755 -o root -g root "$STATE_DIR"
   local info version sha256 actual current=""
-  info="$(curl -fsS --max-time 30 "$SERVER/api/signage/agent/version")" || die "Der Server $SERVER ist nicht erreichbar. Netzwerk und Adresse prüfen."
-  version="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' 2>/dev/null)" || die "Die Antwort des Servers von /agent/version ist ungültig. Die Server-Adresse prüfen."
-  sha256="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha256"])' 2>/dev/null)" || die "Die Antwort des Servers von /agent/version ist ungültig. Die Server-Adresse prüfen."
+  info="$(curl -fsS --max-time 30 "$SERVER/api/signage/agent/version")" || die "Server $SERVER nicht erreichbar."
+  version="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' 2>/dev/null)" || die "Ungültige Antwort von $SERVER/api/signage/agent/version."
+  sha256="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha256"])' 2>/dev/null)" || die "Ungültige Antwort von $SERVER/api/signage/agent/version."
   [[ "$version" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || die "Der Server meldet keine gültige Agent-Version."
   [[ "$sha256" =~ ^[0-9a-f]{64}$ ]] || die "Der Server meldet keine gültige Prüfsumme."
   [ -r "$OPT_DIR/VERSION" ] && current="$(tr -d '[:space:]' < "$OPT_DIR/VERSION")"
@@ -61,7 +61,7 @@ install_package() {
   else
     curl -fsS --max-time 300 -o "$work/agent.tar.gz" "$SERVER/api/signage/agent/stagedesk-agent-$version.tar.gz" || die "Das Agent-Paket $version ließ sich nicht laden."
     actual="$(sha256sum "$work/agent.tar.gz" | cut -d' ' -f1)"
-    [ "$actual" = "$sha256" ] || die "Die Prüfsumme des Pakets stimmt nicht. Installation abgebrochen, bitte später erneut versuchen."
+    [ "$actual" = "$sha256" ] || die "Prüfsumme des Pakets stimmt nicht. Installation abgebrochen."
     mkdir "$work/new"
     tar -xzf "$work/agent.tar.gz" -C "$work/new" --no-same-owner
     [ -d "$work/new/stagedesk_agent" ] && [ -f "$work/new/VERSION" ] && [ -f "$work/new/kiosk/kiosk.sh" ] || die "Das Paket ist unvollständig."

@@ -72,7 +72,7 @@ function DetailPanel({ file, detail, error, canOpenViews, onClose, onDelete }) {
         <section>
           <h3 className="text-sm font-medium text-fg mb-2">Verwendet in</h3>
           {error ? (
-            <p className="text-sm text-bad">Details konnten nicht geladen werden. {errorText(error, 'Bitte erneut öffnen.')}</p>
+            <p className="text-sm text-bad">Details konnten nicht geladen werden. {errorText(error, '')}</p>
           ) : !detail ? null : detail.used_in.length ? (
             <ul className="space-y-1">
               {detail.used_in.map((u) => (
@@ -231,7 +231,7 @@ export default function Media() {
       <div className="mt-6">
         {error && !files ? (
           <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-            Medien konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+            Medien konnten nicht geladen werden. {errorText(error, '')}
           </div>
         ) : files && files.length === 0 ? (
           <div className="bg-surface rounded-lg"><EmptyState icon={FileText} title="Noch keine Dateien" /></div>

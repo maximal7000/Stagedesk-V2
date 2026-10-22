@@ -203,7 +203,7 @@ class PairingFlowTest(PairingTestBase):
         r = self.pair('000000', screen_id=self.screen.id)
         self.assertEqual(r.status_code, 400)
         self.assertEqual(r.json()['detail'],
-                         'Der Code ist ungültig oder abgelaufen. Den Code auf dem Bildschirm prüfen.')
+                         'Code ungültig oder abgelaufen.')
 
     def test_expired_code_400(self):
         body = self.start()

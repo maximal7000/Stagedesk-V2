@@ -77,7 +77,7 @@ class Updater:
         for args, tool in _STEPS:
             result = self._apt(args, deadline)
             if result is None or result.code == 124:
-                error = "Zeitlimit von 60 Minuten überschritten, Paketquellen und Netz prüfen"
+                error = "Zeitlimit von 60 Minuten überschritten"
             elif result.code != 0:
                 detail = (result.err or result.out).strip()[-300:] or f"Code {result.code}"
                 error = f"{tool} fehlgeschlagen: {detail}"

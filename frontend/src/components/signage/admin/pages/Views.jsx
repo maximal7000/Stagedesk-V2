@@ -68,7 +68,7 @@ export default function Views() {
 
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-          Ansichten konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+          Ansichten konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : views && views.length === 0 ? (
         <div className="bg-surface rounded-lg">

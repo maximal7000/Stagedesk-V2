@@ -91,7 +91,7 @@ describe('Klausur-Formular', () => {
     const ok = { title: 'A', active_from: '2026-10-20T08:00', active_until: '2026-10-20T09:00', screen_ids: [1] }
     expect(examProblems(ok)).toBeNull()
     expect(examProblems({ ...ok, title: ' ' })).toMatch(/Titel fehlt/)
-    expect(examProblems({ ...ok, active_until: '' })).toMatch(/Beginn und Ende/)
+    expect(examProblems({ ...ok, active_until: '' })).toMatch(/Beginn oder Ende fehlt/)
     expect(examProblems({ ...ok, active_until: '2026-10-20T08:00' })).toMatch(/nach dem Beginn/)
     expect(examProblems({ ...ok, screen_ids: [] })).toMatch(/Bildschirm/)
   })
@@ -159,7 +159,7 @@ describe('Termine ohne Zeitraum (nur manuell)', () => {
   it('Formular: beide Zeiten leer ist erlaubt, nur eine nicht', () => {
     const ok = { name: 'K', active_from: '', active_until: '', assignments: [{ screen_id: 1, view_id: 7 }] }
     expect(eventProblems(ok)).toBeNull()
-    expect(eventProblems({ ...ok, active_from: '2026-10-22T18:00' })).toBe('Beginn und Ende angeben oder beide leer lassen.')
+    expect(eventProblems({ ...ok, active_from: '2026-10-22T18:00' })).toBe('Nur Beginn oder nur Ende angegeben.')
     expect(eventPayload(ok)).toMatchObject({ active_from: null, active_until: null })
   })
 })

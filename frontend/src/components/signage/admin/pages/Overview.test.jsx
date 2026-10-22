@@ -164,6 +164,6 @@ describe('Overview', () => {
     expect(container.querySelector('[data-screen="s"]')).not.toBeNull()
     expect(container.querySelector('[data-device-state="unknown"]').textContent).toBe('Unbekannt')
     expect(container.textContent).not.toContain('Kein Gerät gekoppelt')
-    expect(container.querySelector('[data-devices-error]').textContent).toContain('Der Status stammt aus der letzten Meldung des Bildschirms.')
+    expect(container.querySelector('[data-devices-error]').textContent).toContain('Status aus der letzten Meldung des Bildschirms.')
   })
 })

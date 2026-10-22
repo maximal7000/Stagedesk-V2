@@ -22,16 +22,16 @@ function viewIdOf(value) {
   return Number.isInteger(n) ? n : null
 }
 
-const SAME_TIMES = 'Von und bis dürfen nicht gleich sein.'
+const SAME_TIMES = 'Von und bis sind gleich.'
 
 // views (optional, list from /views): the backend rejects a view missing there
 export function scheduleProblems(entries, views = null) {
   const known = views ? new Set(views.map((v) => v.id)) : null
   return normalizeSchedule(entries).map((e) => {
-    if (!e.days.length) return 'Mindestens einen Tag wählen.'
-    if (!e.from || !e.until) return 'Von und bis angeben.'
+    if (!e.days.length) return 'Kein Tag gewählt.'
+    if (!e.from || !e.until) return 'Von oder bis fehlt.'
     if (e.from === e.until) return SAME_TIMES
-    if (known && e.view_id !== null && !known.has(e.view_id)) return 'Die gewählte Ansicht gibt es nicht mehr. Bitte eine andere wählen.'
+    if (known && e.view_id !== null && !known.has(e.view_id)) return 'Ansicht nicht mehr vorhanden.'
     return null
   })
 }
@@ -70,9 +70,9 @@ export function normalizeExceptions(list) {
 
 export function exceptionProblems(list) {
   return normalizeExceptions(list).map((e) => {
-    if (!e.from_date) return 'Datum angeben.'
-    if (e.until_date < e.from_date) return 'Das Enddatum liegt vor dem Startdatum.'
-    if (!e.from !== !e.until) return 'Von und bis angeben oder beide leer lassen.'
+    if (!e.from_date) return 'Datum fehlt.'
+    if (e.until_date < e.from_date) return 'Enddatum liegt vor dem Startdatum.'
+    if (!e.from !== !e.until) return 'Nur von oder nur bis angegeben.'
     if (e.from && e.from === e.until) return SAME_TIMES
     return null
   })

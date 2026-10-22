@@ -326,23 +326,23 @@ class DisplayView(models.Model):
 
 def validate_rotation_items(items, own_id=None):
     if not isinstance(items, list) or not items:
-        raise ValueError('Die Rotation braucht mindestens eine Ansicht.')
+        raise ValueError('Wechsel braucht mindestens eine Ansicht.')
     for item in items:
         if not isinstance(item, dict):
-            raise ValueError('Ungültiger Rotationseintrag. Bitte Ansicht und Dauer neu wählen.')
+            raise ValueError('Ungültiger Eintrag im Wechsel.')
         view_id = item.get('view_id')
         seconds = item.get('seconds')
         if isinstance(seconds, bool) or not isinstance(seconds, int) or not 5 <= seconds <= 600:
-            raise ValueError('Die Dauer pro Ansicht muss zwischen 5 und 600 Sekunden liegen.')
+            raise ValueError('Dauer pro Ansicht muss zwischen 5 und 600 Sekunden liegen.')
         if isinstance(view_id, bool) or not isinstance(view_id, int):
-            raise ValueError('Ungültiger Rotationseintrag. Bitte eine Ansicht wählen.')
+            raise ValueError('Eintrag im Wechsel ohne Ansicht.')
         if own_id is not None and view_id == own_id:
-            raise ValueError('Eine Rotation kann sich nicht selbst enthalten.')
+            raise ValueError('Wechsel kann sich nicht selbst enthalten.')
         target = DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).first()
         if target is None:
-            raise ValueError(f'Die Ansicht {view_id} existiert nicht. Bitte eine andere wählen.')
+            raise ValueError(f'Ansicht {view_id} existiert nicht.')
         if target.kind == 'rotation':
-            raise ValueError('Eine Rotation kann keine andere Rotation enthalten.')
+            raise ValueError('Wechsel kann keinen anderen Wechsel enthalten.')
     return items
 
 

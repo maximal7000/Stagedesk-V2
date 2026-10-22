@@ -34,9 +34,9 @@ describe('scheduleProblems', () => {
       { days: [2], from: '09:00', until: '09:00' },
     ])).toEqual([
       null,
-      'Mindestens einen Tag wählen.',
-      'Von und bis angeben.',
-      'Von und bis dürfen nicht gleich sein.',
+      'Kein Tag gewählt.',
+      'Von oder bis fehlt.',
+      'Von und bis sind gleich.',
     ])
   })
 
@@ -47,7 +47,7 @@ describe('scheduleProblems', () => {
   it('meldet eine Ansicht, die es nicht mehr gibt', () => {
     const views = [{ id: 1, name: 'Abfahrten' }]
     expect(scheduleProblems([row([0], '07:00', '13:00', 1), row([0], '13:00', '15:00', 9), row([0], '15:00', '16:00')], views))
-      .toEqual([null, 'Die gewählte Ansicht gibt es nicht mehr. Bitte eine andere wählen.', null])
+      .toEqual([null, 'Ansicht nicht mehr vorhanden.', null])
   })
 })
 
@@ -86,10 +86,10 @@ describe('Ausnahmen', () => {
       { from_date: '2026-11-05', until_date: '2026-11-05', from: '08:00', until: '08:00' },
     ])).toEqual([
       null,
-      'Datum angeben.',
-      'Das Enddatum liegt vor dem Startdatum.',
-      'Von und bis angeben oder beide leer lassen.',
-      'Von und bis dürfen nicht gleich sein.',
+      'Datum fehlt.',
+      'Enddatum liegt vor dem Startdatum.',
+      'Nur von oder nur bis angegeben.',
+      'Von und bis sind gleich.',
     ])
   })
 })

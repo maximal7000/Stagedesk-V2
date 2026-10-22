@@ -1,8 +1,8 @@
 // The English axios texts ("Network Error" …) never appear.
 const BY_STATUS = {
-  401: 'Die Anmeldung ist abgelaufen. Bitte die Seite neu laden und erneut anmelden.',
-  403: 'Dafür fehlt die Berechtigung. Bitte eine Person mit Admin-Rechten fragen.',
-  404: 'Der Eintrag wurde nicht gefunden. Bitte die Seite neu laden.',
+  401: 'Anmeldung abgelaufen.',
+  403: 'Keine Berechtigung.',
+  404: 'Eintrag nicht gefunden.',
 }
 
 // English default texts of Django Ninja/Django (HTTP status names); never shown
@@ -13,7 +13,7 @@ const FRAMEWORK_DEFAULTS = new Set([
   'Not Implemented', 'Cannot parse request body',
 ])
 
-export function errorText(error, fallback = 'Die Aktion ist fehlgeschlagen. Bitte erneut versuchen.') {
+export function errorText(error, fallback = 'Aktion fehlgeschlagen.') {
   const response = error?.response
   const data = response?.data
   if (data && typeof data === 'object') {
@@ -21,9 +21,9 @@ export function errorText(error, fallback = 'Die Aktion ist fehlgeschlagen. Bitt
     if (text && !FRAMEWORK_DEFAULTS.has(text.trim())) return text
   }
   if (response?.status && BY_STATUS[response.status]) return BY_STATUS[response.status]
-  if (response?.status >= 500) return 'Der Server hat einen Fehler gemeldet. Bitte später erneut versuchen.'
+  if (response?.status >= 500) return 'Serverfehler.'
   if (error && !response && (error.message === 'Network Error' || error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED')) {
-    return 'Keine Verbindung zum Server. Bitte die Verbindung prüfen und erneut versuchen.'
+    return 'Server nicht erreichbar.'
   }
   return fallback
 }

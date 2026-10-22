@@ -50,7 +50,7 @@ export const NUMBER_RULES = {
 export const WALK_MINUTES_LIMIT = 60
 export const MAX_DEPARTURES_LIMIT = 50
 
-const numberMessage = (label, min, max) => `${label}: bitte eine ganze Zahl von ${min} bis ${max} eintragen.`
+const numberMessage = (label, min, max) => `${label} ungültig (ganze Zahl von ${min} bis ${max}).`
 const inRange = (value, min, max) => value !== '' && value != null && Number.isInteger(Number(value))
   && Number(value) >= min && Number(value) <= max
 
@@ -150,15 +150,15 @@ export function previewPayload(id, base, draft) {
 
 export function rotationProblems(items) {
   const problems = []
-  if (!items?.length) problems.push('Der Wechsel braucht mindestens eine Ansicht. Bitte eine Ansicht hinzufügen.')
+  if (!items?.length) problems.push('Wechsel braucht mindestens eine Ansicht.')
   ;(items ?? []).forEach((item, i) => {
     if (!item?.view_id) {
-      problems.push(`In Zeile ${i + 1} des Wechsels fehlt die Ansicht. Bitte eine wählen oder die Zeile entfernen.`)
+      problems.push(`Wechsel, Zeile ${i + 1}: Ansicht fehlt.`)
       return
     }
     const seconds = Number(item.seconds)
     if (!Number.isInteger(seconds) || seconds < MIN_ROTATION_SECONDS || seconds > MAX_ROTATION_SECONDS) {
-      problems.push(`In Zeile ${i + 1} des Wechsels muss die Dauer zwischen ${MIN_ROTATION_SECONDS} und ${MAX_ROTATION_SECONDS} Sekunden liegen.`)
+      problems.push(`Wechsel, Zeile ${i + 1}: Dauer muss zwischen ${MIN_ROTATION_SECONDS} und ${MAX_ROTATION_SECONDS} Sekunden liegen.`)
     }
   })
   return problems
@@ -167,7 +167,7 @@ export function rotationProblems(items) {
 // keys: changed fields; only their numbers are checked (old unchanged values block nothing)
 export function viewProblems(draft, keys = []) {
   const problems = []
-  if (!String(draft.name ?? '').trim()) problems.push('Der Name fehlt. Bitte einen Namen eintragen.')
+  if (!String(draft.name ?? '').trim()) problems.push('Name fehlt.')
   if (draft.kind === 'rotation') problems.push(...rotationProblems(draft.rotation_items))
   for (const [key, { label, min, max }] of Object.entries(NUMBER_RULES)) {
     if (keys.includes(key) && !inRange(draft[key], min, max)) problems.push(numberMessage(label, min, max))

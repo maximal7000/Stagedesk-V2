@@ -106,7 +106,7 @@ def render_file(media_file):
         if isinstance(exc, ValueError):
             message = str(exc)
         else:
-            message = 'Datei konnte nicht gelesen werden. Bitte eine gültige Datei hochladen.'
+            message = 'Datei nicht lesbar.'
         # Old pages stay; page_count belongs to them and is left alone.
         MediaFile.objects.filter(pk=media_file.pk).update(status='failed', error=message)
         push.notify_changed_on_commit()

@@ -195,12 +195,12 @@ class ValidateScreenScheduleTest(TestCase):
     def test_validation_messages(self):
         ok = r([0], '07:00', '18:00', None)
         self.assertEqual(self.message([ok, r([], '07:00', '08:00')]),
-                         'Zeile 2: Bitte mindestens einen Wochentag wählen.')
+                         'Zeile 2: kein Wochentag gewählt.')
         self.assertEqual(self.message([ok, r([0], '07:00', '07:00')]), 'Zeile 2: Beginn und Ende sind gleich.')
         self.assertEqual(self.message([ok, r([0], '07:00', '08:00', self.gone.id)]),
-                         'Zeile 2: Die gewählte Ansicht gibt es nicht mehr.')
+                         'Zeile 2: Ansicht nicht mehr vorhanden.')
         self.assertEqual(self.message([ok, r([0], '07:00', '08:00', 999)]),
-                         'Zeile 2: Die gewählte Ansicht gibt es nicht mehr.')
+                         'Zeile 2: Ansicht nicht mehr vorhanden.')
         self.assertIn('Zeile 1', self.message([r([7], '07:00', '08:00')]))
         self.assertIn('Zeile 1', self.message([r([0], '7:00', '08:00')]))
         self.assertIn('Zeile 1', self.message([r([0], '07:00', '24:00')]))
@@ -256,5 +256,5 @@ class ScheduleApiTest(TestCase):
         self.grant('signage.view', 'signage.power')
         res = self.put({'schedule': [r([], '07:00', '18:00')]})
         self.assertEqual(res.status_code, 422)
-        self.assertEqual(res.json()['detail'], 'Zeile 1: Bitte mindestens einen Wochentag wählen.')
+        self.assertEqual(res.json()['detail'], 'Zeile 1: kein Wochentag gewählt.')
         self.push.assert_not_called()

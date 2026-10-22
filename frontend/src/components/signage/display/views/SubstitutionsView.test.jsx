@@ -157,9 +157,15 @@ describe('SubstitutionsView', () => {
     expect(el.querySelector('iframe').getAttribute('src')).toBe(url)
   })
 
-  it('ohne Schlüssel und ohne Einbett-Adresse der bisherige Hinweis', () => {
+  it('ohne Schlüssel und ohne Einbett-Adresse: Kiosk-URL ohne Schlüssel', () => {
     const el = render(<SubstitutionsView view={view({ mode: 'embed', source: null, days: [] })} />)
-    expect(el.textContent).toContain('Für den Vertretungsplan fehlt der Bildschirm-Schlüssel in der Kiosk-URL.')
+    expect(el.textContent).toContain('Kiosk-URL ohne Schlüssel.')
+  })
+
+  it('WebUntis nicht erreichbar: Vertretungsplan nicht verfügbar', () => {
+    const el = render(<SubstitutionsView view={view({ mode: 'embed', source: 'unavailable', days: [] })} />)
+    expect(el.textContent).toContain('Vertretungsplan nicht verfügbar.')
+    expect(el.textContent).not.toContain('Im Admin')
   })
 
   it('in schmalen Flächen ein Tag nach dem anderen', () => {

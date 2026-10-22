@@ -110,8 +110,8 @@ export function deviceProblems(draft, original) {
   const problems = { window: '', config: {} }
   const w = draft?.update_window
   if (w && !sameValue(w, original?.update_window)) {
-    if (!timeOk(w.from) || !timeOk(w.until)) problems.window = 'Von und bis angeben, zum Beispiel 03:00 und 05:00.'
-    else if (w.from >= w.until) problems.window = 'Das Zeitfenster muss am selben Tag enden. „Von“ muss vor „Bis“ liegen.'
+    if (!timeOk(w.from) || !timeOk(w.until)) problems.window = 'Von oder bis ungültig (HH:MM).'
+    else if (w.from >= w.until) problems.window = '„Von“ muss vor „Bis“ liegen.'
   }
   if (draft && (!sameValue(draft.power_method, original?.power_method) || !sameValue(draft.power_config, original?.power_config))) {
     const method = draft.power_method ?? 'cec'
@@ -121,11 +121,11 @@ export function deviceProblems(draft, original) {
       if (key in POWER_CONFIG_INTS) {
         const [lo, hi] = POWER_CONFIG_INTS[key]
         const n = Number(value)
-        if (String(value).trim() === '' || !Number.isInteger(n) || n < lo || n > hi) problems.config[key] = `${label}: bitte eine ganze Zahl von ${lo} bis ${hi} eintragen.`
+        if (String(value).trim() === '' || !Number.isInteger(n) || n < lo || n > hi) problems.config[key] = `${label} ungültig (ganze Zahl von ${lo} bis ${hi}).`
       } else if (String(value).trim() === '') {
         problems.config[key] = key === 'display_ip'
-          ? 'SICP-IP fehlt. Für Hybrid die IP-Adresse des Bildschirms eintragen.'
-          : `${label} fehlt. Bitte einen Wert eintragen.`
+          ? 'SICP-IP fehlt.'
+          : `${label} fehlt.`
       } else if (String(value).length > 64) {
         problems.config[key] = `${label}: höchstens 64 Zeichen.`
       }
@@ -190,10 +190,10 @@ export function overridePayload(viewId, untilLocal) {
 }
 
 export function overrideProblem(viewId, untilLocal, now = new Date()) {
-  if (!viewId) return 'Bitte eine Ansicht wählen.'
+  if (!viewId) return 'Keine Ansicht gewählt.'
   if (untilLocal) {
     const until = new Date(untilLocal)
-    if (Number.isNaN(until.getTime()) || until <= now) return '„Bis“ muss in der Zukunft liegen. Bitte einen späteren Zeitpunkt wählen oder das Feld leeren.'
+    if (Number.isNaN(until.getTime()) || until <= now) return '„Bis“ liegt in der Vergangenheit.'
   }
   return ''
 }

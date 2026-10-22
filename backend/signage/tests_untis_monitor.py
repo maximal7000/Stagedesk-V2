@@ -355,5 +355,5 @@ class CheckCommandTest(TestCase):
         fake = route({'format': [], 'data': []})
         text = self.run_command(fake)
         self.assertIn('Monitor-Schnittstelle (vplan-schueler): nicht eingerichtet '
-                      '(Server und Schule im Monitor-Admin unter Einstellungen eintragen)\n', text)
+                      '(Server oder Schule fehlt)\n', text)
         self.assertEqual(fake.calls, [])

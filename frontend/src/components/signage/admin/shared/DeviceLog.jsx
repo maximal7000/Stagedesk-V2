@@ -52,7 +52,7 @@ export default function DeviceLog({ screenId, reloadKey = 0 }) {
 
   const failure = state.error && (
     <p role="alert" className="text-sm text-bad mb-3">
-      Das Protokoll konnte nicht geladen werden. {errorText(state.error, 'Bitte die Seite neu laden.')}
+      Protokoll konnte nicht geladen werden. {errorText(state.error, '')}
     </p>
   )
 

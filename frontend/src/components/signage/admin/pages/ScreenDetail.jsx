@@ -258,7 +258,7 @@ function KioskSection({ screen, onRegenerate }) {
       toast.success('Link kopiert')
     } catch {
       document.getElementById(inputId)?.select()
-      toast.error('Kopieren war nicht möglich. Der Link ist markiert und lässt sich mit Strg+C kopieren.')
+      toast.error('Kopieren nicht möglich. Link ist markiert.')
     }
   }
   return (
@@ -302,7 +302,7 @@ function DeviceSection({ screen, device, devicesError, now, onReload }) {
         {devicesError ? (
           <>
             <p className="text-fg">Unbekannt</p>
-            <p className="mt-1">Die Gerätedaten konnten nicht geladen werden. {errorText(devicesError, 'Bitte die Seite neu laden.')}</p>
+            <p className="mt-1">Gerätedaten konnten nicht geladen werden. {errorText(devicesError, '')}</p>
           </>
         ) : legacy ? (
           <p>Altes Skript. Den Geräte-Agent auf dem Raspberry Pi installieren, dann erscheinen WLAN, Temperatur und Updates hier.</p>
@@ -411,11 +411,11 @@ export default function ScreenDetail() {
 
   const saveAll = async () => {
     if (display.changedCount && !(display.draft.name ?? '').trim()) {
-      toast.error('Der Name fehlt. Bitte einen Namen für den Bildschirm eintragen.')
+      toast.error('Name fehlt.')
       return
     }
     if (power.changedCount && [...problems.schedule, ...problems.exceptions].some(Boolean)) {
-      toast.error('Zeitplan oder Ausnahmen sind unvollständig. Bitte die markierten Zeilen korrigieren.')
+      toast.error('Zeitplan oder Ausnahmen unvollständig.')
       return
     }
     if (deviceDraft.changedCount && (deviceIssues.window || Object.values(deviceIssues.config).some(Boolean))) {
@@ -453,7 +453,7 @@ export default function ScreenDetail() {
       const updated = await api.regenerateScreenKey(screenId)
       setScreen((s) => ({ ...s, access_key: updated.access_key }))
       setConfirmKey(false)
-      toast.success('Neuer Schlüssel erzeugt. Die neue Kiosk-URL jetzt auf dem Bildschirm eintragen.')
+      toast.success('Neuer Schlüssel erzeugt. Kiosk-URL geändert.')
     } catch (e) {
       toast.error(errorText(e))
     }
@@ -520,7 +520,7 @@ export default function ScreenDetail() {
         <PageHeader title="Bildschirm" />
         {error ? (
           <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-            Der Bildschirm konnte nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+            Bildschirm konnte nicht geladen werden. {errorText(error, '')}
           </div>
         ) : (
           <div className="bg-surface rounded-lg">

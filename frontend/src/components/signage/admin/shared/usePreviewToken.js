@@ -39,6 +39,6 @@ export function usePreviewToken(payload, screenId, { request = previewView, dela
 }
 
 export function previewErrorText(error) {
-  const reason = errorText(error, 'Bitte später erneut versuchen.').replace(/[.\s]+$/, '')
-  return `Vorschau nicht verfügbar: ${reason}.`
+  const reason = errorText(error, '').replace(/[.\s]+$/, '')
+  return reason ? `Vorschau nicht verfügbar: ${reason}.` : 'Vorschau nicht verfügbar.'
 }

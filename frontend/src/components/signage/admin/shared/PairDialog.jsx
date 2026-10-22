@@ -111,7 +111,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
       onClose?.()
     } catch (err) {
       if (mounted.current) {
-        setError(errorText(err, 'Das Koppeln ist fehlgeschlagen. Bitte erneut versuchen.'))
+        setError(errorText(err, 'Koppeln fehlgeschlagen.'))
         if (err?.response?.status === 400 || err?.response?.status === 429) { codeFocus.current = 0; setStep(1) }
       }
     }
@@ -144,7 +144,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
             {mode === 'existing' ? (
               <Field label="Bildschirm" htmlFor={screenId}
                 help={replaced?.hasDevice === null
-                  ? 'Ob dieser Bildschirm schon ein Gerät hat, ließ sich nicht laden. Hat er eines, verliert das alte Gerät damit seinen Zugang.'
+                  ? 'Gerätestatus konnte nicht geladen werden. Ein vorhandenes Gerät verliert damit seinen Zugang.'
                   : replaced?.hasDevice ? 'Dieser Bildschirm hat schon ein Gerät. Das alte Gerät verliert damit seinen Zugang.' : undefined}>
                 <select id={screenId} className={fieldClass} value={existingId} onChange={(e) => setExistingId(e.target.value)}>
                   <option value="">Bildschirm wählen</option>

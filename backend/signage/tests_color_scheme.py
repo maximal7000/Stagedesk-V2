@@ -161,7 +161,7 @@ class ColorSchemeApiTest(TestCase):
             with self.subTest(body=body):
                 r = self.put('/settings', body)
                 self.assertEqual(r.status_code, 422, r.content)
-                self.assertEqual(r.json()['detail'], 'Die helle Zeit muss vor ihrem Ende beginnen.')
+                self.assertEqual(r.json()['detail'], '„Hell ab“ muss vor „Hell bis“ liegen.')
         r = self.put('/settings', {'light_from': '7 Uhr'})
         self.assertEqual(r.status_code, 422)
         self.assertIn('HH:MM', r.json()['detail'])

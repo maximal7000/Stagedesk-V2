@@ -290,7 +290,7 @@ describe('ScreenDetail', () => {
     await mount()
     const fromInput = container.querySelector('[data-schedule-editor] input[aria-label="Von"]')
     await act(async () => { typeInto(fromInput, '') })
-    expect(container.textContent).toContain('Von und bis angeben.')
+    expect(container.textContent).toContain('Von oder bis fehlt.')
     await click(button('Speichern'))
     expect(api.updateScreen).not.toHaveBeenCalled()
     expect(toast.error).toHaveBeenCalled()
@@ -318,7 +318,7 @@ describe('ScreenDetail', () => {
     expect(section.textContent).toContain('Zeigt die Standard-Ansicht')
     await click(button('Anwenden', section))
     expect(api.updateScreen).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Bitte eine Ansicht wählen.')
+    expect(toast.error).toHaveBeenCalledWith('Keine Ansicht gewählt.')
 
     const select = section.querySelector('select')
     await act(async () => {

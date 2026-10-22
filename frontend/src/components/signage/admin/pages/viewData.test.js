@@ -79,13 +79,13 @@ describe('changedKeys / viewPayload / previewPayload', () => {
 
 describe('viewProblems', () => {
   it('verlangt Name und vollständige Wechsel-Einträge', () => {
-    expect(viewProblems({ name: ' ', kind: 'info' })).toEqual(['Der Name fehlt. Bitte einen Namen eintragen.'])
+    expect(viewProblems({ name: ' ', kind: 'info' })).toEqual(['Name fehlt.'])
     expect(viewProblems({ name: 'W', kind: 'rotation', rotation_items: [] }))
-      .toEqual(['Der Wechsel braucht mindestens eine Ansicht. Bitte eine Ansicht hinzufügen.'])
+      .toEqual(['Wechsel braucht mindestens eine Ansicht.'])
     expect(viewProblems({ name: 'W', kind: 'rotation', rotation_items: [{ view_id: null, seconds: 10 }] }))
-      .toEqual(['In Zeile 1 des Wechsels fehlt die Ansicht. Bitte eine wählen oder die Zeile entfernen.'])
+      .toEqual(['Wechsel, Zeile 1: Ansicht fehlt.'])
     expect(viewProblems({ name: 'W', kind: 'rotation', rotation_items: [{ view_id: 2, seconds: 3 }] }))
-      .toEqual(['In Zeile 1 des Wechsels muss die Dauer zwischen 5 und 600 Sekunden liegen.'])
+      .toEqual(['Wechsel, Zeile 1: Dauer muss zwischen 5 und 600 Sekunden liegen.'])
     expect(viewProblems({ name: 'W', kind: 'rotation', rotation_items: [{ view_id: 2, seconds: 30 }] })).toEqual([])
   })
 })
@@ -145,12 +145,12 @@ describe('viewProblems: Zahlenfelder', () => {
   const ok = { name: 'A', kind: 'departures' }
   it('meldet leere und zu große Zahlen der geänderten Felder', () => {
     expect(viewProblems({ ...ok, page_seconds: '' }, ['page_seconds']))
-      .toEqual(['Blättertakt: bitte eine ganze Zahl von 5 bis 120 eintragen.'])
+      .toEqual(['Blättertakt ungültig (ganze Zahl von 5 bis 120).'])
     expect(viewProblems({ ...ok, media_seconds: 601 }, ['media_seconds']))
-      .toEqual(['Sekunden pro Seite: bitte eine ganze Zahl von 3 bis 600 eintragen.'])
+      .toEqual(['Sekunden pro Seite ungültig (ganze Zahl von 3 bis 600).'])
     expect(viewProblems({ ...ok, pdf_per_screen: 4, split_left_percent: '' }, ['pdf_per_screen', 'split_left_percent'])).toEqual([
-      'Seiten nebeneinander: bitte eine ganze Zahl von 1 bis 3 eintragen.',
-      'Breite links: bitte eine ganze Zahl von 20 bis 80 eintragen.',
+      'Seiten nebeneinander ungültig (ganze Zahl von 1 bis 3).',
+      'Breite links ungültig (ganze Zahl von 20 bis 80).',
     ])
     expect(viewProblems({ ...ok, page_seconds: 20, media_seconds: 3 }, ['page_seconds', 'media_seconds'])).toEqual([])
   })
@@ -163,8 +163,8 @@ describe('viewProblems: Zahlenfelder', () => {
       { id: '2', name: 'Sandstraße', walk_minutes: 3, max_departures: 51 },
     ]
     expect(viewProblems({ ...ok, transit_stops: stops }, ['transit_stops'])).toEqual([
-      'Haltestelle „Kohlmarkt“: Fußweg: bitte eine ganze Zahl von 0 bis 60 eintragen.',
-      'Haltestelle „Sandstraße“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 50 eintragen.',
+      'Haltestelle „Kohlmarkt“: Fußweg ungültig (ganze Zahl von 0 bis 60).',
+      'Haltestelle „Sandstraße“: Max. Zeilen ungültig (ganze Zahl von 1 bis 50).',
     ])
   })
   it('lässt alte Haltestellen mit 0 (ohne Grenze) oder bis 50 Zeilen speichern', () => {
@@ -203,7 +203,7 @@ describe('Abfahrten: Erweitert', () => {
   it('Vorausschau wie im Backend: 10 bis 240 Minuten', () => {
     const problems = (v) => viewProblems({ ...base, transit_duration: v }, ['transit_duration'])
     expect(problems(240)).toEqual([])
-    expect(problems('')).toEqual(['Vorausschau: bitte eine ganze Zahl von 10 bis 240 eintragen.'])
+    expect(problems('')).toEqual(['Vorausschau ungültig (ganze Zahl von 10 bis 240).'])
     expect(problems(9)).toHaveLength(1)
   })
 })

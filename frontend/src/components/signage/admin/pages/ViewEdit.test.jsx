@@ -142,7 +142,7 @@ describe('ViewEdit', () => {
     })
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Der Name fehlt. Bitte einen Namen eintragen.')
+    expect(toast.error).toHaveBeenCalledWith('Name fehlt.')
   })
 
   it('beginnt eine neue Ansicht mit der Wahl des Typs', async () => {
@@ -169,7 +169,7 @@ describe('ViewEdit', () => {
     await act(async () => typeInto(container.querySelector('input[aria-label="Max. Zeilen Kohlmarkt"]'), ''))
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Haltestelle „Kohlmarkt“: Max. Zeilen: bitte eine ganze Zahl von 1 bis 50 eintragen.')
+    expect(toast.error).toHaveBeenCalledWith('Haltestelle „Kohlmarkt“: Max. Zeilen ungültig (ganze Zahl von 1 bis 50).')
   })
 
   it('zeigt den gespeicherten WebUntis-Link und löst ihn, wenn die Adresse bearbeitet wird', async () => {
@@ -201,7 +201,7 @@ describe('ViewEdit', () => {
     await act(async () => typeInto(container.querySelector('[data-editor-section="transit-advanced"] input[type="number"]'), '5'))
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Vorausschau: bitte eine ganze Zahl von 10 bis 240 eintragen.')
+    expect(toast.error).toHaveBeenCalledWith('Vorausschau ungültig (ganze Zahl von 10 bis 240).')
   })
 
   describe('Typ ändern', () => {

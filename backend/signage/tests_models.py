@@ -125,7 +125,7 @@ class UpdateViewApiTest(TestCase):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')
         r = self._put(view, {'layout': None})
         self.assertEqual(r.status_code, 422, r.content)
-        self.assertEqual(r.json()['detail'], 'Für Aufteilung fehlt die Auswahl. Bitte einen der angebotenen Werte wählen.')
+        self.assertEqual(r.json()['detail'], 'Aufteilung fehlt.')
 
     def test_update_view_own_url_replaces_saved_link(self):
         link = WebUntisLink.objects.create(name='Bibliothek', url='https://bibliothek.example/untis')

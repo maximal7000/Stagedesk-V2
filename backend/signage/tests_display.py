@@ -394,7 +394,7 @@ class PreviewValidationTest(PreviewTestBase):
         for value in ('16 Uhr', '24:00', '7:30'):
             with self.subTest(value=value):
                 self.assert_rejected({'view': {'substitutions_next_day_from': value}},
-                                     'Uhrzeit ungültig: bitte im Format HH:MM eintragen oder leer lassen')
+                                     'Uhrzeit ungültig (HH:MM oder leer).')
         self.assert_rejected({'view': {'substitutions_custom_format': 'x' * 101}}, 'Eigenes Format')
 
     def test_substitution_fields_accepted(self):

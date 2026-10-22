@@ -9,9 +9,8 @@ export default function ConnectionLost({ screenName, lastOkAt, nextRetryAt, orie
   return (
     <StateScreen state="lost" orientation={orientation} kicker={screenName ? `Bildschirm ${screenName}` : null} title="Verbindung verloren">
       <StateText>
-        Der Server ist seit {formatTime(since)} nicht erreichbar.
+        Server seit {formatTime(since)} nicht erreichbar.
         {nextRetryAt != null && <> <RetryCountdown nextRetryAt={nextRetryAt} /></>}
-        {' '}Die Anzeige läuft automatisch weiter, sobald die Verbindung zurück ist.
       </StateText>
       {lastOkAt != null && (
         <dl className="mt-[3.5rem] grid max-w-[68.75rem] grid-cols-[auto_1fr] items-baseline gap-x-[3.25rem] gap-y-[1rem] d-line-top pt-[2.75rem]">

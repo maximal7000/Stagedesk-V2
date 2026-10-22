@@ -51,7 +51,7 @@ def download(url, dest, deadline=DOWNLOAD_DEADLINE):
             if not chunk:
                 return digest.hexdigest()
             if time.monotonic() > end:
-                raise TimeoutError("Download dauert länger als 10 Minuten, Netz prüfen")
+                raise TimeoutError("Download länger als 10 Minuten, abgebrochen")
             size += len(chunk)
             if size > MAX_PACKAGE:
                 raise ValueError("Paket ist größer als 50 MB")

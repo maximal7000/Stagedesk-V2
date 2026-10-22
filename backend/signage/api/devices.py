@@ -45,9 +45,9 @@ def pair_poll(request, payload: PairPollSchema):
     try:
         result = devices.poll_pairing(payload.pairing_id)
     except LookupError:
-        return 404, {"detail": "Der Kopplungscode ist unbekannt oder abgelaufen."}
+        return 404, {"detail": "Kopplungscode unbekannt oder abgelaufen."}
     except devices.PairingGone:
-        return 410, {"detail": "Die Zugangsdaten wurden bereits abgeholt."}
+        return 410, {"detail": "Zugangsdaten bereits abgeholt."}
     if result is None:
         return 202, {"status": "waiting"}
     return 200, {"status": "paired", "token": result["token"],
@@ -60,7 +60,7 @@ def agent_install_script(request):
     try:
         text = agent_package.install_script_path().read_text(encoding="utf-8")
     except OSError:
-        raise Http404("Das Installationsskript fehlt auf dem Server.")
+        raise Http404("Installationsskript fehlt auf dem Server.")
     text = text.replace("__STAGEDESK_SERVER__", settings.PUBLIC_BASE_URL)
     return HttpResponse(text, content_type="text/plain; charset=utf-8")
 
@@ -75,7 +75,7 @@ def agent_version(request):
 def agent_tarball(request, version: str):
     current, _ = agent_package.agent_package_info()
     if version != current:
-        raise Http404("Diese Agent-Version wird nicht ausgeliefert.")
+        raise Http404("Agent-Version nicht verfügbar.")
     response = HttpResponse(agent_package.build_package(), content_type="application/gzip")
     response["Content-Disposition"] = f'attachment; filename="stagedesk-agent-{version}.tar.gz"'
     return response
@@ -153,7 +153,7 @@ def pair_device(request, payload: DevicePairSchema):
     if cache.get(key, 0) >= MAX_FAILED_ATTEMPTS:
         raise HttpError(429, "Zu viele Versuche. Bitte eine Minute warten.")
     if payload.screen_id is None and payload.new_screen is None:
-        raise HttpError(422, "Bitte einen Bildschirm wählen oder einen neuen anlegen.")
+        raise HttpError(422, "Kein Bildschirm gewählt.")
     code = payload.code.replace(' ', '')
     with transaction.atomic():
         if payload.screen_id is not None:
@@ -171,7 +171,7 @@ def pair_device(request, payload: DevicePairSchema):
                 cache.incr(key)
             except ValueError:
                 cache.set(key, 1, ATTEMPT_WINDOW)
-            raise HttpError(400, "Der Code ist ungültig oder abgelaufen. Den Code auf dem Bildschirm prüfen.")
+            raise HttpError(400, "Code ungültig oder abgelaufen.")
     return device_row(device, screen, MonitorSettings.load(), timezone.now(), True)
 
 
@@ -202,7 +202,7 @@ def create_device_command(request, id: int, payload: DeviceCommandCreateSchema):
         _require_perm(request, 'signage.power')
     device = get_object_or_404(Device.objects.select_related('screen'), id=id)
     if device.revoked_at is not None or device.screen is None:
-        raise HttpError(409, "Das Gerät ist nicht mehr gekoppelt. Bitte den Bildschirm neu koppeln.")
+        raise HttpError(409, "Gerät nicht mehr gekoppelt.")
     user_id, user_name = _author(request)
     command = devices.create_command(device, payload.kind, user_id, user_name)
     transaction.on_commit(lambda: push.push_device_command(command))
@@ -235,7 +235,7 @@ def _agent_device(request):
     token = header[7:].strip() if header[:7].lower() == 'bearer ' else ''
     device = Device.for_token(token)
     if device is None:
-        raise HttpError(401, "Das Gerät ist nicht angemeldet. Bitte den Bildschirm neu koppeln.")
+        raise HttpError(401, "Gerät nicht angemeldet.")
     return device
 
 
@@ -243,15 +243,15 @@ def _agent_device(request):
 def upload_screenshot(request, file: UploadedFile = File(...), command_id: int = Form(None)):
     device = _agent_device(request)
     if file.size > MAX_SCREENSHOT_BYTES:
-        raise HttpError(413, "Der Screenshot ist größer als 15 MB.")
+        raise HttpError(413, "Screenshot größer als 15 MB.")
     data = file.read()
     if not data.startswith(PNG_MAGIC):
-        raise HttpError(422, "Der Screenshot ist kein PNG-Bild.")
+        raise HttpError(422, "Screenshot ist kein PNG.")
     try:
         from PIL import Image
         Image.open(io.BytesIO(data)).verify()
     except Exception:
-        raise HttpError(422, "Der Screenshot ist kein gültiges PNG-Bild.")
+        raise HttpError(422, "Screenshot ist kein gültiges PNG.")
     old = device.last_screenshot
     old_name = old.name if old else ''
     # Random name: the file is served under /media/ and must not be guessable.

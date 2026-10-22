@@ -88,7 +88,7 @@ export default function StopSearch({ onSelect, excludeIds = [], label = 'Haltest
           {loading && <p className="px-3 py-2 text-sm text-fg-muted">Sucht…</p>}
           {!loading && state.error && <p className="px-3 py-2 text-sm text-bad">{errorText(state.error)}</p>}
           {!loading && !state.error && results.length === 0 && (
-            <p className="px-3 py-2 text-sm text-fg-muted">Keine Haltestelle gefunden. Bitte den Namen anders schreiben.</p>
+            <p className="px-3 py-2 text-sm text-fg-muted">Keine Haltestelle gefunden.</p>
           )}
           <ul id={listId} role="listbox" aria-label="Treffer" className="max-h-64 overflow-y-auto">
             {results.map((r, i) => {

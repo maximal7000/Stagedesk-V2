@@ -126,7 +126,7 @@ function GeneralSection({ draft, set, kindProblem }) {
           <input id={ids.name} value={draft.name ?? ''} onChange={(e) => set('name', e.target.value)} aria-invalid={nameMissing}
             className={fieldClass} />
           <p className={`text-xs mt-1.5 ${nameMissing ? 'text-bad' : 'text-fg-subtle'}`}>
-            {nameMissing ? 'Der Name fehlt. Bitte einen Namen eintragen.' : 'Nur im Admin sichtbar.'}
+            {nameMissing ? 'Name fehlt.' : 'Nur im Admin sichtbar.'}
           </p>
         </div>
         <div>
@@ -291,7 +291,7 @@ function EditView({ viewId }) {
     try {
       const res = await api.deleteView(viewId)
       if (res && res.success === false) {
-        toast.error(res.message || 'Die Ansicht ließ sich nicht löschen.')
+        toast.error(res.message || 'Löschen fehlgeschlagen.')
         setBusy(false)
         setConfirmDelete(false)
         return
@@ -311,7 +311,7 @@ function EditView({ viewId }) {
         <PageHeader title="Ansicht" />
         {error ? (
           <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-            Die Ansicht konnte nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+            Ansicht konnte nicht geladen werden. {errorText(error, '')}
           </div>
         ) : (
           <div className="bg-surface rounded-lg">

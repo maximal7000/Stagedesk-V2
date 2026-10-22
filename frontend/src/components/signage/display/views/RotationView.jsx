@@ -23,7 +23,7 @@ export default function RotationView({ view, orientation, frame = {}, screen }) 
       <Frame layout={view.layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
         <div data-display-state="view" data-view-kind="rotation" className="flex h-full items-center">
           <p className="d-lato max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
-            Dieser Wechsel ist leer. Im Admin unter Monitore → Ansichten den Wechsel öffnen und Einträge hinzufügen.
+            Wechsel ohne Ansichten.
           </p>
         </div>
       </Frame>

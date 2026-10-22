@@ -108,7 +108,7 @@ describe('overridePayload / overrideProblem', () => {
   })
   it('meldet fehlende Ansicht und vergangene Zeit', () => {
     expect(overrideProblem('', '', now)).toMatch(/Ansicht/)
-    expect(overrideProblem(4, '2026-10-20T09:00', now)).toMatch(/Zukunft/)
+    expect(overrideProblem(4, '2026-10-20T09:00', now)).toMatch(/Vergangenheit/)
     expect(overrideProblem(4, '2026-10-20T14:00', now)).toBe('')
     expect(overrideProblem(4, '', now)).toBe('')
   })
@@ -162,7 +162,7 @@ describe('Geräte-Felder', () => {
     const bad = { ...orig, update_window: { weekday: 6, from: '05:00', until: '03:00' } }
     expect(deviceProblems(bad, orig).window).toMatch(/„Von“ muss vor „Bis“ liegen/)
     expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '03:00', until: '03:00' } }, orig).window).not.toBe('')
-    expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '', until: '03:00' } }, orig).window).toMatch(/Von und bis/)
+    expect(deviceProblems({ ...orig, update_window: { weekday: 6, from: '', until: '03:00' } }, orig).window).toMatch(/Von oder bis ungültig/)
     expect(deviceProblems(orig, orig).window).toBe('')
     expect(deviceProblems(bad, bad).window).toBe('')
   })

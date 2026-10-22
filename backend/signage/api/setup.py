@@ -20,7 +20,7 @@ router = Router()
 
 def _validate_holiday(payload: HolidayPeriodCreateSchema):
     if payload.end_date < payload.start_date:
-        raise HttpError(422, "Das Enddatum liegt vor dem Startdatum. Bitte das Enddatum anpassen.")
+        raise HttpError(422, "Enddatum liegt vor dem Startdatum.")
 
 
 @router.get("/holidays", response=list[HolidayPeriodSchema], auth=keycloak_auth)
@@ -139,10 +139,10 @@ def create_view_preview(request, payload: ViewPreviewSchema):
     if draft.get('id'):
         saved = DisplayView.objects.filter(id=draft['id'], deleted_at__isnull=True).first()
         if saved is None:
-            raise HttpError(404, "Die Ansicht existiert nicht mehr. Bitte die Seite neu laden.")
+            raise HttpError(404, "Ansicht existiert nicht mehr.")
     # Validate as on save: a broken draft is a 422 with a message, not a 500 when displayed
     draft = validate_view_data(draft, own_id=saved.id if saved else None,
                                current_kind=saved.kind if saved else None)
     if payload.screen_id and not Screen.objects.filter(id=payload.screen_id).exists():
-        raise HttpError(404, "Der Bildschirm existiert nicht mehr. Bitte einen anderen wählen.")
+        raise HttpError(404, "Bildschirm existiert nicht mehr.")
     return {'token': display.store_preview(draft, payload.screen_id)}

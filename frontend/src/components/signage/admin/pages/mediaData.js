@@ -5,7 +5,7 @@ const KIND_LABELS = { pdf: 'PDF', image: 'Bild', background: 'Hintergrund', logo
 export function mediaStatus(file) {
   if (file.status === 'processing') return 'Wird vorbereitet'
   if (file.status === 'failed') {
-    const reason = (file.error || '').trim() || 'Grund unbekannt. Bitte die Datei erneut hochladen.'
+    const reason = (file.error || '').trim() || 'Grund unbekannt.'
     return `Fehlgeschlagen: ${reason}`
   }
   return 'Fertig'
@@ -25,8 +25,8 @@ export const uploadKind = (file) => (isPdf(file) ? 'pdf' : 'image')
 
 export function uploadProblem(file) {
   if (!isPdf(file) && !(file.type || '').startsWith('image/')) {
-    return `„${file.name}“ ist kein PDF und kein Bild. Bitte eine PDF- oder Bilddatei wählen.`
+    return `„${file.name}“ ist kein PDF und kein Bild.`
   }
-  if (file.size > MAX_UPLOAD_BYTES) return `„${file.name}“ ist größer als 50 MB. Bitte die Datei verkleinern.`
+  if (file.size > MAX_UPLOAD_BYTES) return `„${file.name}“ ist größer als 50 MB.`
   return null
 }

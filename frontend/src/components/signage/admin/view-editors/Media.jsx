@@ -73,7 +73,7 @@ export default function MediaEditor({ draft, set }) {
     <>
       <Section title="Dateien" data-editor-section="media"
         aside={items.length > 1 ? <span className="text-xs text-fg-subtle">Reihenfolge per Ziehen</span> : null}>
-        {error && <p className="text-sm text-bad mb-3">Die Dateien konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}</p>}
+        {error && <p className="text-sm text-bad mb-3">Dateien konnten nicht geladen werden. {errorText(error, '')}</p>}
         {items.length ? (
           <FilesList items={items} files={files ?? []} onChange={(v) => set('media_items', v)} />
         ) : (

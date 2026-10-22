@@ -87,6 +87,6 @@ describe('Exams: Termine von Hand', () => {
     await act(async () => { typeInto(from, '2026-10-22T18:00') })
     await click(button('Speichern'))
     expect(api.updateEvent).not.toHaveBeenCalled()
-    expect(toast.error).toHaveBeenCalledWith('Beginn und Ende angeben oder beide leer lassen.')
+    expect(toast.error).toHaveBeenCalledWith('Nur Beginn oder nur Ende angegeben.')
   })
 })

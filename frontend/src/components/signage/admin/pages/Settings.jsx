@@ -144,7 +144,7 @@ function DevicesSection({ draft, set, disabled, readOnly, legacyNames }) {
       await navigator.clipboard.writeText(command)
       toast.success('Befehl kopiert')
     } catch {
-      toast.error('Kopieren war nicht möglich. Den Befehl im Feld markieren und mit Strg+C kopieren.')
+      toast.error('Kopieren nicht möglich.')
     }
   }
   const units = { device_offline_minutes: 'Minuten', warn_temperature_c: '°C', warn_disk_percent: '%', warn_wifi_dbm: 'dBm', warn_reboot_days: 'Tage' }
@@ -391,7 +391,7 @@ export default function Settings() {
       <PageHeader title="Einstellungen" />
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-          Die Einstellungen konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+          Einstellungen konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : settings && values.draft ? (
         <div className="space-y-4 max-w-4xl">

@@ -47,16 +47,16 @@ export function commandResult(kind, command) {
     return {
       ok: false,
       text: noReply
-        ? `${label}: Keine Rückmeldung vom Gerät. Ob der Befehl lief, steht im Protokoll. Bitte Netzwerk und Strom des Pi prüfen und den Befehl bei Bedarf erneut senden.`
-        : `${label} wurde nicht ausgeführt, weil das Gerät 5 Minuten nicht verbunden war. Bitte Netzwerk und Strom des Pi prüfen und den Befehl erneut senden.`,
+        ? `${label}: Keine Rückmeldung vom Gerät.`
+        : `${label} nicht ausgeführt: Gerät 5 Minuten nicht verbunden.`,
     }
   }
   const reason = (command.result || '').trim()
-  return { ok: false, text: reason ? `${label} ist fehlgeschlagen: ${reason}` : `${label} ist fehlgeschlagen. Bitte das Protokoll prüfen und erneut versuchen.` }
+  return { ok: false, text: reason ? `${label} fehlgeschlagen: ${reason}` : `${label} fehlgeschlagen.` }
 }
 
 export const timeoutText = (kind) =>
-  `${labelOf(kind)}: noch keine Antwort des Geräts. Der Befehl läuft weiter, das Ergebnis steht im Protokoll.`
+  `${labelOf(kind)}: noch keine Antwort vom Gerät. Ergebnis folgt im Protokoll.`
 
 // A polling error is not a result; the next round runs.
 export function watchCommand({ get, onDone, onTimeout, intervalMs = POLL_MS, maxMs = POLL_MAX_MS }) {

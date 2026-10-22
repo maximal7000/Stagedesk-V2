@@ -110,7 +110,7 @@ export default function Screens() {
 
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-          Bildschirme konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+          Bildschirme konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : screens && screens.length === 0 ? (
         <div className="bg-surface rounded-lg">

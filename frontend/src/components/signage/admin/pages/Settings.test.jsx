@@ -166,7 +166,7 @@ describe('Settings', () => {
     await click(button('Speichern'))
     expect(api.updateSettings).not.toHaveBeenCalled()
     const { toast } = await import('sonner')
-    expect(toast.error).toHaveBeenCalledWith('Offline melden nach: Bitte eine ganze Zahl von 2 bis 240 eintragen.')
+    expect(toast.error).toHaveBeenCalledWith('Offline melden nach ungültig (ganze Zahl von 2 bis 240).')
   })
 
   it('Geräte: ohne altes Skript steht der Hinweis für alle Bildschirme, ohne Recht nur lesend', async () => {

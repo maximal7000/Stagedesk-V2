@@ -28,7 +28,7 @@ class Command(BaseCommand):
     def _monitor_status(self):
         settings = MonitorSettings.load()
         if not settings.webuntis_server or not settings.webuntis_school:
-            return 'nicht eingerichtet (Server und Schule im Monitor-Admin unter Einstellungen eintragen)'
+            return 'nicht eingerichtet (Server oder Schule fehlt)'
         cause = untis_monitor.check(settings.webuntis_server, settings.webuntis_school, MONITOR_FORMAT,
                                     time.monotonic() + webuntis.DEADLINE_SECONDS)
         return 'geht' if cause is None else f'geht nicht (Ursache: {cause})'

@@ -104,7 +104,7 @@ function StationCard({ station }) {
       <div ref={listRef} className="min-h-0 flex-1 overflow-hidden" style={{ fontSize: `${fontPx}px` }}>
         {deps.length === 0 ? (
           <p className="d-lato pt-[0.75rem] text-[1.375rem] text-(--d-muted)">
-            {station.error ? 'Abfahrten derzeit nicht abrufbar' : 'Keine Abfahrten in nächster Zeit'}
+            {station.error ? 'Abfahrten nicht verfügbar' : 'Keine Abfahrten in nächster Zeit'}
           </p>
         ) : groups.map(([label, list, trains]) => (
           <div key={label ?? 'all'}>

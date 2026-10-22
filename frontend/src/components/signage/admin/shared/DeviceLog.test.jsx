@@ -69,7 +69,7 @@ describe('DeviceLog', () => {
   it('Ladefehler nennt Ursache und nächsten Schritt', async () => {
     api.getScreenEvents.mockImplementation(() => Promise.reject(Object.assign(new Error('x'), { response: { status: 503, data: {} } })))
     await mount()
-    expect(container.querySelector('[role="alert"]').textContent).toContain('Das Protokoll konnte nicht geladen werden.')
+    expect(container.querySelector('[role="alert"]').textContent).toContain('Protokoll konnte nicht geladen werden.')
   })
 
   it('Fehler beim Neuladen: Tabelle bleibt, dazu eine Fehlerzeile', async () => {
@@ -81,7 +81,7 @@ describe('DeviceLog', () => {
     api.getScreenEvents.mockImplementation(() => Promise.reject(Object.assign(new Error('x'), { response: { status: 503, data: {} } })))
     await act(async () => { root.render(view(1)) })
     expect(container.querySelectorAll('tbody tr')).toHaveLength(3)
-    expect(container.querySelector('[role="alert"]').textContent).toContain('Das Protokoll konnte nicht geladen werden.')
+    expect(container.querySelector('[role="alert"]').textContent).toContain('Protokoll konnte nicht geladen werden.')
   })
 
   it('Filterwechsel zeigt die Ladeanzeige statt der alten Zeilen', async () => {

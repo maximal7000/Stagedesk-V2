@@ -369,7 +369,7 @@ export default function Overview() {
       </div>
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-          Bildschirme konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+          Bildschirme konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : screens && screens.length === 0 ? (
         <div className="bg-surface rounded-lg">
@@ -379,7 +379,7 @@ export default function Overview() {
         <>
         {devicesError && (
           <p role="status" data-devices-error className="text-xs text-warn mb-2">
-            Gerätedaten nicht verfügbar: {errorText(devicesError, 'Bitte die Seite neu laden.')} Der Status stammt aus der letzten Meldung des Bildschirms.
+            Gerätedaten nicht verfügbar. {errorText(devicesError, '')} Status aus der letzten Meldung des Bildschirms.
           </p>
         )}
         <ScreenTable columns={OVERVIEW_COLUMNS}>
@@ -403,7 +403,7 @@ export default function Overview() {
                   ) : (
                     <>
                       <div className="text-sm text-fg-muted">Unbekannt</div>
-                      <div className="text-xs text-fg-muted">Anzeige-Daten nicht abrufbar{reason ? ` · ${reason}` : ''}</div>
+                      <div className="text-xs text-fg-muted">Anzeige-Daten nicht verfügbar{reason ? ` · ${reason}` : ''}</div>
                     </>
                   )}
                 </Cell>

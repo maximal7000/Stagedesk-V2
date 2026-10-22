@@ -34,9 +34,9 @@ const MODE_TEXT = {
 }
 
 function holidayProblem(row) {
-  if (!row.name.trim()) return 'Der Name fehlt. Bitte einen Namen eintragen.'
+  if (!row.name.trim()) return 'Name fehlt.'
   if (!row.start_date || !row.end_date) return 'Von und bis angeben.'
-  if (row.end_date < row.start_date) return 'Das Enddatum liegt vor dem Startdatum. Bitte das Enddatum anpassen.'
+  if (row.end_date < row.start_date) return 'Enddatum liegt vor dem Startdatum.'
   return null
 }
 
@@ -257,7 +257,7 @@ export default function Schedules() {
       <PageHeader title="Ferien & Zeitpläne" />
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
-          Ferienzeiträume konnten nicht geladen werden. {errorText(error, 'Bitte die Seite neu laden.')}
+          Ferienzeiträume konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : holidays ? (
         <div className="space-y-4">

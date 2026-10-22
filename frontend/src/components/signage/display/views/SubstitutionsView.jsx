@@ -75,8 +75,8 @@ export default function SubstitutionsView({ view }) {
         <Heading>Vertretungsplan</Heading>
         <p className="d-lato mt-[1.25rem] text-[1.5rem] text-(--d-fg-soft)">
           {data.source == null
-            ? 'Für den Vertretungsplan fehlt der Bildschirm-Schlüssel in der Kiosk-URL.'
-            : 'Der Vertretungsplan ist derzeit nicht abrufbar. Im Admin unter Monitore → Einstellungen die WebUntis-Verbindung prüfen.'}
+            ? 'Kiosk-URL ohne Schlüssel.'
+            : 'Vertretungsplan nicht verfügbar.'}
         </p>
       </div>
     )
