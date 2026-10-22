@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Frame } from '../frame'
 
-// Wechsel: zeigt die Unteransichten nacheinander, jede `items[i].seconds` lang, jede in ihrem eigenen
-// Aufteilung und Rahmen, alle im Farbschema des Bildschirms. Bringt den Rahmen selbst mit (ownFrame); screen ist ViewScreen aus
-// DisplayRoot (als Prop, damit kein Import-Kreis entsteht).
+// Brings its own frame (ownFrame); screen is ViewScreen from DisplayRoot
+// (as a prop, to avoid an import cycle).
 export default function RotationView({ view, orientation, frame = {}, screen }) {
   const Screen = screen
   const items = view.data?.items ?? []

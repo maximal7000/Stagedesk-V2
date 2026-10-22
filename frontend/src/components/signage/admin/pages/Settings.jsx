@@ -1,9 +1,6 @@
-// Einstellungen (Spec §6.2): WebUntis-Zugang mit "Verbindung testen", Notfall-Vorlagen (sortierbar), On-Air-Darstellung
-// und Wetter-Schlüssel. ÖPNV-Werte gehören zur Ansicht und stehen im Abfahrts-Editor (Ruling R26). Eine SaveBar für
-// die ganze Seite; jeder geänderte Teil wird mit eigener Anfrage gespeichert, weil die Rechte getrennt sind: WebUntis
-// und Wetter brauchen signage.setup, On-Air signage.onair, Notfall-Vorlagen signage.emergency. Ohne Recht ist ein
-// Abschnitt nur lesend (Notfall-Vorlagen fehlen dann ganz, weil schon das Lesen das Recht braucht).
-// Zugangsdaten sind write-only (Ruling R22): ein leeres Feld behält den gespeicherten Wert.
+// Each changed part is saved with its own request because the permissions differ: WebUntis and
+// weather need signage.setup, on-air signage.onair, emergency templates signage.emergency.
+// Credentials are write-only: an empty field keeps the stored value.
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
 import { Copy, Plug, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -263,12 +260,12 @@ export default function Settings() {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [legacyNames, setLegacyNames] = useState(null)
-  const [templates, setTemplates] = useState(null)       // gespeichert
-  const [templateList, setTemplateList] = useState([])   // Entwurf
+  const [templates, setTemplates] = useState(null)       // saved
+  const [templateList, setTemplateList] = useState([])   // draft
   const [clearing, setClearing] = useState(null)
   const [busy, setBusy] = useState(false)
-  // Zählt erfolgreiche Speichervorgänge: auch wenn nur ein Geheimnis gespeichert wurde (Werte bleiben ''), beginnt
-  // der Entwurf danach neu
+  // Counts successful saves: even if only a secret was saved (values stay ''), the draft
+  // starts over
   const [savedRound, setSavedRound] = useState(0)
 
   const fetchAll = useCallback(() => Promise.allSettled([
@@ -284,7 +281,7 @@ export default function Settings() {
     }
     setError(null)
     setSettings(settingsRes.value)
-    // Ohne Geräteliste bleibt der Hinweis unter dem Schalter weg
+    // Without a device list the hint under the switch is omitted
     if (devicesRes.status === 'fulfilled') setLegacyNames(legacyScreenNames(devicesRes.value[0], devicesRes.value[1]))
     if (templatesRes.status === 'fulfilled' && templatesRes.value) {
       const sorted = [...templatesRes.value].sort((x, y) => x.sort_order - y.sort_order)
@@ -299,8 +296,8 @@ export default function Settings() {
     return () => { alive = false }
   }, [fetchAll, apply])
 
-  // Ausgangsstand neu, wenn sich die Werte ändern oder gespeichert wurde; ein geänderter *_set-Schalter (Entfernen)
-  // setzt den Entwurf nicht zurück
+  // New baseline when the values change or after a save; a changed *_set switch (remove)
+  // does not reset the draft
   const originalKey = settings ? JSON.stringify([savedRound, pick(settings, [...SETUP_FIELDS, ...ON_AIR_FIELDS, ...SCHEME_FIELDS])]) : null
   const settingsOriginal = useMemo(() => (originalKey ? JSON.parse(originalKey)[1] : null), [originalKey])
   const values = useDraft(settingsOriginal)
@@ -333,8 +330,8 @@ export default function Settings() {
         return null
       }
     }
-    // Einstellungen: erst nach beiden Anfragen übernehmen, sonst setzte die erste Antwort den Entwurf der zweiten zurück.
-    // Schlägt eine fehl, bleibt der Entwurf stehen; erneutes Speichern schickt dieselben Werte noch einmal.
+    // Settings: apply only after both requests, otherwise the first response would reset the second one's draft.
+    // If one fails the draft stays; saving again sends the same values once more.
     let latest = null
     let settingsFailed = false
     for (const [count, fields] of [[setupCount, SETUP_FIELDS], [schemeCount, SCHEME_FIELDS], [onAirCount, ON_AIR_FIELDS]]) {
@@ -354,7 +351,7 @@ export default function Settings() {
         for (const { id, body } of update) await api.updateEmergencyTemplate(id, body)
         for (const body of create) await api.createEmergencyTemplate(body)
       })
-      // Immer den Stand des Servers übernehmen, damit ein erneutes Speichern nichts doppelt anlegt
+      // Always take the server state so saving again creates nothing twice
       try {
         const fresh = [...await api.getEmergencyTemplates()].sort((a, b) => a.sort_order - b.sort_order)
         setTemplates(fresh)
@@ -376,7 +373,7 @@ export default function Settings() {
     setBusy(true)
     try {
       await api.updateSettings({ [`${clearing}_clear`]: true })
-      // Nur den Schalter übernehmen; ungespeicherte Änderungen der übrigen Felder bleiben im Entwurf
+      // Take only the switch; unsaved changes to the other fields stay in the draft
       setSettings((s) => ({ ...s, [`${clearing}_set`]: false }))
       setClearing(null)
       toast.success('Entfernt')

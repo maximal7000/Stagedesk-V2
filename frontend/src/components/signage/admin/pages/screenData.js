@@ -1,13 +1,12 @@
-// Daten-Helfer für Bildschirm-Liste und -Detail (Spec §6.2 Bildschirm-Detail).
 import { formatTime } from '../../display/lib/format'
 import { formatDayTime } from '../shared/explain'
 import { describeSchedule, normalizeExceptions, normalizeSchedule } from '../shared/schedule'
 
-// Abschnitte des Details: Speichern sendet nur die Felder des eigenen Abschnitts.
-// Anzeige braucht signage.setup, Zeitplan und Ein- und Ausschalten signage.power (Backend: SCREEN_POWER_FIELDS).
+// Saving sends only the fields of its own section. Display needs signage.setup, schedule and
+// power signage.power (backend: SCREEN_POWER_FIELDS).
 export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme']
 export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'power_exceptions']
-// Geräte-Agent (Spec §3.4): Power-Methode, Updates und Neustart; Backend braucht dafür signage.devices.
+// Device agent fields; the backend needs signage.devices for them.
 export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot']
 
 export const POWER_METHOD_OPTIONS = [
@@ -17,7 +16,7 @@ export const POWER_METHOD_OPTIONS = [
   { value: 'ddc', label: 'DDC/CI' },
 ]
 
-// Standardwerte von power_config je Methode (Ruling R4); der Agent nutzt dieselben
+// power_config defaults per method; the agent uses the same
 export const POWER_CONFIG_DEFAULTS = {
   cec: { cec_device: '0' },
   hdmi: { output: 'HDMI-A-1' },
@@ -36,13 +35,11 @@ export const DEFAULT_UPDATE_WINDOW = { weekday: 6, from: '03:00', until: '05:00'
 
 export const configLabel = (key) => POWER_CONFIG_LABELS[key] ?? key
 
-// Konfiguration einer Methode: gespeicherte Werte, fehlende mit dem Standard aufgefüllt
 export function configFor(method, config) {
   const defaults = POWER_CONFIG_DEFAULTS[method] ?? {}
   return Object.fromEntries(Object.keys(defaults).map((k) => [k, config?.[k] ?? defaults[k]]))
 }
 
-// Werte, die das Formular anzeigt (gespeicherte Angaben, sonst die Standardwerte)
 export function deviceDefaults(draft) {
   const method = draft?.power_method ?? 'cec'
   return {
@@ -64,7 +61,7 @@ export const ORIENTATION_OPTIONS = [
   { value: 'portrait', label: 'Hoch' },
 ]
 
-// Farbschema pro Bildschirm (Spec §3.2); "Wie eingestellt" folgt den Einstellungen für alle Bildschirme
+// "Wie eingestellt" follows the setting for all screens
 export const COLOR_SCHEME_OPTIONS = [
   { value: 'inherit', label: 'Wie eingestellt' },
   { value: 'light', label: 'Immer hell' },
@@ -77,7 +74,7 @@ export const POWER_MODE_OPTIONS = [
   { value: 'manual_off', label: 'Immer aus' },
 ]
 
-// Ohne zoom: ein URL-Zoom würde die Skalierung aus dem Admin überstimmen
+// No zoom: a URL zoom would override the scaling set in the admin
 export function kioskUrl(origin, screen) {
   return `${origin}/signage?screen=${encodeURIComponent(screen.slug)}&key=${encodeURIComponent(screen.access_key)}`
 }
@@ -93,8 +90,8 @@ function normalizedConfig(method, config) {
   return Object.fromEntries(Object.entries(full).map(([k, v]) => [k, k in POWER_CONFIG_INTS ? Number(v) : String(v).trim()]))
 }
 
-// Nur geänderte Felder. Ändert sich Methode oder Konfiguration, gehen beide zusammen (der Server prüft die
-// Konfiguration gegen die Methode der Anfrage).
+// Only changed fields. If method or config changes, both go together (the server checks the
+// config against the method of the request).
 export function devicePayload(draft, original) {
   const out = {}
   for (const key of ['auto_updates', 'update_window', 'daily_reboot']) {
@@ -110,7 +107,7 @@ export function devicePayload(draft, original) {
 
 const timeOk = (v) => /^([01]\d|2[0-3]):[0-5]\d$/.test(v ?? '')
 
-// -> { window: Text oder '', config: { feld: Text } }; ein Wert, der unverändert ist, wird nicht beanstandet
+// -> { window: text or '', config: { field: text } }; an unchanged value is not flagged
 export function deviceProblems(draft, original) {
   const problems = { window: '', config: {} }
   const w = draft?.update_window
@@ -168,7 +165,7 @@ export function powerSummary(screen) {
 const CEC_TEXT = { on: 'an', standby: 'Standby' }
 export const cecLabel = (status) => CEC_TEXT[status] ?? 'unbekannt'
 
-// Letzte Meldung des Bildschirms (bis zum Geräte-Agent: der CEC-Status vom Pi)
+// Last report of the screen (without a device agent: the CEC status from the Pi)
 export function lastReport(value, now = new Date()) {
   const at = value ? new Date(value) : null
   if (!at || Number.isNaN(at.getTime())) return 'noch nie'
@@ -176,10 +173,10 @@ export function lastReport(value, now = new Date()) {
   return formatDayTime(at)
 }
 
-// Andere Ansicht vorübergehend (override_view_id/override_until, Recht signage.setup).
-// Gilt wie im Backend (Screen.get_active_view) ohne Ende oder bis zu einem Zeitpunkt in der Zukunft.
-// views (optional, Liste der Ansichten ohne Papierkorb): eine Ansicht, die dort fehlt, gilt wie im
-// Backend nicht (override_view.deleted_at). Leere Liste = noch nicht geladen, dann nichts verwerfen.
+// Temporary other view (override_view_id/override_until). Applies like the backend
+// (Screen.get_active_view): without an end or until a time in the future.
+// views (optional, views not in the trash): a view missing there does not count, as in the
+// backend (override_view.deleted_at). Empty list = not loaded yet, then discard nothing.
 export function activeOverride(screen, now = new Date(), views = null) {
   if (!screen?.override_view_id) return null
   const until = screen.override_until ? new Date(screen.override_until) : null
@@ -190,7 +187,7 @@ export function activeOverride(screen, now = new Date(), views = null) {
 
 export const OVERRIDE_CLEAR = { override_view_id: null, override_until: null }
 
-// untilLocal: Wert eines datetime-local-Felds ("2026-10-20T14:00", Ortszeit), leer = bis auf Weiteres
+// untilLocal: datetime-local value ("2026-10-20T14:00", local time), empty = until further notice
 export function overridePayload(viewId, untilLocal) {
   return {
     override_view_id: Number(viewId),

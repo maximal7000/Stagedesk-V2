@@ -61,7 +61,7 @@ describe('DisplayRoot', () => {
     expect(before.classList.contains('d-scheme-light')).toBe(true)
     act(() => { root.render(<DisplayRoot payload={{ screen, view, mode: null, scheme: 'dark' }} state="ok" lastOkAt={lastOkAt} />) })
     const after = el.querySelector('.d-root')
-    // derselbe Knoten: nur die Klasse wechselt, nichts wird neu aufgebaut oder geladen
+    // same node: only the class changes, nothing is rebuilt or reloaded
     expect(after).toBe(before)
     expect(after.classList.contains('d-scheme-dark')).toBe(true)
     expect(after.classList.contains('d-scheme-light')).toBe(false)

@@ -5,9 +5,9 @@ import RotationView from './RotationView'
 import SplitView from './SplitView'
 import SubstitutionsView from './SubstitutionsView'
 
-// Ansicht je view.kind. Props: {view}.
-//   View.Footer:   Fußleiste (Störungen, Stand der Daten); bei "Breit" links neben dem Uhr-Kasten, sonst unten
-//   View.ownFrame: die Ansicht bringt ihren Rahmen selbst mit (Medien, Wechsel) und bekommt dazu
+// Props: {view}.
+//   View.Footer:   footer bar (disruptions, data age); in "Breit" left of the clock box, otherwise at the bottom
+//   View.ownFrame: the view brings its own frame (media, rotation) and gets
 //                  {orientation, frame: {scheme, staleSince, wheel, stripe}, screen}
 export const VIEW_COMPONENTS = {
   departures: DeparturesView,

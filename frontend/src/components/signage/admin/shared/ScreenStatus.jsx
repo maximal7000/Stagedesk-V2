@@ -1,4 +1,3 @@
-// Anzeige des Bildschirm-Status und der Geräte-Spalte. Die Berechnung steht in screenStatus.js.
 import { deviceFacts, deviceStatusView } from './deviceStatus'
 import { screenStatus } from './screenStatus'
 
@@ -18,9 +17,8 @@ export default function ScreenStatus({ screen, now, device }) {
   )
 }
 
-// Spalte "Gerät": nur Hardware-Angaben, keine zweite Ampel (die zeigt "Status").
-// Ohne Gerät: Text mit nächstem Schritt. unknown: die Geräteliste ließ sich nicht laden, ob ein Gerät
-// gekoppelt ist, ist also nicht bekannt.
+// Device column: hardware only, no second status light (that is in "Status").
+// unknown: the device list failed to load, so whether a device is paired is unknown.
 export function DeviceCell({ device, unknown = false }) {
   if (unknown) {
     return (

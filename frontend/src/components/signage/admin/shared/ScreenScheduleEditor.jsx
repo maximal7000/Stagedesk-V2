@@ -1,8 +1,6 @@
-// Abschnitt "Zeitplan" der Bildschirm-Seite (Spec §2.2): eine Liste für Einschaltzeiten und Ansichten.
-// Zeile: Tage, von, bis, Ansicht ("Standard-Ansicht" = view_id null). Die obere Zeile hat Vorrang, die
-// Reihenfolge ändert der Griff (Ziehen oder Pfeiltasten). Ohne Zeilen ist der Bildschirm immer an, der
-// Abschnitt zeigt dann nur eine Zeile. Kontrolliert: value ist die Liste, onChange bekommt die neue Liste.
-// problems: Meldung je Zeile oder null (schedule.scheduleProblems); Überschneidungen ergänzt der Editor selbst.
+// The top row wins; the handle changes the order (drag or arrow keys). Without rows the screen is
+// always on. Controlled: value is the list, onChange gets the new list.
+// problems: message per row or null (schedule.scheduleProblems); the editor adds overlaps itself.
 import { useId } from 'react'
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'

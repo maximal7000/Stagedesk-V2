@@ -1,10 +1,5 @@
-// Bildschirm-Detail (Spec §6.2, Mockup admin-screen-detail.png): Anzeige, Zeitplan, Ein- und Ausschalten,
-// Kiosk-URL und rechts das Gerät. Anzeige und Zeitplan samt Ein- und Ausschalten haben je einen Entwurf
-// (useDraft); die gemeinsame SaveBar speichert jeden geänderten Entwurf mit einer eigenen Anfrage, die nur
-// dessen Felder enthält. Anzeige braucht signage.setup, Zeitplan und Ein- und Ausschalten signage.power
-// (ohne Recht nur lesend). Die Geräte-Felder
-// (Power-Methode, Updates, täglicher Neustart) bilden einen dritten Entwurf und brauchen signage.devices.
-// "Andere Ansicht vorübergehend" und "Löschen" wirken sofort (ohne Entwurf) und brauchen signage.setup.
+// Each section has its own draft (useDraft); the shared SaveBar saves every changed draft with its own
+// request holding only that draft's fields, because the sections need different permissions.
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Copy, Eye, KeyRound, MonitorOff, RotateCw, Trash2 } from 'lucide-react'
@@ -102,7 +97,6 @@ const CONFIG_FIELDS = {
   ],
 }
 
-// Steuerung des Bildschirms (Power-Methode): eigener Entwurf, braucht signage.devices
 function PowerMethodBlock({ device, original, canDevices, problems }) {
   const methodId = useId()
   const idBase = useId()
@@ -169,7 +163,6 @@ function PowerSection({ draft, set, disabled, readOnly, problems, methodBlock })
   )
 }
 
-// Updates (Spec §6): automatische Updates, Zeitfenster, täglicher Neustart; braucht signage.devices
 function UpdatesSection({ device, canDevices, problem }) {
   const ids = { weekday: useId(), from: useId(), until: useId() }
   const values = deviceDefaults(device.draft)
@@ -211,7 +204,6 @@ function UpdatesSection({ device, canDevices, problem }) {
   )
 }
 
-// Andere Ansicht vorübergehend: gilt sofort, ohne Speichern-Leiste. Ohne signage.setup nur die Anzeige des Stands.
 function OverrideSection({ screen, views, now, canEdit, onApply, onClear, busy }) {
   const ids = { view: useId(), until: useId() }
   const [viewId, setViewId] = useState('')
@@ -284,10 +276,9 @@ function KioskSection({ screen, onRegenerate }) {
   )
 }
 
-// Bildschirm ohne gekoppeltes Gerät: CEC-Stand des alten Skripts oder Hinweis. devicesError: die Geräteliste
-// ließ sich nicht laden, ob ein Gerät gekoppelt ist, ist dann unbekannt.
+// devicesError: the device list failed to load, so whether a device is paired is unknown.
 function DeviceSection({ screen, device, devicesError, now, onReload }) {
-  // onReload fehlt ohne signage.setup (Backend: reload_screen braucht setup)
+  // onReload is missing without signage.setup (backend: reload_screen needs setup)
   const legacy = !!device?.legacy
   const state = devicesError ? 'unknown' : legacy ? 'legacy' : 'unpaired'
   return (
@@ -334,11 +325,11 @@ export default function ScreenDetail() {
   const canDevices = hasPermission('signage.devices')
 
   const [screen, setScreen] = useState(null)
-  // Ausgangsstände der Abschnitte: nur beim Laden und nach vollständigem Speichern neu gesetzt, damit ein
-  // gespeicherter Abschnitt den Entwurf des anderen nicht zurücksetzt
+  // Section baselines: only reset on load and after a complete save, so saving one section does not
+  // reset the other section's draft
   const [originals, setOriginals] = useState(null)
   const [views, setViews] = useState([])
-  const [devices, setDevices] = useState(null) // Liste von GET /devices, null = nicht geladen
+  const [devices, setDevices] = useState(null) // list from GET /devices, null = not loaded
   const [devicesError, setDevicesError] = useState(null)
   const [logKey, setLogKey] = useState(0)
   const [error, setError] = useState(null)
@@ -348,7 +339,7 @@ export default function ScreenDetail() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [busy, setBusy] = useState(false)
 
-  // Anderer Bildschirm (gleiche Komponente, neue id): alten Stand sofort verwerfen, auch die Entwürfe
+  // Different screen (same component, new id): drop the old state at once, drafts included
   const [shownId, setShownId] = useState(screenId)
   if (shownId !== screenId) {
     setShownId(screenId)
@@ -367,7 +358,7 @@ export default function ScreenDetail() {
     setOriginals({ display: pickFields(s, DISPLAY_FIELDS), power: pickFields(s, POWER_FIELDS), device: pickFields(s, DEVICE_FIELDS) })
   }, [])
 
-  // Beim Wechsel zu einem anderen Bildschirm oder nach dem Abbau zählt eine späte Antwort nicht mehr
+  // After switching screens or unmounting, a late response no longer counts
   useEffect(() => {
     let alive = true
     Promise.allSettled([api.getScreens(), api.getViews(), api.getDevices()]).then(([screensRes, viewsRes, devicesRes]) => {
@@ -388,20 +379,19 @@ export default function ScreenDetail() {
     return () => { alive = false }
   }, [screenId, adopt])
 
-  // Nach Befehl, Entkoppeln oder Token zurückziehen: Gerät und Protokoll neu laden
   const reloadDevices = useCallback(async () => {
     try {
       const list = await api.getDevices()
       setDevices(list)
       setDevicesError(null)
     } catch (e) {
-      setDevicesError(e) // der letzte Stand bleibt stehen
+      setDevicesError(e) // the last state stays
     }
     setNow(new Date())
     setLogKey((k) => k + 1)
   }, [])
 
-  // Telemetrie kommt jede Minute: Gerät und Protokoll im gleichen Takt neu laden
+  // Telemetry arrives every minute: reload device and log at the same pace
   useEffect(() => {
     const timer = setInterval(reloadDevices, 60 * 1000)
     return () => clearInterval(timer)
@@ -471,7 +461,7 @@ export default function ScreenDetail() {
     setBusy(false)
   }
 
-  // Nur die Override-Felder übernehmen: Entwürfe der Abschnitte bleiben unberührt
+  // Take only the override fields: the section drafts stay untouched
   const changeOverride = async (body) => {
     setBusy(true)
     try {

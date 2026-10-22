@@ -1,7 +1,6 @@
 /**
- * Öffentliche Monitor-Anzeige, Vollbild, ohne Login.
- * Liest nur die URL, holt die Daten und überlässt die Darstellung DisplayRoot.
- * URL: ?screen=<slug> (alt ?bildschirm=), ?view=<slug> (alt ?profil=), ?key=, ?preview=<token>, ?zoom=
+ * Public display page, full screen, no login. Reads only the URL and leaves rendering to DisplayRoot.
+ * URL: ?screen=<slug> (old ?bildschirm=), ?view=<slug> (old ?profil=), ?key=, ?preview=<token>, ?zoom=
  */
 import { useEffect, useMemo } from 'react'
 import DisplayRoot from '../components/signage/display/DisplayRoot'
@@ -18,7 +17,7 @@ function readParams(search) {
   }
 }
 
-// rem-Basis aus Viewport-Breite, Skalierung des Bildschirms und ?zoom=. Neu berechnet nur bei Größenänderung.
+// rem base from viewport width, screen scaling and ?zoom=. Recomputed only on resize.
 function useRootScale(scale, orientation) {
   useEffect(() => {
     const root = document.documentElement
@@ -41,7 +40,7 @@ function useRootScale(scale, orientation) {
   }, [scale, orientation])
 }
 
-// Nächtliches Neuladen gegen 4 Uhr (zufällige Minute), damit der Kiosk über Wochen stabil läuft
+// Nightly reload around 4 am (random minute) so the kiosk runs stable for weeks
 function useNightlyReload() {
   useEffect(() => {
     const now = new Date()

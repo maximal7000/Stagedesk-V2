@@ -1,6 +1,4 @@
-// Klausuren & Termine (Spec §6.2): gemeinsame Liste "Läuft gerade / Kommt / Vergangen", Entwürfe und Payloads
-// der Formulare (Klausur, Termin, Ankündigung). Zeiten im Formular sind Werte von datetime-local (Ortszeit),
-// an den Server gehen sie als ISO mit Zone.
+// Form times are datetime-local values (local time); they go to the server as ISO with zone.
 import { toLocalInput } from './viewData'
 
 export const EXAM_DISPLAY_OPTIONS = [
@@ -36,7 +34,7 @@ function asDate(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-// Wert eines datetime-local-Felds → ISO mit Zone (der Browser rechnet in Ortszeit); leer oder ungültig → null
+// datetime-local value -> ISO with zone (the browser computes in local time); empty or invalid -> null
 export function fromLocalInput(value) {
   if (!value) return null
   const d = new Date(value)
@@ -45,8 +43,6 @@ export function fromLocalInput(value) {
 
 const text = (v) => (typeof v === 'string' ? v.trim() : '')
 const minutesBetween = (from, until) => Math.round((new Date(until) - new Date(from)) / 60000)
-
-// ── Liste ───────────────────────────────────────────────────────────
 
 export function scheduleItems(exams, events, screens) {
   const names = new Map((screens || []).map((s) => [s.id, s.name]))
@@ -61,7 +57,7 @@ export function scheduleItems(exams, events, screens) {
     screens: (e.screen_ids || []).map((id) => names.get(id)).filter(Boolean),
     record: e,
   }))
-  // Ein Termin läuft automatisch nur mit Beginn und Ende (DisplayEvent.is_active_now); sonst nur manuell
+  // An event runs automatically only with start and end (DisplayEvent.is_active_now); otherwise only manually
   const eventItems = (events || []).map((e) => {
     const timed = asDate(e.active_from) && asDate(e.active_until)
     return {
@@ -81,8 +77,8 @@ export function scheduleItems(exams, events, screens) {
 
 const byFrom = (a, b) => (a.from?.getTime() ?? Infinity) - (b.from?.getTime() ?? Infinity)
 
-// Läuft: manuell aktiv oder Beginn erreicht und Ende noch nicht. Kommt: Beginn in der Zukunft, danach Termine ohne
-// Zeitraum. Vergangen: Ende erreicht, die letzten zehn, neueste zuerst.
+// Running: manually active, or start reached and end not yet. Upcoming: start in the future, then events
+// without a time range. Past: end reached, the last ten, newest first.
 export function groupItems(items, now) {
   const running = []
   const upcoming = []
@@ -97,8 +93,6 @@ export function groupItems(items, now) {
   past.sort((a, b) => b.until - a.until)
   return { running, upcoming, past: past.slice(0, PAST_LIMIT) }
 }
-
-// ── Klausur ─────────────────────────────────────────────────────────
 
 const plusMinutes = (date, minutes) => new Date(date.getTime() + minutes * 60000)
 const nextQuarter = (now) => new Date(Math.ceil(now.getTime() / QUARTER_MS) * QUARTER_MS)
@@ -127,7 +121,7 @@ export function examDraft(exam, now = new Date()) {
   }
 }
 
-// "Aus Vorlage": Werte der Vorlage, Zeitraum ab jetzt (volle Minute) mit der Dauer der Vorlage
+// "From template": template values, time range from now (full minute) with the template's duration
 export function examFromTemplate(template, now = new Date()) {
   const start = new Date(Math.floor(now.getTime() / 60000) * 60000)
   return {
@@ -178,8 +172,6 @@ export function templateFromExam(draft) {
   }
 }
 
-// ── Termin ──────────────────────────────────────────────────────────
-
 export function eventDraft(event, now = new Date()) {
   if (event) {
     return {
@@ -214,7 +206,7 @@ export function eventPayload(draft) {
 
 export function eventProblems(draft) {
   if (!text(draft.name)) return 'Der Name fehlt. Bitte einen Namen eintragen.'
-  // Ohne Zeitraum wird der Termin nur von Hand aktiviert; eine einzelne Zeit hätte keine Wirkung
+  // Without a time range the event is only activated by hand; a single time would have no effect
   if (!draft.active_from !== !draft.active_until) return 'Beginn und Ende angeben oder beide leer lassen.'
   const range = rangeProblem(draft.active_from, draft.active_until, false)
   if (range) return range
@@ -223,8 +215,6 @@ export function eventProblems(draft) {
   if (!rows.every(completeAssignment)) return 'Zuordnung unvollständig: in jeder Zeile Bildschirm und Ansicht wählen.'
   return null
 }
-
-// ── Ankündigung ─────────────────────────────────────────────────────
 
 export function announcementDraft(a) {
   return {

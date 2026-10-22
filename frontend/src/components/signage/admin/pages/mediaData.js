@@ -1,4 +1,3 @@
-// Medien (Spec §4.4, §6.2): Status, Kurzbeschreibung der Kachel und Prüfung vor dem Hochladen.
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 
 const KIND_LABELS = { pdf: 'PDF', image: 'Bild', background: 'Hintergrund', logo: 'Logo' }
@@ -12,7 +11,7 @@ export function mediaStatus(file) {
   return 'Fertig'
 }
 
-// "PDF · 3 Seiten · Hochformat"; Liste (orientation) oder Detail (pages[0])
+// "PDF · 3 Seiten · Hochformat"; list (orientation) or detail (pages[0])
 export function fileMeta(file) {
   const parts = [KIND_LABELS[file.kind] ?? file.kind]
   if (file.page_count > 0) parts.push(file.page_count === 1 ? '1 Seite' : `${file.page_count} Seiten`)

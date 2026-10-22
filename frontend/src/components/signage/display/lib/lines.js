@@ -1,4 +1,4 @@
-// Offizielle SWL-Linienfarben (Stadtverkehr Lübeck, Quelle: swhl.de mobil/linien), aus der alten MonitorPage übernommen
+// Official SWL line colours (Stadtverkehr Lübeck, source: swhl.de mobil/linien)
 export const SWL_LINE_COLORS = {
   '1': '#00b1eb', '3': '#00a070', '4': '#13a538', '5': '#004f9f', '6': '#13a538',
   '7': '#82338b', '8': '#13a538', '9': '#00b1eb', '10': '#00b1eb', '11': '#e7343f',
@@ -8,7 +8,7 @@ export const SWL_LINE_COLORS = {
   '40': '#a2bf1a', '41': '#e7343f', '50': '#a2bf1a',
 };
 
-// Lesbare Textfarbe auf farbigem Chip (relative Luminanz)
+// Readable text colour on a coloured chip (relative luminance)
 export function chipTextColor(hex) {
   try {
     const h = String(hex).replace('#', '');
@@ -18,7 +18,6 @@ export function chipTextColor(hex) {
   } catch { return '#ffffff'; }
 }
 
-// SWL-Farbe für eine Linien-Bezeichnung (z.B. "11", "Bus 12"), sonst null
 export function swlColorForLine(name) {
   const k = String(name || '').toLowerCase().replace(/^(bus|linie|tram)\s+/i, '').trim();
   return SWL_LINE_COLORS[k] || null;

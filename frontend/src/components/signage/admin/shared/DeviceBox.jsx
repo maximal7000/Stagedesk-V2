@@ -1,6 +1,5 @@
-// Box "Gerät" im Bildschirm-Detail (Spec §8): Telemetrie in Gruppen, Befehle, letzter Screenshot,
-// Entkoppeln und Token zurückziehen. Für Bildschirme mit gekoppeltem Gerät; die übrigen Zustände
-// (kein Gerät, altes Skript, Geräteliste nicht geladen) zeigt ScreenDetail.
+// For screens with a paired device; the other states (no device, legacy script, device list
+// not loaded) are shown by ScreenDetail.
 import { useEffect, useRef, useState } from 'react'
 import { Camera, Download, Link2Off, MonitorPlay, Monitor, MonitorOff, Power, RotateCw, ShieldOff, X, AppWindow, LayoutGrid } from 'lucide-react'
 import { toast } from 'sonner'
@@ -40,9 +39,9 @@ function LargeScreenshot({ url, caption, onClose }) {
   )
 }
 
-// onReload: nur für Nutzer mit signage.setup ohne signage.devices (Neu laden wie vor dem Geräte-Agent)
+// onReload: only for users with signage.setup without signage.devices (reload as before the device agent)
 export default function DeviceBox({ device, screen, can, onChanged, onReload }) {
-  const [busy, setBusy] = useState({}) // kind -> true, solange der Befehl läuft
+  const [busy, setBusy] = useState({}) // kind -> true while the command runs
   const [confirm, setConfirm] = useState(null) // { kind, ... } | 'unpair' | 'revoke'
   const [working, setWorking] = useState(false)
   const [large, setLarge] = useState(false)

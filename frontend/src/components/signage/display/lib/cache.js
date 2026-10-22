@@ -4,7 +4,7 @@ export function save(slugKey, payload) {
   try {
     localStorage.setItem(PREFIX + slugKey, JSON.stringify({ payload, savedAt: Date.now() }))
   } catch {
-    // Speicher voll oder gesperrt: Anzeige läuft ohne Zwischenspeicher weiter.
+    // Storage full or blocked: the display keeps running without a cache.
   }
 }
 

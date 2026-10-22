@@ -1,6 +1,6 @@
-// Vorschau-Token zum Entwurf (Spec §6.2 Live-Vorschau): fragt POST /views/preview erst nach 600 ms ohne
-// Änderung an, verwirft Antworten, die von einer neueren Anfrage überholt wurden, und holt vor Ablauf der
-// 10 Minuten (Cache im Backend) einen neuen Token. Gleicher Inhalt in einem neuen Objekt fragt nicht erneut.
+// Requests POST /views/preview only after 600 ms without change, drops responses overtaken by a
+// newer request and fetches a new token before the 10 minutes (backend cache) run out. The same
+// content in a new object does not request again.
 import { useEffect, useRef, useState } from 'react'
 import { previewView } from './api'
 import { errorText } from './errorText'
@@ -32,15 +32,15 @@ export function usePreviewToken(payload, screenId, { request = previewView, dela
     return () => clearTimeout(timer)
   }, [key, request, delay])
 
-  // Nach dem Abbau zählt keine Antwort mehr
+  // After unmount no response counts
   useEffect(() => () => { seq.current += 1 }, [])
 
   if (key == null) return { token: null, error: null, pending: false }
-  // Bis die Antwort zum aktuellen Entwurf da ist, bleibt der letzte Token sichtbar
+  // Until the response for the current draft arrives the last token stays visible
   return { token: result.token, error: result.error, pending: result.key !== key }
 }
 
-// "Vorschau nicht verfügbar: <Grund>." mit dem Grund aus der Server-Meldung (ohne doppelten Punkt)
+// "Vorschau nicht verfügbar: <Grund>." with the reason from the server message (no double period)
 export function previewErrorText(error) {
   const reason = errorText(error, 'Bitte später erneut versuchen.').replace(/[.\s]+$/, '')
   return `Vorschau nicht verfügbar: ${reason}.`

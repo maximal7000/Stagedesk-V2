@@ -1,16 +1,16 @@
 import { swlColorForLine } from './lines'
 
-// Verkehrsmittel, die als Bus gelten; alles andere (re, rb, ice, sbahn …) zählt als Zug
+// Modes that count as bus; everything else (re, rb, ice, sbahn …) counts as train
 const BUS_KINDS = ['bus', 'faehre', 'taxi']
 
-// Allgemeine Dauer-Hinweise ohne Störungscharakter (aus der alten MonitorPage übernommen)
+// General standing notices without disruption character
 const DISRUPTION_GENERIC_RE = /(tretroller|e-?scooter|e-?roller|fahrr[aä]d|gep[aä]ck|mitnahme|hund|ferienfahrplan|schulfrei|kurzstrecke|heiligabend|silvester|rollstuhl|autokraft|barrierefrei|informationen zum)/i
 
 const DISRUPTION_KIND_LABEL = { disruption: 'Störung', construction: 'Baustelle', strike: 'Streik' }
 
 export const isBus = (dep) => BUS_KINDS.includes(dep?.kind_icon)
 
-// Kurzes Chip-Label: "Bus 12" → "12", "RE8" → "RE 8"
+// Short chip label: "Bus 12" -> "12", "RE8" -> "RE 8"
 export function lineLabel(dep) {
   const raw = String(dep?.line || '').trim()
   const m = raw.match(/^(?:Bus|Linie|Tram|Fähre|Faehre)\s+(.+)$/i)
@@ -18,13 +18,13 @@ export function lineLabel(dep) {
   return label.replace(/^([A-Za-z]+)(\d+)$/, '$1 $2')
 }
 
-// Chip-Farbe: Farbe aus der API, sonst SWL-Farbe (nur Busse), sonst null (neutraler Chip)
+// Chip colour: colour from the API, else SWL colour (buses only), else null (neutral chip)
 export function lineColor(dep) {
   if (dep?.line_color) return dep.line_color
   return isBus(dep) ? swlColorForLine(lineLabel(dep)) : null
 }
 
-// Minuten bis zur tatsächlichen Abfahrt ("HH:MM", Verspätung eingerechnet), über Mitternacht hinweg
+// Minutes until the actual departure ("HH:MM", delay included), across midnight
 export function minutesUntil(dep, now) {
   const value = dep?.departure_actual || dep?.departure
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(value || ''))
@@ -36,7 +36,7 @@ export function minutesUntil(dep, now) {
   return diff
 }
 
-// Störungsleiste: allgemeine Hinweise ohne Linienbezug raus; Streik, dann hervorgehobene zuerst
+// Disruption bar: drop general notices without a line; strike first, then highlighted ones
 export function visibleDisruptions(items) {
   return (items || [])
     .filter((d) => !(DISRUPTION_GENERIC_RE.test(`${d.title || ''} ${d.text || ''}`)

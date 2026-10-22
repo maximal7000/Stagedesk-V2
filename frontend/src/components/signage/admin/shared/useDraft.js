@@ -1,7 +1,6 @@
-// Speichermodell des Monitor-Admin (Spec §6.2): ein Entwurf über einem Original.
-// set('name', v) oder set('schedule.0.end', v) ändert den Entwurf; gezählt werden geänderte Felder der
-// obersten Ebene (tiefer Vergleich). save(fn) ruft fn(draft) und macht den gespeicherten Stand zum Original.
-// `original` muss stabil sein (zum Beispiel State aus dem Laden): ein neues Objekt setzt den Entwurf zurück.
+// set('name', v) or set('schedule.0.end', v) changes the draft; changed top-level fields are counted
+// (deep compare). save(fn) calls fn(draft) and makes the saved state the original.
+// `original` must be stable (e.g. state from loading): a new object resets the draft.
 import { useCallback, useMemo, useState } from 'react'
 
 export function deepEqual(a, b) {
@@ -35,7 +34,7 @@ export function useDraft(original) {
   const [state, setState] = useState(() => ({ source: original, base: original, draft: original }))
   const [saving, setSaving] = useState(false)
 
-  // Neues Original von außen (geladen oder neu abgerufen): Entwurf und Ausgangsstand neu setzen
+  // New original from outside (loaded or refetched): reset draft and baseline
   let current = state
   if (state.source !== original) {
     current = { source: original, base: original, draft: original }
@@ -57,7 +56,7 @@ export function useDraft(original) {
     setSaving(true)
     try {
       const result = await fn(snapshot)
-      // Kam inzwischen ein neues Original (neu geladen), gilt dieses; der alte Stand wird nicht übernommen
+      // If a new original arrived meanwhile (reloaded) it wins; the old state is not taken over
       setState((s) => (s.source === source ? { ...s, base: snapshot } : s))
       return result
     } finally {

@@ -1,6 +1,5 @@
-// Daten-Helfer für Ansichten-Liste und -Bearbeitung (Spec §3.1, §6.2 "Ansicht bearbeiten").
-// Der Entwurf enthält nur bearbeitbare Felder; gespeichert und in die Vorschau geschickt werden nur die
-// geänderten, normalisiert über viewPayload.
+// The draft holds only editable fields; only the changed ones are saved and sent to the preview,
+// normalised via viewPayload.
 import { deepEqual } from '../shared/useDraft'
 
 export const KIND_OPTIONS = [
@@ -41,7 +40,7 @@ export const MIN_ROTATION_SECONDS = 5
 export const MAX_ROTATION_SECONDS = 600
 export const DEFAULT_MAX_DEPARTURES = 10
 
-// Zahlenfelder mit Bereich, wie das Backend sie prüft (monitor/validation.py)
+// Number fields with ranges as the backend checks them (signage/validation.py)
 export const NUMBER_RULES = {
   page_seconds: { label: 'Blättertakt', min: 5, max: 120 },
   media_seconds: { label: 'Sekunden pro Seite', min: 3, max: 600 },
@@ -57,7 +56,7 @@ const numberMessage = (label, min, max) => `${label}: bitte eine ganze Zahl von 
 const inRange = (value, min, max) => value !== '' && value != null && Number.isInteger(Number(value))
   && Number(value) >= min && Number(value) <= max
 
-// Felder, die das Admin bearbeitet (Teilmenge von DisplayViewUpdateSchema)
+// Fields the admin edits (subset of DisplayViewUpdateSchema)
 export const EDITABLE_FIELDS = [
   'name', 'kind', 'layout', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
@@ -82,7 +81,7 @@ const LIST_FIELDS = new Set(['transit_disruption_rail_lines', 'transit_disruptio
 
 const pad = (n) => String(n).padStart(2, '0')
 
-// ISO mit Zone → Wert eines datetime-local-Felds (Ortszeit). Der Server liest einen Wert ohne Zone als Ortszeit.
+// ISO with zone -> datetime-local value (local time). The server reads a value without zone as local time.
 export function toLocalInput(iso) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -148,7 +147,7 @@ export function viewPayload(draft, keys) {
   return Object.fromEntries(keys.map((k) => [k, normalizeField(k, draft[k])]))
 }
 
-// Vorschau: die gespeicherte Ansicht (id) ist die Basis, dazu nur die geänderten Felder
+// Preview: the saved view (id) is the base, plus only the changed fields
 export function previewPayload(id, base, draft) {
   return { id, ...viewPayload(draft, changedKeys(base, draft)) }
 }
@@ -169,7 +168,7 @@ export function rotationProblems(items) {
   return problems
 }
 
-// keys: geänderte Felder; nur deren Zahlen werden geprüft (alte, ungeänderte Werte blockieren nichts)
+// keys: changed fields; only their numbers are checked (old unchanged values block nothing)
 export function viewProblems(draft, keys = []) {
   const problems = []
   if (!String(draft.name ?? '').trim()) problems.push('Der Name fehlt. Bitte einen Namen eintragen.')
@@ -182,7 +181,7 @@ export function viewProblems(draft, keys = []) {
       if (!inRange(stop.walk_minutes ?? 0, 0, WALK_MINUTES_LIMIT)) {
         problems.push(`Haltestelle „${stop.name}“: ${numberMessage('Fußweg', 0, WALK_MINUTES_LIMIT)}`)
       }
-      // 0 hieß im alten Admin "ohne Grenze" und wird beim Speichern zum Standard (normalizeStop)
+      // 0 meant "no limit" in the old admin and becomes the default on save (normalizeStop)
       const max = stop.max_departures === 0 ? DEFAULT_MAX_DEPARTURES : stop.max_departures
       if (!inRange(max ?? DEFAULT_MAX_DEPARTURES, 1, MAX_DEPARTURES_LIMIT)) {
         problems.push(`Haltestelle „${stop.name}“: ${numberMessage('Max. Zeilen', 1, MAX_DEPARTURES_LIMIT)}`)
@@ -192,7 +191,7 @@ export function viewProblems(draft, keys = []) {
   return problems
 }
 
-// Ein Wechsel enthält nie einen Wechsel (Backend: validate_rotation_items) und nie sich selbst
+// A rotation never contains a rotation (backend: validate_rotation_items) nor itself
 export function rotationChoices(views, ownId) {
   return (views ?? []).filter((v) => v.kind !== 'rotation' && v.id !== ownId)
 }
@@ -205,8 +204,8 @@ export function moveItem(list, from, to) {
   return next
 }
 
-// Eine Ansicht in einem Wechsel kann nicht selbst zum Wechsel werden (Backend: validation._check_not_in_rotation).
-// Gelöschte Wechsel zählen nicht. Geteilte Ansichten verweisen auf Inhalte, nicht auf Ansichten.
+// A view inside a rotation cannot become a rotation itself (backend: validation._check_not_in_rotation).
+// Deleted rotations do not count. Split views reference content, not views.
 export function kindChangeProblem(viewId, nextKind, views) {
   if (nextKind !== 'rotation') return null
   const rotation = (views ?? []).find((v) => v.kind === 'rotation' && !v.deleted_at
@@ -214,7 +213,6 @@ export function kindChangeProblem(viewId, nextKind, views) {
   return rotation ? `Diese Ansicht ist Teil des Wechsels „${rotation.name}“. Erst dort entfernen.` : null
 }
 
-// Bildschirme, auf denen die Ansicht eingestellt ist, mit der Rolle (Standard, vorübergehend, Zeitplan)
 export function usedOn(viewId, screens, now = new Date()) {
   const out = []
   for (const s of screens ?? []) {
@@ -242,7 +240,7 @@ export function stopTransport(stop) {
   return parts.length ? parts.join(', ') : 'Keine'
 }
 
-// Vorschau-Größe: Auflösung des Bildschirms (das Modell kennt keine; 4K wie die vorhandenen Geräte)
+// Preview size: screen resolution (the model has none; 4K like the existing devices)
 export function screenSize(screen) {
   return screen?.orientation === 'portrait' ? { width: 2160, height: 3840 } : { width: 3840, height: 2160 }
 }

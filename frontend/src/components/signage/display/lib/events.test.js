@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { daysUntil, eventDetail } from './events'
 import { formatDayMonth, formatShortDate, parseLocalDate } from './format'
 
-// Alle Werte sind lokale Zeiten der Testumgebung
+// All values are local times of the test environment
 const local = (y, mo, d, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).toISOString()
 
 describe('Termine', () => {

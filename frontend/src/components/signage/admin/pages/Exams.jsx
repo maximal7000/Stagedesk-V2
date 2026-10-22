@@ -1,6 +1,3 @@
-// Klausuren & Termine (Spec §6.2): eine Liste "Läuft gerade / Kommt / Vergangen" mit Klausuren und Terminen
-// gemischt nach Zeit, darunter die Ankündigungen. Anlegen und Bearbeiten im Seitenpanel; "Aus Vorlage" übernimmt
-// eine Klausur-Vorlage. Schreiben braucht signage.exams (Route), Lesen signage.view.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { BookmarkPlus, CalendarClock, ChevronDown, Megaphone, Pencil, Plus, Power, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -152,7 +149,6 @@ function AnnouncementForm({ draft, set }) {
   )
 }
 
-// "Aus Vorlage": Liste der Klausur-Vorlagen; ein Klick übernimmt, der Papierkorb entfernt die Vorlage
 function TemplateMenu({ templates, onPick, onDelete }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
@@ -322,7 +318,6 @@ export default function Exams() {
     setSaving(false)
   }
 
-  // Termin von Hand an- oder ausschalten (wie im alten Admin); wirkt sofort
   const toggleEvent = async (item) => {
     try {
       await (item.active ? api.deactivateEvent(item.id) : api.activateEvent(item.id))

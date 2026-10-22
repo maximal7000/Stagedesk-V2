@@ -9,13 +9,12 @@ export function paginate(items, perPage) {
   return pages
 }
 
-// Seiten aus gemessenen Zeilenhöhen: Indizes je Seite, die in `available` passen.
-// Eine Zeile, die höher ist als `available`, bekommt eine eigene Seite.
+// A row taller than `available` gets a page of its own.
 export function paginateByHeight(heights, available) {
   return packByHeight(heights, available)
 }
 
-// Wechselt alle `seconds` Sekunden die Seite. Kein Timer bei höchstens einer Seite.
+// No timer with at most one page.
 export function usePager(pages, seconds) {
   const count = pages.length
   const [raw, setRaw] = useState(0)

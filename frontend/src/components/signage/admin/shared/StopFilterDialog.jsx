@@ -1,7 +1,5 @@
-// Filter einer Haltestelle (Spec §6.2: "Filter öffnen sich in einem Dialog"): Linien, Richtung, Via,
-// Verkehrsmittel und eine Zusatz-Haltestelle, deren Abfahrten in dieselbe Liste kommen.
-// Arbeitet auf einer Kopie; "Übernehmen" gibt sie an den Entwurf der Ansicht zurück. Hier wird die
-// Haltestelle auch entfernt (die Tabelle bleibt dadurch schmal genug für die halbe Seitenbreite).
+// Works on a copy; "Übernehmen" hands it back to the view draft. Removing the stop also happens
+// here (keeps the table narrow enough for half the page width).
 import { useEffect, useId, useRef, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'

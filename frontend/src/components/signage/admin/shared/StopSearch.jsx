@@ -1,5 +1,4 @@
-// Haltestellensuche (GET /transit/search): Eingabe entprellt, Treffer als Liste, mit Pfeiltasten, Enter und
-// Escape bedienbar (Combobox-Muster). Veraltete Antworten zählen nicht.
+// Combobox pattern; stale responses are ignored.
 import { useEffect, useId, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { searchStops } from './api'

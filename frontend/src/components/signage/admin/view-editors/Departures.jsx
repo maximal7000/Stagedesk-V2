@@ -1,7 +1,3 @@
-// Editor für Abfahrten (Spec §6.2, Mockup admin-view-edit.png): Haltestellen-Tabelle mit Fußweg, Max. Zeilen
-// und Verkehrsmitteln, sortierbar per Ziehen (natives HTML5-Drag, mit der Tastatur über den Griff),
-// Filter im Dialog, dazu Störungsmeldungen (mit Ausblenden einzelner Meldungen), Streik und Erweitert
-// (Vorausschau, Quellen, Zwischenhalte).
 import { useEffect, useId, useState } from 'react'
 import { ChevronRight, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { Button, StatusBadge } from '../../../ui'
@@ -151,7 +147,7 @@ function ManualMessages({ value, onChange }) {
   )
 }
 
-// Aktuelle Meldungen der gespeicherten Ansicht (GET /disruptions); Ausblenden ändert transit_disruption_hidden im Entwurf
+// Current messages of the saved view (GET /disruptions); hiding changes transit_disruption_hidden in the draft
 function CurrentMessages({ viewId, hidden, onChange }) {
   const [state, setState] = useState({ viewId: null, list: null, error: null })
   useEffect(() => {

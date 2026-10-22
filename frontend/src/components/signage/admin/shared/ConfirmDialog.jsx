@@ -1,4 +1,4 @@
-// Bestätigungsdialog des Monitor-Admin. tone='danger' füllt den Bestätigen-Knopf rot (einziger Ort dafür).
+// tone='danger' fills the confirm button red (the only place for that).
 import { useEffect, useId, useRef } from 'react'
 import { Button } from '../../../ui'
 
@@ -16,11 +16,10 @@ export default function ConfirmDialog({
   const cancelRef = useRef(null)
   const dialogRef = useRef(null)
 
-  // Beim Öffnen: Fokus auf "Abbrechen"
   useEffect(() => { cancelRef.current?.focus() }, [])
 
-  // Escape gilt nur im Dialog und erreicht die Seite nicht (ein offenes Seitenpanel bleibt offen);
-  // Tab bleibt zwischen den Knöpfen des Dialogs
+  // Escape stays in the dialog and does not reach the page (an open side panel stays open);
+  // Tab cycles between the dialog's buttons
   const onKeyDown = (e) => {
     if (e.key === 'Escape') {
       e.stopPropagation()
@@ -45,7 +44,7 @@ export default function ConfirmDialog({
         <div className="mt-5 flex justify-end gap-2">
           <Button ref={cancelRef} variant="ghost" onClick={onCancel} disabled={busy}>{cancelLabel}</Button>
           {tone === 'danger' ? (
-            // Eigener Knopf statt Button-Variante: die Akzentfläche von "primary" ließe sich nicht sicher überschreiben
+            // Own button instead of a Button variant: the accent fill of "primary" cannot be overridden reliably
             <button type="button" onClick={onConfirm} disabled={busy}
               className="inline-flex items-center justify-center gap-2 text-sm font-medium leading-none px-3.5 py-2 rounded-md whitespace-nowrap bg-bad text-white hover:brightness-110 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-bad focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:bg-raised disabled:text-fg-disabled">
               {confirmLabel}

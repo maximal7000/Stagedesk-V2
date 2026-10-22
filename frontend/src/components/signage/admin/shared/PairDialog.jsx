@@ -1,4 +1,3 @@
-// Dialog "Bildschirm koppeln" (Spec §3.1, §8): Schritt 1 Code vom Bildschirm, Schritt 2 vorhandener oder neuer Bildschirm.
 import { useEffect, useId, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '../../../ui'
@@ -12,7 +11,7 @@ const MODES = [
   { value: 'new', label: 'Neuer Bildschirm' },
 ]
 
-// Sechs Einzelfelder, gruppiert 3 + 3 wie auf dem Pi ("482 913"). cells: Array aus sechs Zeichen, leer = ''; Lücken bleiben erhalten.
+// Six single fields grouped 3 + 3 as on the Pi ("482 913"). cells: array of six chars, empty = ''; gaps are kept.
 const EMPTY_CELLS = ['', '', '', '', '', '']
 
 function CodeInput({ cells, onChange }) {
@@ -22,7 +21,7 @@ function CodeInput({ cells, onChange }) {
     el?.focus()
     el?.select?.()
   }
-  // Ziffern ab Position i einsetzen (Eingabe oder Einfügen), übrige Felder bleiben
+  // Insert digits from position i (typing or paste); the other fields stay
   const put = (i, typed) => {
     if (!typed) return
     const next = [...cells]
@@ -36,7 +35,7 @@ function CodeInput({ cells, onChange }) {
     const raw = e.target.value
     if (raw === '') { clear(i); return }
     const old = cells[i]
-    // Neu getippte Ziffer: das alte Zeichen einmal abziehen, egal wo der Cursor stand
+    // Newly typed digit: remove the old character once, wherever the cursor was
     const typed = normalizeCode(old && raw.includes(old) && raw.length === 2 ? raw.replace(old, '') : raw)
     if (typed) put(i, typed.length <= 2 ? typed.slice(-1) : typed)
   }
@@ -61,7 +60,7 @@ function CodeInput({ cells, onChange }) {
   )
 }
 
-// screens: [{ id, name, hasDevice? }] (hasDevice null = unbekannt, die Geräteliste ließ sich nicht laden); onPaired lädt die Liste neu, onClose schließt
+// screens: [{ id, name, hasDevice? }] (hasDevice null = unknown, the device list failed to load)
 export default function PairDialog({ screens, onClose, onPaired }) {
   const titleId = useId()
   const screenId = useId()
@@ -79,8 +78,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
   const dialogRef = useRef(null)
   const mounted = useRef(true)
   useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-  // Fokus auf das erste Bedienelement des Schritts (Code, Auswahl oder Name)
-  // Schritt 1: erstes leeres Ziffernfeld, nach einem Codefehler das erste Feld
+  // Step 1: first empty digit field, after a code error the first field
   const codeFocus = useRef(null)
   useEffect(() => {
     const root = dialogRef.current
@@ -92,7 +90,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
     } else {
       root.querySelector('input, select')?.focus()
     }
-    // code bewusst nicht in den Abhängigkeiten: nur beim Schrittwechsel fokussieren
+    // code deliberately not in the deps: focus only on step change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, mode])
 
@@ -117,7 +115,7 @@ export default function PairDialog({ screens, onClose, onPaired }) {
     } catch (err) {
       if (mounted.current) {
         setError(errorText(err, 'Das Koppeln ist fehlgeschlagen. Bitte erneut versuchen.'))
-        // Fehler des Codes (ungültig, abgelaufen, zu viele Versuche): zurück zur Codeeingabe
+        // Code errors (invalid, expired, too many attempts): back to code entry
         if (err?.response?.status === 400 || err?.response?.status === 429) { codeFocus.current = 0; setStep(1) }
       }
     }

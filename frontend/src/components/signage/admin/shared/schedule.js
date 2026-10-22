@@ -1,8 +1,7 @@
-// Gemeinsamer Zeitplan (Screen.schedule, Spec §2.2) und Datums-Ausnahmen (power_exceptions) eines Bildschirms.
-// Zeile: { days, from, until, view_id }, view_id null = Standard-Ansicht. Tage zählen wie im Backend
-// (screen_schedule.py, date.weekday()): 0 = Montag … 6 = Sonntag. Endet eine Zeile vor ihrem Beginn, reicht sie
-// über Mitternacht, der Teil nach 0 Uhr gehört zum Folgetag. Überschneiden sich Zeilen, gilt die obere; an ist
-// der Bildschirm in der Vereinigung aller Zeilen. Eine Ausnahme ohne Zeiten heißt: ganztags an.
+// Row: { days, from, until, view_id }, view_id null = default view. Days as in the backend
+// (screen_schedule.py, date.weekday()): 0 = Monday … 6 = Sunday. A row that ends before it starts
+// crosses midnight; the part after 00:00 belongs to the next day. Overlapping rows: the top one wins;
+// the screen is on in the union of all rows. An exception without times means on all day.
 export const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 const text = (v) => (typeof v === 'string' ? v.trim() : '')
@@ -10,7 +9,7 @@ const isEntry = (e) => e !== null && typeof e === 'object' && !Array.isArray(e)
 
 export function normalizeSchedule(entries) {
   return (Array.isArray(entries) ? entries : []).filter(isEntry).map((e) => ({
-    // "1" aus alten Daten zählt als 1; das Backend vergleicht Zahlen
+    // "1" from old data counts as 1; the backend compares numbers
     days: [...new Set((Array.isArray(e.days) ? e.days : []).map((d) => (typeof d === 'string' && d.trim() !== '' ? Number(d) : d))
       .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))]
       .sort((a, b) => a - b),
@@ -27,7 +26,7 @@ function viewIdOf(value) {
 
 const SAME_TIMES = 'Von und bis dürfen nicht gleich sein.'
 
-// views (optional, Liste aus /views): eine Ansicht, die dort fehlt, lehnt das Backend ab
+// views (optional, list from /views): the backend rejects a view missing there
 export function scheduleProblems(entries, views = null) {
   const known = views ? new Set(views.map((v) => v.id)) : null
   return normalizeSchedule(entries).map((e) => {
@@ -39,7 +38,7 @@ export function scheduleProblems(entries, views = null) {
   })
 }
 
-// Zusammenhängende Tage ab drei werden zu "Mo–Fr", sonst einzeln mit Komma
+// Three or more consecutive days become "Mo–Fr", otherwise listed with commas
 export function formatDays(days) {
   const sorted = [...new Set(days)].sort((a, b) => a - b)
   const parts = []
@@ -56,7 +55,7 @@ export function formatDays(days) {
 export function describeSchedule(entries) {
   const list = normalizeSchedule(entries)
   if (!list.length) return 'Ohne Zeitplan'
-  // Zeilen mit gleichen Zeiten für verschiedene Ansichten nur einmal nennen
+  // Rows with the same times for different views are listed once
   return [...new Set(list.map((e) => `${formatDays(e.days)} ${e.from} bis ${e.until}`))].join(' · ')
 }
 
@@ -83,10 +82,9 @@ export function exceptionProblems(list) {
   })
 }
 
-// ── Wochenübersicht ─────────────────────────────────────────────────
-// Zeiten als Minuten-Bereiche [start, end) je Wochentag, genau wie das Backend sie wertet
-// (screen_schedule.row_matches): nur Zahlen als Tage, ohne Zeiten ganztags, fehlende Zeit 00:00 bzw. 23:59,
-// über Mitternacht bis 0 Uhr am Tag und ab 0 Uhr am Folgetag. 23:59 als Ende zählt bis Mitternacht.
+// Times as minute ranges [start, end) per weekday, exactly as the backend evaluates them
+// (screen_schedule.row_matches): only numbers as days, without times all day, missing time 00:00 or 23:59,
+// across midnight until 00:00 on the day and from 00:00 on the next day. 23:59 as end counts until midnight.
 export const DAY_MINUTES = 1440
 const FULL_DAY = [{ start: 0, end: DAY_MINUTES }]
 const DAY_START = '00:00'
@@ -106,7 +104,7 @@ function toMinutes(hhmm) {
 
 const validDays = (row) => (Array.isArray(row.days) ? row.days : []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6)
 
-// Teilstücke einer Zeile: [{ day, start, end }]
+// Pieces of a row: [{ day, start, end }]
 function segments(row) {
   if (!isEntry(row)) return []
   const [from, until] = windowOf(row)
@@ -126,7 +124,7 @@ function segments(row) {
 
 const overlaps = (a, b) => a.day === b.day && a.start < b.end && b.start < a.end
 
-// Hinweis je Zeile, die sich mit einer früheren überschneidet (die obere hat Vorrang); aneinanderstoßend zählt nicht
+// Hint per row that overlaps an earlier one (the top one wins); touching rows do not count
 export function overlapHints(rows) {
   const list = Array.isArray(rows) ? rows : []
   const parts = list.map(segments)
@@ -147,8 +145,8 @@ function subtract(range, covered) {
   return pieces
 }
 
-// Wirksame Balken der Woche: [{ day, start, end, viewId }], ohne Überschneidung (die obere Zeile gewinnt),
-// sortiert nach Tag und Beginn; aneinanderstoßende Stücke derselben Ansicht zusammengefasst
+// Effective bars of the week: [{ day, start, end, viewId }], no overlap (the top row wins),
+// sorted by day and start; touching pieces of the same view merged
 export function weekBars(rows) {
   const covered = Array.from({ length: 7 }, () => [])
   const bars = []
@@ -179,8 +177,8 @@ function mergeRanges(ranges) {
   return out
 }
 
-// Ein-Zeiten eines Bildschirms je Wochentag (power.compute_power_state): leerer Zeitplan = immer an,
-// sonst die Vereinigung aller Zeilen
+// On-times per weekday (power.compute_power_state): empty schedule = always on,
+// otherwise the union of all rows
 export function powerWeek(screen) {
   if (screen?.power_mode === 'manual_off') return { mode: 'off', days: Array(7).fill([]) }
   if (screen?.power_mode === 'manual_on') return { mode: 'on', days: Array(7).fill(FULL_DAY) }
@@ -191,7 +189,7 @@ export function powerWeek(screen) {
   return { mode: 'schedule', days: days.map(mergeRanges) }
 }
 
-// Zeile, die jetzt gilt (screen_schedule.active_row): Enden zählen mit, die obere zuerst. weekday 0 = Montag.
+// Row that applies now (screen_schedule.active_row): ends inclusive, top first. weekday 0 = Monday.
 export function activeRow(rows, weekday, hhmm) {
   for (const row of Array.isArray(rows) ? rows : []) {
     if (!isEntry(row) || (row.days !== undefined && !Array.isArray(row.days))) continue
@@ -205,8 +203,8 @@ export function activeRow(rows, weekday, hhmm) {
   return null
 }
 
-// Farbplatz je Ansicht in der Wochenübersicht (Reihe mit count Tönen): Standard-Ansicht zuerst, dann die übrigen
-// nach id. Die Farbe folgt der Ansicht, Verschieben von Zeilen färbt also nichts um. -> Map(viewId | null -> Platz)
+// Colour slot per view (series with count tones): default view first, then the others by id.
+// The colour follows the view, so moving rows recolours nothing. -> Map(viewId | null -> slot)
 export function seriesSlots(rows, count) {
   const ids = [...new Set((Array.isArray(rows) ? rows : []).map((r) => r?.view_id).filter((id) => Number.isInteger(id)))]
     .sort((a, b) => a - b)

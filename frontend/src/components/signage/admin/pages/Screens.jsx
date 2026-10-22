@@ -1,4 +1,3 @@
-// Bildschirm-Liste (Spec §6.2): Tabelle wie in der Übersicht, dazu "Neuer Bildschirm".
 import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronRight, MonitorOff, Plus } from 'lucide-react'
@@ -65,7 +64,7 @@ function NewScreenDialog({ views, busy, onCreate, onCancel }) {
 
 export default function Screens() {
   const navigate = useNavigate()
-  // Ohne signage.setup (nur Ein- und Ausschalten) kein Anlegen
+  // Without signage.setup (power only) no creating
   const canSetup = useUser().hasPermission('signage.setup')
   const [screens, setScreens] = useState(null)
   const [views, setViews] = useState([])

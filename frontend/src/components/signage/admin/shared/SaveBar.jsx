@@ -1,4 +1,3 @@
-// Leiste für ungespeicherte Änderungen (Spec §6.2). Erscheint nur, solange count > 0.
 import { Button } from '../../../ui'
 
 function changesLabel(count) {

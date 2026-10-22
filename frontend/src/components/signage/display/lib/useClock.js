@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-// Gemeinsamer Sekundentakt: alle Aufrufer teilen einen Timer, er läuft nur bei mindestens einem Abonnenten.
+// Shared second tick: all callers share one timer; it only runs with at least one subscriber.
 const listeners = new Set()
 let timer = null
 let current = new Date()
@@ -29,8 +29,7 @@ export function useClock() {
   return useSyncExternalStore(subscribe, getSnapshot)
 }
 
-// Derselbe Takt, aber nur minutengenau: der Wert ändert sich (und rendert neu) nur beim Minutenwechsel.
-// Für Minutenangaben wie "in 6 min" oder Countdown-Tage.
+// Same tick at minute precision: the value changes (and re-renders) only when the minute changes.
 const getMinute = () => Math.floor(current.getTime() / 60000)
 
 export function useClockMinute() {

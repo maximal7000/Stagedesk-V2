@@ -4,17 +4,15 @@ import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../li
 import { paginateByHeight, usePager } from '../lib/pager'
 import { Heading, PageCount } from './parts'
 
-// Vertretungsplan (Spec §1.3): je Tag ein Kasten mit Kopf (Abwesend, Betroffen, Nachrichten) und Tabelle.
-// Schüleransicht nach Klasse, Lehrkräfte-Ansicht nach Kürzel. Klasse und Hinweis brechen um; die Zeilen werden
-// in einer versteckten Messschicht gemessen und danach seitenweise geblättert.
-// mode 'embed': die WebUntis-Seite im Rahmen (gewählt, Ausweichen oder ohne Schlüssel).
+// Rows are measured in a hidden layer and then paged.
+// mode 'embed': the WebUntis page in the frame (chosen, fallback or no key).
 
 const ROW_MIN_REM = 2.1875
 const KIND_TONE = { cancelled: 'text-(--d-red)', room_change: 'text-(--d-info)' }
 const KIND_FALLBACK = { substitution: 'Vertretung', cancelled: 'Entfall', room_change: 'Raumänderung', other: 'Änderung' }
 
-// Ersetztes durchgestrichen, Neues dahinter. Altwert und erster neuer Wert bleiben zusammen ("~~113~~ 015");
-// umbrochen wird nur zwischen getrennten Werten einer Liste ("KLM, HRT").
+// Replaced values struck through, new ones after them. Old value and first new value stay together ("~~113~~ 015");
+// wrapping only happens between separate values of a list ("KLM, HRT").
 function Replaced({ old, value }) {
   const [first = '', ...rest] = String(value ?? '').split(/,\s*/)
   return (
@@ -29,8 +27,8 @@ function Replaced({ old, value }) {
   )
 }
 
-// Spalten: flag = Schalter in data.columns (Format-Optionen aus WebUntis), ohne flag immer sichtbar.
-// nowrap: kurze Werte ("8.–9.", "Raumänderung") brechen nie mitten im Wert; Klasse, Lehrkraft, Raum und Hinweis umbrechen.
+// Columns: flag = switch in data.columns (format options from WebUntis), without flag always visible.
+// nowrap: short values ("8.–9.", "Raumänderung") never break inside; class, teacher, room and note wrap.
 const COLUMN_DEFS = {
   group: { head: 'Kürzel', fr: 7, nowrap: true, cls: 'd-oswald font-medium', lead: true, cell: (row) => row.group },
   class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-oswald font-medium', cell: (row) => row.classes_label },
@@ -57,7 +55,7 @@ function tableColumns(data) {
     const flag = COLUMN_DEFS[key].flag
     return !flag || flags[flag] !== false
   })
-  // Schüleransicht: die Klasse führt die Gruppe an (nur bei Wechsel gezeigt)
+  // Student view: the class heads the group (shown only on change)
   const lead = groupBy === 'teacher' ? 'group' : 'class'
   return {
     keys,
@@ -75,7 +73,7 @@ export default function SubstitutionsView({ view }) {
   const data = view.data ?? {}
   if (!isLive(data)) {
     if (data.embed_url) return <EmbedFrame url={data.embed_url} />
-    // source null: Daten gibt es nur mit gültigem Schlüssel; sonst ist WebUntis nicht erreichbar
+    // source null: data exists only with a valid key; otherwise WebUntis is unreachable
     return (
       <div className="d-card h-full px-[2rem] py-[1.75rem]">
         <Heading>Vertretungsplan</Heading>
@@ -90,8 +88,8 @@ export default function SubstitutionsView({ view }) {
   return <DayColumns data={data} seconds={view.page_seconds} />
 }
 
-// Zwei Tage nebeneinander. In schmalen Flächen (Aufteilung "Normal", Splitscreen) ist für beide Tage samt Kopf
-// übereinander kein Platz: dann ein Tag nach dem anderen, jeweils mit allen seinen Seiten.
+// Two days side by side. In narrow areas (layout "Normal", split screen) there is no room for both days
+// stacked with their headers: then one day after the other, each with all its pages.
 const STACK_BELOW_REM = 100
 
 function DayColumns({ data, seconds }) {
@@ -125,7 +123,7 @@ function dayTitle(day) {
 
 const withPeriods = (entry) => (entry.periods ? `${entry.name} (${entry.periods})` : entry.name)
 
-// "Abwesend" (Lehrkräfte, dann Klassen) und "Betroffen" (Klassen, dann Lehrkräfte); nur Zeilen mit Einträgen
+// "Abwesend" (teachers, then classes) and "Betroffen" (classes, then teachers); only rows with entries
 function DayHead({ day }) {
   const list = day.absent ?? []
   const absent = [...list.filter((a) => a.kind !== 'class'), ...list.filter((a) => a.kind === 'class')].map(withPeriods)
@@ -166,7 +164,7 @@ function DayCard({ day, news, columns, seconds, onDone }) {
   }, [rows, heights, height])
   const { index, count } = usePager(pages, seconds)
   const page = (pages[index] ?? []).map((i) => rows[i])
-  // Ein Tag nach dem anderen: nach allen Seiten dieses Tages weiter zum nächsten
+  // One day after the other: after all pages of this day on to the next
   useEffect(() => {
     if (!onDone || !(seconds > 0)) return undefined
     const id = setTimeout(onDone, Math.max(1, count) * seconds * 1000)
@@ -198,7 +196,7 @@ function DayCard({ day, news, columns, seconds, onDone }) {
               ))}
             </div>
           )}
-        {/* Messschicht: alle Zeilen in voller Breite, unsichtbar; liefert die Höhen für das Blättern */}
+        {/* Measuring layer: all rows full width, invisible; provides the heights for paging */}
         <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">
           {rows.map((row, i) => <SubstitutionRow key={i} row={row} columns={columns} showLead />)}
         </div>
@@ -207,7 +205,7 @@ function DayCard({ day, news, columns, seconds, onDone }) {
   )
 }
 
-// Höhen der Kinder von ref (px), neu gemessen bei geänderten deps und nach dem Laden der Schriften
+// Heights of ref's children (px), re-measured when deps change and after the fonts load
 function useRowHeights(ref, deps) {
   const [heights, setHeights] = useState([])
   useLayoutEffect(() => {
@@ -246,7 +244,7 @@ function SubstitutionRow({ row, columns, showLead }) {
   )
 }
 
-// WebUntis-Seite im Rahmen, ohne Farbfilter; auf die rem-Basis hochskaliert, damit sie auf 4K lesbar bleibt
+// WebUntis page in the frame, no colour filter; scaled up to the rem base so it stays readable on 4K
 function EmbedFrame({ url }) {
   const ref = useRef(null)
   const { width, height, remPx } = useBoxSize(ref)
@@ -266,7 +264,7 @@ function EmbedFrame({ url }) {
   )
 }
 
-// "WebUntis · 21.10. 07:42" aus dem Stand der Monitor-Schnittstelle, sonst der Abrufzeitpunkt "07:42"
+// "WebUntis · 21.10. 07:42" from the monitor endpoint's timestamp, otherwise the fetch time "07:42"
 function stamp(data) {
   if (data.updated_at) {
     const day = formatDayMonth(data.updated_at)
@@ -276,7 +274,7 @@ function stamp(data) {
   return formatTime(data.fetched_at)
 }
 
-// Fußleiste: Stand der Daten (nur bei eigenen Daten, das iframe zeigt ihn selbst) und Hinweis auf die Ersatzquelle
+// Footer: data age (only for own data, the iframe shows it itself) and the fallback source hint
 function SourceNote({ view }) {
   const data = view.data ?? {}
   const when = isLive(data) ? stamp(data) : ''

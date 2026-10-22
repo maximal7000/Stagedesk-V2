@@ -1,6 +1,5 @@
-// Sortieren per Ziehen mit nativem HTML5-Drag (keine Bibliothek): Zeilen bekommen die Handler aus
-// rowProps(index); beim Ablegen ruft der Hook onMove(von, nach). Die Tastatur-Alternative liefert
-// handleKeyDown (Pfeil hoch/runter am Griff).
+// Native HTML5 drag (no library): rows get the handlers from rowProps(index); on drop the hook calls
+// onMove(from, to). handleKeyDown is the keyboard alternative (arrow up/down on the handle).
 import { useState } from 'react'
 import { moveItem } from '../pages/viewData'
 
@@ -40,11 +39,10 @@ export function useListDrag(count, onMove) {
   return { rowProps, handleKeyDown }
 }
 
-// Gemeinsame Klassen: gezogene Zeile blass, Zielzeile hinterlegt
 export const dragRowClass = 'data-[dragging]:opacity-50 data-[drop-target]:bg-raised'
 
-// Stabile Schlüssel je Zeile (Einträge haben keine id): Verschieben, Entfernen und Hinzufügen führen sie
-// mit, damit React die Zeile samt Fokus mitnimmt. Passt die Anzahl nicht (Verwerfen, neu geladen), neu vergeben.
+// Stable keys per row (items have no id): move, remove and add carry them so React keeps the row
+// and its focus. If the count does not match (discard, reload) they are reassigned.
 let nextRowKey = 0
 const freshKey = () => `row-${++nextRowKey}`
 

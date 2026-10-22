@@ -1,6 +1,6 @@
 import StateScreen, { StateText } from './StateScreen'
 
-// Unbekannter Bildschirm-Slug. previewExpired: die Admin-Vorschau (Token) gilt nicht mehr.
+// previewExpired: the admin preview token is no longer valid.
 export default function ScreenNotFound({ slug, orientation, previewExpired = false }) {
   if (previewExpired) {
     return (

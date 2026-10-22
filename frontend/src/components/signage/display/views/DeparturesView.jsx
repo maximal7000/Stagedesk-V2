@@ -6,17 +6,14 @@ import { disruptionLabel, isBus, lineColor, lineLabel, minutesUntil, visibleDisr
 import { useClockMinute } from '../lib/useClock'
 import { Heading } from './parts'
 
-// Abfahrten (Aufteilung "Breit", Entwurf departures.png): ein Block pro Haltestelle. Haltestellen mit Zügen
-// (Hauptbahnhof/ZOB) stehen in einer eigenen hohen Spalte, die übrigen in einem Raster mit zwei Reihen.
-
-const LINE = 1.64 // Zeilenhöhe / Zeilenschrift
-const MIN_REM = 0.95 // Mindest-Zeilenschrift (Spec §5.2)
-const PREF_REM = 1.375 // Zeilenschrift laut Entwurf
-const SUBHEAD_REM = 2.25 // Zwischenüberschrift "Züge" / "Busse"
-// Mindestbreite einer Zeile in em der Zeilenschrift, damit das Ziel lesbar bleibt. In schmalen Karten
-// (Splitscreen) wird die Schrift dafür kleiner, höchstens bis MIN_REM.
+const LINE = 1.64 // row height / row font
+const MIN_REM = 0.95 // minimum row font
+const PREF_REM = 1.375 // row font per design
+const SUBHEAD_REM = 2.25 // subheading "Züge" / "Busse"
+// Minimum row width in em of the row font so the destination stays readable. In narrow cards
+// (split screen) the font shrinks for it, down to MIN_REM at most.
 const ROW_EM = { bus: 21, train: 26 }
-const CARD_PAD_REM = 2.75 // horizontale Kartenpolster
+const CARD_PAD_REM = 2.75 // horizontal card padding
 const GAP_REM = 1.25
 
 const hasTrains = (station) => (station.departures || []).some((d) => !isBus(d))
@@ -33,8 +30,8 @@ export default function DeparturesView({ view }) {
   if (!stations.length) {
     return <p className="d-oswald pt-[2rem] text-[2rem] text-(--d-muted)">Keine Haltestellen eingerichtet.</p>
   }
-  // Zu schmal für alle Spalten (Splitscreen, viele Haltestellen): ein gleichmäßiges Raster mit so vielen
-  // Spalten, wie die Mindestbreite einer Karte zulässt, statt abgeschnittener Ziele.
+  // Too narrow for all columns (split screen, many stops): an even grid with as many columns as the
+  // minimum card width allows, instead of truncated destinations.
   const cardPx = (ROW_EM[tall.length ? 'train' : 'bus'] * MIN_REM + CARD_PAD_REM) * remPx
   const gapPx = GAP_REM * remPx
   const wanted = cols + tall.length
@@ -82,7 +79,7 @@ function StationCard({ station }) {
   const deps = station.departures ?? []
   const grouped = deps.some(isBus) && deps.some((d) => !isBus(d))
   const reserve = grouped ? 2 * SUBHEAD_REM * remPx : 0
-  // Breite begrenzt die Wunschgröße; fitRows rechnet Zeilen und Schrift dann mit genau dieser Größe
+  // Width limits the preferred size; fitRows then computes rows and font with exactly this size
   const rowEm = hasTrains(station) ? ROW_EM.train : ROW_EM.bus
   const widthRem = width > 0 ? width / rowEm / remPx : PREF_REM
   const { rows, fontPx } = fitRows({
@@ -127,7 +124,7 @@ function StationCard({ station }) {
   )
 }
 
-// Spalten: Zeit, Linie, Ziel, (Gleis), Minuten. Alle Maße in em der Zeilenschrift.
+// Columns: time, line, destination, (platform), minutes. All sizes in em of the row font.
 const ROW_COLUMNS = { bus: '3.4em 2.4em minmax(0,1fr) auto', train: '3.4em 3.4em minmax(0,1fr) auto auto' }
 
 function DepartureRow({ dep, trains }) {
@@ -160,7 +157,7 @@ function DepartureRow({ dep, trains }) {
   )
 }
 
-// Eigene Blattkomponente: rendert nur beim Minutenwechsel neu
+// Own leaf component: re-renders only when the minute changes
 function Minutes({ dep }) {
   const now = useClockMinute()
   const min = minutesUntil(dep, now)
@@ -173,7 +170,7 @@ function Minutes({ dep }) {
   )
 }
 
-// Störungsleiste links neben der Uhr-Box; blättert alle page_seconds
+// Disruption bar left of the clock box; pages every page_seconds
 function DisruptionBar({ view }) {
   const items = useMemo(() => visibleDisruptions(view.data?.disruptions), [view.data?.disruptions])
   const { index, count } = usePager(items, view.page_seconds)

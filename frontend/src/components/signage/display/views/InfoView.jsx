@@ -7,14 +7,11 @@ import { usePager } from '../lib/pager'
 import { useClockMinute } from '../lib/useClock'
 import { Heading, PageCount } from './parts'
 
-// Info (Aufteilung "Normal", Entwurf display-info.png): Ankündigungen links, Termine und Countdown rechts,
-// QR-Code in der Ecke. Uhr, Datum und Wetter kommen aus dem Rahmen.
-
 const STACK_BELOW_REM = 70
 
-// Zeilenhöhen im gestapelten Layout aus der natürlichen Höhe (alle Einträge), nie aus der gezeigten Seite:
-// passt alles, bekommt jeder Abschnitt genau seine Höhe; sonst behält ein kurzer Abschnitt seine Höhe
-// und der andere den Rest; sind beide länger als die Hälfte, teilen sie sich die Fläche gleich.
+// Row heights in the stacked layout come from the natural height (all items), never from the shown page:
+// if everything fits each section gets exactly its height; otherwise a short section keeps its height
+// and the other gets the rest; if both exceed half, they share the area equally.
 function stackedRows({ natural, height, remPx, qr, hasA, hasB }) {
   if (!hasA) return '0px minmax(0,1fr)'
   if (!hasB) return 'minmax(0,1fr) auto'
@@ -33,11 +30,11 @@ export default function InfoView({ view }) {
   const seconds = view.page_seconds
   const ref = useRef(null)
   const { width, height, remPx } = useBoxSize(ref)
-  // Natürliche Höhe je Abschnitt (alle Einträge auf einer Seite), unabhängig von der gerade gezeigten Seite
+  // Natural height per section (all items on one page), independent of the page shown
   const [natural, setNatural] = useState({ a: null, b: null })
   const setA = useCallback((v) => setNatural((n) => (n.a === v ? n : { ...n, a: v })), [])
   const setB = useCallback((v) => setNatural((n) => (n.b === v ? n : { ...n, b: v })), [])
-  // Hochformat und schmale Flächen: Termine unter den Ankündigungen statt in einer zu schmalen Spalte
+  // Portrait and narrow areas: events below the announcements instead of in a too narrow column
   const stacked = width > 0 && width / remPx < STACK_BELOW_REM
   if (!announcements.length && !events.length && !countdown) {
     return <p className="d-oswald pt-[3.75rem] text-[2rem] text-(--d-muted)">Keine Ankündigungen oder Termine.</p>
@@ -68,9 +65,9 @@ export default function InfoView({ view }) {
   )
 }
 
-// Abschnitt, der so viele Einträge zeigt, wie hineinpassen, und sonst blättert. `after` folgt direkt
-// auf die Liste und bekommt seinen Platz immer. Die Höhen misst eine unsichtbare Kopie,
-// neu nur bei geänderter Breite oder geänderten Daten.
+// Shows as many items as fit and pages otherwise. `after` follows the list directly and always
+// gets its space. The heights are measured on an invisible copy,
+// only when the width or the data change.
 function PagedSection({ title, items, seconds, renderItem, after = null, onNatural = null }) {
   const sectionRef = useRef(null)
   const bodyRef = useRef(null)
@@ -84,7 +81,7 @@ function PagedSection({ title, items, seconds, renderItem, after = null, onNatur
       if (!el) return
       const next = [...el.children].map((c) => c.getBoundingClientRect().height)
       setHeights((prev) => (prev.length === next.length && prev.every((h, i) => h === next[i]) ? prev : next))
-      // Kopf, Abstand und Polster des Abschnitts plus alle Einträge
+      // Header, gap and padding of the section plus all items
       const section = sectionRef.current
       const body = bodyRef.current
       if (onNatural && section && body) {
@@ -93,7 +90,7 @@ function PagedSection({ title, items, seconds, renderItem, after = null, onNatur
       }
     }
     measure()
-    // Nachgeladene Schriften ändern die Höhen
+    // Late-loading fonts change the heights
     const fonts = typeof document !== 'undefined' ? document.fonts : null
     fonts?.addEventListener?.('loadingdone', measure)
     return () => fonts?.removeEventListener?.('loadingdone', measure)
@@ -149,8 +146,8 @@ function renderEvent(ev) {
   )
 }
 
-// Rendert nur beim Minutenwechsel neu (Tageswechsel)
-// first: ohne Termine darüber steht der Countdown oben, ohne Linie
+// Re-renders only when the minute changes (day change)
+// first: without events above, the countdown is at the top, without a line
 function Countdown({ countdown, first = false }) {
   const now = useClockMinute()
   const days = daysUntil(countdown.date, now)

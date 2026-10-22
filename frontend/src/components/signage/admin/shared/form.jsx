@@ -1,5 +1,3 @@
-// Formular-Bausteine des Monitor-Admin: Abschnitt, Feld mit Hilfetext in einem Satz, Segment-Auswahl,
-// Kontrollkästchen und Eingabe für Listen (Linien). Bühnenschwarz-Tokens, rounded-md, keine Pills.
 import { useId, useState } from 'react'
 import { X } from 'lucide-react'
 import { chipTextColor, swlColorForLine } from '../../display/lib/lines'
@@ -64,7 +62,7 @@ export function Checkbox({ label, help, checked, onChange, disabled }) {
   )
 }
 
-// Linie als Chip; SWL-Linien in ihrer Farbe (wie auf der Anzeige)
+// SWL lines in their colour (as on the display)
 export function LineChip({ line, onRemove }) {
   const color = swlColorForLine(line)
   const style = color ? { backgroundColor: color, color: chipTextColor(color) } : undefined
@@ -81,7 +79,7 @@ export function LineChip({ line, onRemove }) {
   )
 }
 
-// Liste aus kurzen Einträgen (Linien): Enter oder Komma übernimmt, Rücktaste im leeren Feld entfernt den letzten
+// Enter or comma adds an entry, Backspace in the empty field removes the last one
 export function ListInput({ id, value, onChange, placeholder, disabled, chips = true }) {
   const [text, setText] = useState('')
   const list = value ?? []

@@ -1,11 +1,9 @@
-// Befehle an das Gerät (Spec §5): welche Knöpfe es gibt, ihre Nachfragen und das Nachfragen nach dem Ergebnis.
-
 export const OFFLINE_HINT = 'Der Befehl wird gesendet, sobald das Gerät wieder verbunden ist (höchstens 5 Minuten).'
 
 export const POLL_MS = 2000
 export const POLL_MAX_MS = 2 * 60 * 1000
 
-// Reihenfolge der Knöpfe. power: nur mit signage.power (Backend: POWER_COMMANDS). confirm: Nachfrage vor dem Senden.
+// Button order. power: only with signage.power (backend: POWER_COMMANDS). confirm: question before sending.
 export const COMMANDS = [
   { kind: 'reload', label: 'Neu laden' },
   { kind: 'restart_browser', label: 'Browser neu starten' },
@@ -30,8 +28,8 @@ export const COMMANDS = [
 export const isPaired = (device) => !!device && device.id != null && !device.legacy
 
 // can: hasPermission(permission). -> { items: [{ kind, label, confirm? }], hint }
-// Ohne signage.devices oder ohne gekoppeltes Gerät gibt es keine Befehle. Offline bleiben sie möglich
-// (der Server hält sie 5 Minuten), dazu der Hinweis.
+// Without signage.devices or a paired device there are no commands. Offline they stay possible
+// (the server keeps them 5 minutes), with the hint.
 export function commandsFor(device, can) {
   if (!isPaired(device) || !can('signage.devices')) return { items: [], hint: '' }
   const items = COMMANDS.filter((c) => !c.power || can('signage.power')).map((c) => ({ kind: c.kind, label: c.label, confirm: c.confirm }))
@@ -42,12 +40,12 @@ export const labelOf = (kind) => COMMANDS.find((c) => c.kind === kind)?.label ??
 
 export const isFinished = (status) => status === 'ok' || status === 'failed' || status === 'expired'
 
-// Ergebnis eines beendeten Befehls als Satz für den Toast: { ok, text }
+// Result of a finished command as a sentence for the toast: { ok, text }
 export function commandResult(kind, command) {
   const label = labelOf(kind)
   if (command.status === 'ok') return { ok: true, text: `${label} ist ausgeführt.` }
   if (command.status === 'expired') {
-    // Backend nennt den Grund: pending = nie zugestellt, sent = keine Rückmeldung
+    // The backend names the reason: pending = never delivered, sent = no response
     const noReply = (command.result || '').trim() === 'Keine Rückmeldung vom Gerät.'
     return {
       ok: false,
@@ -63,8 +61,8 @@ export function commandResult(kind, command) {
 export const timeoutText = (kind) =>
   `${labelOf(kind)}: noch keine Antwort des Geräts. Der Befehl läuft weiter, das Ergebnis steht im Protokoll.`
 
-// Fragt alle 2 s mit get() nach, bis der Befehl ok, failed oder expired ist, höchstens 2 Minuten.
-// Ein Fehler beim Nachfragen zählt nicht als Ergebnis, die nächste Runde läuft. Rückgabe: stop().
+// Polls get() every 2 s until the command is ok, failed or expired, at most 2 minutes.
+// A polling error is not a result; the next round runs. Returns stop().
 export function watchCommand({ get, onDone, onTimeout, intervalMs = POLL_MS, maxMs = POLL_MAX_MS }) {
   let stopped = false
   let timer = null

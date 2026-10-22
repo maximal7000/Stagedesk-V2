@@ -2,10 +2,10 @@ import { useLayoutEffect, useRef, useState } from 'react'
 
 const rootRemPx = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
 
-// Größe eines Elements in px plus rem-Basis. Gemessen, sobald das Element (neu) im Baum hängt, und danach
-// nur bei Größenänderung (ResizeObserver), nie im Sekundentakt. Das Element darf später erscheinen
-// (z.B. erst nach dem Laden der Daten statt eines Leerzustands): jeder Render prüft, ob ref.current
-// ein anderes Element ist, und hängt Messung und Beobachter dann um.
+// Size of an element in px plus the rem base. Measured when the element is (re)attached, then only
+// on resize (ResizeObserver), never every second. The element may appear later
+// (e.g. only after the data loads instead of an empty state): each render checks whether ref.current
+// is a different element and then moves measurement and observer.
 export function useBoxSize(ref) {
   const [size, setSize] = useState({ width: 0, height: 0, remPx: 16 })
   const watched = useRef({ el: null, observer: null })
@@ -27,7 +27,7 @@ export function useBoxSize(ref) {
       watched.current.observer = observer
     }
   })
-  // Auch in StrictMode (Mount, Cleanup, Mount) hängt der zweite Lauf den Beobachter wieder an
+  // In StrictMode too (mount, cleanup, mount) the second run re-attaches the observer
   useLayoutEffect(() => () => {
     watched.current.observer?.disconnect()
     watched.current = { el: null, observer: null }
@@ -35,8 +35,8 @@ export function useBoxSize(ref) {
   return size
 }
 
-// Zeilenzahl für eine Liste: so viele, wie bei der Mindestschrift minRem passen, höchstens max und count.
-// Die Schrift wächst danach bis prefRem, soweit die Höhe reicht. lineFactor = Zeilenhöhe / Schriftgröße.
+// Row count for a list: as many as fit at the minimum font minRem, at most max and count.
+// The font then grows up to prefRem as far as the height allows. lineFactor = line height / font size.
 export function fitRows({ height, remPx, count, max, minRem, prefRem, lineFactor }) {
   const pref = prefRem * remPx
   if (!(height > 0) || !(count > 0)) return { rows: 0, fontPx: pref }
@@ -45,8 +45,8 @@ export function fitRows({ height, remPx, count, max, minRem, prefRem, lineFactor
   return { rows, fontPx: rows ? Math.min(pref, height / (rows * lineFactor)) : pref }
 }
 
-// Teilt Einträge mit gemessenen Höhen in Seiten, die jeweils in `height` passen (mindestens ein Eintrag je Seite).
-// Ergebnis: Listen von Indizes.
+// Splits items with measured heights into pages that each fit `height` (at least one item per page).
+// Result: lists of indices.
 export function packByHeight(heights, height, gap = 0) {
   const pages = []
   let page = []

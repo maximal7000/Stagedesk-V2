@@ -18,7 +18,6 @@ function viewportOrientation() {
   return typeof window !== 'undefined' && window.innerHeight > window.innerWidth ? 'portrait' : 'landscape'
 }
 
-// Bildschirmfüllende Fläche; Rahmen und Sondermodi füllen sie (bzw. im Splitscreen ihre Hälfte).
 export default function DisplayRoot(props) {
   return (
     <div className="fixed inset-0 overflow-hidden">
@@ -27,8 +26,8 @@ export default function DisplayRoot(props) {
   )
 }
 
-// Wählt Zustand, Sondermodus oder Ansicht. Rendert nicht sekündlich; das tun nur Uhr und Countdown.
-// slug: Bildschirm- oder Ansichts-Slug aus der URL, preview: Vorschau-Token.
+// Does not re-render every second; only the clock and countdown do.
+// slug: screen or view slug from the URL, preview: preview token.
 function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '', preview = null }) {
   const screen = payload?.screen ?? null
   const scheme = payload?.scheme === 'dark' ? 'dark' : 'light'
@@ -40,8 +39,8 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
     return <Loading orientation={orientation} />
   }
   if (!screen && !payload.view) return <ScreenNotFound slug={slug} orientation={orientation} />
-  // Ein zwischengespeicherter Notfall bleibt stehen, auch ohne Verbindung und bei "aus" im Zwischenspeicher
-  // (der Server schaltet bei Notfall ein); mit "Stand HH:MM" der letzten Daten.
+  // A cached emergency stays, even offline and with "off" in the cache (the server switches on during
+  // an emergency); with "Stand HH:MM" of the last data.
   if (state === 'lost' && payload.mode?.kind === 'emergency') {
     return <EmergencyMode mode={payload.mode} orientation={orientation} staleSince={lastOkAt ?? null} />
   }
@@ -62,8 +61,8 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
   return <ViewScreen view={payload.view} scheme={scheme} orientation={orientation} staleSince={staleSince} />
 }
 
-// Sondermodus auf der Seite mode.side (Standard rechts), gegenüber die Ansicht in ihrem Rahmen.
-// CI-Rad und Streifen nur am Bildschirmrand; im Hochformat übereinander (links = oben).
+// Special mode on mode.side (default right), the view in its frame opposite.
+// CI wheel and stripe only at the screen edge; in portrait stacked (left = top).
 function ModeSplit({ mode, view, scheme, orientation, staleSince }) {
   const Mode = MODE_COMPONENTS[mode.kind]
   const side = mode.side === 'left' ? 'left' : 'right'
@@ -92,9 +91,8 @@ function ModeSplit({ mode, view, scheme, orientation, staleSince }) {
   )
 }
 
-// Eine Ansicht im Rahmen ihrer Aufteilung (view.layout) und im Farbschema des Bildschirms. Ansichten mit
-// eigenem Rahmen (Medien, Wechsel) bekommen die Rahmen-Angaben und ViewScreen selbst als screen (für die
-// Unteransichten des Wechsels).
+// Views with their own frame (media, rotation) get the frame props and ViewScreen itself as screen
+// (for the rotation's sub-views).
 function ViewScreen({ view, scheme = 'light', orientation, staleSince = null, wheel = true, stripe = true }) {
   if (!view) return <Loading orientation={orientation} />
   const View = VIEW_COMPONENTS[view.kind]

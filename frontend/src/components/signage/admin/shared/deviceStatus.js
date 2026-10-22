@@ -1,5 +1,4 @@
-// Ampel und Kennzahlen eines Geräts (Spec §7.1) aus GET /api/signage/devices.
-// Der Text des Servers (status_text) gilt; die Farbe folgt allein aus status.
+// The server's text (status_text) wins; the colour follows from status alone.
 const TONES = { online: 'ok', warning: 'warn', offline: 'bad', off: 'off', legacy: 'warn', unpaired: 'none' }
 const LABELS = { online: 'Online', warning: 'Warnung', offline: 'Offline', off: 'Aus', legacy: 'Altes Skript', unpaired: 'Kein Gerät gekoppelt' }
 const SEPARATOR = ' · '
@@ -31,8 +30,7 @@ export function deviceStatusView(device) {
 
 const number = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
-// Hardware-Angaben für die Spalte "Gerät": Agent-Version und Messwerte (WLAN nur bei Funk, Temperatur).
-// `warn` markiert den Messwert, der eine aktive Warnung ausgelöst hat.
+// `warn` marks the value that raised an active warning.
 export function deviceFacts(device) {
   const codes = new Set((device?.warnings || []).map((w) => w.code))
   const metrics = []
@@ -53,7 +51,7 @@ const asDate = (v) => {
   return d && !Number.isNaN(d.getTime()) ? d : null
 }
 
-// "Stand HH:MM": Zeitpunkt der letzten Meldung des Geräts
+// "Stand HH:MM": time of the device's last report
 export function reportTime(device) {
   const at = asDate(device?.last_seen_at)
   return at ? `${pad2(at.getHours())}:${pad2(at.getMinutes())}` : ''
@@ -76,12 +74,12 @@ const dayTime = (v) => {
   return d ? `${DAYS[d.getDay()]} ${pad2(d.getDate())}.${pad2(d.getMonth() + 1)}., ${pad2(d.getHours())}:${pad2(d.getMinutes())}` : ''
 }
 
-// Der Agent meldet an/aus/standby; on/off bleiben für ältere Meldungen
+// The agent reports an/aus/standby; on/off remain for older reports
 const DISPLAY_POWER = { an: 'an', on: 'an', standby: 'Standby', aus: 'aus', off: 'aus' }
 const NETWORK_KIND = { wifi: 'WLAN', lan: 'LAN', ethernet: 'LAN' }
 
-// Telemetrie in vier Gruppen für die Geräte-Box: [{ title, rows: [{ label, value, warn }] }].
-// Fehlende Werte (null) erscheinen nicht; eine Gruppe ohne Werte entfällt.
+// Telemetry in four groups for the device box: [{ title, rows: [{ label, value, warn }] }].
+// Missing values (null) do not appear; a group without values is dropped.
 export function telemetryGroups(device) {
   const t = device?.telemetry || {}
   const codes = new Set((device?.warnings || []).map((w) => w.code))

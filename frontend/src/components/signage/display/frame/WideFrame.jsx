@@ -1,9 +1,6 @@
 import ClockBox from './ClockBox'
 import { CiStripe, CiWheel, frameRootClass } from './parts'
 
-// Aufteilung "Breit": Inhalt über die ganze Breite, das Rad liegt an derselben Stelle wie bei "Normal"
-// darunter, schmaler roter Streifen rechts. Keine Titelzeile; die Uhr steht als Kasten unten rechts,
-// links daneben optional eine Fußleiste (footer).
 export default function WideFrame({ scheme, clock, footer, wheel = true, stripe = true, children }) {
   return (
     <div className={frameRootClass(scheme, 'wide')}>

@@ -1,5 +1,4 @@
-// Bestätigung für sofort wirksame Schalter (Spec §6.2): Meldung mit "Rückgängig", verschwindet nach 8 s.
-// Pro Aktion neu einhängen (key wechseln), damit die Zeit von vorn läuft.
+// Remount per action (change the key) so the timer starts over.
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { Button } from '../../../ui'

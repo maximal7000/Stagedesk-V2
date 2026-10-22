@@ -1,5 +1,5 @@
-// Datums-Ausnahmen für "Ein- und Ausschalten" (Spec §6.2). Kontrolliert: value ist die Liste, onChange bekommt
-// die neue Liste. problems: Meldung je Zeile oder null (aus schedule.js), erscheint unter der Zeile.
+// Controlled: value is the list, onChange gets the new list. problems: message per row or null
+// (from schedule.js), shown under the row.
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'
 import { iconButton } from './ScreenTable'
@@ -10,7 +10,7 @@ function Problem({ text }) {
   return text ? <p className="text-xs text-bad mt-1.5">{text}</p> : null
 }
 
-// Ausnahmen nach Datum: an diesen Tagen gilt nur das angegebene Fenster (ohne Zeiten ganztags an)
+// Exceptions by date: on these days only the given window applies (without times: on all day)
 export default function ExceptionEditor({ value, onChange, problems = [], disabled = false, today }) {
   const rows = Array.isArray(value) ? value : []
   const update = (index, patch) => onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)))

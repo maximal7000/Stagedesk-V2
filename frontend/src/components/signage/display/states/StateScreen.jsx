@@ -1,6 +1,5 @@
 import { ClockBox, Frame } from '../frame'
 
-// Gemeinsamer Aufbau der Zustandsbildschirme (immer "Normal" und hell): Uhr oben rechts, Kicker, großer Titel, Text.
 export default function StateScreen({ state, orientation, kicker, title, titleClassName = '', children }) {
   const portrait = orientation === 'portrait'
   return (

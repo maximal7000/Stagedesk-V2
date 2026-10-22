@@ -1,7 +1,5 @@
-// "Zeigt gerade" in der Übersicht (Spec §6.2): was ein Bildschirm zeigt und warum, als Satz.
-// Grundlage sind die /display-Antwort des Bildschirms und seine Felder aus /screens. Die Reihenfolge folgt
-// dem Backend: Notfall schaltet ein (Power-Regel §3.2), dann die Aus-Gründe, dann Klausur, dann die
-// Ansichtsregel Override > Termin > Zeitplan > Standard (Screen.get_active_view).
+// The order follows the backend: emergency switches on (power rule), then the off reasons, then exam,
+// then the view rule override > event > schedule > default (Screen.get_active_view).
 import { formatShortDate, formatTime } from '../../display/lib/format'
 import { activeRow } from './schedule'
 
@@ -33,7 +31,7 @@ function isoDay(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-// Python-Wochentag wie im Backend: Montag = 0
+// Python weekday as in the backend: Monday = 0
 const weekdayOf = (d) => (d.getDay() + 6) % 7
 const hhmmOf = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
 
@@ -85,8 +83,8 @@ function viewReason(screen, viewId, { now, events }) {
   return 'Standard-Ansicht'
 }
 
-// Satz "warum" für einen Bildschirm. context: { now, events (/events), holidays (/holidays) }.
-// Ohne Anzeige-Daten bleibt nur, was aus den Bildschirm-Feldern folgt (aus oder '').
+// context: { now, events (/events), holidays (/holidays) }. Without display data only what follows
+// from the screen fields remains (off or '').
 export function explainScreen(screen, payload, context = {}) {
   const ctx = { now: context.now ?? new Date(), events: context.events, holidays: context.holidays }
   if (payload?.mode?.kind === 'emergency') return 'Notfall aktiv'
@@ -112,7 +110,7 @@ function viewLabel(view, viewNames) {
   return viewNames?.[view.id] || KIND_LABELS[view.kind] || 'Ansicht'
 }
 
-// Erste Zeile von "Zeigt gerade": Ansichtsname oder Sondermodus. viewNames: { [id]: name } aus /views.
+// viewNames: { [id]: name } from /views.
 export function describeShown(payload, viewNames) {
   const mode = payload?.mode
   if (mode?.kind === 'emergency') return 'Notfall'

@@ -1,7 +1,6 @@
 import { VIEW_COMPONENTS } from './index'
 
-// Geteilte Ansicht (Aufteilung "Breit"): links und rechts je eine Unteransicht ({kind, data}) aus VIEW_COMPONENTS,
-// die linke Breite ist left_percent. Alte Seitenwerte ohne Daten (exam, clock, empty) bleiben leer.
+// Old side values without data (exam, clock, empty) stay empty.
 
 const clampPercent = (value) => Math.min(80, Math.max(20, Number(value) || 50))
 
@@ -28,7 +27,7 @@ export default function SplitView({ view }) {
   )
 }
 
-// Fußleisten beider Seiten nebeneinander, im Verhältnis der Seiten (Stand WebUntis links, Störungen rechts)
+// Footers of both sides next to each other in the ratio of the sides (WebUntis data age left, disruptions right)
 function SplitFooter({ view }) {
   const data = view.data ?? {}
   const percent = clampPercent(data.left_percent)

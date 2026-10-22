@@ -1,4 +1,3 @@
-// Griff einer sortierbaren Zeile: Ziehen mit der Maus, Pfeiltasten mit der Tastatur.
 import { GripVertical } from 'lucide-react'
 
 export default function DragHandle({ label, onKeyDown }) {

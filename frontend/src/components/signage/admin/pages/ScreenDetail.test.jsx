@@ -44,7 +44,7 @@ const pairedDevice = (extra = {}) => ({
   ...extra,
 })
 
-// Knopf neben dem Detail: wechselt wie ein Link zu Bildschirm 2, die Detail-Komponente bleibt eingehängt
+// Button next to the detail: navigates to screen 2 like a link, the detail component stays mounted
 function GoToSecond() {
   const navigate = useNavigate()
   return createElement('button', { type: 'button', 'data-go': '', onClick: () => navigate('/signage-admin/screens/2') }, 'weiter')
@@ -216,7 +216,7 @@ describe('ScreenDetail', () => {
       expect(rows[2].textContent).not.toContain('Überschneidet')
       expect(section().querySelector('[data-week-overview]').textContent).toContain('Abfahrten')
       expect(section().querySelector('[data-week-overview]').textContent).toContain('Standard-Ansicht')
-      // Wechsel der Ansicht ohne Lücke: keine Fläche in Hintergrundfarbe, höchstens eine dunklere Linie im Balken
+      // View change without a gap: no background-coloured area, at most a darker line in the bar
       const bars = [...section().querySelectorAll('[data-week-day="0"] [data-view-id]')]
       expect(bars.map((b) => b.dataset.viewId)).toEqual(['1', 'default'])
       expect(bars.some((b) => b.className.includes('border-surface'))).toBe(false)
@@ -268,7 +268,7 @@ describe('ScreenDetail', () => {
     await act(async () => { typeInto(byLabel('Ort'), 'Geändert') })
     expect(container.textContent).toContain('1 ungespeicherte Änderung')
     await click(container.querySelector('[data-go]'))
-    // Während Aula lädt, bleibt nichts von Glocke stehen
+    // While Aula loads, nothing of Glocke remains
     expect(container.textContent).not.toContain('Glocke')
     expect(container.textContent).not.toContain('ungespeicherte')
     await act(async () => { resolveSecond([glocke(), aula]) })

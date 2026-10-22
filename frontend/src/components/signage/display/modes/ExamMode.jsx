@@ -3,11 +3,7 @@ import { CiStripe, CiWheel, frameRootClass } from '../frame/parts'
 import { formatTime } from '../lib/format'
 import { useClockMinute } from '../lib/useClock'
 
-// Klausur (Entwurf mode-exam.png, "Normal" und hell): Kicker "Klausur", Titel, Text, Beginn, Ende und Restzeit.
-// Vollbild im CI-Rahmen mit Uhr oben rechts; im Splitscreen (panel 'left'/'right', split-exam.png)
-// eine schmale CI-Fläche ohne Uhr, Rad nur links und Streifen nur rechts am Bildschirmrand.
-
-// Titelgröße: das längste Wort passt in die Breite; im Vollbild bis etwa 24 Zeichen in eine Zeile
+// Title size: the longest word fits the width; full screen fits about 24 characters per line
 function titleFontRem(title, widthRem, maxRem, oneLine) {
   const words = String(title || '').split(/\s+/)
   const longest = Math.max(1, ...words.map((w) => [...w].length))
@@ -32,7 +28,7 @@ export default function ExamMode({ mode, orientation, panel = null, staleSince =
   )
 }
 
-// Im Hochformat (übereinander) ohne Rad: dort trägt die Ansicht das Band mit drei Rädern
+// In portrait (stacked) no wheel: the view carries the band with three wheels there
 function ExamPanel({ mode, side, orientation }) {
   const wheel = side === 'left' && orientation !== 'portrait'
   return (
@@ -84,7 +80,7 @@ function TimeItem({ label, children }) {
   )
 }
 
-// Restzeit "1:48 h" bzw. "35 min"; eigene Blattkomponente, rendert nur beim Minutenwechsel
+// Own leaf component: re-renders only when the minute changes
 function Remaining({ until }) {
   const now = useClockMinute()
   const end = until ? new Date(until).getTime() : NaN

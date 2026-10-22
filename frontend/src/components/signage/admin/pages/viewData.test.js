@@ -25,7 +25,7 @@ describe('draftFromView', () => {
     expect(draft).not.toHaveProperty('api_token')
     expect(draft).not.toHaveProperty('id')
     expect(draft.name).toBe(' Abfahrten Halle ')
-    // jsdom läuft in der Zeitzone des Rechners: Ortszeit-Format ohne Zone
+    // jsdom runs in the machine's time zone: local format without zone
     expect(draft.custom_countdown_date).toMatch(/^2026-11-01T\d\d:00$/)
     expect(draftFromView({ ...VIEW, custom_countdown_date: null }).custom_countdown_date).toBe('')
   })
@@ -59,7 +59,7 @@ describe('changedKeys / viewPayload / previewPayload', () => {
         id: '1', name: 'Katharineum', walk_minutes: 3, max_departures: 10, filter_lines: ['5', '11'],
         filter_direction: 'Moisling', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true,
       }],
-      // Zeilen ohne gewählte Ansicht gehen nicht mit
+      // Rows without a chosen view are left out
       rotation_items: [{ view_id: 3, seconds: 20 }],
       media_items: [4, 5],
     })

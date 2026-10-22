@@ -1,12 +1,8 @@
 import { ClockBox } from '../frame'
 
-// On-Air (Entwurf mode-on-air.png): Studio-Leuchtschild, rote Fläche mit weißer Schrift auf Schwarz.
-// Darunter im Vollbild die aktuelle Uhr (show_clock), bei veralteten Daten mit "Stand HH:MM". Im
-// Splitscreen (panel) nichts darunter, die Uhr zeigt dort der Rahmen der Ansicht.
-// Animation: still, pulse oder blink (display.css).
 const ANIMATION = { pulse: 'd-onair-pulse', blink: 'd-onair-blink' }
 
-// Schriftgröße nach Textlänge, damit auch ein langer eigener Text ins Schild passt
+// Font size by text length so a long custom text fits the sign
 function signFontRem(text, panel) {
   const len = Math.max(1, [...text].length)
   return panel ? Math.min(10.5, 68 / len) : Math.min(17, 150 / len)

@@ -1,11 +1,8 @@
-// Wochenübersicht des Bildschirm-Zeitplans (Spec §2.2): Zeilen Mo–So, 0–24 Uhr, ein Balken je wirksamem
-// Abschnitt (die obere Zeile gewinnt, shared/schedule.weekBars), Farbe je Ansicht, Aus-Zeit schraffiert.
-// Grenzt eine Ansicht direkt an die nächste, trennt eine dunklere Linie im Balken; eine Lücke in Hintergrundfarbe
-// sähe aus wie Aus-Zeit (der Bildschirm bleibt an).
-// Die Zeilen des Editors darunter sind die Tabellenform derselben Angaben; die Übersicht ist nur Bild.
+// Where a view borders the next one a darker line separates them; a gap in background colour
+// would look like off time (the screen stays on).
 import { DAY_MINUTES, WEEKDAYS, seriesSlots, weekBars } from './schedule'
 
-// Kategorische Reihe aus index.css (--color-series-1 … 6), feste Reihenfolge; Platz aus schedule.seriesSlots
+// Categorical series from index.css (--color-series-1 … 6), fixed order; slot from schedule.seriesSlots
 const SERIES = ['bg-series-1', 'bg-series-2', 'bg-series-3', 'bg-series-4', 'bg-series-5', 'bg-series-6']
 const HOURS = [0, 6, 12, 18, 24]
 const HATCH = { backgroundImage: 'repeating-linear-gradient(135deg, var(--sd-line) 0 1px, transparent 1px 6px)' }

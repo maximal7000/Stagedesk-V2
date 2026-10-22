@@ -1,6 +1,5 @@
 import { ClockBox, Frame } from '../frame'
 
-// Ruhemodus (Power-Steuerung "aus"): ruhiges dunkles CI-Bild mit kleiner Uhr statt alter Inhalte.
 export default function IdleScreen({ orientation }) {
   return (
     <Frame layout="wide" scheme="dark" orientation={orientation}>

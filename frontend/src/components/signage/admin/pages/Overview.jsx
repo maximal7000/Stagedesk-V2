@@ -1,5 +1,3 @@
-// Monitor-Übersicht (Spec §6.2): Sondermodi, Bildschirme mit Status und "Zeigt gerade",
-// Datenquellen und "Demnächst". Sofortige Schalter speichern direkt und bieten 8 s "Rückgängig".
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Link2, MonitorOff, MoreVertical, Power, RotateCw } from 'lucide-react'
@@ -31,7 +29,7 @@ function BoxText({ title, children }) {
   return (
     <div className="min-w-0 flex-1">
       <div className="text-sm font-semibold text-fg">{title}</div>
-      {/* Unterzeile bleibt als Platz erhalten, damit die Titel der drei Kästen auf einer Linie stehen */}
+      {/* Keeps the subtitle's space so the titles of the three boxes line up */}
       <div className="text-xs text-fg-muted mt-0.5 min-h-4">{children}</div>
     </div>
   )
@@ -124,14 +122,14 @@ export default function Overview() {
   const [extra, setExtra] = useState({ settings: null, views: [], exams: [], events: [], holidays: null })
   const [displays, setDisplays] = useState(null)
   const [devicesError, setDevicesError] = useState(null)
-  const [devices, setDevices] = useState({}) // screen_id -> Gerät (auch altes Skript); leer bei Fehler
+  const [devices, setDevices] = useState({}) // screen_id -> device (legacy script too); empty on error
   const [now, setNow] = useState(() => new Date())
   const [undo, setUndo] = useState(null)
   const [dialog, setDialog] = useState(null) // 'all-off' | 'emergency'
   const [templates, setTemplates] = useState(null)
   const [busy, setBusy] = useState(false)
   const [onAirBusy, setOnAirBusy] = useState(false)
-  // Nur die jüngste Ladung zählt; nach dem Abbau wird nichts mehr gesetzt
+  // Only the latest load counts; nothing is set after unmount
   const loadSeq = useRef(0)
   const mounted = useRef(true)
   useEffect(() => {
@@ -154,7 +152,7 @@ export default function Overview() {
     ])
     if (!current()) return
     setNow(new Date())
-    // Sondermodi unabhängig von den Bildschirmen: On-Air und Notfall bleiben auch ohne Bildschirm-Liste schaltbar
+    // Special modes do not depend on the screens: on-air and emergency stay switchable without a screen list
     setExtra({
       settings: settingsRes.ok ? settingsRes.value : null,
       views: viewsRes.ok ? viewsRes.value : [],
@@ -162,7 +160,7 @@ export default function Overview() {
       events: eventsRes.ok ? eventsRes.value : [],
       holidays: holidaysRes.ok ? holidaysRes.value : null,
     })
-    // Ohne Geräteliste greift pro Bildschirm der Rückfall auf den CEC-Status
+    // Without a device list each screen falls back to its CEC status
     setDevicesError(devicesRes.ok ? null : devicesRes.error)
     setDevices(devicesRes.ok ? Object.fromEntries(devicesRes.value.filter((d) => d.screen_id != null).map((d) => [d.screen_id, d])) : {})
     if (!screensRes.ok) {
@@ -182,12 +180,11 @@ export default function Overview() {
     return () => clearInterval(timer)
   }, [load])
 
-  // Sofortige Aktion: ausführen, neu laden, Bestätigung mit "Rückgängig" zeigen
   const instant = async (action, message, revert) => {
     try {
       const result = await action()
       const text = typeof message === 'function' ? message(result) : message
-      // Neue id je Aktion: die Meldung hängt sich neu ein und die 8 s laufen von vorn
+      // New id per action: the toast remounts and the 8 s start over
       setUndo((prev) => ({ id: (prev?.id ?? 0) + 1, message: text, revert }))
     } catch (e) {
       toast.error(errorText(e))
@@ -268,7 +265,6 @@ export default function Overview() {
     load()
   }
 
-  // Zeilenmenü: Ein- und Ausschalten mit signage.power, "Manuelle Ansicht aufheben" mit signage.setup
   const screenMenu = (s) => {
     const isOn = displays?.[s.slug]?.screen?.power ?? s.power_mode !== 'manual_off'
     const { items, hint } = can.power ? powerMenu(s, { now, isOn, emergencyActive }) : { items: [], hint: '' }
@@ -283,7 +279,7 @@ export default function Overview() {
         () => api.powerOffToday([s.id]),
         (r) => (r?.off_until?.[String(s.id)] ? `${s.name} aus bis ${formatDayTime(r.off_until[String(s.id)])}` : `${s.name} bis Tagesende aus`),
         () => api.undoPowerOffToday([s.id])),
-      // Rückgängig setzt genau den bisherigen Zeitpunkt wieder (off_until ist mit signage.power schreibbar)
+      // Undo restores exactly the previous time (off_until is writable with signage.power)
       'clear-off': (item) => instant(
         () => api.undoPowerOffToday([s.id]), `${s.name} folgt wieder dem Zeitplan`,
         () => api.updateScreen(s.id, { off_until: item.previous })),

@@ -1,5 +1,3 @@
-// Notfall-Dialog (Spec §6.2): Vorlage wählen oder Text frei eingeben, dazu ein Zusatz. "Weiter" führt zur
-// zweiten Bestätigung. Ist der Notfall aktiv, bietet der Dialog nur "Notfall beenden".
 import { useEffect, useId, useRef, useState } from 'react'
 import { Button } from '../../../ui'
 import ConfirmDialog from './ConfirmDialog'
@@ -46,7 +44,6 @@ export default function EmergencyDialog({ active = false, currentText = '', curr
   const [note, setNote] = useState('')
   const [confirming, setConfirming] = useState(false)
 
-  // Erste Vorlage vorauswählen, sobald die Liste da ist
   const [preselected, setPreselected] = useState(false)
   if (!preselected && templates?.length) {
     setPreselected(true)

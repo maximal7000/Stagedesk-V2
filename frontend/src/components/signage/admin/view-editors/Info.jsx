@@ -1,5 +1,3 @@
-// Editor für die Info-Ansicht (Spec §4.1): Ankündigungen, Termine und Countdown. Die Inhalte selbst
-// werden unter Klausuren & Termine gepflegt; hier wird nur gewählt, was erscheint.
 import { useId } from 'react'
 import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
 

@@ -1,5 +1,3 @@
-// Abgeleitete Angaben der Übersicht (Spec §6.2): Datenquellen, nächste Klausur, "Demnächst",
-// und ob alle Bildschirme bis Tagesende aus sind.
 import { formatShortDate, formatTime, parseLocalDate } from '../../display/lib/format'
 import { formatDayTime } from '../shared/explain'
 import { screenStatus } from '../shared/screenStatus'
@@ -10,7 +8,7 @@ function asDate(value) {
   return Number.isNaN(d.getTime()) ? null : d
 }
 
-// Alle Abfahrts-Daten einer Ansicht, auch in geteilten Ansichten und im Ansichten-Wechsel
+// All departure data of a view, also in split views and rotations
 function departuresBlocks(view, out = []) {
   if (!view) return out
   if (view.kind === 'departures' && view.data) out.push(view.data)
@@ -35,7 +33,7 @@ function sourceFrom(entries, isOk) {
   return last ? { tone: 'ok', text: `OK · ${formatTime(last)}` } : { tone: 'warn', text: 'keine Daten' }
 }
 
-// payloads: /display-Antworten der Bildschirme; settings: /settings (WebUntis-Prüfung)
+// payloads: /display responses of the screens; settings: /settings (WebUntis check)
 export function dataSources(payloads, settings) {
   const entries = []
   for (const p of payloads || []) {
@@ -56,7 +54,6 @@ export function dataSources(payloads, settings) {
   }
 }
 
-// Laufende oder nächste Klausur
 export function nextExam(exams, now) {
   const open = (exams || []).filter((e) => {
     const until = asDate(e.active_until)
@@ -66,7 +63,7 @@ export function nextExam(exams, now) {
   return open[0] ?? null
 }
 
-// "Di 20.10., 08:00 bis 12:30" (am selben Tag nur die Endzeit)
+// "Di 20.10., 08:00 bis 12:30" (on the same day only the end time)
 export function formatRange(from, until) {
   const a = asDate(from)
   const b = asDate(until)
@@ -76,7 +73,6 @@ export function formatRange(from, until) {
   return `${formatDayTime(a)} bis ${end}`
 }
 
-// "Demnächst": nächste (oder laufende) Ferien und der nächste Termin
 export function upcoming(holidays, events, now) {
   const items = []
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -95,7 +91,7 @@ export function upcoming(holidays, events, now) {
   return items
 }
 
-// Spätestes off_until, wenn alle Bildschirme bis Tagesende aus sind; sonst null
+// Latest off_until if all screens are off until end of day; otherwise null
 export function allOffUntil(screens, now) {
   if (!screens?.length) return null
   const dates = screens.map((s) => asDate(s.off_until))
@@ -105,8 +101,8 @@ export function allOffUntil(screens, now) {
 
 export const EMERGENCY_POWER_HINT = 'Während des Notfalls sind alle Bildschirme an.'
 
-// Menü "An/aus" einer Bildschirm-Zeile. isOn: aktueller Zustand laut /display.
-// Während des Notfalls schaltet die Power-Regel alles ein, die Einträge sind dann gesperrt.
+// isOn: current state per /display.
+// During an emergency the power rule switches everything on, so the entries are disabled.
 export function powerMenu(screen, { now, isOn, emergencyActive }) {
   const disabled = !!emergencyActive
   const items = []
@@ -123,7 +119,7 @@ export function powerMenu(screen, { now, isOn, emergencyActive }) {
   return { items, hint: disabled ? EMERGENCY_POWER_HINT : '' }
 }
 
-// "3 Bildschirme · 2 online"; online zählt die Geräte-Ampel (Warnung gilt als online), sonst der CEC-Rückfall
+// "3 Bildschirme · 2 online"; online counts the device status light (warning counts as online), otherwise the CEC fallback
 export function screensMeta(screens, now, devices = {}) {
   const online = screens.filter((s) => screenStatus(s, now, devices[s.id]).state === 'online').length
   const count = screens.length === 1 ? '1 Bildschirm' : `${screens.length} Bildschirme`

@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { ClockBox, Frame } from '../frame'
 import { paginate } from '../lib/pager'
 
-// Medien (PDF-Seiten und Bilder als fertige Seitenbilder): alle `seconds` die nächsten `per_screen`
-// Seiten (1 bis 3 nebeneinander), Wechsel per Deckkraft (300 ms).
-// Passen alle Seiten zur Ausrichtung des Bildschirms (Querformat auf Querformat), laufen sie randlos
-// mit object-fit: contain auf Weiß bzw. im dunklen Schema auf Schwarz. Sonst (Hochformat-Seite auf
-// Querformat-Bildschirm) stehen sie mittig im CI-Rahmen mit Uhr.
-// Bringt den Rahmen selbst mit (ownFrame): frame = {scheme, staleSince, wheel, stripe} aus ViewScreen.
+// If all pages match the screen orientation they run edge to edge with object-fit: contain on white
+// (black in the dark scheme). Otherwise (portrait page on a landscape screen) they sit centred in
+// the CI frame with the clock.
+// Brings its own frame (ownFrame): frame = {scheme, staleSince, wheel, stripe} from ViewScreen.
 
 const FADE_MS = 300
 
@@ -21,7 +19,7 @@ function useSlideshow(count, seconds) {
     )
     return () => clearInterval(id)
   }, [count, seconds])
-  // Die vorige Seite bleibt liegen, bis die neue eingeblendet ist
+  // The previous page stays until the new one has faded in
   useEffect(() => {
     if (state.previous == null) return undefined
     const id = setTimeout(() => setState((s) => ({ ...s, previous: null })), FADE_MS)
@@ -38,7 +36,7 @@ export default function MediaView({ view, orientation = 'landscape', frame = {} 
   const slides = useMemo(() => paginate(data.pages ?? [], perScreen), [data.pages, perScreen])
   const { index, previous } = useSlideshow(slides.length, data.seconds)
 
-  // Nächste Seite vorladen, damit der Wechsel nicht auf das Dekodieren wartet
+  // Preload the next page so the switch does not wait for decoding
   useEffect(() => {
     if (slides.length <= 1) return
     for (const page of slides[(index + 1) % slides.length]) {
@@ -92,7 +90,7 @@ function Slide({ pages, layout, orientation, frame, fadeIn }) {
   )
 }
 
-// framed: Seite im CI-Rahmen mit feiner Kante, damit eine weiße Seite auf Weiß als Seite erkennbar bleibt
+// framed: page in the CI frame with a fine edge so a white page on white stays recognisable as a page
 function Page({ page, framed = false }) {
   return (
     <div className="flex h-full min-w-0 flex-1 items-center justify-center">

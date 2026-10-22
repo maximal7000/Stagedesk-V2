@@ -1,5 +1,3 @@
-// Editor für den Vertretungsplan (Spec §1.4): Datenquelle, Ausgabe, Abwesenheiten, Klausuren, Wechsel auf den
-// nächsten Schultag, Blättertakt und die Rückfall-Links für die eingebettete WebUntis-Seite.
 import { useEffect, useId, useState } from 'react'
 import { getWebuntisLinks } from '../shared/api'
 import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
@@ -18,8 +16,8 @@ export function PageSecondsField({ draft, set }) {
   )
 }
 
-// Ein gespeicherter Link aus der Link-Bibliothek hat Vorrang vor der Adresse (DisplayView.get_webuntis_url).
-// Wird die Adresse bearbeitet, geht der Link als null mit, damit die eigene Adresse gilt.
+// A saved link from the link library wins over the address (DisplayView.get_webuntis_url).
+// When the address is edited the link goes as null so the own address applies.
 function FallbackUrlField({ label, help, urlKey, linkKey, draft, set, links }) {
   const id = useId()
   const linkId = draft[linkKey]
@@ -124,7 +122,7 @@ export default function SubstitutionsEditor({ draft, set }) {
           <Checkbox label="Abwesenheiten anzeigen" checked={draft.substitutions_show_absences !== false}
             onChange={(v) => set('substitutions_show_absences', v)} help="Abwesende und betroffene Lehrkräfte und Klassen über der Tabelle." />
         )}
-        {/* Die Klausur-Einstellung wirkt nur auf die Monitor-Schnittstelle. */}
+        {/* The exam setting only affects the monitor endpoint. */}
         {source === 'monitor' && (
           <Field label="Klausuren anzeigen">
             <div className="max-w-sm">
@@ -135,7 +133,7 @@ export default function SubstitutionsEditor({ draft, set }) {
         )}
         {source !== 'embed' && <NextDayField draft={draft} set={set} />}
         <PageSecondsField draft={draft} set={set} />
-        {/* Jede Quelle weicht am Ende auf die eingebettete Seite aus, die Links gelten also immer. */}
+        {/* Every source finally falls back to the embedded page, so the links always apply. */}
         {source === 'embed' ? (
           <FallbackUrlFields draft={draft} set={set} links={links}
             help="Diese WebUntis-Seite erscheint eingebettet, wenn keine Vertretungsdaten kommen." />

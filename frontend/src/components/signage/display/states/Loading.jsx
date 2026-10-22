@@ -1,6 +1,6 @@
 import StateScreen from './StateScreen'
 
-// Erster Start ohne Daten. Kein Spinner, keine Animation. bare: nur der Text, im Rahmen einer Ansicht.
+// No spinner, no animation. bare: text only, inside a view's frame.
 export default function Loading({ orientation, bare = false }) {
   if (bare) {
     return (

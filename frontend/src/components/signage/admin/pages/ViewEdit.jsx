@@ -1,7 +1,4 @@
-// Ansicht anlegen und bearbeiten (Spec §6.2, Mockup admin-view-edit.png).
-// Ohne id (Route views/new): zuerst der Typ, dann der Name; "Anlegen" öffnet die neue Ansicht.
-// Mit id: links Allgemein und der Editor des Typs, rechts Live-Vorschau und "Verwendet auf", unten die
-// SaveBar. Gespeichert und in die Vorschau geschickt werden nur geänderte Felder (viewData.viewPayload).
+// Only changed fields are saved and sent to the preview (viewData.viewPayload).
 import { useEffect, useId, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
@@ -58,8 +55,6 @@ function Breadcrumb({ current, confirmLeave }) {
     </nav>
   )
 }
-
-// ── Neue Ansicht: Typ wählen, dann Name ────────────────────────────
 
 function NewView() {
   const navigate = useNavigate()
@@ -119,8 +114,6 @@ function NewView() {
     </div>
   )
 }
-
-// ── Ansicht bearbeiten ─────────────────────────────────────────────
 
 function GeneralSection({ draft, set, kindProblem }) {
   const ids = { name: useId(), kind: useId(), city: useId(), qrUrl: useId(), qrLabel: useId() }
@@ -387,6 +380,6 @@ function EditView({ viewId }) {
 export default function ViewEdit() {
   const { id } = useParams()
   if (!id) return <NewView />
-  // key: eine andere Ansicht beginnt mit frischem Stand und Entwurf
+  // key: another view starts with a fresh state and draft
   return <EditView key={id} viewId={Number(id)} />
 }

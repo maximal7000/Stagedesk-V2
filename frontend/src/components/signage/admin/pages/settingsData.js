@@ -1,10 +1,9 @@
-// Einstellungen (Spec §6.2): WebUntis-Test als Satz, Payloads der Abschnitte und Notfall-Vorlagen.
-// Zugangsdaten sind write-only (Ruling R22): der Server liefert '' plus *_set; ein leeres Feld heißt unverändert.
+// Credentials are write-only: the server returns '' plus *_set; an empty field means unchanged.
 import { deepEqual } from '../shared/useDraft'
 import { errorText } from '../shared/errorText'
 
 export const SECRET_FIELDS = ['webuntis_password', 'weather_api_key']
-// Geräte-Überwachung (Spec §8): Zahlenfelder mit Bereich wie im Backend, dazu der Token-Schalter
+// Device monitoring: number fields with ranges as in the backend, plus the token switch
 export const DEVICE_NUMBER_FIELDS = [
   { key: 'device_offline_minutes', label: 'Offline melden nach', min: 2, max: 240 },
   { key: 'warn_temperature_c', label: 'Warnung ab Temperatur', min: 50, max: 95 },
@@ -16,7 +15,7 @@ export const DEVICE_FIELDS = [...DEVICE_NUMBER_FIELDS.map((f) => f.key), 'requir
 const NUMBER_KEYS = new Set(DEVICE_NUMBER_FIELDS.map((f) => f.key))
 export const SETUP_FIELDS = ['webuntis_server', 'webuntis_school', 'webuntis_username', 'webuntis_password', 'weather_api_key', ...DEVICE_FIELDS]
 export const ON_AIR_FIELDS = ['on_air_text', 'on_air_animation', 'on_air_show_clock']
-// Farbschema (Spec 3.2): Recht signage.setup, eigene Anfrage; daylight_today ist nur lesend und wird nie gesendet
+// Colour scheme: signage.setup, own request; daylight_today is read-only and never sent
 export const SCHEME_FIELDS = ['color_scheme', 'light_from', 'light_until']
 export const COLOR_SCHEME_OPTIONS = [
   { value: 'light', label: 'Hell' },
@@ -51,7 +50,7 @@ export function credentialsComplete(settings, draft = {}) {
   return !!(value('webuntis_server') && value('webuntis_school') && value('webuntis_username') && password)
 }
 
-// Ergebnis von POST /webuntis/check (webuntis.check: login, substitutions, timetable, source) als Satz
+// Result of POST /webuntis/check (webuntis.check: login, substitutions, timetable, source) as a sentence
 export function checkSentence(result, error, settings) {
   if (error) return { tone: 'bad', text: `Keine Verbindung: ${sentence(errorText(error))}` }
   if (SOURCE_SENTENCES[result?.source]) return { tone: 'ok', text: SOURCE_SENTENCES[result.source] }
@@ -66,19 +65,18 @@ export function checkSentence(result, error, settings) {
   return { tone: 'bad', text: `Keine Verbindung: ${reason}` }
 }
 
-// Gespeicherte Quelle (MonitorSettings.webuntis_source) für die Zeile unter dem Knopf
 export function sourceSentence(source) {
   if (SOURCE_SENTENCES[source]) return SOURCE_SENTENCES[source]
   if (source === 'unavailable') return 'Keine Verbindung beim letzten Test.'
   return 'Noch nicht getestet.'
 }
 
-// Geänderte Felder eines Abschnitts; Geheimnisse nur, wenn etwas eingetragen ist
+// Changed fields of a section; secrets only when something was entered
 export function settingsPayload(base, draft, fields) {
   const out = {}
   for (const key of fields) {
     if (SECRET_FIELDS.includes(key)) {
-      // Leer (auch nur Leerzeichen) heißt unverändert; sonst genau wie eingegeben, ohne Kürzen
+      // Empty (or whitespace only) means unchanged; otherwise exactly as entered, not trimmed
       if (text(draft[key])) out[key] = draft[key]
       continue
     }
@@ -95,11 +93,9 @@ export function settingsPayload(base, draft, fields) {
 
 export const changedIn = (base, draft, fields) => Object.keys(settingsPayload(base, draft, fields)).length
 
-// ── Notfall-Vorlagen ────────────────────────────────────────────────
-
 const templateBody = (t, index) => ({ title: text(t.title), text: text(t.text), note: text(t.note), sort_order: index })
 
-// Entwurf (Reihenfolge = sort_order) gegen den gespeicherten Stand: anlegen, ändern, löschen
+// Draft (order = sort_order) against the saved state: create, update, delete
 export function templateChanges(original, draft) {
   const byId = new Map((original || []).map((t) => [t.id, t]))
   const create = []
@@ -128,9 +124,6 @@ export function templateProblems(list) {
   return index < 0 ? null : `Vorlage ${index + 1}: Titel und Text eintragen.`
 }
 
-// ── Geräte ──────────────────────────────────────────────────────────
-
-// Erste Bereichsverletzung eines geänderten Geräte-Felds als Satz, sonst null
 export function deviceProblems(base, draft) {
   const changed = settingsPayload(base, draft, DEVICE_FIELDS)
   for (const { key, label, min, max } of DEVICE_NUMBER_FIELDS) {
@@ -144,7 +137,7 @@ export function deviceProblems(base, draft) {
   return null
 }
 
-// Bildschirme, die sich noch ohne Token melden (GET /devices: legacy), mit Namen aus der Bildschirmliste
+// Screens still reporting without a token (GET /devices: legacy), named from the screen list
 export function legacyScreenNames(devices, screens) {
   const names = new Map((screens || []).map((s) => [s.id, s.name]))
   return (devices || []).filter((d) => d.legacy)

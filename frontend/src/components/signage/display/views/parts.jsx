@@ -1,6 +1,3 @@
-// Gemeinsame Bausteine der Ansichten
-
-// Überschrift mit rotem CI-Balken; rechts optional ein Zusatz (Fußweg, Seitenzahl)
 export function Heading({ children, aside, size = 'text-[1.75rem]', className = '' }) {
   return (
     <header className={`flex items-baseline justify-between gap-[1rem] ${className}`}>
@@ -10,7 +7,7 @@ export function Heading({ children, aside, size = 'text-[1.75rem]', className = 
   )
 }
 
-// "Seite n / m", nur wenn es mehr als eine Seite gibt (Spec §5.2: blättern nur, was nicht passt)
+// "Seite n / m", only with more than one page (page only what does not fit)
 export function PageCount({ index, count, className = 'text-[1.375rem]' }) {
   if (count <= 1) return null
   return (

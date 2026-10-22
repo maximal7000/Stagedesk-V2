@@ -1,12 +1,11 @@
-// Fehlermeldungen für die Oberfläche: die Meldung des Servers (detail/message) oder ein deutscher Satz mit
-// Ursache und nächstem Schritt. Die englischen axios-Texte ("Network Error" …) erscheinen nie.
+// The English axios texts ("Network Error" …) never appear.
 const BY_STATUS = {
   401: 'Die Anmeldung ist abgelaufen. Bitte die Seite neu laden und erneut anmelden.',
   403: 'Dafür fehlt die Berechtigung. Bitte eine Person mit Admin-Rechten fragen.',
   404: 'Der Eintrag wurde nicht gefunden. Bitte die Seite neu laden.',
 }
 
-// Englische Standardtexte von Django Ninja/Django (HTTP-Statusnamen); sie werden nie angezeigt
+// English default texts of Django Ninja/Django (HTTP status names); never shown
 const FRAMEWORK_DEFAULTS = new Set([
   'Unauthorized', 'Forbidden', 'Not Found', 'Method Not Allowed', 'Bad Request', 'Unprocessable Entity',
   'Internal Server Error', 'Service Unavailable', 'Bad Gateway', 'Gateway Timeout', 'Not Acceptable',

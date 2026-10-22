@@ -1,5 +1,3 @@
-// Editor für Medien (Spec §3.1, §4.4): Dateien wählen und sortieren, Sekunden pro Seite, Seiten
-// nebeneinander und Modus für PDFs. Die Dateiliste kommt aus GET /files (Medien-Verwaltung).
 import { useEffect, useId, useState } from 'react'
 import { FileImage, FileText, Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'
@@ -63,7 +61,7 @@ export default function MediaEditor({ draft, set }) {
     return () => { alive = false }
   }, [])
 
-  // Nur PDFs und Bilder; Logos und Hintergründe gehören nicht in die Medien-Ansicht
+  // Only PDFs and images; logos and backgrounds do not belong in the media view
   const available = (files ?? []).filter((f) => MEDIA_KINDS.has(f.kind) && !items.includes(f.id))
   const add = () => {
     if (!pick) return

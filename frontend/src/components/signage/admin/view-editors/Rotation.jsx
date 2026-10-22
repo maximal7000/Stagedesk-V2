@@ -1,5 +1,4 @@
-// Editor für den Wechsel (Spec §3.1): Liste aus Ansicht und Sekunden, sortierbar per Ziehen.
-// Wechsel-Ansichten und die eigene Ansicht sind nicht wählbar (Backend: validate_rotation_items).
+// Rotation views and the view itself cannot be chosen (backend: validate_rotation_items).
 import { Plus, Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'
 import { Section, fieldClass } from '../shared/form'
@@ -9,7 +8,7 @@ import {
   MAX_ROTATION_SECONDS, MIN_ROTATION_SECONDS, kindLabel, moveItem, rotationChoices, rotationProblems,
 } from '../pages/viewData'
 
-// Typ nur nennen, wenn der Name ihn nicht schon enthält ("Abfahrten (Abfahrten)" vermeiden)
+// Name the kind only if the name does not already contain it (avoids "Abfahrten (Abfahrten)")
 function optionLabel(view) {
   const kind = kindLabel(view.kind)
   return view.name.toLowerCase().includes(kind.toLowerCase()) ? view.name : `${view.name} (${kind})`
@@ -17,7 +16,7 @@ function optionLabel(view) {
 
 export default function RotationEditor({ draft, set, views, viewId }) {
   const items = draft.rotation_items ?? []
-  // Die leere Liste erklärt sich selbst; gemeldet werden unvollständige Zeilen
+  // The empty list explains itself; incomplete rows are reported
   const problems = items.length ? rotationProblems(items) : []
   const choices = rotationChoices(views, viewId)
   const names = Object.fromEntries((views ?? []).map((v) => [v.id, v.name]))

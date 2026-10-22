@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { explainScreen, describeShown } from './explain'
 
-// Dienstag, 20.10.2026, 10:00 Ortszeit (Python-Wochentag 1)
+// Tuesday, 20.10.2026, 10:00 local time (Python weekday 1)
 const now = new Date(2026, 9, 20, 10, 0)
 
 const screen = (extra = {}) => ({

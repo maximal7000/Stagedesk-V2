@@ -15,7 +15,7 @@ const row = (over) => ({
 
 const ALL_COLUMNS = { class: true, subject: true, teacher: true, room: true, note: true }
 
-// Zeiten ohne Versatz: Ortszeit des Testlaufs, wie auf dem Gerät
+// Times without offset: local time of the test run, as on the device
 function view(data) {
   return {
     id: 3, kind: 'substitutions', layout: 'wide', page_seconds: 15,
@@ -39,7 +39,7 @@ function render(element) {
   return host
 }
 
-// Sichtbare Tabelle (ohne die versteckte Messschicht)
+// Visible table (without the hidden measuring layer)
 const visible = (el) => el.querySelector('[data-substitutions-table]')
 const headers = (el) => [...el.querySelectorAll('[data-column-head]')].map((h) => h.textContent)
 

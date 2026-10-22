@@ -1,6 +1,4 @@
-// Ferien & Zeitpläne (Spec §6.2): Ferienzeiträume als Tabelle (Anlegen, Bearbeiten, Löschen) und eine
-// Wochenübersicht der Ein-Zeiten aller Bildschirme (Zeilen Mo–So, Balken als CSS-Grid mit einer Spalte pro Minute).
-// Die Balken folgen power.compute_power_state (shared/schedule.powerWeek). Recht: signage.power (Route).
+// The bars follow power.compute_power_state (shared/schedule.powerWeek).
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'

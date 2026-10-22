@@ -6,7 +6,7 @@ function scaleFactor(scale) {
   return Number.isFinite(pct) && pct > 0 ? pct / 100 : 1
 }
 
-// Ein gesetztes zoom ist ein absoluter Faktor und ersetzt Auto-Skalierung samt Prozentwert.
+// A set zoom is an absolute factor and replaces auto scaling including the percentage.
 export function computeRootPx({ width, orientation, scale, zoom }) {
   const base = orientation === 'portrait' ? BASE_WIDTH.portrait : BASE_WIDTH.landscape
   const factor = zoom ?? (width / base) * scaleFactor(scale)

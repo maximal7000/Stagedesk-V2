@@ -1,5 +1,4 @@
-// Dünne Aufrufe der Monitor-API (/api/signage/…) für das Admin. Jede Funktion liefert response.data.
-// Pfade ohne Schrägstrich am Ende (Django-Ninja-Konvention des Projekts).
+// Paths without a trailing slash (the project's Django Ninja convention).
 import apiClient from '../../../../lib/api'
 
 const BASE = '/signage'
@@ -8,14 +7,11 @@ const post = (path, body, params) => apiClient.post(BASE + path, body, { params 
 const put = (path, body, params) => apiClient.put(BASE + path, body, { params }).then((r) => r.data)
 const del = (path, body, params) => apiClient.delete(BASE + path, { data: body, params }).then((r) => r.data)
 
-// ── Anzeige-Daten (für "Zeigt gerade" in der Übersicht) ─────────────
 export const getDisplay = (slug) => get('/display', { screen: slug })
 
-// ── Sondermodi ─────────────────────────────────────────────────────
 export const setOnAir = (onAir) => post('/on-air', { on_air: onAir })
 export const setEmergency = ({ active, text = '', note = '' }) => post('/emergency', { active, text, note })
 
-// ── Ansichten ──────────────────────────────────────────────────────
 export const getViews = () => get('/views')
 export const getView = (id) => get('/config', { view_id: id })
 export const createView = (body) => post('/views', body)
@@ -28,18 +24,16 @@ export const previewView = (draft, screenId = null) => post('/views/preview', { 
 export const getDisruptions = (viewId) => get('/disruptions', { view_id: viewId })
 export const searchStops = (q, results = 10) => get('/transit/search', { q, results })
 
-// ── Bildschirme ────────────────────────────────────────────────────
 export const getScreens = () => get('/screens')
 export const createScreen = (body) => post('/screens', body)
 export const updateScreen = (id, body) => put(`/screens/${id}`, body)
 export const deleteScreen = (id) => del(`/screens/${id}`)
 export const reloadScreen = (id) => post(`/screens/${id}/reload`)
 export const regenerateScreenKey = (id) => post(`/screens/${id}/regenerate-key`)
-// Leere oder fehlende Liste = alle Bildschirme
+// Empty or missing list = all screens
 export const powerOffToday = (ids) => post('/screens/power-off-today', { screen_ids: ids?.length ? ids : null })
 export const undoPowerOffToday = (ids) => del('/screens/power-off-today', { screen_ids: ids?.length ? ids : null })
 
-// ── Medien ─────────────────────────────────────────────────────────
 export const getFiles = (kind) => get('/files', kind ? { kind } : undefined)
 export const getFile = (id) => get(`/files/${id}`)
 export function uploadFile(file, { name = '', kind = 'image' } = {}) {
@@ -54,7 +48,6 @@ export const getTrash = () => get('/trash')
 export const restoreFromTrash = (kind, id) => post('/trash/restore', null, { kind, id })
 export const purgeFromTrash = (kind, id) => del('/trash/purge', undefined, { kind, id })
 
-// ── Klausuren, Termine, Ankündigungen ──────────────────────────────
 export const getExams = () => get('/exams')
 export const createExam = (body) => post('/exams', body)
 export const updateExam = (id, body) => put(`/exams/${id}`, body)
@@ -77,7 +70,6 @@ export const createAnnouncement = (body) => post('/announcements', body)
 export const updateAnnouncement = (id, body) => put(`/announcements/${id}`, body)
 export const deleteAnnouncement = (id) => del(`/announcements/${id}`)
 
-// ── Ferien und Notfall-Vorlagen ────────────────────────────────────
 export const getHolidays = () => get('/holidays')
 export const createHoliday = (body) => post('/holidays', body)
 export const updateHoliday = (id, body) => put(`/holidays/${id}`, body)
@@ -88,7 +80,6 @@ export const createEmergencyTemplate = (body) => post('/emergency-templates', bo
 export const updateEmergencyTemplate = (id, body) => put(`/emergency-templates/${id}`, body)
 export const deleteEmergencyTemplate = (id) => del(`/emergency-templates/${id}`)
 
-// ── Einstellungen und WebUntis ─────────────────────────────────────
 export const getSettings = () => get('/settings')
 export const updateSettings = (body) => put('/settings', body)
 export const checkWebuntis = () => post('/webuntis/check')
@@ -98,9 +89,8 @@ export const createWebuntisLink = (body) => post('/webuntis-links', body)
 export const updateWebuntisLink = (id, body) => put(`/webuntis-links/${id}`, body)
 export const deleteWebuntisLink = (id) => del(`/webuntis-links/${id}`)
 
-// ── Geräte (Geräte-Agent) ──────────────────────────────────────────
 export const getDevices = () => get('/devices')
-// body: { code, screen_id } oder { code, new_screen: { name, location } }
+// body: { code, screen_id } or { code, new_screen: { name, location } }
 export const pairDevice = (body) => post('/devices/pair', body)
 export const unpairDevice = (id) => post(`/devices/${id}/unpair`)
 export const revokeDevice = (id) => post(`/devices/${id}/revoke`)

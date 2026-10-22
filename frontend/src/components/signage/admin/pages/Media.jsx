@@ -1,6 +1,3 @@
-// Medien (Spec §6.2): Hochladen per Ziehen und Ablegen oder Dateiauswahl, Kacheln mit erster Seite, Seitenzahl,
-// Ausrichtung und Status. Solange eine Datei vorbereitet wird, fragt die Seite alle 3 s nach (useMediaFiles).
-// Das Detailpanel zeigt alle Seiten und "Verwendet in"; Löschen legt die Datei in den Papierkorb (mit Rückgängig).
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FileText, Hourglass, ImageOff, Trash2, Upload } from 'lucide-react'
@@ -15,7 +12,7 @@ import { errorText } from '../shared/errorText'
 import { fileMeta, mediaStatus, uploadKind, uploadProblem } from './mediaData'
 import * as api from '../shared/api'
 
-// Laufende Uploads tragen eine eigene Nummer: zwei Dateien mit gleichem Namen bleiben getrennt
+// Running uploads carry their own number: two files with the same name stay apart
 let uploadSeq = 0
 
 const STATUS_TONE = { processing: 'info', ready: 'positive', failed: 'danger' }
@@ -129,7 +126,7 @@ export default function Media() {
   const openFile = files?.find((f) => f.id === openId) ?? null
   const openStatus = openFile?.status
 
-  // Detail laden beim Öffnen und erneut, sobald sich der Status in der Liste ändert (Vorbereitung fertig)
+  // Load the detail on open and again when its status in the list changes (processing finished)
   useEffect(() => {
     if (openId == null) return undefined
     let alive = true

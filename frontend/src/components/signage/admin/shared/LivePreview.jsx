@@ -1,6 +1,5 @@
-// Live-Vorschau (Spec §6.2): schickt den Entwurf entprellt an POST /views/preview und zeigt
-// /signage?preview=<token> in einem iframe in der Originalgröße des gewählten Bildschirms, verkleinert per
-// transform: scale(). Auflösung und Ausrichtung kommen vom Bildschirm (4K quer, im Hochformat 2160 × 3840).
+// Renders the iframe at the screen's original size and scales it down with transform: scale().
+// Resolution and orientation come from the screen (4K landscape, portrait 2160 × 3840).
 import { useEffect, useId, useRef, useState } from 'react'
 import { previewErrorText, usePreviewToken } from './usePreviewToken'
 import { fieldClass } from './form'

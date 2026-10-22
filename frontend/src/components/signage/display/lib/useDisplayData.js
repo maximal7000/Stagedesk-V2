@@ -9,7 +9,7 @@ const BACKOFF_MS = [5000, 10000, 30000, 60000]
 
 const backoff = (failures) => BACKOFF_MS[Math.min(Math.max(failures, 1), BACKOFF_MS.length) - 1]
 
-// Basis für fetch und WebSocket: gleicher Host wie die API (Vite-Proxy im Dev, gleiche Origin in Produktion).
+// Base for fetch and WebSocket: same host as the API (Vite proxy in dev, same origin in production).
 export function endpoints(base = API_BASE, loc = window.location) {
   const apiUrl = new URL(base.replace(/\/+$/, ''), loc.origin)
   const origin = apiUrl.origin
@@ -37,8 +37,8 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
   const initialReload = useRef(undefined)
   const loadRef = useRef(() => {})
 
-  // Laden, Polling und Wiederholung. Pro Effekt-Lauf ein eigener Kontext: Cleanup bricht
-  // Abfrage und Timer ab, alte Antworten können weder State setzen noch Timer anlegen.
+  // Each effect run has its own context: cleanup aborts request and timers, old responses can neither
+  // set state nor create timers.
   useEffect(() => {
     let cancelled = false
     let timer = null
@@ -74,7 +74,7 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
         if (stale()) return
         if (!res.ok) {
           let detail = null
-          try { detail = (await res.json())?.detail ?? null } catch { /* kein JSON */ }
+          try { detail = (await res.json())?.detail ?? null } catch { /* no JSON */ }
           const err = new Error('http')
           err.status = res.status
           err.detail = detail
@@ -115,7 +115,7 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
     }
   }, [screen, view, key, preview, slugKey])
 
-  // Browser-Online-Status: bei Rückkehr sofort neu laden
+  // Browser online status: reload immediately on return
   useEffect(() => {
     const on = () => { setOnline(true); loadRef.current() }
     const off = () => setOnline(false)
@@ -124,7 +124,7 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
     return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
   }, [])
 
-  // WebSocket: changed lädt neu, reload lädt die Seite neu. Fehler wirken nur auf die Wiederverbindung.
+  // WebSocket: changed refetches, reload reloads the page. Errors only affect reconnecting.
   useEffect(() => {
     if (!screen || preview) return undefined
     let ws = null
@@ -149,13 +149,13 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
         if (closed) return
         retryTimer = setTimeout(connect, backoff(++attempts))
       }
-      ws.onerror = () => { try { ws.close() } catch { /* bereits zu */ } }
+      ws.onerror = () => { try { ws.close() } catch { /* already closed */ } }
     }
     connect()
     return () => {
       closed = true
       clearTimeout(retryTimer)
-      if (ws) { ws.onclose = null; try { ws.close() } catch { /* bereits zu */ } }
+      if (ws) { ws.onclose = null; try { ws.close() } catch { /* already closed */ } }
     }
   }, [screen, preview])
 
@@ -163,7 +163,7 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
   const failed = snapshot.failed
   const state = connectionState({ lastOkAt: snapshot.lastOkAt, now, online, failed })
 
-  // Übergang stale -> lost braucht einen Render, auch wenn sonst nichts passiert (einmaliger Timer)
+  // The stale -> lost transition needs a render even if nothing else happens (one-shot timer)
   useEffect(() => {
     if ((!failed && online) || snapshot.lastOkAt == null) return undefined
     const left = snapshot.lastOkAt + LOST_AFTER_MS - Date.now()

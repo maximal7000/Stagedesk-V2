@@ -1,6 +1,5 @@
-// Status eines Bildschirms in Textform (Spec §6.2, §7.1), ohne Komponente (auch für overviewData.js).
-// Mit gekoppeltem Gerät (GET /devices) gilt dessen Ampel. Ohne Gerät, also bei altem Skript, bleibt der
-// Rückfall: online, wenn der letzte CEC-Status höchstens 5 min alt ist.
+// With a paired device (GET /devices) its status light applies. Without one (legacy script) the
+// fallback: online if the last CEC status is at most 5 min old.
 import { deviceStatusView } from './deviceStatus'
 
 const ONLINE_WINDOW_MS = 5 * 60 * 1000

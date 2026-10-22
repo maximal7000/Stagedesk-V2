@@ -1,5 +1,3 @@
-// Ansichten-Liste (Spec §6.2): Name, Typ und "Verwendet auf"; "Neue Ansicht" führt zur Typ-Wahl.
-// Nach dem Löschen (ViewEdit) erscheint hier die Meldung mit "Rückgängig" (Wiederherstellen aus dem Papierkorb).
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ChevronRight, LayoutTemplate, Plus } from 'lucide-react'
@@ -43,7 +41,7 @@ export default function Views() {
     return () => { alive = false }
   }, [load])
 
-  // Die Meldung gilt einmal: beim Neuladen der Seite nicht erneut zeigen
+  // The toast applies once: do not show it again on reload
   useEffect(() => {
     if (location.state?.deleted) navigate(location.pathname, { replace: true, state: null })
   }, [location, navigate])

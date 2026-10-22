@@ -3,15 +3,15 @@ import { formatShortDate, formatTime } from './format'
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
 const sameDay = (a, b) => startOfDay(a).getTime() === startOfDay(b).getTime()
 
-// Kalendertage von `now` bis `value` (heute = 0, gestern = -1)
+// Calendar days from `now` to `value` (today = 0, yesterday = -1)
 export function daysUntil(value, now) {
   return Math.round((startOfDay(new Date(value)) - startOfDay(now)) / 86400000)
 }
 
-// Zweite Zeile eines Termins: Uhrzeit, "ganztägig", "bis Fr 23.10." oder "läuft bis 21:00"
+// Second line of an event: time, "ganztägig", "bis Fr 23.10." or "läuft bis 21:00"
 export function eventDetail(ev) {
   const start = new Date(ev.date_from)
-  // Ende genau um Mitternacht zählt zum Vortag
+  // An end exactly at midnight counts for the previous day
   const end = ev.date_until ? new Date(new Date(ev.date_until).getTime() - 60000) : start
   const multiDay = !sameDay(start, end)
   const allDay = start.getHours() === 0 && start.getMinutes() === 0 && end.getHours() === 23 && end.getMinutes() >= 58

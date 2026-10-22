@@ -1,7 +1,6 @@
-// Schutz vor verlorenen Entwürfen (Spec §6.2).
-// Seiten melden mit useUnsavedGuard(isDirty) ungespeicherte Änderungen an; solange eine gemeldet ist,
-// warnt der Browser beim Schließen oder Neuladen (beforeunload), und confirmLeave() fragt vor
-// App-internen Wechseln nach (Sidebar-Links rufen es mit ihrem Ziel vor der Navigation auf).
+// Pages report unsaved changes with useUnsavedGuard(isDirty); while one is reported the browser warns
+// on close or reload (beforeunload) and confirmLeave() asks before in-app navigation (sidebar links
+// call it with their target before navigating).
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useRef } from 'react'
 
 export const LEAVE_QUESTION = 'Es gibt ungespeicherte Änderungen. Seite trotzdem verlassen?'
@@ -16,12 +15,12 @@ export default function UnsavedChangesProvider({ children }) {
     else dirtyIds.current.delete(id)
   }, [])
 
-  // target: Pfad des Links. Zeigt er auf die aktuelle Seite, wird nichts verlassen: keine Frage, Meldungen bleiben.
+  // target: path of the link. If it points at the current page nothing is left: no question, reports stay.
   const confirmLeave = useCallback((target) => {
     if (dirtyIds.current.size === 0) return true
     if (typeof target === 'string' && target === window.location.pathname) return true
     const ok = window.confirm(LEAVE_QUESTION)
-    // Die Seite wird gleich verlassen: ihre Meldung gilt nicht mehr, auch falls sie nicht abgebaut wird
+    // The page is about to be left: its report no longer counts, even if it does not unmount
     if (ok) dirtyIds.current.clear()
     return ok
   }, [])
@@ -32,7 +31,7 @@ export default function UnsavedChangesProvider({ children }) {
 
 const alwaysLeave = () => true
 
-// Für Links außerhalb der Monitor-Seiten: ohne Provider ist Verlassen immer erlaubt.
+// For links outside the signage pages: without a provider leaving is always allowed.
 // eslint-disable-next-line react-refresh/only-export-components
 export function useConfirmLeave() {
   return useContext(UnsavedChangesContext)?.confirmLeave ?? alwaysLeave

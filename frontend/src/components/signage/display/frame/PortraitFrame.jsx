@@ -1,9 +1,6 @@
 import ClockBox from './ClockBox'
 import { CiStripe, CiWheel, FrameFooter, frameRootClass } from './parts'
 
-// Hochformat (Vorlage "Hintergrund dreifach"): Band mit drei Rädern links, roter Streifen rechts.
-// Dieselben zwei Aufteilungen wie im Querformat: "Normal" mit Kopfzeile, "Breit" über die ganze Breite
-// mit Uhr-Kasten unten, das Band dann unter dem Inhalt.
 export default function PortraitFrame({ layout = 'normal', scheme, clock, footer, wheel = true, stripe = true, children }) {
   const wide = layout === 'wide'
   const weather = clock?.showWeather ? clock.weather : null

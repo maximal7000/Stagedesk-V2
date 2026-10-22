@@ -3,7 +3,7 @@ import { useClock } from '../lib/useClock'
 import { formatTime, formatTimeSeconds } from '../lib/format'
 import StateScreen, { StateText } from './StateScreen'
 
-// Längerer Ausfall (ab 120 s ohne gültige Daten). since: letzte gültige Daten, sonst Beginn dieses Zustands.
+// Longer outage (from 120 s without valid data). since: last valid data, otherwise start of this state.
 export default function ConnectionLost({ screenName, lastOkAt, nextRetryAt, orientation }) {
   const [shownAt] = useState(() => Date.now())
   const since = lastOkAt ?? shownAt
@@ -24,7 +24,7 @@ export default function ConnectionLost({ screenName, lastOkAt, nextRetryAt, orie
   )
 }
 
-// Eigene Komponente, damit nur dieser Satz sekündlich neu rendert
+// Own component so only this sentence re-renders every second
 function RetryCountdown({ nextRetryAt }) {
   const now = useClock()
   const seconds = Math.max(0, Math.ceil((nextRetryAt - now.getTime()) / 1000))

@@ -1,6 +1,5 @@
-// Medien-Liste mit Abfrage alle 3 s, solange eine Datei vorbereitet wird (status 'processing'). Ohne solche
-// Datei läuft kein Intervall; beim Verlassen der Seite wird es aufgeräumt. Eine ältere Antwort überschreibt
-// nie eine neuere.
+// Polls every 3 s while a file is processing ('processing'); no interval otherwise, cleaned up on
+// unmount. An older response never overwrites a newer one.
 import { useCallback, useEffect, useRef, useState } from 'react'
 import * as api from './api'
 

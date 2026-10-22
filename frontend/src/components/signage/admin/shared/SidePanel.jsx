@@ -1,5 +1,4 @@
-// Seitenpanel des Monitor-Admin (Formulare und Details rechts über der Seite). Escape oder ein Klick auf die
-// abgedunkelte Fläche ruft onClose; ob ein Entwurf verworfen werden darf, entscheidet die Seite.
+// Escape or a click on the backdrop calls onClose; the page decides whether a draft may be discarded.
 import { useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
 

@@ -1,5 +1,3 @@
-// Editor für die geteilte Ansicht (Spec §3.1): Inhalt links und rechts, Breite der linken Seite.
-// Zeigt eine Seite Abfahrten oder den Vertretungsplan, folgen darunter deren Einstellungen.
 import { useId } from 'react'
 import { Field, Section, Segmented } from '../shared/form'
 import DeparturesEditor from './Departures'

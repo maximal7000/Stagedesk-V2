@@ -1,4 +1,3 @@
-// Abschnitt "Protokoll" im Bildschirm-Detail (Spec §8): Ereignisse und Befehle, neueste zuerst, Filter nach Art.
 import { useEffect, useId, useState } from 'react'
 import { Section, fieldClass } from './form'
 import { formatDayTime } from './explain'
@@ -7,7 +6,7 @@ import * as api from './api'
 
 const LIMIT = 100
 
-// Filtergruppen: Wert -> Arten des Servers (der Server filtert nach genau einer Art)
+// Filter groups: value -> server kinds (the server filters by exactly one kind)
 const LOG_GROUPS = [
   { value: 'all', label: 'Alle', kinds: [] },
   { value: 'connection', label: 'Verbindung', kinds: ['online', 'offline'] },
@@ -41,7 +40,7 @@ export default function DeviceLog({ screenId, reloadKey = 0 }) {
     setState({ loading: true, events: [], error: null, filter: value })
   }
 
-  // Filterwechsel: Ladeanzeige (changeFilter). Neuladen im Takt (reloadKey): die Tabelle bleibt stehen, ein Fehler erscheint als Zeile.
+  // Filter change: loading indicator (changeFilter). Periodic reload (reloadKey): the table stays, an error appears as a row.
   useEffect(() => {
     let alive = true
     const group = LOG_GROUPS.find((g) => g.value === filter) ?? LOG_GROUPS[0]

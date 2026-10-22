@@ -71,7 +71,7 @@ describe('Frame', () => {
 
 describe('display.css', () => {
   it('Breit + Hell hat eine hellgraue Seite, damit die Kästen sich abheben', () => {
-    // jsdom wertet kein CSS aus: die Regel wird im Quelltext geprüft
+    // jsdom does not evaluate CSS: the rule is checked in the source
     const css = readFileSync(resolve(__dirname, '../display.css'), 'utf8')
     const rule = css.match(/\.d-scheme-light\.d-layout-wide\s*\{([^}]*)\}/)
     expect(rule).not.toBeNull()
