@@ -127,10 +127,6 @@ def default_files(root):
     ]
     files += [root / 'frontend/src/pages/SignagePage.jsx']
     files += walk(root / 'frontend/src/components/signage')
-    # Old frontend locations until the frontend moves to components/signage.
-    files += [root / 'frontend/src/pages/MonitorPage.jsx']
-    files += walk(root / 'frontend/src/components/display')
-    files += walk(root / 'frontend/src/components/monitor-admin')
     files += walk(root / 'agent')
     return [p for p in files if p.exists()]
 

@@ -4,7 +4,7 @@
 //                                  [--layout normal|wide] [--scheme light|dark] [--out <dir>] [--no-build]
 //
 // Baut die App (außer mit --no-build), startet `vite preview` auf einem freien Port und beantwortet
-// /api/monitor/display aus frontend/tests/display-fixtures/<name>.json. Bilder landen in
+// /api/monitor/display aus frontend/tests/signage/display-fixtures/<name>.json. Bilder landen in
 // docs/superpowers/screenshots/2026-10-19-monitor/ (oder --out <dir>) als
 // display-<name>[-<state>][-<layout>][-<scheme>][-portrait].png.
 //   --layout überschreibt view.layout (auch in den Unteransichten des Wechsels), --scheme das Farbschema.
@@ -21,7 +21,7 @@ import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const FIXTURES = join(FRONTEND, 'tests', 'display-fixtures')
+const FIXTURES = join(FRONTEND, 'tests', 'signage', 'display-fixtures')
 const ASSETS = join(FIXTURES, 'assets')
 const OUT = resolve(FRONTEND, '..', 'docs', 'superpowers', 'screenshots', '2026-10-19-monitor')
 const VITE = join(FRONTEND, 'node_modules', '.bin', 'vite')

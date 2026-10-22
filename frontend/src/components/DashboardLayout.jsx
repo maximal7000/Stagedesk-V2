@@ -42,7 +42,7 @@ import { useUser } from '../contexts/UserContext';
 import GlobalSearchModal from './GlobalSearchModal';
 import NotificationBell from './NotificationBell';
 import ShortcutsModal from './ShortcutsModal';
-import { useConfirmLeave } from './monitor-admin/shared/UnsavedChangesProvider';
+import { useConfirmLeave } from './signage/admin/shared/UnsavedChangesProvider';
 import { LogoMark } from './ui';
 import { lazy, Suspense } from 'react';
 const QRScanner = lazy(() => import('./QRScanner'));

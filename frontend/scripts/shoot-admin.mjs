@@ -5,15 +5,15 @@
 // Baut die App (außer mit --no-build), startet `vite preview` auf einem freien Port und meldet vor dem
 // Laden einen Testnutzer an: Er liegt im Storage-Schlüssel, den oidc-client-ts über `userStore` aus
 // src/authConfig.js liest (`oidc.user:<authority>:<client_id>`). Keycloak wird nie kontaktiert.
-// Jede Anfrage an /api/** wird aus frontend/tests/admin-fixtures/ beantwortet: GET /api/monitor/screens
+// Jede Anfrage an /api/** wird aus frontend/tests/signage/admin-fixtures/ beantwortet: GET /api/monitor/screens
 // liest monitor-screens.json (Pfad ohne /api/, "/" wird zu "-"). Mit Query gilt zuerst die Datei mit "@query"
 // (GET /api/monitor/display?screen=aula → monitor-display@screen=aula.json). Eine Aufnahme mit `variant` liest
-// zuerst aus tests/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
+// zuerst aus tests/signage/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
 // nennt den Pfad. Schreibende Anfragen lesen <pfad>.<methode>.json (POST /api/monitor/views/preview →
 // monitor-views-preview.post.json), sonst antworten sie mit {"success": true}. Fehlerfälle beschreibt
 // fulfillFixture (Testdatei mit "__status" oder "__abort").
 // Live-Vorschau: Eine Aufnahme mit `preview` beantwortet GET /api/monitor/display?preview=… (das iframe der
-// Vorschau) mit tests/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
+// Vorschau) mit tests/signage/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
 // Bilder: docs/superpowers/screenshots/2026-10-19-monitor/admin-<seite>.png (oder --out <dir>).
 // Schlägt eine Seite fehl, laufen die übrigen weiter; der Exit-Code ist am Ende 1.
 // Chromium: CHROMIUM_PATH oder /opt/pw-browsers/chromium (mit --headless=new).
@@ -26,8 +26,8 @@ import { chromium } from 'playwright-core'
 import { loadEnv } from 'vite'
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const FIXTURES = join(FRONTEND, 'tests', 'admin-fixtures')
-const DISPLAY_FIXTURES = join(FRONTEND, 'tests', 'display-fixtures')
+const FIXTURES = join(FRONTEND, 'tests', 'signage', 'admin-fixtures')
+const DISPLAY_FIXTURES = join(FRONTEND, 'tests', 'signage', 'display-fixtures')
 const OUT = resolve(FRONTEND, '..', 'docs', 'superpowers', 'screenshots', '2026-10-19-monitor')
 const VITE = join(FRONTEND, 'node_modules', '.bin', 'vite')
 const T0 = new Date('2026-10-20T10:00:00+02:00')
@@ -434,7 +434,7 @@ async function shoot(context, baseUrl, name, storageKey, outDir) {
       window.WebSocket = SilentSocket
     }, [storageKey, JSON.stringify(testUser())])
     await page.route('**/api/**', (route) => answerApi(route, missing, shot))
-    // Seitenbilder der Medien-Vorschau aus tests/display-fixtures/assets/
+    // Seitenbilder der Medien-Vorschau aus tests/signage/display-fixtures/assets/
     await page.route('**/media/monitor/**', (route) => route.fulfill({
       status: 200, contentType: 'image/svg+xml',
       body: readFileSync(join(DISPLAY_FIXTURES, 'assets', new URL(route.request().url()).pathname.split('/').pop())),
