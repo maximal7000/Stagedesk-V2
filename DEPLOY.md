@@ -287,6 +287,20 @@ Migrationen `monitor` 0044 (`0044_substitution_sources`), 0045 (`0045_unified_sc
 
 `python manage.py monitor_webuntis_record --format <name> --date YYYYMMDD --out <dir>` speichert rohe Antworten des öffentlichen WebUntis-Monitors (Format und Daten) für Testdaten. Vor dem Einchecken anonymisieren: Lehrkraft-Kürzel durch erfundene ersetzen, Nachrichtentexte durch Beispieltext.
 
+## Abfahrten-Monitor (Spalten, Zeitangabe, Störungsspalte)
+
+Migration `signage` 0047 (`0047_departures_layout`), mit getestetem Rückweg.
+
+- **Was sich ändert:** `transit_show_relative` wird die Zeitangabe (Minuten oder Uhrzeit), `transit_disruption_banner` wird `transit_show_disruptions`, `transit_columns` wird auf 4 gesetzt. `transit_disruption_position`, `transit_disruption_banner` und `transit_show_relative` entfallen. Admin (Frontend) und Backend gemeinsam ausrollen; `deploy.sh` baut beides.
+- **Gleise:** brauchen `DB_TT_CLIENT_ID` und `DB_TT_API_KEY` in `/opt/stagedesk/backend/.env` (DB API Marketplace, Timetables). Für Gleise am Hauptbahnhof "Lübeck Hbf" als DB-Haltestelle anlegen (mit "nur Züge") und in dieselbe Spalte unter "ZOB/Hauptbahnhof" (Busse) setzen.
+- **Ablauf:** Backup-Tag und Tarball wie oben, Deploy mit `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`.
+- **Nach dem Deploy:**
+  - Im Admin unter `/signage-admin/views` in jeder Abfahrten-Ansicht den Haltestellen eine Spalte zuordnen (die Migration setzt nur die Spaltenzahl auf 4).
+  - Zeitangabe (Minuten, Uhrzeit, Gemischt) und "Störungen anzeigen" der Ansicht prüfen.
+  - Anzeige am Bildschirm ansehen: Fußzeile mit Datum, Wetter und Stand; "DB nicht erreichbar" oder "NAH.SH nicht erreichbar" dort zeigt eine ausgefallene Quelle.
+  - Kiosks über "Neu laden" neu laden, sonst bleibt das alte Bundle bis zum nächtlichen Neuladen.
+- **Rückweg:** im venv `python manage.py migrate signage 0046`, dann Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten. Die Zeitangabe "Gemischt" kommt als Minuten zurück, die Spaltenzahl entfällt.
+
 ---
 
 ## V1-Backup
