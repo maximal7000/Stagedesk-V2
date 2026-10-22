@@ -79,7 +79,7 @@ export const POWER_MODE_OPTIONS = [
 
 // Ohne zoom: ein URL-Zoom würde die Skalierung aus dem Admin überstimmen
 export function kioskUrl(origin, screen) {
-  return `${origin}/monitor?screen=${encodeURIComponent(screen.slug)}&key=${encodeURIComponent(screen.access_key)}`
+  return `${origin}/signage?screen=${encodeURIComponent(screen.slug)}&key=${encodeURIComponent(screen.access_key)}`
 }
 
 export function pickFields(screen, fields) {

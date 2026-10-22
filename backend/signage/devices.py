@@ -160,7 +160,7 @@ def hello_payload(device: Device) -> dict:
         "type": "hello",
         "slug": screen.slug,
         "key": screen.access_key,
-        "kiosk_url": f"{settings.PUBLIC_BASE_URL}/monitor?screen={screen.slug}&key={screen.access_key}",
+        "kiosk_url": f"{settings.PUBLIC_BASE_URL}/signage?screen={screen.slug}&key={screen.access_key}",
         "power_method": screen.power_method,
         "power_config": screen.power_config or {},
         "update_window": screen.update_window or {},
@@ -406,7 +406,7 @@ def notification_recipients() -> list:
 
 
 def _link(screen) -> str:
-    return f'/monitor-admin/screens/{screen.id}'
+    return f'/signage-admin/screens/{screen.id}'
 
 
 def _watch_device(device_id, cfg, now, notify) -> None:

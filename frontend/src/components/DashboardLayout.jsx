@@ -156,14 +156,14 @@ export default function DashboardLayout({ children }) {
 
   // Monitor-Navigation (Spec §6.1): alle Unterseiten setzen signage.view voraus, dazu je ein eigenes Recht
   const monitorNavigation = hasPermission('signage.view') ? [
-    { name: 'Übersicht', href: '/monitor-admin', icon: LayoutDashboard, permission: 'signage.view' },
+    { name: 'Übersicht', href: '/signage-admin', icon: LayoutDashboard, permission: 'signage.view' },
     // Bildschirme: setup bearbeitet die Anzeige, power nur das Ein- und Ausschalten
-    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['signage.setup', 'signage.power', 'signage.devices'] },
-    { name: 'Ansichten', href: '/monitor-admin/views', icon: PanelsTopLeft, permission: 'signage.setup' },
-    { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'signage.exams' },
-    { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'signage.media' },
-    { name: 'Ferien & Zeitpläne', href: '/monitor-admin/schedules', icon: CalendarRange, permission: 'signage.power' },
-    { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, anyOf: ['signage.setup', 'signage.onair', 'signage.emergency'] },
+    { name: 'Bildschirme', href: '/signage-admin/screens', icon: Monitor, anyOf: ['signage.setup', 'signage.power', 'signage.devices'] },
+    { name: 'Ansichten', href: '/signage-admin/views', icon: PanelsTopLeft, permission: 'signage.setup' },
+    { name: 'Klausuren & Termine', href: '/signage-admin/exams', icon: CalendarClock, permission: 'signage.exams' },
+    { name: 'Medien', href: '/signage-admin/media', icon: Image, permission: 'signage.media' },
+    { name: 'Ferien & Zeitpläne', href: '/signage-admin/schedules', icon: CalendarRange, permission: 'signage.power' },
+    { name: 'Einstellungen', href: '/signage-admin/settings', icon: SlidersHorizontal, anyOf: ['signage.setup', 'signage.onair', 'signage.emergency'] },
   ].filter(item => (item.anyOf ? item.anyOf.some(p => hasPermission(p)) : hasPermission(item.permission))) : [];
 
   // Admin-Navigation
@@ -196,7 +196,7 @@ export default function DashboardLayout({ children }) {
   };
 
   const getPageTitle = () => {
-    if (location.pathname === '/monitor-admin' || location.pathname.startsWith('/monitor-admin/')) return 'Monitore';
+    if (location.pathname === '/signage-admin' || location.pathname.startsWith('/signage-admin/')) return 'Monitore';
     const allNav = [
       ...navigation, 
       ...inventarSubNav,

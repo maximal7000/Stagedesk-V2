@@ -207,7 +207,7 @@ class SelfUpdater:
         archive = paths.opt_new.with_name("stagedesk-agent.download")
         archive.parent.mkdir(parents=True, exist_ok=True)
         try:
-            digest = self.fetch(f"{self.server}/api/monitor/agent/stagedesk-agent-{version}.tar.gz", archive)
+            digest = self.fetch(f"{self.server}/api/signage/agent/stagedesk-agent-{version}.tar.gz", archive)
             digest = digest or _file_sha256(archive)
             if not sha256 or not hmac.compare_digest(digest.encode(), sha256.encode()):
                 raise ValueError("Prüfsumme des Pakets stimmt nicht, Update abgebrochen")

@@ -79,7 +79,7 @@ class SelfUpdateTests(unittest.TestCase):
     def test_self_update_swaps_and_marks_pending(self):
         result = self.updater.check(self.hello())
         self.assertEqual(result, {"updated": "1.1.0"})
-        self.assertEqual(self.fetched, ["https://srv/api/monitor/agent/stagedesk-agent-1.1.0.tar.gz"])
+        self.assertEqual(self.fetched, ["https://srv/api/signage/agent/stagedesk-agent-1.1.0.tar.gz"])
         self.assertEqual((self.paths.opt_dir / "VERSION").read_text().strip(), "1.1.0")
         self.assertTrue((self.paths.opt_dir / "stagedesk_agent" / "__init__.py").exists())
         self.assertEqual((self.paths.opt_prev / "OLD").read_text(), "old")

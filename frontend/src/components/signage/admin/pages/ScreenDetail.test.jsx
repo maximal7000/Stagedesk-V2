@@ -47,7 +47,7 @@ const pairedDevice = (extra = {}) => ({
 // Knopf neben dem Detail: wechselt wie ein Link zu Bildschirm 2, die Detail-Komponente bleibt eingehängt
 function GoToSecond() {
   const navigate = useNavigate()
-  return createElement('button', { type: 'button', 'data-go': '', onClick: () => navigate('/monitor-admin/screens/2') }, 'weiter')
+  return createElement('button', { type: 'button', 'data-go': '', onClick: () => navigate('/signage-admin/screens/2') }, 'weiter')
 }
 
 let root, container
@@ -56,10 +56,10 @@ async function mount() {
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
-    root.render(createElement(MemoryRouter, { initialEntries: ['/monitor-admin/screens/1'] },
+    root.render(createElement(MemoryRouter, { initialEntries: ['/signage-admin/screens/1'] },
       createElement(Routes, null,
-        createElement(Route, { path: '/monitor-admin/screens/:id', element: createElement(ScreenDetail) }),
-        createElement(Route, { path: '/monitor-admin/screens', element: createElement('p', { 'data-list': '' }, 'Liste') }))))
+        createElement(Route, { path: '/signage-admin/screens/:id', element: createElement(ScreenDetail) }),
+        createElement(Route, { path: '/signage-admin/screens', element: createElement('p', { 'data-list': '' }, 'Liste') }))))
   })
 }
 
@@ -259,9 +259,9 @@ describe('ScreenDetail', () => {
     document.body.appendChild(container)
     root = createRoot(container)
     await act(async () => {
-      root.render(createElement(MemoryRouter, { initialEntries: ['/monitor-admin/screens/1'] },
+      root.render(createElement(MemoryRouter, { initialEntries: ['/signage-admin/screens/1'] },
         createElement(Routes, null, createElement(Route, {
-          path: '/monitor-admin/screens/:id',
+          path: '/signage-admin/screens/:id',
           element: createElement(Fragment, null, createElement(ScreenDetail), createElement(GoToSecond)),
         }))))
     })
@@ -302,7 +302,7 @@ describe('ScreenDetail', () => {
     perms.add('signage.setup')
     api.regenerateScreenKey.mockResolvedValue({ ...glocke(), access_key: 'neu-key' })
     await mount()
-    expect(byLabel('Kiosk-URL').value).toBe(`${window.location.origin}/monitor?screen=glocke&key=alt-key`)
+    expect(byLabel('Kiosk-URL').value).toBe(`${window.location.origin}/signage?screen=glocke&key=alt-key`)
     await click(button('Neu erzeugen'))
     const dialog = container.querySelector('[role="alertdialog"]')
     expect(dialog.textContent).toContain('Der alte Link funktioniert danach nicht mehr für den Vertretungsplan.')

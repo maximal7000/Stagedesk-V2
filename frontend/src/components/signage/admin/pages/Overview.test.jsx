@@ -42,7 +42,7 @@ describe('Overview', () => {
     root = createRoot(container)
     await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })
     const link = [...container.querySelectorAll('a')].find((a) => a.textContent.includes('Glocke'))
-    expect(link?.getAttribute('href')).toBe('/monitor-admin/screens/1')
+    expect(link?.getAttribute('href')).toBe('/signage-admin/screens/1')
   })
 
   it('verwirft eine ältere Antwort, die nach einer neueren ankommt', async () => {

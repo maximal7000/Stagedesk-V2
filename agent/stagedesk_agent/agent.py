@@ -431,7 +431,7 @@ class Agent:
         self.state = "connecting"
         if not self.config.kiosk_url and self.config.slug and self.config.key:
             query = urlencode({"screen": self.config.slug, "key": self.config.key})
-            self.config.kiosk_url = f"{self.config.server.rstrip('/')}/monitor?{query}"
+            self.config.kiosk_url = f"{self.config.server.rstrip('/')}/signage?{query}"
             self.config.save()
         if self.config.kiosk_url:
             self._set_kiosk(self.config.kiosk_url)

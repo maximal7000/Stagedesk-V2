@@ -2,7 +2,7 @@
  * Main App Component mit Routing
  */
 import { Suspense, lazy, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from 'react-oidc-context';
 import { setAuthContext } from './lib/api';
 import { UserProvider } from './contexts/UserContext';
@@ -16,7 +16,7 @@ import './App.css';
 import SignagePage from './pages/SignagePage';
 import AufgabenMonitorPage from './pages/AufgabenMonitorPage';
 
-// Seiten werden erst bei Bedarf geladen: die Anzeige /monitor (Raspberry Pi) lädt so kein Admin.
+// Seiten werden erst bei Bedarf geladen: die Anzeige /signage (Raspberry Pi) lädt so kein Admin.
 const DashboardLayout = lazy(() => import('./components/DashboardLayout'));
 // Root pages
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -63,6 +63,12 @@ const KompetenzenPage = lazy(() => import('./pages/kompetenzen/KompetenzenPage')
 // Notifications
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
 
+// Old admin addresses (bookmarks, notification links) keep working: same rest of path and query.
+function LegacyAdminRedirect() {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`/signage-admin${pathname.slice('/monitor-admin'.length)}${search}${hash}`} replace />;
+}
+
 function AppContent() {
   const auth = useAuth();
 
@@ -83,7 +89,10 @@ function AppContent() {
       {/* Public Routes */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/design-test" element={<DesignTestPage />} />
+      <Route path="/signage" element={<SignagePage />} />
+      {/* Old address of installed Pis and kiosk URLs, permanently the same page */}
       <Route path="/monitor" element={<SignagePage />} />
+      <Route path="/monitor-admin/*" element={<LegacyAdminRedirect />} />
       <Route path="/aufgaben-monitor" element={<AufgabenMonitorPage />} />
 
       {/* Protected Routes: Dashboard */}
@@ -123,7 +132,7 @@ function AppContent() {
                     <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
                     <Route path="/admin/system" element={<PermissionRoute adminOnly><SystemAdminPage /></PermissionRoute>} />
                     <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
-                    <Route path="/monitor-admin" element={<PermissionRoute permission="signage.view"><SignageAdminLayout /></PermissionRoute>}>
+                    <Route path="/signage-admin" element={<PermissionRoute permission="signage.view"><SignageAdminLayout /></PermissionRoute>}>
                       <Route index element={<SignageOverview />} />
                       <Route path="screens" element={<PermissionRoute anyOf={['signage.setup', 'signage.power', 'signage.devices']}><SignageScreens /></PermissionRoute>} />
                       <Route path="screens/:id" element={<PermissionRoute anyOf={['signage.setup', 'signage.power', 'signage.devices']}><SignageScreenDetail /></PermissionRoute>} />
@@ -134,7 +143,7 @@ function AppContent() {
                       <Route path="media" element={<PermissionRoute permission="signage.media"><SignageMedia /></PermissionRoute>} />
                       <Route path="schedules" element={<PermissionRoute permission="signage.power"><SignageSchedules /></PermissionRoute>} />
                       <Route path="settings" element={<PermissionRoute anyOf={['signage.setup', 'signage.onair', 'signage.emergency']}><SignageSettings /></PermissionRoute>} />
-                      <Route path="*" element={<Navigate to="/monitor-admin" replace />} />
+                      <Route path="*" element={<Navigate to="/signage-admin" replace />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

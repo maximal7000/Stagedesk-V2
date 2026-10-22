@@ -94,7 +94,7 @@ export default function Screens() {
     setBusy(true)
     try {
       const created = await api.createScreen(body)
-      navigate(`/monitor-admin/screens/${created.id}`)
+      navigate(`/signage-admin/screens/${created.id}`)
     } catch (e) {
       toast.error(errorText(e))
       setBusy(false)
@@ -121,7 +121,7 @@ export default function Screens() {
       ) : screens ? (
         <ScreenTable columns={COLUMNS}>
           {screens.map((s) => {
-            const to = `/monitor-admin/screens/${s.id}`
+            const to = `/signage-admin/screens/${s.id}`
             return (
               <ScreenRow key={s.id} screen={s}>
                 <ScreenNameCell screen={s} to={to} />

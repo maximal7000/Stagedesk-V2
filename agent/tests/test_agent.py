@@ -146,7 +146,7 @@ class AgentTests(unittest.TestCase):
         self.cfg.token = "T"   # connection will fail before hello in this variant
         a.connection_factory = lambda cfg, om, af: type("C", (), {"run_forever": lambda s: None})()
         a.run_once()
-        self.assertEqual(self.kiosk, ["https://stagedesk.t410.de/monitor?screen=s&key=k"])
+        self.assertEqual(self.kiosk, ["https://stagedesk.t410.de/signage?screen=s&key=k"])
 
 
 class FakePower:

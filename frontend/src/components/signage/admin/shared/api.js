@@ -1,8 +1,8 @@
-// Dünne Aufrufe der Monitor-API (/api/monitor/…) für das Admin. Jede Funktion liefert response.data.
+// Dünne Aufrufe der Monitor-API (/api/signage/…) für das Admin. Jede Funktion liefert response.data.
 // Pfade ohne Schrägstrich am Ende (Django-Ninja-Konvention des Projekts).
 import apiClient from '../../../../lib/api'
 
-const BASE = '/monitor'
+const BASE = '/signage'
 const get = (path, params) => apiClient.get(BASE + path, { params }).then((r) => r.data)
 const post = (path, body, params) => apiClient.post(BASE + path, body, { params }).then((r) => r.data)
 const put = (path, body, params) => apiClient.put(BASE + path, body, { params }).then((r) => r.data)

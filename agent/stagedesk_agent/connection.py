@@ -55,7 +55,7 @@ class WebsocketTransport:
 def ws_url(server, slug):
     parts = urlsplit(server)
     scheme = "wss" if parts.scheme == "https" else "ws"
-    return f"{scheme}://{parts.netloc}/ws/monitor/pi/{slug}/"
+    return f"{scheme}://{parts.netloc}/ws/signage/pi/{slug}/"
 
 
 class Connection:

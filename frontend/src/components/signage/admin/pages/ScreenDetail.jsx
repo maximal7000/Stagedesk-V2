@@ -493,7 +493,7 @@ export default function ScreenDetail() {
     try {
       await api.deleteScreen(screenId)
       toast.success(`„${screen.name}“ ist gelöscht.`)
-      navigate('/monitor-admin/screens')
+      navigate('/signage-admin/screens')
     } catch (e) {
       toast.error(errorText(e))
       setBusy(false)
@@ -515,8 +515,8 @@ export default function ScreenDetail() {
 
   const breadcrumb = (
     <nav aria-label="Brotkrümel" className="text-sm text-fg-subtle mb-2">
-      <Link to="/monitor-admin/screens" className="hover:text-fg focus:outline-none focus-visible:underline"
-        onClick={(e) => { if (!confirmLeave('/monitor-admin/screens')) e.preventDefault() }}>
+      <Link to="/signage-admin/screens" className="hover:text-fg focus:outline-none focus-visible:underline"
+        onClick={(e) => { if (!confirmLeave('/signage-admin/screens')) e.preventDefault() }}>
         Bildschirme
       </Link>
       {screen && <span aria-hidden="true"> / </span>}

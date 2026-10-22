@@ -1,10 +1,10 @@
-// Screenshot-Werkzeug der Anzeige: fotografiert /monitor mit Testdaten in 3840×2160 (bzw. 2160×3840).
+// Screenshot-Werkzeug der Anzeige: fotografiert /signage mit Testdaten in 3840×2160 (bzw. 2160×3840).
 //
 //   node scripts/shoot-display.mjs [--only <name>[,<name>…]] [--portrait] [--state lost|stale]
 //                                  [--layout normal|wide] [--scheme light|dark] [--out <dir>] [--no-build]
 //
 // Baut die App (außer mit --no-build), startet `vite preview` auf einem freien Port und beantwortet
-// /api/monitor/display aus frontend/tests/signage/display-fixtures/<name>.json. Bilder landen in
+// /api/signage/display aus frontend/tests/signage/display-fixtures/<name>.json. Bilder landen in
 // docs/superpowers/screenshots/2026-10-19-monitor/ (oder --out <dir>) als
 // display-<name>[-<state>][-<layout>][-<scheme>][-portrait].png.
 //   --layout überschreibt view.layout (auch in den Unteransichten des Wechsels), --scheme das Farbschema.
@@ -136,7 +136,7 @@ async function shootPage(page, context, baseUrl, name, payload, opts) {
   })
 
   let failing = false
-  await page.route('**/api/monitor/display*', (route) => (failing
+  await page.route('**/api/signage/display*', (route) => (failing
     ? route.fulfill({ status: 503, contentType: 'application/json', body: '{"detail":"Service Unavailable"}' })
     : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) })))
   await page.route('**/media/monitor/**', (route) => serveAsset(route))
@@ -146,7 +146,7 @@ async function shootPage(page, context, baseUrl, name, payload, opts) {
   else await page.clock.setFixedTime(new Date(T0.getTime() + 20000))
 
   const slug = payload.screen?.slug ?? NOT_FOUND_SLUG
-  await page.goto(`${baseUrl}/monitor?screen=${encodeURIComponent(slug)}`)
+  await page.goto(`${baseUrl}/signage?screen=${encodeURIComponent(slug)}`)
   await page.waitForSelector('[data-display-state]:not([data-display-state="loading"])', { timeout: 15000 })
 
   if (opts.state === 'stale') {

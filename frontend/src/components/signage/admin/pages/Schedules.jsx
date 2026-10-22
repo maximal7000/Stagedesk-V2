@@ -198,7 +198,7 @@ function WeekOverview({ screens }) {
             return (
               <div key={s.id} data-week-screen={s.slug}>
                 <div className="flex items-baseline justify-between gap-3 mb-2">
-                  <Link to={`/monitor-admin/screens/${s.id}`} className="text-sm font-semibold text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline truncate">
+                  <Link to={`/signage-admin/screens/${s.id}`} className="text-sm font-semibold text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline truncate">
                     {s.name}
                   </Link>
                   <span className="text-xs text-fg-muted whitespace-nowrap">

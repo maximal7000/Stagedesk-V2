@@ -46,12 +46,12 @@ afterEach(() => {
 describe('endpoints', () => {
   it('leitet WS-Host aus der API-Basis ab', () => {
     const e = endpoints('https://stagedesk.t410.de/api', { origin: 'https://x' })
-    expect(e.display).toBe('https://stagedesk.t410.de/api/monitor/display')
+    expect(e.display).toBe('https://stagedesk.t410.de/api/signage/display')
     expect(e.wsBase).toBe('wss://stagedesk.t410.de')
   })
   it('löst eine relative Basis gegen die Origin auf', () => {
     const e = endpoints('/api', { origin: 'http://localhost:5173' })
-    expect(e.display).toBe('http://localhost:5173/api/monitor/display')
+    expect(e.display).toBe('http://localhost:5173/api/signage/display')
     expect(e.wsBase).toBe('ws://localhost:5173')
   })
 })
@@ -62,13 +62,13 @@ describe('useDisplayData', () => {
     mount({ screen: 'eingang', key: 'abc' })
     await flush()
     const url = new URL(fetchMock.mock.calls[0][0])
-    expect(url.pathname).toBe('/api/monitor/display')
+    expect(url.pathname).toBe('/api/signage/display')
     expect(url.searchParams.get('screen')).toBe('eingang')
     expect(url.searchParams.get('key')).toBe('abc')
     expect(latest.state).toBe('ok')
     expect(latest.payload.view.kind).toBe('info')
     expect(localStorage.getItem('stagedesk.display.screen:eingang')).toContain('"kind":"info"')
-    expect(FakeSocket.instances[0].url).toMatch(/^wss?:\/\/.+\/ws\/monitor\/display\/eingang\/$/)
+    expect(FakeSocket.instances[0].url).toMatch(/^wss?:\/\/.+\/ws\/signage\/display\/eingang\/$/)
   })
 
   it('zeigt beim Start sofort den Zwischenspeicher', () => {

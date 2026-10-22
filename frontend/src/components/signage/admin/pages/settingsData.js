@@ -152,4 +152,4 @@ export function legacyScreenNames(devices, screens) {
     .sort((a, b) => a.localeCompare(b, 'de'))
 }
 
-export const installCommand = (origin) => `curl -fsSL ${origin}/api/monitor/agent/install.sh | sudo bash`
+export const installCommand = (origin) => `curl -fsSL ${origin}/api/signage/agent/install.sh | sudo bash`

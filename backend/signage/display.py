@@ -1,5 +1,5 @@
 """
-Display-Vertrag (Spec §4.1): baut die Antwort von GET /api/monitor/display.
+Display-Vertrag (Spec §4.1): baut die Antwort von GET /api/signage/display.
 
 build_payload() ist die einzige Stelle, die die Form der Antwort festlegt.
 Die Datenquellen (Wetter, ÖPNV, Störungen) cachen ihre Ergebnisse an der Ansicht;

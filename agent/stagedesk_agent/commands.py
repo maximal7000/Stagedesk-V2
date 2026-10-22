@@ -34,7 +34,7 @@ def upload_screenshot(server, token, png, opener=urllib.request.urlopen):
     body = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"screenshot.png\"\r\n"
             "Content-Type: image/png\r\n\r\n").encode() + png + f"\r\n--{boundary}--\r\n".encode()
     request = urllib.request.Request(
-        f"{server.rstrip('/')}/api/monitor/agent/screenshot", data=body, method="POST",
+        f"{server.rstrip('/')}/api/signage/agent/screenshot", data=body, method="POST",
         headers={"Authorization": f"Bearer {token}", "Content-Type": f"multipart/form-data; boundary={boundary}"})
     try:
         with opener(request, timeout=UPLOAD_TIMEOUT) as response:

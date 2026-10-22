@@ -71,8 +71,8 @@ async function mount(path) {
   await act(async () => {
     root.render(createElement(MemoryRouter, { initialEntries: [path] },
       createElement(Routes, null,
-        createElement(Route, { path: '/monitor-admin/views/new', element: createElement(ViewEdit) }),
-        createElement(Route, { path: '/monitor-admin/views/:id', element: createElement(ViewEdit) }))))
+        createElement(Route, { path: '/signage-admin/views/new', element: createElement(ViewEdit) }),
+        createElement(Route, { path: '/signage-admin/views/:id', element: createElement(ViewEdit) }))))
   })
 }
 function typeInto(input, value) {
@@ -98,7 +98,7 @@ afterEach(() => {
 
 describe('ViewEdit', () => {
   it('speichert nur das geänderte Feld und blendet die SaveBar danach aus', async () => {
-    await mount('/monitor-admin/views/1')
+    await mount('/signage-admin/views/1')
     expect(container.textContent).not.toContain('Typ: Abfahrten')
     expect(container.textContent).toContain('Glocke')
     await act(async () => button('Breit').click())
@@ -109,7 +109,7 @@ describe('ViewEdit', () => {
   })
 
   it('sortiert Haltestellen per Ziehen und speichert die neue Reihenfolge', async () => {
-    await mount('/monitor-admin/views/1')
+    await mount('/signage-admin/views/1')
     expect(stopNames()).toEqual(['a', 'b', 'c'])
     const rows = () => container.querySelectorAll('[data-stop-row]')
     await act(async () => rows()[0].dispatchEvent(dragEvent('dragstart')))
@@ -127,14 +127,14 @@ describe('ViewEdit', () => {
   })
 
   it('bietet im Wechsel keine Wechsel-Ansichten an', async () => {
-    await mount('/monitor-admin/views/4')
+    await mount('/signage-admin/views/4')
     const select = container.querySelector('#rotation-view-0')
     const options = [...select.options].map((o) => o.textContent)
     expect(options).toEqual(['Ansicht wählen', 'Abfahrten Halle', 'Vertretungsplan'])
   })
 
   it('speichert nicht ohne Namen', async () => {
-    await mount('/monitor-admin/views/1')
+    await mount('/signage-admin/views/1')
     const input = container.querySelector('input[aria-invalid]')
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
     await act(async () => {
@@ -147,7 +147,7 @@ describe('ViewEdit', () => {
   })
 
   it('beginnt eine neue Ansicht mit der Wahl des Typs', async () => {
-    await mount('/monitor-admin/views/new')
+    await mount('/signage-admin/views/new')
     const tiles = [...container.querySelectorAll('[data-kind-tiles] [role="radio"]')]
     expect(tiles.map((t) => t.querySelector('.font-semibold').textContent))
       .toEqual(['Abfahrten', 'Vertretungsplan', 'Geteilt', 'Medien', 'Info', 'Wechsel'])
@@ -157,7 +157,7 @@ describe('ViewEdit', () => {
   })
 
   it('nimmt beim Verschieben im Wechsel den Fokus mit der Zeile mit', async () => {
-    await mount('/monitor-admin/views/4')
+    await mount('/signage-admin/views/4')
     const handle = button('Abfahrten Halle verschieben')
     handle.focus()
     await act(async () => handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })))
@@ -166,7 +166,7 @@ describe('ViewEdit', () => {
   })
 
   it('speichert nicht mit leerer Zahl und nennt den Bereich', async () => {
-    await mount('/monitor-admin/views/1')
+    await mount('/signage-admin/views/1')
     await act(async () => typeInto(container.querySelector('input[aria-label="Max. Zeilen Kohlmarkt"]'), ''))
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
@@ -174,7 +174,7 @@ describe('ViewEdit', () => {
   })
 
   it('zeigt den gespeicherten WebUntis-Link und löst ihn, wenn die Adresse bearbeitet wird', async () => {
-    await mount('/monitor-admin/views/2')
+    await mount('/signage-admin/views/2')
     expect(container.textContent).toContain('Aktiv ist der gespeicherte Link „Untis zwei Tage“')
     await act(async () => typeInto(container.querySelector('input[type="url"]'), 'https://eigen.example'))
     expect(container.textContent).not.toContain('Aktiv ist der gespeicherte Link')
@@ -183,13 +183,13 @@ describe('ViewEdit', () => {
   })
 
   it('bietet in der Medien-Ansicht nur PDFs und Bilder an', async () => {
-    await mount('/monitor-admin/views/6')
+    await mount('/signage-admin/views/6')
     const select = container.querySelector('[data-editor-section="media"] select')
     expect([...select.options].map((o) => o.textContent)).toEqual(['Datei wählen', 'Speiseplan', 'Plakat'])
   })
 
   it('Abfahrten: blendet eine aktuelle Meldung aus und speichert die Vorausschau', async () => {
-    await mount('/monitor-admin/views/1')
+    await mount('/signage-admin/views/1')
     expect(api.getDisruptions).toHaveBeenCalledWith(1)
     await act(async () => button('RE8 fällt aus ausblenden').click())
     await act(async () => typeInto(container.querySelector('[data-editor-section="transit-advanced"] input[type="number"]'), '90'))
@@ -198,7 +198,7 @@ describe('ViewEdit', () => {
   })
 
   it('Abfahrten: Vorausschau außerhalb des Bereichs wird nicht gespeichert', async () => {
-    await mount('/monitor-admin/views/1')
+    await mount('/signage-admin/views/1')
     await act(async () => typeInto(container.querySelector('[data-editor-section="transit-advanced"] input[type="number"]'), '5'))
     await act(async () => button('Speichern').click())
     expect(api.updateView).not.toHaveBeenCalled()
@@ -217,7 +217,7 @@ describe('ViewEdit', () => {
     }
 
     it('tauscht beim Wechsel sofort den Editor und die Vorschau, Zurückwechseln zeigt die alten Werte', async () => {
-      await mount('/monitor-admin/views/6')
+      await mount('/signage-admin/views/6')
       expect(kindSelect().value).toBe('media')
       expect([...kindSelect().options].map((o) => o.textContent))
         .toEqual(['Abfahrten', 'Vertretungsplan', 'Geteilt', 'Medien', 'Info', 'Wechsel'])
@@ -231,7 +231,7 @@ describe('ViewEdit', () => {
     })
 
     it('speichert den neuen Typ ohne Nachfrage, wenn die Ansicht auf keinem Bildschirm läuft', async () => {
-      await mount('/monitor-admin/views/6')
+      await mount('/signage-admin/views/6')
       await pick('info')
       await act(async () => button('Speichern').click())
       expect(container.querySelector('[role="alertdialog"]')).toBeNull()
@@ -239,7 +239,7 @@ describe('ViewEdit', () => {
     })
 
     it('fragt bei einem Bildschirm vor dem Speichern nach', async () => {
-      await mount('/monitor-admin/views/1')
+      await mount('/signage-admin/views/1')
       await pick('info')
       await act(async () => button('Speichern').click())
       expect(api.updateView).not.toHaveBeenCalled()
@@ -258,7 +258,7 @@ describe('ViewEdit', () => {
         { id: 9, name: 'Glocke', default_view_id: 1, orientation: 'landscape', schedule: [] },
         { id: 10, name: 'Aula', default_view_id: 1, orientation: 'landscape', schedule: [] },
       ]))
-      await mount('/monitor-admin/views/1')
+      await mount('/signage-admin/views/1')
       await pick('info')
       await act(async () => button('Speichern').click())
       expect(container.querySelector('[role="alertdialog"]').textContent)
@@ -266,7 +266,7 @@ describe('ViewEdit', () => {
     })
 
     it('sperrt Wechsel für ein Mitglied eines Wechsels mit Meldung und speichert nicht', async () => {
-      await mount('/monitor-admin/views/1')
+      await mount('/signage-admin/views/1')
       await pick('rotation')
       expect(container.textContent).toContain('Diese Ansicht ist Teil des Wechsels „Wechsel Mensa“. Erst dort entfernen.')
       await act(async () => button('Speichern').click())

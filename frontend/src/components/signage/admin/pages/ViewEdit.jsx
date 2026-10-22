@@ -49,8 +49,8 @@ const KIND_ICONS = {
 function Breadcrumb({ current, confirmLeave }) {
   return (
     <nav aria-label="Brotkrümel" className="text-sm text-fg-subtle mb-2">
-      <Link to="/monitor-admin/views" className="hover:text-fg focus:outline-none focus-visible:underline"
-        onClick={(e) => { if (confirmLeave && !confirmLeave('/monitor-admin/views')) e.preventDefault() }}>
+      <Link to="/signage-admin/views" className="hover:text-fg focus:outline-none focus-visible:underline"
+        onClick={(e) => { if (confirmLeave && !confirmLeave('/signage-admin/views')) e.preventDefault() }}>
         Ansichten
       </Link>
       {current && <span aria-hidden="true"> / </span>}
@@ -74,7 +74,7 @@ function NewView() {
     setBusy(true)
     try {
       const created = await api.createView({ name: name.trim(), kind })
-      navigate(`/monitor-admin/views/${created.id}`, { replace: true })
+      navigate(`/signage-admin/views/${created.id}`, { replace: true })
     } catch (err) {
       toast.error(errorText(err))
       setBusy(false)
@@ -111,7 +111,7 @@ function NewView() {
             </Field>
             <div className="mt-4 flex gap-2">
               <Button type="submit" variant="primary" disabled={busy || !name.trim()}>Anlegen</Button>
-              <Button type="button" variant="ghost" onClick={() => navigate('/monitor-admin/views')} disabled={busy}>Abbrechen</Button>
+              <Button type="button" variant="ghost" onClick={() => navigate('/signage-admin/views')} disabled={busy}>Abbrechen</Button>
             </div>
           </Section>
         )}
@@ -204,8 +204,8 @@ function UsedOnSection({ used, confirmLeave }) {
           {used.map((u) => (
             <div key={u.id} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4">
               <dt>
-                <Link to={`/monitor-admin/screens/${u.id}`} className="text-fg-muted hover:text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline"
-                  onClick={(e) => { if (!confirmLeave(`/monitor-admin/screens/${u.id}`)) e.preventDefault() }}>
+                <Link to={`/signage-admin/screens/${u.id}`} className="text-fg-muted hover:text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline"
+                  onClick={(e) => { if (!confirmLeave(`/signage-admin/screens/${u.id}`)) e.preventDefault() }}>
                   {u.name}
                 </Link>
               </dt>
@@ -286,7 +286,7 @@ function EditView({ viewId }) {
     try {
       const created = await api.createView({ name: `${view.name} (Kopie)`, kind: view.kind, clone_from_id: view.id })
       toast.success(`„${created.name}“ angelegt`)
-      navigate(`/monitor-admin/views/${created.id}`)
+      navigate(`/signage-admin/views/${created.id}`)
     } catch (e) {
       toast.error(errorText(e))
     }
@@ -303,7 +303,7 @@ function EditView({ viewId }) {
         setConfirmDelete(false)
         return
       }
-      navigate('/monitor-admin/views', { state: { deleted: { id: viewId, name: view.name } } })
+      navigate('/signage-admin/views', { state: { deleted: { id: viewId, name: view.name } } })
     } catch (e) {
       toast.error(errorText(e))
       setBusy(false)

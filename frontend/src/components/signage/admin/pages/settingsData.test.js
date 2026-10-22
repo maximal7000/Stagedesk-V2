@@ -137,7 +137,7 @@ describe('Geräte-Einstellungen', () => {
 
   it('Installationsbefehl aus der aktuellen Adresse', () => {
     expect(installCommand('https://stagedesk.t410.de'))
-      .toBe('curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash')
+      .toBe('curl -fsSL https://stagedesk.t410.de/api/signage/agent/install.sh | sudo bash')
   })
 })
 

@@ -14,7 +14,7 @@ export function endpoints(base = API_BASE, loc = window.location) {
   const apiUrl = new URL(base.replace(/\/+$/, ''), loc.origin)
   const origin = apiUrl.origin
   return {
-    display: `${apiUrl.href}/monitor/display`,
+    display: `${apiUrl.href}/signage/display`,
     wsBase: origin.replace(/^http/, 'ws'),
   }
 }
@@ -133,7 +133,7 @@ export function useDisplayData({ screen, view, key, preview } = {}) {
     let attempts = 0
     const connect = () => {
       try {
-        ws = new WebSocket(`${endpoints().wsBase}/ws/monitor/display/${encodeURIComponent(screen)}/`)
+        ws = new WebSocket(`${endpoints().wsBase}/ws/signage/display/${encodeURIComponent(screen)}/`)
       } catch {
         retryTimer = setTimeout(connect, backoff(++attempts))
         return

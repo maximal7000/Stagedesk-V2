@@ -60,7 +60,7 @@ class PairingClient:
         self._stop_event.set()
 
     def _url(self, name):
-        return f"{self.config.server.rstrip('/')}/api/monitor/agent/pair/{name}"
+        return f"{self.config.server.rstrip('/')}/api/signage/agent/pair/{name}"
 
     def _lifetime(self, value):
         """Seconds the code stays valid, measured at receipt (immune to a wrong device clock)."""

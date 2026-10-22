@@ -182,7 +182,7 @@ describe('Settings', () => {
     const writeText = vi.fn().mockResolvedValue()
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     await mount()
-    const cmd = `curl -fsSL ${window.location.origin}/api/monitor/agent/install.sh | sudo bash`
+    const cmd = `curl -fsSL ${window.location.origin}/api/signage/agent/install.sh | sudo bash`
     expect(container.querySelector('[data-install-command]').textContent).toBe(cmd)
     await click(button('Kopieren'))
     expect(writeText).toHaveBeenCalledWith(cmd)

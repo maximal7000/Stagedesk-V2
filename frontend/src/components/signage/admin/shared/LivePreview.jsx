@@ -1,5 +1,5 @@
 // Live-Vorschau (Spec §6.2): schickt den Entwurf entprellt an POST /views/preview und zeigt
-// /monitor?preview=<token> in einem iframe in der Originalgröße des gewählten Bildschirms, verkleinert per
+// /signage?preview=<token> in einem iframe in der Originalgröße des gewählten Bildschirms, verkleinert per
 // transform: scale(). Auflösung und Ausrichtung kommen vom Bildschirm (4K quer, im Hochformat 2160 × 3840).
 import { useEffect, useId, useRef, useState } from 'react'
 import { previewErrorText, usePreviewToken } from './usePreviewToken'
@@ -53,7 +53,7 @@ export default function LivePreview({ payload, screens = [], defaultScreenId = n
         <div className="relative overflow-hidden rounded-md bg-canvas border border-line-subtle mx-auto"
           style={{ width: scale ? width * scale : '100%', height: scale ? height * scale : undefined, aspectRatio: scale ? undefined : `${width} / ${height}` }}>
           {token && scale > 0 && (
-            <iframe key={token} title="Vorschau der Ansicht" src={`/monitor?preview=${encodeURIComponent(token)}`} tabIndex={-1}
+            <iframe key={token} title="Vorschau der Ansicht" src={`/signage?preview=${encodeURIComponent(token)}`} tabIndex={-1}
               aria-hidden="true"
               style={{ width, height, transform: `scale(${scale})`, transformOrigin: '0 0', pointerEvents: 'none', border: 0 }}
               className="absolute left-0 top-0" />

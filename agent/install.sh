@@ -1,6 +1,6 @@
 #!/bin/bash
 # Stagedesk Geräte-Agent: Installation auf einem Raspberry Pi (Bookworm).
-# Aufruf: curl -fsSL <Server>/api/monitor/agent/install.sh | sudo bash
+# Aufruf: curl -fsSL <Server>/api/signage/agent/install.sh | sudo bash
 # Idempotent: ein zweiter Lauf aktualisiert Paket und Dienste und behält die Kopplung.
 # Eine andere Server-Adresse (z. B. zum Testen): sudo STAGEDESK_SERVER=https://server bash install.sh
 set -euo pipefail
@@ -51,7 +51,7 @@ install_package() {
   say "2/6 Agent-Paket laden und prüfen"
   install -d -m 755 -o root -g root "$STATE_DIR"
   local info version sha256 actual current=""
-  info="$(curl -fsS --max-time 30 "$SERVER/api/monitor/agent/version")" || die "Der Server $SERVER ist nicht erreichbar. Netzwerk und Adresse prüfen."
+  info="$(curl -fsS --max-time 30 "$SERVER/api/signage/agent/version")" || die "Der Server $SERVER ist nicht erreichbar. Netzwerk und Adresse prüfen."
   version="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["version"])' 2>/dev/null)" || die "Die Antwort des Servers von /agent/version ist ungültig. Die Server-Adresse prüfen."
   sha256="$(printf '%s' "$info" | python3 -c 'import json,sys; print(json.load(sys.stdin)["sha256"])' 2>/dev/null)" || die "Die Antwort des Servers von /agent/version ist ungültig. Die Server-Adresse prüfen."
   [[ "$version" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]] || die "Der Server meldet keine gültige Agent-Version."
@@ -60,7 +60,7 @@ install_package() {
   if [ "$current" = "$version" ] && [ -d "$OPT_DIR/stagedesk_agent" ]; then
     say "    Version $version ist schon installiert."
   else
-    curl -fsS --max-time 300 -o "$work/agent.tar.gz" "$SERVER/api/monitor/agent/stagedesk-agent-$version.tar.gz" || die "Das Agent-Paket $version ließ sich nicht laden."
+    curl -fsS --max-time 300 -o "$work/agent.tar.gz" "$SERVER/api/signage/agent/stagedesk-agent-$version.tar.gz" || die "Das Agent-Paket $version ließ sich nicht laden."
     actual="$(sha256sum "$work/agent.tar.gz" | cut -d' ' -f1)"
     [ "$actual" = "$sha256" ] || die "Die Prüfsumme des Pakets stimmt nicht. Installation abgebrochen, bitte später erneut versuchen."
     mkdir "$work/new"

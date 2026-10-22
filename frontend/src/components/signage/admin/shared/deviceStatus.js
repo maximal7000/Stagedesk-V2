@@ -1,4 +1,4 @@
-// Ampel und Kennzahlen eines Geräts (Spec §7.1) aus GET /api/monitor/devices.
+// Ampel und Kennzahlen eines Geräts (Spec §7.1) aus GET /api/signage/devices.
 // Der Text des Servers (status_text) gilt; die Farbe folgt allein aus status.
 const TONES = { online: 'ok', warning: 'warn', offline: 'bad', off: 'off', legacy: 'warn', unpaired: 'none' }
 const LABELS = { online: 'Online', warning: 'Warnung', offline: 'Offline', off: 'Aus', legacy: 'Altes Skript', unpaired: 'Kein Gerät gekoppelt' }

@@ -3,7 +3,7 @@ WebSocket Consumer für Raspberry Pi HDMI-CEC Power-Steuerung
 ============================================================
 
 Jeder Pi verbindet sich mit:
-  ws://t410.de/ws/monitor/pi/<slug>/
+  ws://t410.de/ws/signage/pi/<slug>/  (old: /ws/monitor/pi/<slug>/)
 
 Der Consumer:
   - Sendet sofort den aktuellen power-Befehl nach Connect
@@ -70,7 +70,7 @@ def push_power_to_all() -> None:
 
 
 class ScreenPiConsumer(AsyncWebsocketConsumer):
-    """WebSocket-Endpunkt für den Raspberry Pi.  URL: /ws/monitor/pi/<slug>/"""
+    """WebSocket-Endpunkt für den Raspberry Pi.  URL: /ws/signage/pi/<slug>/ (old: /ws/monitor/…)"""
 
     def _bearer_token(self):
         for name, value in self.scope.get("headers", []):
@@ -369,7 +369,7 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
 
 
 class DisplayConsumer(AsyncWebsocketConsumer):
-    """WebSocket-Endpunkt der Anzeige (öffentlich, nur Hinweise).  URL: /ws/monitor/display/<slug>/
+    """WebSocket-Endpunkt der Anzeige (öffentlich, nur Hinweise).  URL: /ws/signage/display/<slug>/ (old: /ws/monitor/…)
 
     Sendet nur {"type":"changed"} bzw. {"type":"reload"}; Daten holt die Anzeige per HTTP.
     Eingehende Nachrichten werden ignoriert."""

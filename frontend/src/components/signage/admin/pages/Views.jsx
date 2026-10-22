@@ -66,7 +66,7 @@ export default function Views() {
   return (
     <div data-admin-page="views" data-state={state}>
       <PageHeader title="Ansichten" meta={count}
-        actions={<Button variant="primary" icon={Plus} onClick={() => navigate('/monitor-admin/views/new')}>Neue Ansicht</Button>} />
+        actions={<Button variant="primary" icon={Plus} onClick={() => navigate('/signage-admin/views/new')}>Neue Ansicht</Button>} />
 
       {error ? (
         <div className="bg-surface rounded-lg px-4 py-3 text-sm text-bad">
@@ -79,7 +79,7 @@ export default function Views() {
       ) : views ? (
         <ScreenTable columns={COLUMNS}>
           {views.map((v) => {
-            const to = `/monitor-admin/views/${v.id}`
+            const to = `/signage-admin/views/${v.id}`
             const used = usedOn(v.id, screens)
             return (
               <tr key={v.id} className="border-b border-line-subtle last:border-0" data-view={v.slug}>

@@ -13,7 +13,7 @@ const glocke = {
 describe('kioskUrl', () => {
   it('baut die URL mit Bildschirm und Schlüssel, ohne zoom', () => {
     const url = kioskUrl('https://stagedesk.t410.de', glocke)
-    expect(url).toBe('https://stagedesk.t410.de/monitor?screen=glocke&key=k1%2F%2B%3F')
+    expect(url).toBe('https://stagedesk.t410.de/signage?screen=glocke&key=k1%2F%2B%3F')
     expect(url).not.toContain('zoom')
   })
 })

@@ -81,7 +81,7 @@ function DetailPanel({ file, detail, error, canOpenViews, onClose, onDelete }) {
               {detail.used_in.map((u) => (
                 <li key={u.view_id} className="text-sm">
                   {canOpenViews ? (
-                    <Link to={`/monitor-admin/views/${u.view_id}`} className="text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline">{u.name}</Link>
+                    <Link to={`/signage-admin/views/${u.view_id}`} className="text-fg hover:underline underline-offset-2 focus:outline-none focus-visible:underline">{u.name}</Link>
                   ) : <span className="text-fg">{u.name}</span>}
                 </li>
               ))}

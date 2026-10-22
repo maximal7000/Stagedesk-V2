@@ -38,7 +38,7 @@ class PairingTests(unittest.TestCase):
         c = self.client([(200, {"code": "482913", "pairing_id": "pid", "expires_at": iso(T0 + timedelta(minutes=15))})])
         code, pid, exp = c.start()
         self.assertEqual((code, pid), ("482913", "pid"))
-        self.assertEqual(self.http.calls[0], ("https://stagedesk.t410.de/api/monitor/agent/pair/start",
+        self.assertEqual(self.http.calls[0], ("https://stagedesk.t410.de/api/signage/agent/pair/start",
                                               {"serial": "abc", "model": "Pi 4"}))
 
     def test_poll_waiting_is_none(self):

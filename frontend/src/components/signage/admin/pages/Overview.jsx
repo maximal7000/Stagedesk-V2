@@ -362,7 +362,7 @@ export default function Overview() {
                 </>
               ) : 'Keine Klausur geplant'}
             </BoxText>
-            {can.exams && <Button as={Link} to="/monitor-admin/exams">Öffnen</Button>}
+            {can.exams && <Button as={Link} to="/signage-admin/exams">Öffnen</Button>}
           </Box>
         </div>
       )}
@@ -394,7 +394,7 @@ export default function Overview() {
             const menu = screenMenu(s)
             return (
               <ScreenRow key={s.id} screen={s}>
-                <ScreenNameCell screen={s} to={(can.setup || can.power || can.devices) ? `/monitor-admin/screens/${s.id}` : undefined} />
+                <ScreenNameCell screen={s} to={(can.setup || can.power || can.devices) ? `/signage-admin/screens/${s.id}` : undefined} />
                 <Cell><ScreenStatus screen={s} now={now} device={devices[s.id]} /></Cell>
                 <Cell className="min-w-0">
                   {!known ? (

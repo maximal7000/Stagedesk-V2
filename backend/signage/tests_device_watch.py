@@ -120,7 +120,7 @@ class WatchTest(WatchBase):
         self.assertEqual(self.bodies(), ['Bildschirm Glocke ist seit 11 Minuten offline.'])
         args = self.notify.call_args
         self.assertEqual(args.args[:3], (['u1'], 'system', args.args[2]))
-        self.assertEqual(args.kwargs['link'], f'/monitor-admin/screens/{self.screen.id}')
+        self.assertEqual(args.kwargs['link'], f'/signage-admin/screens/{self.screen.id}')
         self.assertIsNotNone(self.device.offline_notified_at)
         self.assertEqual(DeviceEvent.objects.filter(device=self.device, kind='offline').count(), 1)
         self.go(self.now + timedelta(minutes=5))
