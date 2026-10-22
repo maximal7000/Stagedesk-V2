@@ -1,4 +1,3 @@
-"""Globale Einstellungen, ON AIR, Notfall und WebUntis-Link-Bibliothek."""
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router
@@ -18,8 +17,6 @@ from ..validation import validate_settings_device_data, validate_settings_light_
 router = Router(tags=["Monitor"])
 
 
-# ═══ ON AIR Endpunkt (Token-Auth) ════════════════════════════════
-
 def _set_on_air(active: bool):
     settings = MonitorSettings.load()
     settings.on_air_active = active
@@ -29,7 +26,7 @@ def _set_on_air(active: bool):
 
 
 def _set_emergency(active: bool, text: str, note: str):
-    """Notfall setzen und alle Bildschirme neu schalten (Notfall schaltet ein, Spec §3.2)."""
+    """Emergency switches all screens on."""
     settings = MonitorSettings.load()
     settings.emergency_active = active
     settings.emergency_text = text
@@ -42,8 +39,6 @@ def _set_emergency(active: bool, text: str, note: str):
 
 @router.post("/on-air", response={200: dict, 401: dict, 403: dict})
 def toggle_on_air(request, payload: OnAirSchema):
-    """ON AIR Status ändern (global, MonitorSettings)"""
-    # Erst per Token prüfen
     token = request.headers.get('X-Monitor-Token', '')
     if token:
         if DisplayView.objects.filter(api_token=token).exists():
@@ -65,11 +60,8 @@ def toggle_on_air(request, payload: OnAirSchema):
     return 200, {"success": True, "on_air": payload.on_air}
 
 
-# ═══ Notfall Endpunkt (Token-Auth) ═══════════════════════════════
-
 @router.post("/emergency", response={200: dict, 401: dict, 403: dict})
 def toggle_emergency(request, payload: EmergencySchema):
-    """Notfall-Meldung aktivieren/deaktivieren (global, MonitorSettings)"""
     token = request.headers.get('X-Monitor-Token', '')
     if token:
         if DisplayView.objects.filter(api_token=token).exists():
@@ -90,8 +82,6 @@ def toggle_emergency(request, payload: EmergencySchema):
     _log_audit(request, 'Notfall ' + ('an' if payload.active else 'aus'), payload.text if payload.active else '')
     return 200, {"success": True}
 
-
-# ═══ Admin: WebUntis-Link-Bibliothek ═════════════════════════════
 
 @router.get("/webuntis-links", response=list[WebUntisLinkSchema], auth=keycloak_auth)
 def list_webuntis_links(request):
@@ -126,8 +116,6 @@ def delete_webuntis_link(request, id: int):
     return {"success": True}
 
 
-# ═══ Admin: Globale Einstellungen (Wetter/WebUntis-Zugang) ═══════
-
 ON_AIR_SETTINGS_FIELDS = {'on_air_text', 'on_air_animation', 'on_air_show_clock'}
 SETTINGS_SECRET_FIELDS = ('webuntis_password', 'weather_api_key')
 
@@ -140,9 +128,8 @@ def get_settings(request):
 
 @router.put("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def update_settings(request, payload: MonitorSettingsUpdateSchema):
-    # On-Air-Darstellung gehört zum Recht onair, alles andere zu setup (Spec §4.5).
     data = {k: v for k, v in payload.dict(exclude_unset=True).items() if v is not None}
-    # Zugangsdaten sind write-only: leer heißt unverändert, geleert wird nur über *_clear (Ruling R22)
+    # Credentials are write-only: empty means unchanged, cleared only via *_clear
     for secret in SETTINGS_SECRET_FIELDS:
         if not data.get(secret):
             data.pop(secret, None)

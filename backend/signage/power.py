@@ -1,22 +1,18 @@
-"""
-Power-Regel für Bildschirme (Spec §3.2) und "bis Tagesende aus".
-
-Alle Uhrzeiten werden lokal gerechnet (settings.TIME_ZONE, Europe/Berlin).
-"""
+"""All times are computed locally (settings.TIME_ZONE, Europe/Berlin)."""
 from datetime import date, datetime, time, timedelta
 
 from django.utils import timezone
 
 from . import screen_schedule
 
-# "Bis Tagesende aus" ohne Zeitplan: am nächsten Tag um diese Uhrzeit wieder an.
+# "Off until end of day" without a schedule: back on at this time the next day.
 FALLBACK_ON_TIME = time(5, 0)
-# Höchstens so viele Tage nach einem Zeitplan-Fenster suchen.
+# Search at most this many days for a schedule window.
 MAX_LOOKAHEAD_DAYS = 14
 
 
 def time_in_window(hhmm: str, start: str, end: str) -> bool:
-    """Prüft ob Uhrzeit HH:MM im Fenster [start, end] liegt (auch über Mitternacht)."""
+    """Whether HH:MM lies in [start, end], also across midnight."""
     if not start and not end:
         return True
     start = start or '00:00'
@@ -27,7 +23,6 @@ def time_in_window(hhmm: str, start: str, end: str) -> bool:
 
 
 def active_exception(screen, day: date):
-    """Erste Datums-Ausnahme des Bildschirms, deren Bereich `day` enthält."""
     for e in screen.power_exceptions or []:
         if not isinstance(e, dict):
             continue
@@ -57,29 +52,24 @@ def _schedule_entries(screen):
 
 
 def compute_power_state(screen, now: datetime) -> bool:
-    """Soll der Bildschirm zum Zeitpunkt `now` an sein? Reihenfolge exakt Spec §3.2."""
-    # 1. Notfall
+    """Whether the screen should be on at `now`. The checks run in priority order."""
     if _emergency_active():
         return True
-    # 2. Manueller Modus
     if screen.power_mode == 'manual_on':
         return True
     if screen.power_mode == 'manual_off':
         return False
-    # 3. "Bis Tagesende aus"
     if screen.off_until and screen.off_until > now:
         return False
 
     local_now = timezone.localtime(now)
     hhmm = local_now.strftime('%H:%M')
-    # 4. Datums-Ausnahme
     exception = active_exception(screen, local_now.date())
     if exception is not None:
         return time_in_window(hhmm, exception.get('from', ''), exception.get('until', ''))
-    # 5. Ferien
     if screen.off_during_holidays and is_holiday(local_now.date()):
         return False
-    # 6. Zeitplan: Vereinigung aller Zeilen (leer = immer an)
+    # Schedule: union of all rows (empty = always on)
     return screen_schedule.is_on(screen.schedule, local_now)
 
 
@@ -95,9 +85,8 @@ def _at(day: date, at: time) -> datetime:
 
 
 def next_on_time(screen, now: datetime) -> datetime:
-    """Beginn des nächsten Zeitplan-Fensters, das nicht mehr heute liegt.
-    Tage ohne Fenster werden übersprungen (höchstens 14 Tage). Ohne Zeitplan
-    oder ohne passendes Fenster: nächster Tag 05:00."""
+    """Start of the next schedule window that is not today. Days without a window are skipped
+    (at most 14 days). Without a schedule or matching window: next day 05:00."""
     today = timezone.localtime(now).date()
     entries = _schedule_entries(screen)
     for offset in range(1, MAX_LOOKAHEAD_DAYS + 1):

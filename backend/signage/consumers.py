@@ -1,24 +1,9 @@
-"""
-WebSocket Consumer für Raspberry Pi HDMI-CEC Power-Steuerung
-============================================================
+"""WebSocket consumers for the Raspberry Pi (power, agent protocol) and the display.
 
-Jeder Pi verbindet sich mit:
-  ws://t410.de/ws/signage/pi/<slug>/  (old: /ws/monitor/pi/<slug>/)
-
-Der Consumer:
-  - Sendet sofort den aktuellen power-Befehl nach Connect
-  - Hat einen 30 s Tick-Loop, der den Power-State neu auswertet und nur
-    bei Änderung pushed (damit Zeitplan-Übergänge bei stehender Verbindung
-    durchschlagen)
-  - Hat einen 60 s Heartbeat: schickt {type:"ping"}, erwartet pong; bricht
-    nach 90 s ohne pong die Verbindung ab (tote Verbindungen erkennen)
-  - Empfängt CEC-Status- und pong-Updates vom Pi
-  - Mit Geräte-Token (Header Authorization: Bearer ...) gilt das volle
-    Agent-Protokoll (hello, command, telemetry, update_gate ...); ohne Token
-    bleibt der Altbetrieb (power_command, cec_status, ping/pong)
-  - Ermöglicht push_power_to_screen() aus anderen Modulen, um bei
-    Config-Änderungen einen sofortigen Push auszulösen
-"""
+The Pi consumer re-evaluates the power state every 30 s and pushes only on change, so schedule
+transitions apply on long-lived connections. A 60 s ping detects dead connections (closed after
+90 s without pong). With a device token (Authorization: Bearer ...) the full agent protocol
+applies; without one the legacy protocol (power_command, cec_status, ping/pong)."""
 
 import asyncio
 import json
@@ -33,10 +18,10 @@ from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
-TICK_INTERVAL = 30   # Power-Status alle 30s neu auswerten
-PING_INTERVAL = 60   # Heartbeat-ping alle 60s
-PONG_TIMEOUT = 90    # >90s ohne pong → Verbindung kappen
-TELEMETRY_INTERVAL = 30  # Telemetrie höchstens alle 30s speichern
+TICK_INTERVAL = 30
+PING_INTERVAL = 60
+PONG_TIMEOUT = 90
+TELEMETRY_INTERVAL = 30
 _monotonic = time.monotonic
 
 
@@ -45,33 +30,28 @@ def _group_name(slug: str) -> str:
 
 
 def push_power_to_screen(slug: str, power: bool = None) -> None:
-    """Aus synchronem Django-Code: Power-Befehl an alle verbundenen Pi-Sockets
-    eines Bildschirms senden. Wenn `power` None ist, wertet der Consumer beim
-    Empfang selbst aus — das ist sicherer, weil der Server immer den
-    aktuellen Sollzustand kennt."""
+    """If `power` is None the consumer evaluates it on receipt; safer, because the server
+    always knows the current target state."""
     layer = get_channel_layer()
     if not layer:
         return
     async_to_sync(layer.group_send)(_group_name(slug), {
         "type": "power_command",
-        "power": power,  # None → Consumer fragt DB neu
+        "power": power,
     })
 
 
 def push_power_to_all() -> None:
-    """Alle Bildschirme neu auswerten lassen (Notfall, Ferien, "bis Tagesende aus")."""
     from .models import Screen
     for slug in Screen.objects.values_list('slug', flat=True):
         try:
             push_power_to_screen(slug)
         except Exception:
-            # Der gespeicherte Zustand gilt trotzdem; der 30-s-Tick des Consumers holt ihn nach.
+            # The saved state still applies; the consumer's 30 s tick catches up.
             logger.exception("Power-Push an %s fehlgeschlagen", slug)
 
 
 class ScreenPiConsumer(AsyncWebsocketConsumer):
-    """WebSocket-Endpunkt für den Raspberry Pi.  URL: /ws/signage/pi/<slug>/ (old: /ws/monitor/…)"""
-
     def _bearer_token(self):
         for name, value in self.scope.get("headers", []):
             if name.lower() == b"authorization":
@@ -116,12 +96,10 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
                 await self.close(code=4003)
                 return
             await self.send(json.dumps(hello))
-        # Initialen Power-State senden
         await self._send_current_power()
         if self.device is not None:
             for message in await self._pending_commands():
                 await self.send(json.dumps(message))
-        # Background-Tasks starten
         self._tick_task = asyncio.create_task(self._tick_loop())
         self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
 
@@ -154,14 +132,13 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
         elif msg_type == "pong":
             self._last_pong = time.time()
         elif msg_type == "ping":
-            # Pi schickt selbst ping → mit pong antworten (manche Clients machen das so)
+            # Some clients send ping themselves: answer with pong.
             await self.send(json.dumps({"type": "pong"}))
             self._last_pong = time.time()
 
     async def _receive_device(self, msg_type, data) -> bool:
-        """Agent-Nachrichten; True, wenn behandelt."""
         if msg_type == "telemetry":
-            # Das Selbst-Update wird einmal gemeldet; die Drosselung darf es nicht verschlucken.
+            # The self-update is reported once; throttling must not swallow it.
             event = data.get("agent_updated")
             if event is None and isinstance(data.get("data"), dict):
                 event = data["data"].get("agent_updated")
@@ -191,12 +168,8 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             return False
         return True
 
-    # ── Background-Tasks ──────────────────────────────────────────────
-
     async def _tick_loop(self):
-        """Alle TICK_INTERVAL Sekunden den Soll-Power-State neu auswerten und
-        bei Änderung pushen. So springt der Pi automatisch in den nächsten
-        Zeitplan-Slot, auch wenn er stundenlang verbunden bleibt."""
+        """Pushes only on change, so the Pi follows schedule slots even when connected for hours."""
         try:
             while True:
                 await asyncio.sleep(TICK_INTERVAL)
@@ -207,12 +180,9 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             return
 
     async def _heartbeat_loop(self):
-        """Alle PING_INTERVAL Sekunden ping schicken, alle PONG_TIMEOUT
-        Sekunden prüfen ob pong angekommen ist."""
         try:
             while True:
                 await asyncio.sleep(PING_INTERVAL)
-                # Wenn pong zu lange her: Verbindung gilt als tot
                 if time.time() - self._last_pong > PONG_TIMEOUT:
                     try:
                         await self.close(code=4001)
@@ -226,8 +196,6 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
         except asyncio.CancelledError:
             return
 
-    # ── Push-Helpers ─────────────────────────────────────────────────
-
     async def _send_current_power(self):
         power = await self._get_power_state()
         if power is not None:
@@ -240,11 +208,7 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
         except Exception:
             pass
 
-    # ── Channel-Layer Handler (von push_power_to_screen aufgerufen) ──
-
     async def power_command(self, event):
-        """Externer Push (z.B. nach Config-Änderung im Admin). Wenn power
-        explizit gesetzt ist, das nehmen — sonst frisch aus DB lesen."""
         if event.get("power") is None:
             power = await self._get_power_state()
         else:
@@ -253,11 +217,9 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             await self._send_power(power)
 
     async def device_close(self, event):
-        """Token zurückgezogen oder Gerät entkoppelt (push.close_device_sockets)."""
         await self.close(code=event.get("code", 4003))
 
     async def device_hello(self, event):
-        """Konfiguration hat sich geändert: hello neu senden."""
         if self.device is None:
             return
         payload = await self._hello()
@@ -267,14 +229,11 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
         await self.send(json.dumps(payload))
 
     async def device_command(self, event):
-        """Neuer Befehl (push.push_device_command)."""
         if self.device is None:
             return
         message = await self._claim_command(event.get("id"))
         if message:
             await self.send(json.dumps(message))
-
-    # ── DB-Helfer ────────────────────────────────────────────────────
 
     @database_sync_to_async
     def _device_for_token(self, token):
@@ -348,7 +307,7 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_power_state(self):
-        """Soll-Zustand des Bildschirms; None, wenn er nicht mehr existiert (nichts schalten)."""
+        """None if the screen no longer exists (switch nothing)."""
         from .models import Screen
         try:
             screen = Screen.objects.get(slug=self.slug)
@@ -369,10 +328,8 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
 
 
 class DisplayConsumer(AsyncWebsocketConsumer):
-    """WebSocket-Endpunkt der Anzeige (öffentlich, nur Hinweise).  URL: /ws/signage/display/<slug>/ (old: /ws/monitor/…)
-
-    Sendet nur {"type":"changed"} bzw. {"type":"reload"}; Daten holt die Anzeige per HTTP.
-    Eingehende Nachrichten werden ignoriert."""
+    """Public, hints only: sends {"type":"changed"} or {"type":"reload"}; the display fetches data
+    over HTTP. Incoming messages are ignored."""
 
     async def connect(self):
         from . import push

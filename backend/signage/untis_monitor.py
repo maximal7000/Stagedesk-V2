@@ -1,12 +1,10 @@
-"""
-Client der öffentlichen WebUntis-Monitor-Schnittstelle (Vertretungsplan ohne Konto).
+"""Client for the public WebUntis monitor endpoint (substitution plan without an account).
 
-Zwei Endpunkte: `format` liefert die in WebUntis eingestellten Anzeige-Optionen (1 Stunde im
-Cache), `data` liefert Zeilen, Abwesenheiten und Nachrichten eines Tages. Jede Abfrage hat
-ein Gesamtbudget (monotone Frist); jeder Fehler wird zu MonitorUnavailable.
+Two endpoints: `format` returns the display options configured in WebUntis (cached for an hour),
+`data` returns rows, absences and messages of one day. Each request has an overall budget
+(monotonic deadline); every error becomes MonitorUnavailable.
 
-Es werden keine Datenzeilen geloggt.
-"""
+No data rows are logged."""
 import re
 import time
 import urllib.parse
@@ -24,8 +22,8 @@ FORMAT_CACHE_PREFIX = 'signage:untis-monitor:format:'
 
 FORMAT_PRESETS = {'students_2': 'vplan-schueler', 'students_1': 'vplan-schueler-1', 'teachers': 'vplan-lehrer'}
 
-# Spalten einer Zeile in fester Reihenfolge: (Format-Option, Feld). Feld None = verwerfen.
-# Eine Spalte ist nur vorhanden, wenn ihre Option im Format gesetzt ist.
+# Row columns in fixed order: (format option, field). Field None = drop.
+# A column only exists if its option is set in the format.
 COLUMN_ORDER = [
     ('showHour', 'periods'),
     ('showTime', None),
@@ -36,24 +34,22 @@ COLUMN_ORDER = [
     ('showSubstText', 'kind_label'),
     ('showInfo', 'note'),
 ]
-# Elementtypen in absentElements/affectedElements.
+# Element types in absentElements/affectedElements.
 ELEMENT_CLASS = 1
 ELEMENT_TEACHER = 2
 GROUP_BY = {1: 'class', 2: 'teacher'}
 DEFAULT_KIND_LABEL = 'Vertretung'
 
 _CHANGED = re.compile(r'^(.*?)\s*\((.*)\)\s*$', re.DOTALL)
-# Art-Texte aus WebUntis (Deutsch, so wie sie geliefert werden).
+# Kind texts from WebUntis (German, as delivered).
 _CANCEL_TEXT = re.compile(r'entfall|ausfall', re.IGNORECASE)
 _ROOM_CHANGE_TEXT = re.compile(r'raumänderung', re.IGNORECASE)
 _NEW_SPAN = re.compile(r'<span[^>]*substMonitorSubstElem[^>]*>(.*?)</span>', re.DOTALL | re.IGNORECASE)
 
 
 class MonitorUnavailable(Exception):
-    """Die Monitor-Schnittstelle ist nicht erreichbar oder lieferte etwas Unbrauchbares."""
+    """The monitor endpoint is unreachable or returned something unusable."""
 
-
-# ═══ Abruf ════════════════════════════════════════════════════════
 
 def _base(server):
     return f'https://{server}/WebUntis/monitor/substitution'
@@ -75,14 +71,13 @@ def _post(url, body, deadline):
 
 
 def request_format(server, school, format_name, deadline):
-    """Rohe Antwort des format-Endpunkts (ungecacht)."""
+    """Raw response of the format endpoint (uncached)."""
     query = f'school={urllib.parse.quote(school)}&formatName={urllib.parse.quote(format_name)}'
     url = f'{_base(server)}/format?{query}'
     return _post(url, {'formatName': format_name, 'schoolName': school}, deadline)
 
 
 def request_day(server, school, format_name, options, day: date, deadline):
-    """Rohe Antwort des data-Endpunkts für einen Tag."""
     url = f'{_base(server)}/data?school={urllib.parse.quote(school)}'
     body = {**options, 'formatName': format_name, 'schoolName': school,
             'date': int(day.strftime('%Y%m%d')), 'dateOffset': 0}
@@ -90,7 +85,7 @@ def request_day(server, school, format_name, options, day: date, deadline):
 
 
 def fetch_format(server, school, format_name, deadline) -> dict:
-    """Format-Optionen (payload), eine Stunde gecacht."""
+    """Format options (payload), cached for an hour."""
     key = FORMAT_CACHE_PREFIX + format_name
     cached = cache.get(key)
     if cached is not None:
@@ -101,15 +96,13 @@ def fetch_format(server, school, format_name, deadline) -> dict:
 
 
 def fetch_day(server, school, format_name, options, day: date, deadline) -> dict:
-    """Rohes payload eines Tages."""
     return request_day(server, school, format_name, options, day, deadline)['payload']
 
 
 def check(server, school, format_name, deadline):
-    """Format (frisch, nicht aus dem Cache) und heutigen Tag abrufen. None, wenn es geht, sonst die Ursache.
+    """Fetches the format (fresh, not from the cache) and today. None if it works, otherwise the cause.
 
-    Gibt keine Daten zurück.
-    """
+    Returns no data."""
     cache.delete(FORMAT_CACHE_PREFIX + format_name)
     try:
         options = fetch_format(server, school, format_name, deadline)
@@ -120,8 +113,6 @@ def check(server, school, format_name, deadline):
         return type(exc).__name__
     return None
 
-
-# ═══ Kopf ═════════════════════════════════════════════════════════
 
 def _iso_date(value):
     try:
@@ -147,7 +138,7 @@ def _unit(value):
 
 
 def _absence_periods(absences):
-    """'' (ganztägig oder unbekannt), '3.' oder '3.–4.' aus der Spanne aller Abwesenheiten."""
+    """'' (all day or unknown), '3.' or '3.–4.' from the span of all absences."""
     starts, ends = [], []
     for absence in absences or []:
         start, end = _unit(absence.get('startUnit')), _unit(absence.get('endUnit'))
@@ -178,14 +169,12 @@ def parse_header(payload: dict, show_absences: bool) -> dict:
             'updated_at': _updated_at(payload.get('lastUpdate'))}
 
 
-# ═══ Zeilen ═══════════════════════════════════════════════════════
-
 def _text(html):
     return _strip_html(html)
 
 
 def _split_change(cell):
-    """(neu, alt) einer Zelle: "<span ...>ROT</span> (<span ...>ÖLZ</span>)" oder "204 (209)"."""
+    """(new, old) of a cell: "<span ...>ROT</span> (<span ...>ÖLZ</span>)" or "204 (209)"."""
     cell = cell or ''
     span = _NEW_SPAN.search(cell)
     if span:
@@ -216,7 +205,7 @@ def _kind(label, css_classes):
 
 
 def parse_rows(payload: dict, options: dict) -> list:
-    """Zeilen wie geliefert (je Gruppe eine Wiederholung); Entdoppeln macht der Aufrufer."""
+    """Rows as delivered (repeated per group); the caller dedupes."""
     fields = [field for option, field in COLUMN_ORDER if options.get(option)]
     rows = []
     for raw in payload.get('rows') or []:
@@ -238,11 +227,9 @@ def parse_rows(payload: dict, options: dict) -> list:
     return rows
 
 
-# ═══ Tage ═════════════════════════════════════════════════════════
-
 def load_days(server, school, format_name, *, start: date, count: int, overrides: dict,
               show_absences: bool, deadline: float) -> dict:
-    """Format laden, dann `count` Tage ab `start`; der Folgetag kommt aus next_date des Vortags."""
+    """Loads the format, then `count` days from `start`; the next day comes from the previous day's next_date."""
     options = {**fetch_format(server, school, format_name, deadline), **(overrides or {})}
     days = []
     day = start

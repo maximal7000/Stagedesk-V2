@@ -1,4 +1,3 @@
-"""Pi-WebSocket mit Geräte-Token und Agent-Protokoll (Spec §3.3, §4.2, §5, §6)."""
 from datetime import timedelta
 from unittest import mock
 
@@ -24,7 +23,7 @@ def _communicator(slug, token=None):
 
 
 async def _sync_point(comm):
-    """Alles bis hierher wurde verarbeitet (Nachrichten laufen der Reihe nach)."""
+    """Everything up to here has been processed (messages are handled in order)."""
     await comm.send_json_to({'type': 'ping'})
     while True:
         msg = await comm.receive_json_from()
@@ -150,7 +149,7 @@ class DeviceConsumerTest(TransactionTestCase):
             await comm.send_json_to({'type': 'telemetry', 'data': {'cpu_temp': 99}})
             await _sync_point(comm)
             second = await sync_to_async(Device.objects.get)(pk=self.device.pk)
-            self.assertEqual(second.last_telemetry['cpu_temp'], 40)  # gedrosselt
+            self.assertEqual(second.last_telemetry['cpu_temp'], 40)  # throttled
             self.assertGreater(second.last_seen_at, first.last_seen_at)
             await comm.disconnect()
         async_to_sync(run)()

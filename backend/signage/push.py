@@ -1,10 +1,5 @@
-"""
-Änderungs-Push an die Anzeige (WebSocket-Gruppen display_<slug> und display_all).
-
-Fehler im Channel-Layer (z.B. Redis nicht erreichbar) werden nur protokolliert:
-ein Speichern darf deswegen nie mit 500 enden. Die Anzeige holt sich die Daten
-ohnehin im Rückfall-Intervall selbst.
-"""
+"""Errors in the channel layer (e.g. Redis unreachable) are only logged: saving must never end
+in a 500. The display polls on its fallback interval anyway."""
 import logging
 
 from asgiref.sync import async_to_sync
@@ -31,7 +26,7 @@ def _send(group: str, message_type: str) -> None:
 
 
 def notify_changed(screen_slugs=None) -> None:
-    """Die Anzeige soll neu laden. None = alle Bildschirme."""
+    """None = all screens."""
     if screen_slugs is None:
         _send(ALL_GROUP, "display_changed")
         return
@@ -40,12 +35,10 @@ def notify_changed(screen_slugs=None) -> None:
 
 
 def notify_reload(slug: str) -> None:
-    """Die Seite des Bildschirms komplett neu laden lassen."""
     _send(group_name(slug), "display_reload")
 
 
 def notify_changed_on_commit(screen_slugs=None) -> None:
-    """Wie notify_changed, aber erst nach erfolgreichem Commit."""
     transaction.on_commit(lambda: notify_changed(screen_slugs))
 
 
@@ -54,7 +47,7 @@ def device_group(device_id: int) -> str:
 
 
 def close_device_sockets(device) -> None:
-    """Offene WebSocket-Verbindungen des Geräts schließen lassen (Code 4003, behandelt der Consumer)."""
+    """Code 4003, handled by the consumer."""
     try:
         layer = get_channel_layer()
         if not layer:
@@ -66,7 +59,6 @@ def close_device_sockets(device) -> None:
 
 
 def push_device_hello(screen) -> None:
-    """Das Gerät des Bildschirms soll sein `hello` (Konfiguration) neu bekommen."""
     from .models import Device
     device_id = Device.objects.filter(screen=screen).values_list('id', flat=True).first()
     if device_id is None:
@@ -81,8 +73,7 @@ def push_device_hello(screen) -> None:
 
 
 def push_device_command(command) -> None:
-    """Neuen Befehl sofort an das verbundene Gerät schicken (nach dem Commit aufrufen).
-    Ohne Verbindung bleibt er `pending` und geht beim Verbinden raus."""
+    """Call after the commit. Without a connection it stays `pending` and goes out on connect."""
     try:
         layer = get_channel_layer()
         if not layer:

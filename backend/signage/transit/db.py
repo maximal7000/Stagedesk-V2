@@ -9,14 +9,10 @@ from datetime import datetime, timedelta
 from .common import REQUEST_TIMEOUT, REQUEST_TIMEOUT_SEARCH, TIMEZONE, _product_icon
 
 
-# ═══ API Konfiguration ════════════════════════════════════════════
-
-# DB Timetables API (offiziell, DB API Marketplace) — Credentials via Env-Vars
 DB_TT_BASE = "https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1"
 DB_TT_CLIENT_ID = os.getenv("DB_TT_CLIENT_ID", "")
 DB_TT_API_KEY = os.getenv("DB_TT_API_KEY", "")
 
-# DB-Kategorie → Produkt-Typ (für Filter/Icon)
 DB_CAT_TO_PRODUCT = {
     "ICE": "nationalExpress", "ECE": "nationalExpress", "RJ": "nationalExpress",
     "IC": "national", "EC": "national", "EN": "national", "NJ": "national", "D": "national",
@@ -28,7 +24,7 @@ DB_CAT_TO_PRODUCT = {
 }
 
 
-# DB IRIS Meldungs-Codes → Text (Verspätungsursachen t="d" + Qualitätsmängel t="q")
+# DB IRIS message codes -> text (delay causes t="d" + quality issues t="q")
 DB_MSG_TEXT = {
     1: "Nähere Informationen in Kürze", 2: "Polizeieinsatz", 3: "Feuerwehreinsatz auf der Strecke",
     4: "Kurzfristiger Personalausfall", 5: "Ärztliche Versorgung eines Fahrgastes", 6: "Betätigen der Notbremse",
@@ -63,12 +59,11 @@ DB_MSG_TEXT = {
     95: "Universaltoilette fehlt", 96: "Zustieg kann nicht garantiert werden", 97: "Hohe Auslastung",
     98: "Sonstige Qualitätsmängel", 99: "Verzögerungen im Betriebsablauf",
 }
-# Codes, die keine echte Störung sind (nicht als Verspätungsgrund anzeigen)
+# Codes that are not real disruptions (not shown as delay cause)
 DB_MSG_IGNORE = {84, 88, 89, 62}
 
 
 def _db_tt_get(path, timeout=None):
-    """DB Timetables API GET → XML-Element (ElementTree)."""
     req = urllib.request.Request(DB_TT_BASE + path, headers={
         "DB-Client-Id": DB_TT_CLIENT_ID,
         "DB-Api-Key": DB_TT_API_KEY,
@@ -82,21 +77,19 @@ def _db_tt_get(path, timeout=None):
 def _db_cat_product(cat, line):
     if cat in DB_CAT_TO_PRODUCT:
         return DB_CAT_TO_PRODUCT[cat]
-    # Fallback über Linien-Präfix (z.B. "RE83" → RE)
+    # Fallback via the line prefix (e.g. "RE83" -> RE)
     m = re.match(r'^([A-Za-zÄÖÜ]+)', (line or ''))
     if m and m.group(1) in DB_CAT_TO_PRODUCT:
         return DB_CAT_TO_PRODUCT[m.group(1)]
     return "regional"
 
 
-# ═══ DB REST — Abfahrten ══════════════════════════════════════════
-
-_DB_META_CACHE = {}  # eva -> (meta_evas, timestamp) — große Bahnhöfe trennen S-Bahn in eigene EVA
+_DB_META_CACHE = {}  # eva -> (meta_evas, timestamp); large stations split the S-Bahn into its own EVA
 
 
 def _db_meta_evas(eva):
-    """Geschwister-EVAs eines Bahnhofs (aus dem meta-Feld) — z.B. die separate S-Bahn-EVA.
-    IRIS trennt Bahnsteig-Gruppen: Hamburg Hbf = 8002549 (Fern/Regio), S-Bahn = 8098549."""
+    """Sibling EVAs of a station (from the meta field), e.g. the separate S-Bahn EVA.
+    IRIS splits platform groups: Hamburg Hbf = 8002549 (long-distance/regional), S-Bahn = 8098549."""
     import time as _time
     now = _time.time()
     hit = _DB_META_CACHE.get(str(eva))
@@ -117,7 +110,6 @@ def _db_meta_evas(eva):
 
 
 def _fetch_sbahn_meta(eva, duration, max_results, stopovers=False):
-    """S-Bahn-Abfahrten aus den meta-Geschwister-EVAs einsammeln (nur kind_icon == sbahn)."""
     out = []
     for m_eva in _db_meta_evas(eva):
         try:
@@ -131,25 +123,22 @@ def _fetch_sbahn_meta(eva, duration, max_results, stopovers=False):
 
 
 def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
-    """Abfahrten über die DB Timetables API (/plan geplant + /fchg Echtzeit).
-    Extrahiert: Verspätung, Gleis(-wechsel), Ausfall, Meldungen (Verspätungsgründe/
-    Ersatzverkehr/Umleitung/Qualität), Flügelzug, Ersatzzug, Halt-Änderungen."""
+    """/plan (planned) plus /fchg (real-time changes)."""
     if not DB_TT_CLIENT_ID:
         return []
     now = datetime.now(TIMEZONE)
 
-    # Echtzeit-Änderungen je Stop-ID
     changes = {}
-    replaced_by = {}   # (cat, nr) des Originals -> Ersatz-Label (z.B. "Bus 114392")
-    replacement_trips = []        # Ersatz-Fahrten (tl t="e" + <ref>) — stehen nur im /fchg, als eigene Abfahrt ergänzen
+    replaced_by = {}   # (cat, nr) of the original -> replacement label (e.g. "Bus 114392")
+    replacement_trips = []        # replacement trips (tl t="e" + <ref>) only appear in /fchg; added as departures of their own
     try:
         fchg = _db_tt_get(f"/fchg/{station_id}")
         for s in fchg.findall("s"):
             dp = s.find("dp")
             if dp is None:
                 continue
-            codes = []      # d + q — für Flag-Erkennung (SEV/Umleitung)
-            codes_d = []    # nur t="d" = echte Verspätungs-/Ausfallursachen (fürs Anzeigen)
+            codes = []      # d + q, for flag detection (SEV/detour)
+            codes_d = []    # only t="d" = real delay/cancellation causes (shown)
             for m in list(dp) + list(s):
                 if m.tag != "m":
                     continue
@@ -164,7 +153,7 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                 "ct": dp.get("ct"), "cp": dp.get("cp"), "cs": dp.get("cs"),
                 "cpth": dp.get("cpth"), "codes": codes, "codes_d": codes_d,
             }
-            # Ersatzverkehr: dieser Trip ersetzt einen anderen (Original steht im <ref>)
+            # Replacement service: this trip replaces another one (original in <ref>)
             tl = s.find("tl")
             ref = s.find("ref")
             if tl is not None and tl.get("t") == "e" and ref is not None:
@@ -178,8 +167,8 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
         pass
 
     hours = 1 + min(3, int(duration) // 60)
-    # Auch die vorherige Stunde laden (i=-1): Züge mit früher Plan-Zeit aber
-    # Verspätung stehen im Plan der GEPLANTEN Stunde, nicht der aktuellen.
+    # Also load the previous hour (i=-1): delayed trains with an early planned time
+    # are in the plan of the PLANNED hour, not the current one.
     deps = []
     for i in range(-1, hours):
         t = now + timedelta(hours=i)
@@ -224,10 +213,9 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             platform_actual = ch.get("cp") or platform_planned
             product = _db_cat_product(cat, line)
 
-            # ─── Meldungen aus Change-Codes ───
             codes = ch.get("codes", [])
-            # Grund/Bemerkung NUR aus echten Ursachen (t="d") — Qualitätshinweise
-            # (t="q", z.B. „nur 2. Klasse") gehören nicht als Verspätungsgrund auf die Zeile.
+            # Reason/remark only from real causes (t="d"); quality notes
+            # (t="q", e.g. "2nd class only") are not a delay reason on the row.
             remarks = []
             for c in ch.get("codes_d", []):
                 if c in DB_MSG_IGNORE:
@@ -238,11 +226,10 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             rail_replacement = any(c in (29, 78) for c in codes)
             diversion = 58 in codes
 
-            # ─── Flügelzug / Ersatzzug ───
             wing_train = bool(dp.get("wings"))
             replacement_train = tl_t == "e"
 
-            # ─── Halt-Änderungen (geänderte Route cpth vs ppth) ───
+            # Stop changes: changed route cpth vs planned ppth
             added_stops, dropped_stops = [], []
             ends_early, planned_destination = False, ""
             cpth = ch.get("cpth")
@@ -253,8 +240,8 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                 dropped_stops = [h for h in ppth if h not in setn][:3]
                 if new_route:
                     orig_destination = ppth[-1] if ppth else ""
-                    destination = new_route[-1]  # neues Ziel
-                    # Zug endet früher: neues Ziel liegt in der Original-Route, dahinter fällt was weg
+                    destination = new_route[-1]
+                    # Train ends early: the new destination is on the original route, stops after it are dropped
                     if orig_destination and destination != orig_destination and destination in ppth:
                         ends_early, planned_destination = True, orig_destination
 
@@ -295,7 +282,6 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                 result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
             deps.append(result)
 
-    # Ersatz-Fahrten (nur im /fchg vorhanden) als eigene Abfahrten ergänzen
     for s in replacement_trips:
         dp = s.find("dp"); tl = s.find("tl"); ref = s.find("ref")
         if dp is None or tl is None:

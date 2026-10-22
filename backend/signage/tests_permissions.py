@@ -1,4 +1,3 @@
-"""Rechte-Aufteilung (Spec §3.5): users/0016 und die Zuordnung Endpunkt zu Recht."""
 import importlib
 import pkgutil
 from unittest import mock
@@ -57,7 +56,7 @@ class SplitMonitorEditMigrationTest(MigrationTestCase):
 
 
 class EndpointPermissionMatrixTest(SimpleTestCase):
-    """Patcht _require_perm und prüft den Code, den der Endpunkt als Erstes verlangt."""
+    """Patches _require_perm and checks the code the endpoint asks for first."""
 
     def assertRequires(self, code, func_name, *args, **kwargs):
         module = next(m for m in API_MODULES if hasattr(m, func_name))
@@ -88,11 +87,11 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
                 ('activate_event', 1), ('deactivate_event', 1),
             ],
             'signage.media': [('upload_file', None), ('delete_file', 1)],
-            # update_settings: Aufteilung setup/onair in tests_power.SettingsPermissionSplitTest
+            # update_settings: setup/onair split in tests_power.SettingsPermissionSplitTest
             'signage.power': [
                 ('list_holidays',), ('create_holiday', None), ('update_holiday', 1, None),
                 ('delete_holiday', 1), ('power_off_today', None), ('undo_power_off_today', None),
-                # gemischte Payloads: tests_power.ScreenUpdatePermissionSplitTest
+                # mixed payloads: tests_power.ScreenUpdatePermissionSplitTest
                 ('update_screen', 1, ScreenUpdateSchema(power_mode='auto', off_until=None)),
             ],
             'signage.emergency': [
@@ -119,7 +118,7 @@ class EndpointPermissionMatrixTest(SimpleTestCase):
 
 
 class RenameToSignagePermissionsMigrationTest(MigrationTestCase):
-    """users/0017: monitor.* heißt signage.*, Zuweisungen an Gruppen und Nutzer bleiben."""
+    """users/0017: monitor.* becomes signage.*, group and user assignments stay."""
     migrate_from = ('users', '0016_split_monitor_edit')
     migrate_to = ('users', '0017_rename_monitor_permissions_to_signage')
     CODES = ['view', 'setup', 'exams', 'media', 'power', 'onair', 'emergency', 'devices']

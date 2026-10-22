@@ -10,13 +10,9 @@ from .nahsh import _nahsh_products_from_bitmask, _nahsh_rpc
 logger = logging.getLogger('signage.transit')
 
 
-# ═══ Stationssuche ════════════════════════════════════════════════
-
 def search_stations(query, results=10, use_db=True, use_nahsh=True):
-    """
-    Stationen suchen — fragt DB REST + NAH.SH HAFAS parallel ab.
-    Gibt Liste zurück: [{"id": "...", "name": "...", "kind": "...", "source": "...", "products": [...]}]
-    """
+    """Queries DB and NAH.SH HAFAS in parallel.
+    Returns [{"id": "...", "name": "...", "kind": "...", "source": "...", "products": [...]}]"""
     if not query or len(query) < 2:
         return []
     if not use_db and not use_nahsh:
@@ -28,7 +24,7 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
     nahsh_results = []
 
     def _search_db():
-        # DB Timetables /station/{pattern} → EVA-Nummern
+        # DB Timetables /station/{pattern} -> EVA numbers
         if not db.DB_TT_CLIENT_ID:
             return []
         root = _db_tt_get(f"/station/{urllib.parse.quote(query)}", timeout=REQUEST_TIMEOUT_SEARCH)
@@ -38,7 +34,7 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
             name = st.get("name")
             if not eva or not name:
                 continue
-            # DB Timetables liefert nur Bahnhöfe (Zugverkehr)
+            # DB Timetables only returns railway stations
             products = ["nationalExpress", "national", "regionalExpress", "regional", "suburban"]
             out.append({
                 "id": str(eva),
@@ -64,7 +60,7 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
                 continue
             sid = str(loc.get("extId", ""))
             if not sid:
-                # Fallback: lid parsen "A=1@O=...@L=8000199@..."
+                # Fallback: parse lid "A=1@O=...@L=8000199@..."
                 lid = loc.get("lid", "")
                 if "@L=" in lid:
                     sid = lid.split("@L=")[1].split("@")[0]
@@ -80,7 +76,6 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
             })
         return out
 
-    # Parallel abfragen
     with ThreadPoolExecutor(max_workers=2) as pool:
         fut_db = pool.submit(_search_db) if use_db else None
         fut_nahsh = pool.submit(_search_nahsh) if use_nahsh else None
@@ -97,7 +92,7 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
             except Exception as e:
                 logger.warning(f"NAH.SH Stationssuche Fehler: {e}")
 
-    # Merge: DB zuerst, dann NAH.SH ergänzen
+    # Merge: DB first, NAH.SH fills in
     combined = {}
     for s in db_results:
         combined[s["id"]] = s
@@ -117,7 +112,6 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
 
 
 def _station_type(products):
-    """Haupttyp der Station bestimmen"""
     if any(p in products for p in ["nationalExpress", "national"]):
         return "long_distance"
     if any(p in products for p in ["regionalExpress", "regional", "suburban"]):

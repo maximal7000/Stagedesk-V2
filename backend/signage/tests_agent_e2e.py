@@ -1,10 +1,10 @@
-"""Ende-zu-Ende: der echte Agent mit dem echten websocket-client gegen einen laufenden ASGI-Server.
+"""End to end: the real agent with the real websocket-client against a running ASGI server.
 
-Daphne läuft in einem Thread dieses Prozesses (gleiche Datenbank, gleicher In-Memory-Channel-Layer).
-Alle Aufrufe des Tests an den Server gehen per HTTP an diesen Server, damit Pushes und Sockets in
-derselben Ereignisschleife liegen. Systembefehle des Agents laufen über den FakeRunner.
+Daphne runs in a thread of this process (same database, same in-memory channel layer).
+All test calls go to that server over HTTP so pushes and sockets share one event loop.
+The agent's system commands go through FakeRunner.
 
-Braucht `websocket-client` (nur Testumgebung, siehe backend/requirements-dev.txt)."""
+Needs `websocket-client` (test environment only, see backend/requirements-dev.txt)."""
 import json
 import socket
 import sys
@@ -37,7 +37,7 @@ _server = {}
 
 
 def live_server_port():
-    """Daphne einmal je Prozess in einem Thread starten (der Twisted-Reactor läuft nur einmal)."""
+    """Start Daphne once per process in a thread (the Twisted reactor only runs once)."""
     if 'port' in _server:
         return _server['port']
     from daphne.server import Server
@@ -111,9 +111,9 @@ class AgentEndToEndTest(TransactionTestCase):
         self.screen = Screen.objects.create(name='Glocke', slug='glocke')
 
     def api(self, method, path, body=None):
-        """HTTP-Aufruf an den Server. SQLite im Speicher (geteilter Cache) meldet bei gleichzeitigen
-        Zugriffen mehrerer Server-Threads "table is locked" als 500; die Aufrufe des Tests sind
-        wiederholbar (die Transaktion wurde zurückgerollt), deshalb gibt es bei 500 einige Versuche."""
+        """In-memory SQLite (shared cache) reports "table is locked" as 500 when several server
+        threads access it at once; the test calls are repeatable (the transaction was rolled back),
+        so a 500 is retried a few times."""
         for attempt in range(6):
             request = urllib.request.Request(
                 f'{self.base}/api/monitor{path}', method=method,
@@ -157,7 +157,7 @@ class AgentEndToEndTest(TransactionTestCase):
             self.agent.request_stop()
             self.agent.stop()
             thread.join(10)
-            # Warten, bis der Server die Sockets des Agents abgebaut hat, bevor die Testdatenbank geleert wird.
+            # Wait until the server has dropped the agent's sockets before the test database is flushed.
             end = time.monotonic() + 5
             while time.monotonic() < end and any(
                     getattr(p, 'state', None) == 'connected' for p in list(_server['server'].connections)):
@@ -171,7 +171,7 @@ class AgentEndToEndTest(TransactionTestCase):
         return next((row for row in rows if row['id'] == device_id), None)
 
     def run_on_reactor(self, function, *args):
-        """Eine Funktion im Reactor-Thread von Daphne ausführen und das Ergebnis abwarten."""
+        """Run a function in Daphne's reactor thread and wait for the result."""
         from twisted.internet import reactor, threads
         done = threading.Event()
         box = {}
@@ -189,7 +189,7 @@ class AgentEndToEndTest(TransactionTestCase):
         return box.get('value')
 
     def stop_server(self):
-        """Port schließen und offene Verbindungen kappen, wie bei einem Serverausfall."""
+        """Close the port and cut open connections, like a server outage."""
         server = _server['server']
 
         def stop():
@@ -240,19 +240,17 @@ class AgentEndToEndTest(TransactionTestCase):
             self.assertTrue(config.token)
 
     def test_e2e_pair_hello_telemetry_command_unpair(self):
-        # Der Test liest nur über die API: SQLite im Speicher teilt die Verbindung zwischen Threads und
-        # sperrt Tabellen, wenn der Test-Thread selbst parallel zum Server liest.
+        # The test reads only via the API: in-memory SQLite shares the connection between threads and
+        # locks tables when the test thread reads in parallel to the server.
         with mock.patch('stagedesk_agent.pairing.POLL_INTERVAL', 0.2), \
                 mock.patch('stagedesk_agent.connection.backoff_delays', lambda jitter=True: iter(lambda: 0.2, None)):
             config = self.start_agent()
 
-            # 1. Kopplungscode erscheint, Admin koppelt über die API
             code = wait_for(lambda: self.pages.codes() and self.pages.codes()[-1], message='kein Kopplungscode')
             status, paired = self.api('POST', '/devices/pair', {'code': code, 'screen_id': self.screen.id})
             self.assertEqual(status, 200, paired)
             device_id = paired['id']
 
-            # 2. Token kommt an, hello wird übernommen, Telemetrie landet im Gerät
             wait_for(lambda: config.token, message='kein Token')
             row = wait_for(lambda: (self.device_row(device_id) or {}).get('telemetry') and self.device_row(device_id),
                            message='keine Telemetrie')
@@ -261,7 +259,6 @@ class AgentEndToEndTest(TransactionTestCase):
             self.assertEqual(config.slug, 'glocke')
             self.assertIn('screen=glocke', config.kiosk_url)
 
-            # 3. Befehl restart_browser wird ausgeführt und gemeldet
             status, command = self.api('POST', f'/devices/{device_id}/commands', {'kind': 'restart_browser'})
             self.assertEqual(status, 200, command)
 
@@ -274,7 +271,6 @@ class AgentEndToEndTest(TransactionTestCase):
                                      f'Aufrufe {self.runner.calls[-5:]}; Zustand {self.agent.state}')
             self.assertIn(('systemctl', 'restart', 'stagedesk-kiosk'), [call[0] for call in self.runner.calls])
 
-            # 4. Entkoppeln: Token weg, der Agent fordert einen neuen Code an
             codes_before = len(self.pages.codes())
             status, _ = self.api('POST', f'/devices/{device_id}/unpair')
             self.assertEqual(status, 200)

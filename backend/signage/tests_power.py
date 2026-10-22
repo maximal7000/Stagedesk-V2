@@ -1,8 +1,4 @@
-"""Power-Regel (Spec §3.2), "bis Tagesende aus", Ferien, Notfall-Push (Task 4).
-
-Alle Zeitpunkte sind fest vorgegeben; kein Test hängt vom echten Datum ab.
-2026-10-19 ist ein Montag.
-"""
+"""All times are fixed; no test depends on the real date. 2026-10-19 is a Monday."""
 from datetime import date, datetime, timedelta, timezone as dt_timezone
 from unittest import mock
 
@@ -46,7 +42,7 @@ class ComputePowerStateTest(TestCase):
     def test_off_until_future_is_off(self):
         screen = self.screen(off_until=MONDAY_10 + timedelta(hours=1))
         self.assertFalse(power.compute_power_state(screen, MONDAY_10))
-        # abgelaufen: wieder Zeitplan
+        # expired: schedule again
         self.assertTrue(power.compute_power_state(screen, MONDAY_10 + timedelta(hours=2)))
 
     def test_exception_before_holiday(self):
@@ -75,7 +71,7 @@ class ComputePowerStateTest(TestCase):
 
     def test_schedule_uses_local_time(self):
         screen = self.screen()
-        # 06:30 UTC = 08:30 Berlin (Sommerzeit bis 25.10.)
+        # 06:30 UTC = 08:30 Berlin (summer time until 25.10.)
         utc_time = datetime(2026, 10, 19, 6, 30, tzinfo=dt_timezone.utc)
         self.assertTrue(power.compute_power_state(screen, utc_time))
 
@@ -260,7 +256,7 @@ class PushPowerToAllTest(TestCase):
 class ScreenPowerPushTest(TestCase):
 
     def test_push_failure_after_save_is_logged_not_500(self):
-        """Final-Review 4: der gespeicherte Strommodus gilt, auch wenn der Push scheitert."""
+        """The saved power mode applies even if the push fails."""
         screen = Screen.objects.create(name='A', slug='a')
         with _auth(), mock.patch('signage.api.screens._require_perm'), \
                 mock.patch('signage.consumers.push_power_to_screen', side_effect=ConnectionError), \
@@ -277,8 +273,6 @@ class _Denied(Exception):
 
 
 class SettingsPermissionSplitTest(SimpleTestCase):
-    """PUT /settings: On-Air-Darstellung braucht onair, alles andere setup (Spec §4.5)."""
-
     def required(self, **fields):
         payload = MonitorSettingsUpdateSchema(**fields)
         with mock.patch.object(api_settings, '_require_perm', side_effect=_Denied) as guard:
@@ -297,7 +291,7 @@ class SettingsPermissionSplitTest(SimpleTestCase):
 
 
 class FreshImportTest(SimpleTestCase):
-    """signage.api.setup muss sich in einem frischen Prozess als erstes Modul importieren lassen."""
+    """signage.api.setup must be importable as the first module in a fresh process."""
 
     def test_api_setup_imports_standalone(self):
         import subprocess
@@ -311,8 +305,6 @@ class FreshImportTest(SimpleTestCase):
 
 
 class ScreenUpdatePermissionSplitTest(SimpleTestCase):
-    """PUT /screens/{id}: Power-Felder brauchen power, alles andere setup (Spec §3.5)."""
-
     def required(self, **fields):
         payload = ScreenUpdateSchema(**fields)
         with mock.patch.object(api_screens, '_require_perm') as guard, \
@@ -334,6 +326,6 @@ class ScreenUpdatePermissionSplitTest(SimpleTestCase):
         self.assertEqual(self.required(name='Halle', power_mode='auto'), ['signage.setup', 'signage.power'])
 
     def test_override_needs_setup(self):
-        # Andere Ansicht vorübergehend gehört zu Bildschirme (setup), nicht zu Ein- und Ausschalten
+        # A temporary other view belongs to screens (setup), not to power
         self.assertEqual(self.required(override_view_id=3, override_until=None), ['signage.setup'])
         self.assertEqual(self.required(override_view_id=None, override_until=None), ['signage.setup'])

@@ -72,7 +72,7 @@ class LegacyAliasTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class GlobalStateApiTest(TestCase):
-    """On-Air und Notfall liegen in MonitorSettings; /display und /clock lesen dort (Task 2)."""
+    """On-air and emergency live in MonitorSettings; /display and /clock read them there."""
 
     def setUp(self):
         self.view = DisplayView.objects.create(name='V', slug='v', is_default=True, api_token='tok',
@@ -104,8 +104,6 @@ class GlobalStateApiTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class RegenerateScreenKeyTest(TestCase):
-    """POST /screens/{id}/regenerate-key (Spec §4.5): neuer access_key, Recht setup."""
-
     def setUp(self):
         self.view = DisplayView.objects.create(name='Vertretung', slug='vertretung', kind='substitutions',
                                                webuntis_url='https://example.org/untis')
@@ -165,8 +163,6 @@ class RegenerateScreenKeyTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ScreenAccessKeyVisibilityTest(TestCase):
-    """access_key gibt den Vertretungsplan frei: nur mit signage.setup in Antworten (Review T16)."""
-
     def setUp(self):
         self.screen = Screen.objects.create(name='Halle', slug='halle')
         self.profile = UserProfile.objects.create(keycloak_id='tester')
@@ -209,8 +205,6 @@ class ScreenAccessKeyVisibilityTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class SettingsSecretsTest(TestCase):
-    """Zugangsdaten sind write-only: GET/PUT liefern sie nie aus, nur ob sie gesetzt sind (Ruling R22)."""
-
     def setUp(self):
         self.profile = UserProfile.objects.create(keycloak_id='tester')
         auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
@@ -295,7 +289,7 @@ class SettingsSecretsTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ViewSecretsTest(TestCase):
-    """GET /config: alter Wetter-Schlüssel der Ansicht nie, api_token (ATEM) nur mit signage.setup."""
+    """GET /config: never the old per-view weather key, api_token (ATEM) only with signage.setup."""
 
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', weather_api_key='alt-key',
@@ -345,7 +339,7 @@ class ViewSecretsTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ChangeViewKindTest(TestCase):
-    """PUT /config mit neuem Typ: Einstellungen des alten Typs bleiben, Wechsel-Mitglieder werden geschützt."""
+    """PUT /config with a new kind: settings of the old kind stay, rotation members are protected."""
 
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', kind='departures', page_seconds=33)
@@ -404,8 +398,6 @@ class ChangeViewKindTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ExamDefaultSideTest(TestCase):
-    """Klausur und Vorlage stehen im geteilten Bild standardmäßig rechts (Modell und Spec)."""
-
     def setUp(self):
         auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'admin'})
         auth.start()

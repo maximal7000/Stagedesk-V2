@@ -1,6 +1,3 @@
-"""
-Medien-Umwandlung: PDFs und Bilder werden zu WebP-Seitenbildern (4K) vorbereitet.
-"""
 import io
 import logging
 import threading
@@ -26,7 +23,6 @@ def _orientation(width, height):
 
 
 def _store_page(media_file, index, image):
-    """Schreibt ein PIL-Bild als WebP in den Speicher und gibt die Seitendaten zurück."""
     buf = io.BytesIO()
     image.convert('RGB').save(buf, format='WEBP', quality=WEBP_QUALITY)
     name = default_storage.save(
@@ -39,7 +35,7 @@ def _store_page(media_file, index, image):
 
 
 def _iter_pdf(media_file):
-    """Liefert die PDF-Seiten einzeln als PIL-Bild; Prüfungen vor dem ersten Rendern."""
+    """Yields the PDF pages one by one as PIL images; checks run before the first render."""
     import pypdfium2 as pdfium
 
     pdf = pdfium.PdfDocument(media_file.file.path)
@@ -79,17 +75,13 @@ def _delete_stored(names):
     for name in names:
         try:
             default_storage.delete(name)
-        except Exception:  # Aufräumen darf nie den Ablauf stören
+        except Exception:  # cleanup must never break the flow
             logger.warning('Seitenbild %s konnte nicht gelöscht werden', name)
 
 
 def render_file(media_file):
-    """Erzeugt die Seitenbilder einer Datei und setzt status, page_count und error.
-
-    Seite für Seite: rendern, speichern, freigeben. Die alten Seiten werden erst
-    nach erfolgreichem Austausch (Transaktion) und nach dem Commit aus dem Speicher
-    gelöscht; bei einem Fehler bleiben sie unverändert.
-    """
+    """Page by page: render, store, release. The old pages are deleted from storage only after
+    a successful swap (transaction) and after the commit; on an error they stay unchanged."""
     media_file = MediaFile.objects.get(pk=media_file.pk)
     staged = []
     try:
@@ -108,14 +100,14 @@ def render_file(media_file):
                 status='ready', page_count=len(staged), error='')
             transaction.on_commit(lambda: _delete_stored(old_names))
             push.notify_changed_on_commit()
-    except Exception as exc:  # beschädigte Dateien dürfen nicht in 'processing' hängen
+    except Exception as exc:  # broken files must not get stuck in 'processing'
         logger.warning('Umwandlung von MediaFile %s fehlgeschlagen: %s', media_file.pk, exc)
         _delete_stored([d['image'] for d in staged])
         if isinstance(exc, ValueError):
             message = str(exc)
         else:
             message = 'Datei konnte nicht gelesen werden. Bitte eine gültige Datei hochladen.'
-        # Alte Seiten bleiben; page_count gehört zu ihnen und wird nicht angetastet.
+        # Old pages stay; page_count belongs to them and is left alone.
         MediaFile.objects.filter(pk=media_file.pk).update(status='failed', error=message)
         push.notify_changed_on_commit()
 
@@ -130,6 +122,6 @@ def _render_in_thread(media_file_id):
 
 
 def render_async(media_file_id):
-    """Startet die Umwandlung im Hintergrund (eigene DB-Verbindung im Thread)."""
+    """Background thread with its own DB connection."""
     close_old_connections()
     threading.Thread(target=_render_in_thread, args=(media_file_id,), daemon=True).start()

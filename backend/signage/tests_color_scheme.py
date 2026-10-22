@@ -1,4 +1,3 @@
-"""Aufteilung (Normal/Breit) und Farbschema mit Tageslicht (Spec §3)."""
 from datetime import date, datetime, time, timedelta
 from unittest import mock
 from zoneinfo import ZoneInfo
@@ -113,7 +112,7 @@ class PayloadTest(TestCase):
             self.assertEqual(payload['view']['layout'], 'wide')
             self.assertNotIn('style', payload['view'])
             self.assertEqual((payload['scheme'], payload['screen']['scheme']), ('light', 'light'))
-            # ohne Bildschirm (Vorschau): Einstellung, keine Ausnahme
+            # no screen (preview): the setting, no exception
             preview = display.build_payload(None, view, key_ok=True, now=now, preview=True)
             self.assertEqual((preview['scheme'], preview['screen']), ('dark', None))
             unknown = display.build_payload(None, None, key_ok=False, now=now)

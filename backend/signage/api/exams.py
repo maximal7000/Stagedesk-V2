@@ -1,4 +1,3 @@
-"""Klausuren, Klausur-Vorlagen, Termine (Events) und Hinweise (Ankündigungen)."""
 import re
 
 from django.shortcuts import get_object_or_404
@@ -29,7 +28,6 @@ def _clamp_int(v, lo, hi):
 
 
 def _validate_exam_data(data: dict) -> dict:
-    """Klausur-Daten prüfen: Zeitraum Beginn<Ende, split_percent, Hex-Farbe."""
     start, end = data.get('active_from'), data.get('active_until')
     if start and end and start >= end:
         raise HttpError(422, "Klausur: Ende muss nach dem Beginn liegen")
@@ -41,8 +39,6 @@ def _validate_exam_data(data: dict) -> dict:
         data.pop('color')
     return data
 
-
-# ═══ Admin: Ankündigungen ═════════════════════════════════════════
 
 @router.get("/announcements", response=list[AnnouncementSchema], auth=keycloak_auth)
 def list_announcements(request):
@@ -77,8 +73,6 @@ def delete_announcement(request, id: int):
     push.notify_changed_on_commit()
     return {"success": True}
 
-
-# ═══ Klausuren ════════════════════════════════════════════════════
 
 @router.get("/exams", response=list[ExamSchema], auth=keycloak_auth)
 def list_exams(request):
@@ -124,10 +118,7 @@ def delete_exam(request, id: int):
     return {"success": True}
 
 
-# ═══ Admin: Events (aktivierbare Modi) ═══════════════════════════
-
 def _apply_event_assignments(event, assignments):
-    """Setzt die Bildschirm→Profil-Zuweisungen eines Events neu."""
     event.assignments.all().delete()
     for a in assignments or []:
         d = a if isinstance(a, dict) else a.dict()
@@ -197,8 +188,6 @@ def deactivate_event(request, id: int):
     _log_audit(request, 'Event deaktiviert', event.name)
     return event
 
-
-# ═══ Admin: Klausur-Vorlagen ═════════════════════════════════════
 
 @router.get("/exam-templates", response=list[ExamTemplateSchema], auth=keycloak_auth)
 def list_exam_templates(request):

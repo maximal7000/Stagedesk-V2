@@ -1,7 +1,4 @@
-"""Gemeinsamer Zeitplan pro Bildschirm (Spec §2.2): Einschaltzeiten und Ansichten in einer Liste.
-
-Alle Zeitpunkte sind fest vorgegeben; 2026-10-19 ist ein Montag.
-"""
+"""All times are fixed; 2026-10-19 is a Monday."""
 from datetime import datetime
 from unittest import mock
 
@@ -52,11 +49,11 @@ class RowRulesTest(TestCase):
         self.assertIs(active_row(rows, monday('11:00')), rows[1])
 
     def test_overnight_row(self):
-        rows = [r([4], '22:00', '06:00', None)]  # Freitag 22:00 bis Samstag 06:00
+        rows = [r([4], '22:00', '06:00', None)]  # Friday 22:00 to Saturday 06:00
         self.assertTrue(is_on(rows, timezone.localtime(local(2026, 10, 23, 23))))
         self.assertTrue(is_on(rows, timezone.localtime(local(2026, 10, 24, 5, 59))))
         self.assertFalse(is_on(rows, timezone.localtime(local(2026, 10, 24, 6, 1))))
-        # der Teil nach 0 Uhr zählt zum Folgetag, nicht zum Freitag selbst
+        # the part after 00:00 counts for the next day, not for Friday itself
         self.assertFalse(is_on(rows, timezone.localtime(local(2026, 10, 23, 5))))
         self.assertTrue(row_matches(rows[0], 5, '06:00'))
         self.assertFalse(row_matches(rows[0], 4, '06:00'))
@@ -65,7 +62,7 @@ class RowRulesTest(TestCase):
         rows = [r([0, 1, 2, 3, 4], '07:00', '18:00', None)]
         self.assertFalse(is_on(rows, monday('06:59')))
         self.assertFalse(is_on(rows, monday('18:01')))
-        self.assertFalse(is_on(rows, timezone.localtime(local(2026, 10, 25, 12))))  # Sonntag
+        self.assertFalse(is_on(rows, timezone.localtime(local(2026, 10, 25, 12))))  # Sunday
 
 
 @mock.patch('signage.models.timezone.localtime', return_value=monday('09:00'))
@@ -90,7 +87,7 @@ class ActiveViewFromScheduleTest(TestCase):
         self.morning.save()
         self.assertEqual(self.screen.get_active_view(), self.default)
         self.assertTrue(power.compute_power_state(self.screen, monday('09:00')))
-        self.screen.schedule = [r([0], '07:00', '10:00', 999)]  # Ansicht gibt es gar nicht
+        self.screen.schedule = [r([0], '07:00', '10:00', 999)]  # the view does not exist at all
         self.assertEqual(self.screen.get_active_view(), self.default)
 
     def test_override_and_event_still_win(self, _now):
@@ -148,7 +145,7 @@ class MergeLegacyTest(TestCase):
         self.assertEqual(merge_legacy([], []), [])
 
     def test_merge_legacy_overnight_power_stays_on_same_day(self):
-        # alt: Fr 22:00–06:00 galt am Freitag 00:00–06:00 und 22:00–23:59
+        # old: Fri 22:00-06:00 applied on Friday 00:00-06:00 and 22:00-23:59
         merged = merge_legacy([{'view_id': 3, 'days': [4], 'from': '05:00', 'until': '23:00'}],
                               [{'days': [4], 'from': '22:00', 'until': '06:00'}])
         self.assertEqual(merged, [
@@ -177,7 +174,7 @@ class MergeLegacyTest(TestCase):
         self.assertEqual(split_legacy(rows), (
             [{'view_id': 3, 'days': [0], 'from': '07:00', 'until': '09:00'}],
             [{'days': [0, 1], 'from': '07:00', 'until': '18:00'}]))
-        # ohne Standard-Zeile: die Zeilen selbst sind die Einschaltzeiten
+        # without a default row the rows themselves are the on-times
         self.assertEqual(split_legacy([r([0], '07:00', '09:00', 3)]), (
             [{'view_id': 3, 'days': [0], 'from': '07:00', 'until': '09:00'}],
             [{'days': [0], 'from': '07:00', 'until': '09:00'}]))

@@ -1,6 +1,3 @@
-"""
-Monitor Schemas
-"""
 from typing import Dict, Literal, Optional, List
 from datetime import date, datetime
 from django.utils import timezone
@@ -19,7 +16,7 @@ class MediaFileSchema(Schema):
     status: str = 'ready'
     page_count: int = 0
     error: str = ''
-    # Kachel im Admin: erste Seite (leer, solange keine Seite vorbereitet ist)
+    # Admin tile: first page (empty until a page is prepared)
     first_page_url: str = ''
     orientation: str = ''
 
@@ -29,7 +26,7 @@ class MediaFileSchema(Schema):
 
     @staticmethod
     def _first_page(obj):
-        pages = list(obj.pages.all())   # nutzt prefetch_related('pages')
+        pages = list(obj.pages.all())   # uses prefetch_related('pages')
         return min(pages, key=lambda p: p.index) if pages else None
 
     @staticmethod
@@ -58,7 +55,6 @@ class WebUntisLinkCreateSchema(Schema):
 
 
 class DisplayViewListSchema(Schema):
-    """Kurze Profil-Übersicht für die Liste"""
     id: int
     name: str
     slug: str
@@ -70,7 +66,6 @@ class DisplayViewListSchema(Schema):
 
 
 class DisplayViewSchema(Schema):
-    """Admin: alle Felder eines Profils"""
     id: int
     name: str
     slug: str
@@ -83,7 +78,7 @@ class DisplayViewSchema(Schema):
     show_countdown: bool
     show_weather: bool
     weather_city: str
-    # Alter Wetter-Schlüssel pro Ansicht: write-only (Ruling R22), der globale hat Vorrang
+    # Old per-view weather key: write-only, the global one wins
     weather_api_key: str = ''
     weather_api_key_set: bool = False
     pdf_mode: str = 'cycle'
@@ -188,7 +183,7 @@ class DisplayViewUpdateSchema(Schema):
     qr_code_label: Optional[str] = None
     show_custom_countdown: Optional[bool] = None
     custom_countdown_name: Optional[str] = None
-    # Text statt datetime: validation.parse_countdown_date prüft mit deutscher Meldung (ohne Zone = Ortszeit)
+    # Text instead of datetime: validation.parse_countdown_date checks it with a German message (no zone = local time)
     custom_countdown_date: Optional[str] = None
     show_transit: Optional[bool] = None
     transit_stops: Optional[list] = None
@@ -230,14 +225,14 @@ class DisplayViewUpdateSchema(Schema):
     substitutions_format: Optional[str] = None
     substitutions_custom_format: Optional[str] = None
     substitutions_show_absences: Optional[bool] = None
-    # None heißt hier „wie im WebUntis-Format“ und darf gesetzt werden
+    # None means "as in the WebUntis format" here and may be set
     substitutions_show_exams: Optional[bool] = None
     substitutions_next_day_from: Optional[str] = None
     page_seconds: Optional[int] = None
 
 
 class DisplayViewDraftSchema(DisplayViewUpdateSchema):
-    """Entwurf für die Vorschau: Felder wie beim Speichern, `id` = gespeicherte Ansicht als Basis."""
+    """`id` = saved view used as the base."""
     id: Optional[int] = None
 
 
@@ -247,7 +242,6 @@ class ViewPreviewSchema(Schema):
 
 
 class DisplayViewCreateSchema(Schema):
-    """Neues Profil erstellen"""
     name: str
     slug: str = ''
     kind: str = 'info'
@@ -275,7 +269,6 @@ class AnnouncementCreateSchema(Schema):
 
 
 class UpcomingEventSchema(Schema):
-    """Veranstaltung (Modul veranstaltung) in der Display-Antwort"""
     id: int
     name: str
     ort: str
@@ -351,7 +344,7 @@ class OnAirSchema(Schema):
 
 
 class LegacyEmergencySchema(Schema):
-    """Altes ATEM-Format von POST /notfall."""
+    """Old ATEM format of POST /notfall."""
     aktiv: bool
     text: str = ''
 
@@ -391,7 +384,7 @@ class EmergencyTemplateCreateSchema(Schema):
 
 
 class ScreenSelectionSchema(Schema):
-    """Leer oder fehlend = alle Bildschirme."""
+    """Empty or missing = all screens."""
     screen_ids: Optional[List[int]] = None
 
 
@@ -449,7 +442,6 @@ class ExamDisplaySchema(Schema):
     split_percent: int = 50
 
 
-# ─── Events ──────────────────────────────────────────────────
 class EventAssignmentSchema(Schema):
     screen_id: int
     view_id: int
@@ -494,7 +486,6 @@ class DisplayEventUpdateSchema(Schema):
     assignments: Optional[List[EventAssignmentSchema]] = None
 
 
-# ─── Klausur-Vorlagen ────────────────────────────────────────
 class ExamTemplateSchema(Schema):
     id: int
     name: str
@@ -520,9 +511,8 @@ class ExamTemplateCreateSchema(Schema):
     split_percent: int = 50
 
 
-# ─── Globale Einstellungen ───────────────────────────────────
 class MonitorSettingsSchema(Schema):
-    # Zugangsdaten sind write-only: immer '' plus *_set (Ruling R22)
+    # Credentials are write-only: always '' plus *_set
     weather_api_key: str = ''
     weather_api_key_set: bool = False
     webuntis_server: str = ''
@@ -580,7 +570,7 @@ class MonitorSettingsUpdateSchema(Schema):
     webuntis_school: Optional[str] = None
     webuntis_username: Optional[str] = None
     webuntis_password: Optional[str] = None
-    # Leere Zugangsdaten bleiben unverändert; geleert wird nur über diese Schalter
+    # Empty credentials stay unchanged; clearing only via these switches
     webuntis_password_clear: Optional[bool] = None
     weather_api_key_clear: Optional[bool] = None
     on_air_text: Optional[str] = None
@@ -618,8 +608,8 @@ class DevicePairSchema(Schema):
 
 
 class DeviceSchema(Schema):
-    """Gerät mit Ampel. `id` ist leer bei Bildschirmen mit altem Skript (`legacy`).
-    serial, telemetry.network.ip/mac: nur mit signage.devices, sonst null."""
+    """`id` is empty for screens with the legacy script.
+    serial, telemetry.network.ip/mac: only with signage.devices, otherwise null."""
     id: Optional[int] = None
     screen_id: Optional[int] = None
     serial: Optional[str] = None

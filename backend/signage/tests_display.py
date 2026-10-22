@@ -1,4 +1,3 @@
-"""Display-Vertrag (Spec §4.1) und Vorschau (Spec §4.5)."""
 from datetime import timedelta
 from unittest import mock
 
@@ -38,7 +37,7 @@ SUBSTITUTION_ROW = {'classes': ['7b'], 'group': '', 'periods': '3.–4.', 'subje
 
 
 def fake_load_days(server, school, format_name, *, start, count, overrides, show_absences, deadline):
-    """Monitor-Schnittstelle ohne Netz: `count` Kalendertage ab `start`."""
+    """Monitor endpoint without network: `count` calendar days from `start`."""
     days = [{'date': (start + timedelta(days=i)).isoformat(), 'next_date': None, 'updated_at': None,
              'absent': [], 'affected': {'classes': [], 'teachers': []},
              'messages': [{'subject': '', 'body': 'Heute 3. Stunde Vollversammlung'}],
@@ -184,7 +183,7 @@ class ContractTest(DisplayTestBase):
                          (None, [], 'embed', 'https://example.org/untis'))
         data = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': 'falsch'}).json()
         self.assertEqual(data['view']['data']['days'], [])
-        # Schlüssel eines anderen Bildschirms gilt nicht
+        # Another screen's key does not count
         other = Screen.objects.create(name='Andere', slug='andere')
         data = self.client.get('/api/monitor/display', {'screen': 'halle', 'key': other.access_key}).json()
         self.assertEqual(data['view']['data']['days'], [])
@@ -218,7 +217,7 @@ class ContractTest(DisplayTestBase):
             data = self.client.get('/api/monitor/display', {'screen': 'halle'},
                                    HTTP_AUTHORIZATION='Bearer x').json()
         self.assertEqual(len(data['view']['data']['days']), 2)
-        # ohne Recht: kein Fehler, nur Rückfall
+        # without permission: no error, only the fallback
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'fremd'}):
             r = self.client.get('/api/monitor/display', {'screen': 'halle'}, HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 200)
@@ -330,8 +329,6 @@ class PreviewTest(PreviewTestBase):
         self.assertEqual(DisplayView.objects.count(), count)
 
     def test_preview_ignores_power_and_special_modes(self):
-        """Final-Review 2: die Vorschau zeigt immer den Entwurf, auch wenn der Bildschirm aus ist
-        oder dort gerade Notfall, Klausur oder On-Air läuft."""
         self.grant_setup()
         screen = Screen.objects.create(name='Halle', slug='halle', power_mode='manual_off')
         settings = MonitorSettings.load()
@@ -344,7 +341,7 @@ class PreviewTest(PreviewTestBase):
         settings.emergency_active = True
         settings.save()
         self.assertIsNone(self.client.get('/api/monitor/display', {'preview': token}).json()['mode'])
-        # normaler Abruf bleibt unverändert
+        # a normal fetch stays unchanged
         live = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()
         self.assertEqual(live['mode']['kind'], 'emergency')
 
@@ -363,8 +360,6 @@ class PreviewTest(PreviewTestBase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class PreviewValidationTest(PreviewTestBase):
-    """Die Vorschau prüft den Entwurf wie das Speichern: Fehler sind 422 mit deutscher Meldung, nie 500."""
-
     def setUp(self):
         super().setUp()
         self.grant_setup()
@@ -382,7 +377,7 @@ class PreviewValidationTest(PreviewTestBase):
                              'existiert nicht')
         self.assert_rejected({'view': {'id': rotation.id, 'rotation_items': [{'view_id': rotation.id, 'seconds': 10}]}},
                              'nicht selbst')
-        # gespeicherte Rotation, Entwurf leert die Liste: der gespeicherte Typ zählt
+        # saved rotation, the draft empties the list: the saved kind counts
         self.assert_rejected({'view': {'id': rotation.id, 'rotation_items': []}}, 'mindestens eine Ansicht')
         self.assert_rejected({'view': {'kind': 'rotation', 'rotation_items': [{'view_id': self.saved.id, 'seconds': 'x'}]}},
                              'Sekunden')

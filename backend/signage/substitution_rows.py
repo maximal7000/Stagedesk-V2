@@ -1,4 +1,3 @@
-"""Sortierung und Klassenlisten des Vertretungsplans (reine Funktionen, ohne Django)."""
 import re
 
 GRADE_ORDER = ['5', '6', '7', '8', '9', '10', 'E', 'Q1', 'Q2']

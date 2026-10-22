@@ -1,15 +1,11 @@
-"""
-Vertretungsplan einer Ansicht (Spec §1.1, §1.3): Quellenkette, Ausweichen und Tageslogik.
+"""Order of sources: WebUntis monitor endpoint -> WebUntis account (only with credentials) ->
+embedded page. The chosen source comes first, then only the following ones. One deadline
+(DEADLINE_SECONDS) covers the whole chain.
 
-Reihenfolge der Quellen: WebUntis-Vertretungsplan (Monitor-Schnittstelle) → WebUntis-Konto
-(nur mit Zugangsdaten) → Seite einbetten. Die gewählte Quelle kommt zuerst, danach nur die
-folgenden. Eine Frist (DEADLINE_SECONDS) gilt für die ganze Kette.
+The monitor endpoint is cached per format, start and day count, with a single-flight lock and
+a last good state (24 h). The account query caches in webuntis.py itself.
 
-Die Monitor-Schnittstelle cacht je Format, Start und Tagesanzahl, mit Single-Flight-Sperre und
-letztem guten Stand (24 h). Die Konto-Abfrage cacht in webuntis.py selbst.
-
-Es werden keine Datenzeilen geloggt.
-"""
+No data rows are logged."""
 import logging
 import time
 from datetime import date, timedelta
@@ -30,7 +26,7 @@ FAILED_SECONDS = webuntis.CACHE_SECONDS_UNAVAILABLE
 LOCK_SECONDS = webuntis.LOCK_SECONDS
 LAST_GOOD_SECONDS = webuntis.LAST_GOOD_SECONDS
 DEFAULT_FORMAT = 'students_2'
-# Die Konto-Abfrage kennt kein Format: alle Spalten, Gruppierung nach Klasse.
+# The account query has no format: all columns, grouped by class.
 ACCOUNT_COLUMNS = {'class': True, 'subject': True, 'teacher': True, 'room': True, 'note': True}
 _FAILED = {'failed': True}
 
@@ -47,14 +43,11 @@ def _result(source, *, group_by='class', columns=None, days=(), news=None, updat
 
 
 def empty(source=None) -> dict:
-    """Ergebnis ohne Daten (Seite einbetten oder ohne gültigen Schlüssel)."""
     return _result(source)
 
 
-# ═══ Tageslogik ═══════════════════════════════════════════════════
-
 def _past_cutoff(value, local_now) -> bool:
-    """True ab der Uhrzeit `value` (HH:MM); leer oder ungültig = nie."""
+    """True from time `value` (HH:MM) on; empty or invalid = never."""
     try:
         hour, minute = (int(part) for part in (value or '').split(':'))
     except ValueError:
@@ -84,14 +77,12 @@ def _label(day_iso, today):
 
 
 def _current_days(days, today):
-    """Nur Tage ab heute (ein Tag ohne Datum bleibt stehen)."""
+    """Only days from today (a day without a date stays)."""
     return [d for d in days if not d.get('date') or date.fromisoformat(d['date']) >= today]
 
 
-# ═══ Monitor-Schnittstelle ════════════════════════════════════════
-
 def _exams_suffix(overrides):
-    # Eigene Klausur-Einstellung ändert die Zeilen: eigener Schlüssel.
+    # A custom exam setting changes the rows: own key.
     return f":exams-{'on' if overrides['showExamSupervision'] else 'off'}" if overrides else ''
 
 
@@ -100,16 +91,15 @@ def _monitor_key(format_name, start, count, overrides):
 
 
 def _family_key(format_name, overrides):
-    """Letzter guter Stand je Format, unabhängig von Start und Tagesanzahl."""
+    """Last good state per format, independent of start and day count."""
     return f'{CACHE_PREFIX}monitor:{format_name}' + _exams_suffix(overrides) + ':last_good'
 
 
 def _last_good(key, family_key, start, count):
-    """Letzter guter Stand dieses Schlüssels, sonst der des Formats ab `start`, auf `count` Tage gekürzt.
+    """Last good state of this key, else the format's one from `start`, cut to `count` days.
 
-    Greift, wenn der Schlüssel gerade gewechselt hat (Mitternacht, Wechsel auf den nächsten Schultag,
-    erster Abruf) und der neue noch keinen eigenen Stand hat.
-    """
+    Applies when the key has just changed (midnight, switch to the next school day, first fetch)
+    and the new one has no state yet."""
     stored = cache.get(key + ':last_good')
     if stored:
         return stored
@@ -121,7 +111,7 @@ def _last_good(key, family_key, start, count):
 
 
 def _store_monitor(data, now):
-    """Rohstand für Cache und letzten guten Stand: Abwesenheiten immer dabei."""
+    """Raw state for cache and last good state: absences always included."""
     days = [{'date': d.get('date'), 'absent': d.get('absent') or [],
              'affected': d.get('affected') or _no_affected(), 'messages': d.get('messages') or [],
              'rows': d.get('rows') or []} for d in data.get('days') or []]
@@ -130,7 +120,7 @@ def _store_monitor(data, now):
 
 
 def _present_monitor(stored, view, today):
-    """Gespeicherten Stand für diese Ansicht aufbereiten; None, wenn kein Tag mehr aktuell ist."""
+    """None if no day is current any more."""
     if not stored or stored.get('failed'):
         return None
     days = _current_days(stored['days'], today)
@@ -159,7 +149,7 @@ def _monitor(view, now, today, next_day, count, deadline):
         return (_present_monitor(cached, view, today)
                 or _present_monitor(_last_good(key, family_key, start, count), view, today))
     if not cache.add(key + ':lock', 1, LOCK_SECONDS):
-        # Ein anderer Worker lädt gerade: nicht warten.
+        # Another worker is loading: do not wait.
         return _present_monitor(_last_good(key, family_key, start, count), view, today)
     try:
         try:
@@ -179,13 +169,11 @@ def _monitor(view, now, today, next_day, count, deadline):
         cache.delete(key + ':lock')
 
 
-# ═══ Konto-Abfrage ════════════════════════════════════════════════
-
 def _account(view, now, today, next_day, count, deadline, chosen):
     settings = webuntis._credentials()
     if settings is None:
         return None
-    # Als Ersatzquelle nur mit eingerichteten Zugangsdaten (Spec §1.1).
+    # As a fallback only with configured credentials.
     if chosen != 'account' and not settings.webuntis_username:
         return None
     if time.monotonic() >= deadline:
@@ -201,10 +189,8 @@ def _account(view, now, today, next_day, count, deadline, chosen):
                    fetched_at=result.get('fetched_at'))
 
 
-# ═══ Kette ════════════════════════════════════════════════════════
-
 def load(view, now, *, single_day: bool) -> dict:
-    """Vertretungsplan der Ansicht. `single_day`: nur ein Tag (geteilte Ansicht, Sondermodus)."""
+    """`single_day`: only one day (split view, special mode)."""
     deadline = time.monotonic() + webuntis.DEADLINE_SECONDS
     local_now = timezone.localtime(now)
     today = local_now.date()
@@ -217,6 +203,6 @@ def load(view, now, *, single_day: bool) -> dict:
         elif source == 'account':
             result = _account(view, now, today, next_day, count, deadline, chosen)
         else:
-            result = empty('unavailable')  # Seite einbetten: liefert immer
+            result = empty('unavailable')  # the embedded page always delivers
         if result is not None:
             return {**result, 'fallback': source != chosen}

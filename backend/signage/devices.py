@@ -1,8 +1,4 @@
-"""
-Fachlogik für Geräte-Kopplung und Token-Verwaltung (Spec §3).
-
-pairing_id und Geräte-Token liegen nur als SHA-256-Hash in der Datenbank.
-"""
+"""pairing_id and device tokens are stored only as SHA-256 hashes."""
 import hashlib
 import json
 import logging
@@ -23,8 +19,8 @@ from .models import Device, DeviceCommand, DeviceEvent, MonitorSettings, Pairing
 PAIRING_TTL = timedelta(minutes=15)
 MAX_OPEN_REQUESTS = 10
 MAX_PER_SERIAL = 3
-COMMAND_TTL = timedelta(minutes=5)  # `pending`: so lange wartet ein Befehl auf ein offline Gerät
-SENT_COMMAND_TTL = timedelta(minutes=75)  # `sent`: über dem apt-Limit von 60 Minuten (update_now)
+COMMAND_TTL = timedelta(minutes=5)  # `pending`: how long a command waits for an offline device
+SENT_COMMAND_TTL = timedelta(minutes=75)  # `sent`: above apt's 60 minute limit (update_now)
 EXPIRED_PENDING_TEXT = 'Das Gerät war 5 Minuten nicht verbunden.'
 EXPIRED_SENT_TEXT = 'Keine Rückmeldung vom Gerät.'
 MAX_TELEMETRY_BYTES = 64 * 1024
@@ -32,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 
 class PairingGone(Exception):
-    """Der Token wurde bereits ausgeliefert (HTTP 410)."""
+    """The token was already delivered (HTTP 410)."""
 
 
 class InvalidPairingCode(Exception):
-    """Code unbekannt, abgelaufen oder schon verbraucht."""
+    """Code unknown, expired or already used."""
 
 
 def hash_pairing_id(pairing_id: str) -> str:
@@ -56,13 +52,11 @@ def _new_code(taken: set) -> str:
 
 @transaction.atomic
 def start_pairing(serial: str, model: str):
-    """Legt einen PairingRequest an. Gibt (Request, Klartext-pairing_id) zurück."""
     now = timezone.now()
-    # Bestätigte, noch nicht ausgelieferte Requests bleiben nach Ablauf noch eine Karenzzeit erhalten.
+    # Confirmed but undelivered requests survive expiry for a grace period.
     PairingRequest.objects.filter(expires_at__lte=now, confirmed_device__isnull=True).delete()
     PairingRequest.objects.filter(expires_at__lte=now - PAIRING_TTL).delete()
     open_qs = _open_requests()
-    # Pro Seriennummer höchstens 3 (inklusive des neuen), insgesamt höchstens 10.
     if serial:
         same = list(open_qs.filter(serial=serial).order_by('created_at', 'id'))
         for old in same[:max(0, len(same) - (MAX_PER_SERIAL - 1))]:
@@ -82,7 +76,7 @@ def start_pairing(serial: str, model: str):
 
 
 def poll_pairing(pairing_id: str):
-    """None solange offen; einmalig die Zugangsdaten; danach PairingGone. Unbekannt: LookupError."""
+    """None while open; the credentials once; PairingGone afterwards. Unknown: LookupError."""
     req = PairingRequest.objects.select_related('confirmed_device__screen').filter(
         pairing_id_hash=hash_pairing_id(pairing_id)).first()
     if req is None:
@@ -92,7 +86,7 @@ def poll_pairing(pairing_id: str):
             raise LookupError('expired')
         return None
     with transaction.atomic():
-        # Atomar als ausgeliefert markieren, damit zwei Polls nicht beide den Token bekommen.
+        # Mark delivered atomically so two polls cannot both get the token.
         claimed = PairingRequest.objects.filter(pk=req.pk, token_delivered=False).update(token_delivered=True)
         if not claimed:
             raise PairingGone()
@@ -134,7 +128,7 @@ def unpair(device: Device) -> None:
     with transaction.atomic():
         screen = device.screen
         device.screen = None
-        device.revoked_at = timezone.now()  # der Pi koppelt danach als neues Gerät
+        device.revoked_at = timezone.now()  # the Pi then pairs as a new device
         device.save(update_fields=['screen', 'revoked_at'])
         DeviceEvent.objects.create(device=device, screen=screen, kind='unpaired',
                                    text='Gerät vom Bildschirm gelöst.')
@@ -150,10 +144,7 @@ def revoke_token(device: Device) -> None:
         transaction.on_commit(lambda: push.close_device_sockets(device))
 
 
-# ── Agent-Protokoll (Spec §4.2, §5, §6) ──────────────────────────────
-
 def hello_payload(device: Device) -> dict:
-    """Konfiguration, die der Agent nach dem Verbinden und bei Änderungen bekommt."""
     screen = device.screen
     version, sha256 = agent_package_info()
     return {
@@ -187,8 +178,6 @@ def expire_old_commands(device: Device) -> int:
 
 
 def send_pending_commands(device: Device) -> list:
-    """Abgelaufene Befehle auf `expired` setzen, die übrigen `pending` auf `sent` setzen und als
-    Nachrichten zurückgeben (der Consumer sendet sie)."""
     expire_old_commands(device)
     messages = []
     for command in DeviceCommand.objects.filter(device=device, status='pending').order_by('created_at', 'id'):
@@ -198,7 +187,6 @@ def send_pending_commands(device: Device) -> list:
 
 
 def claim_command(device: Device, command_id: int):
-    """Einen `pending`-Befehl dieses Geräts auf `sent` setzen; Nachricht oder None."""
     command = DeviceCommand.objects.filter(pk=command_id, device=device).first()
     if command is None or command.created_at < timezone.now() - COMMAND_TTL:
         return None
@@ -213,7 +201,6 @@ def finish_command(device: Device, command_id, ok: bool, text: str) -> None:
         status='ok' if ok else 'failed', result=str(text or '')[:2000], finished_at=timezone.now())
     if not changed:
         return
-    # Protokoll-Eintrag des Befehls bekommt das Ergebnis (Spec §5: Person, Zeit, Ergebnis)
     try:
         event = DeviceEvent.objects.filter(device=device, kind='command',
                                            data__command_id=int(command_id)).first()
@@ -234,8 +221,7 @@ COMMAND_LABELS = {
 
 
 def create_command(device: Device, kind: str, user_id: str = '', user_name: str = '') -> DeviceCommand:
-    """Befehl anlegen (Status `pending`) und im Protokoll vermerken. Senden: push.push_device_command
-    nach dem Commit."""
+    """Send with push.push_device_command after the commit."""
     with transaction.atomic():
         command = DeviceCommand.objects.create(
             device=device, kind=kind, created_by_id=(user_id or '')[:64], created_by_name=(user_name or '')[:150])
@@ -246,15 +232,13 @@ def create_command(device: Device, kind: str, user_id: str = '', user_name: str 
     return command
 
 
-# ── Ampel (Spec §7.1) ────────────────────────────────────────────────
-
 ONLINE_WINDOW = timedelta(minutes=2)
 
 
 def device_status(device, screen, settings, now) -> tuple:
-    """(status, Text) für die Ampel. `device` None oder zurückgezogen = kein Gerät; dann zeigt ein
-    Bildschirm mit jungem `cec_status_at` den Rückfall „Altes Skript“. Die Warnungen kommen aus
-    `device.active_warnings` (pflegt die Überwachung)."""
+    """(status, text) for the status light. Without a device (or revoked), a screen with a recent
+    `cec_status_at` falls back to "legacy script". Warnings come from `device.active_warnings`
+    (maintained by the watcher)."""
     from . import power
     if device is None or device.revoked_at is not None:
         if screen is not None and screen.cec_status_at and now - screen.cec_status_at <= ONLINE_WINDOW:
@@ -275,9 +259,8 @@ def device_status(device, screen, settings, now) -> tuple:
 
 
 def update_gate(screen: Screen, now) -> tuple:
-    """Darf der Agent jetzt aktualisieren oder neu starten? Gleiche Regeln wie `display._mode`
-    (Notfall, Klausur mit Zwangsanzeige, On-Air der aktuellen Ansicht) plus ein aktiver Termin
-    (Monitor-Event), der diesem Bildschirm zugewiesen ist."""
+    """May the agent update or restart now? Same rules as `display._mode` (emergency, exam with
+    forced display, on-air of the current view) plus an active event assigned to this screen."""
     cfg = MonitorSettings.load()
     if cfg.emergency_active:
         return False, "Notfall aktiv"
@@ -314,7 +297,7 @@ def record_update_result(device: Device, data: dict) -> None:
 
 
 def record_agent_update(device: Device, event) -> None:
-    """Ereignis `agent_updated` für ein abgeschlossenes Selbst-Update, einmal je from/to/at."""
+    """Event `agent_updated` for a finished self-update, once per from/to/at."""
     if not isinstance(event, dict):
         return
     old, new, at = event.get("from"), event.get("to"), event.get("at")
@@ -329,8 +312,7 @@ def record_agent_update(device: Device, event) -> None:
 
 
 def store_telemetry(device: Device, data: dict) -> None:
-    """Telemetrie speichern; das vom Server gesetzte `last_update` bleibt erhalten.
-    Zu große Nachrichten (über 64 KB JSON) werden verworfen."""
+    """The server-set `last_update` is preserved. Messages over 64 KB of JSON are dropped."""
     if len(json.dumps(data, default=str)) > MAX_TELEMETRY_BYTES:
         logger.warning("Telemetrie von Gerät %s verworfen: über %s Bytes", device.pk, MAX_TELEMETRY_BYTES)
         return
@@ -348,8 +330,6 @@ def store_telemetry(device: Device, data: dict) -> None:
         fields["agent_version"] = version[:20]
     Device.objects.filter(pk=device.pk).update(**fields)
 
-
-# ── Warnungen und Überwachung (Spec §7.2, §7.3) ──────────────────────
 
 EVENT_RETENTION = timedelta(days=90)
 UPDATE_FAILED_LOOKBACK = timedelta(days=1)
@@ -372,7 +352,7 @@ def _aware(value):
 
 
 def compute_warnings(telemetry: dict, settings, now) -> list:
-    """Warnungen `[{code, text}]` aus der Telemetrie. Fehlende Werte (null) erzeugen keine Warnung."""
+    """Missing values (null) produce no warning."""
     network, system = _group(telemetry, 'network'), _group(telemetry, 'system')
     display, updates = _group(telemetry, 'display'), _group(telemetry, 'updates')
     out = []
@@ -398,8 +378,8 @@ def compute_warnings(telemetry: dict, settings, now) -> list:
 
 
 def notification_recipients() -> list:
-    """keycloak_ids aller Nutzer mit effektivem Recht `signage.devices` (Admins zählen über das
-    gecachte Admin-Flag am Profil)."""
+    """keycloak_ids of all users with the effective permission `signage.devices` (admins count via
+    the cached admin flag on the profile)."""
     from users.models import UserProfile
     return [p.keycloak_id for p in UserProfile.objects.all()
             if p.keycloak_id and p.has_permission('signage.devices', p.is_admin_cached)]
@@ -410,8 +390,7 @@ def _link(screen) -> str:
 
 
 def _watch_device(device_id, cfg, now, notify) -> None:
-    """Zustand eines Geräts nachführen. Läuft unter Zeilensperre, damit zwei gleichzeitige Läufe
-    nichts doppelt melden."""
+    """Runs under a row lock so two concurrent runs do not report twice."""
     from . import power
     with transaction.atomic():
         device = Device.objects.select_for_update().select_related('screen').filter(
@@ -431,7 +410,7 @@ def _watch_device(device_id, cfg, now, notify) -> None:
                 notify(f'Bildschirm {screen.name} ist wieder online.')
                 device.offline_notified_at = None
                 changed.add('offline_notified_at')
-            # Warnungen nur aus frischer Telemetrie; offline bleibt der letzte Stand stehen.
+            # Warnings only from fresh telemetry; offline keeps the last state.
             current = compute_warnings(device.last_telemetry, cfg, now)
             known = {w.get('code') for w in device.active_warnings or [] if isinstance(w, dict)}
             for warning in current:
@@ -467,8 +446,7 @@ def _watch_device(device_id, cfg, now, notify) -> None:
 
 
 def watch(now) -> None:
-    """Ampel und Warnungen für alle Geräte nachführen, Übergänge als Ereignisse festhalten und
-    Benachrichtigungen verschicken. Idempotent: der Zustand liegt am Gerät."""
+    """Idempotent: the state lives on the device."""
     cfg = MonitorSettings.load()
     recipients = None
     for device_id in list(Device.objects.filter(revoked_at__isnull=True, screen__isnull=False)
@@ -479,7 +457,7 @@ def watch(now) -> None:
             if not pending:
                 continue
             screen = Device.objects.select_related('screen').get(pk=device_id).screen
-            if screen is None:  # zwischenzeitlich entkoppelt: nichts mehr zu melden
+            if screen is None:  # unpaired in the meantime: nothing to report
                 continue
             if recipients is None:
                 recipients = notification_recipients()

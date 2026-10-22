@@ -1,9 +1,4 @@
-"""
-Monitor API, Geräte-Router: Kopplung per Code, Entkoppeln, Token zurückziehen.
-
-Wird in api/__init__.py per signage_router.add_router("", router) eingebunden.
-Die beiden agent/pair-Routen sind öffentlich (auth=None): der Agent hat vor der Kopplung keinen Token.
-"""
+"""The agent/pair routes are public (auth=None): the agent has no token before pairing."""
 import io
 import secrets
 import uuid
@@ -36,7 +31,7 @@ POWER_COMMANDS = {'power_on', 'power_off'}
 REDACTED_KEYS = {'serial', 'ip', 'mac'}
 
 MAX_FAILED_ATTEMPTS = 5
-ATTEMPT_WINDOW = 60  # Sekunden
+ATTEMPT_WINDOW = 60  # seconds
 
 
 @router.post("/agent/pair/start", auth=None)
@@ -61,7 +56,7 @@ def pair_poll(request, payload: PairPollSchema):
 
 @router.get("/agent/install.sh", auth=None)
 def agent_install_script(request):
-    """Installationsskript mit eingesetzter Server-URL; öffentlich, enthält keine Geheimnisse."""
+    """Install script with the server URL filled in; public, contains no secrets."""
     try:
         text = agent_package.install_script_path().read_text(encoding="utf-8")
     except OSError:
@@ -108,7 +103,6 @@ def _can(request, code: str) -> bool:
 
 
 def _redact(value):
-    """Seriennummer, IP und MAC (auch verschachtelt) auf null setzen."""
     if isinstance(value, dict):
         return {k: (None if k in REDACTED_KEYS else _redact(v)) for k, v in value.items()}
     return value
@@ -145,7 +139,7 @@ def list_devices(request):
     cfg, now = MonitorSettings.load(), timezone.now()
     active = list(Device.objects.filter(revoked_at__isnull=True).select_related('screen'))
     rows = [device_row(d, d.screen, cfg, now, can_see_ids) for d in active]
-    # Altes Skript: Verbindung ohne Token (cec_status_at jung), kein Gerät am Bildschirm
+    # Legacy script: connected without a token (recent cec_status_at), no device on the screen
     screens = Screen.objects.filter(cec_status_at__gte=now - devices.ONLINE_WINDOW).exclude(
         id__in=[d.screen_id for d in active if d.screen_id])
     rows += [_legacy_row(s, cfg, now) for s in screens]
@@ -171,7 +165,7 @@ def pair_device(request, payload: DevicePairSchema):
         try:
             device = devices.confirm_pairing(code, screen)
         except devices.InvalidPairingCode:
-            transaction.set_rollback(True)  # neu angelegten Bildschirm wieder verwerfen
+            transaction.set_rollback(True)  # drop the screen created for this pairing
             cache.add(key, 0, ATTEMPT_WINDOW)
             try:
                 cache.incr(key)
@@ -260,7 +254,7 @@ def upload_screenshot(request, file: UploadedFile = File(...), command_id: int =
         raise HttpError(422, "Der Screenshot ist kein gültiges PNG-Bild.")
     old = device.last_screenshot
     old_name = old.name if old else ''
-    # Zufälliger Name: die Datei liegt unter /media/ und soll nicht erratbar sein.
+    # Random name: the file is served under /media/ and must not be guessable.
     device.last_screenshot.save(f"{device.id}-{secrets.token_hex(12)}.png", ContentFile(data), save=False)
     device.last_screenshot_at = timezone.now()
     device.save(update_fields=['last_screenshot', 'last_screenshot_at'])

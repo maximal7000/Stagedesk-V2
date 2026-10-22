@@ -1,7 +1,5 @@
-"""
-Sonnenauf- und -untergang für Lübeck, offline berechnet (NOAA-Näherung, ohne Bewölkung).
-Sonnenhöhe −0,833° (Refraktion und Sonnenradius). Genauigkeit: wenige Minuten.
-"""
+"""Sunrise and sunset for Lübeck, computed offline (NOAA approximation, ignores clouds).
+Solar altitude -0.833° (refraction and solar radius). Accuracy: a few minutes."""
 import math
 from datetime import date, datetime, timedelta, timezone as dt_timezone
 from zoneinfo import ZoneInfo
@@ -14,7 +12,7 @@ SUN_ALTITUDE = -0.833
 
 
 def _utc_minutes(day: date):
-    """Minuten nach 00:00 UTC für Sonnenaufgang und -untergang (NOAA, Bruchjahr um 12 Uhr)."""
+    """Minutes after 00:00 UTC for sunrise and sunset (NOAA, fractional year at noon)."""
     gamma = 2 * math.pi / 365 * (day.timetuple().tm_yday - 1)
     eqtime = 229.18 * (0.000075 + 0.001868 * math.cos(gamma) - 0.032077 * math.sin(gamma)
                        - 0.014615 * math.cos(2 * gamma) - 0.040849 * math.sin(2 * gamma))
@@ -30,7 +28,7 @@ def _utc_minutes(day: date):
 
 
 def sun_times(day: date) -> tuple[datetime, datetime]:
-    """(Sonnenaufgang, Sonnenuntergang) am Tag `day`, als Ortszeit (settings.TIME_ZONE) mit Zeitzone."""
+    """(sunrise, sunset) on `day` as aware local time (settings.TIME_ZONE)."""
     local = ZoneInfo(settings.TIME_ZONE)
     midnight = datetime(day.year, day.month, day.day, tzinfo=dt_timezone.utc)
     rise, set_ = _utc_minutes(day)

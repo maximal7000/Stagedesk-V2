@@ -1,4 +1,3 @@
-"""Änderungs-Push an die Anzeige (Spec §4.2): DisplayConsumer, push.py und Auslöser."""
 from unittest import mock
 
 from asgiref.sync import async_to_sync, sync_to_async
@@ -56,7 +55,7 @@ class DisplayPushTest(TransactionTestCase):
         async def run():
             comm = await _connect('gibt-es-nicht')
             self.assertTrue(await comm.receive_nothing())
-            await comm.send_to(text_data='{"type":"ping"}')  # eingehende Nachrichten werden ignoriert
+            await comm.send_to(text_data='{"type":"ping"}')  # incoming messages are ignored
             self.assertTrue(await comm.receive_nothing())
             await comm.disconnect()
         async_to_sync(run)()

@@ -1,4 +1,3 @@
-"""Dateien (Upload/Verwaltung) und Papierkorb."""
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -14,8 +13,6 @@ from ..schemas import MediaFileSchema
 
 router = Router(tags=["Monitor"])
 
-
-# ═══ Admin: Dateien (Upload/Manage) ══════════════════════════════
 
 @router.get("/files", response=list[MediaFileSchema], auth=keycloak_auth)
 def list_files(request, kind: str = None):
@@ -72,14 +69,12 @@ def get_file(request, id: int):
 def delete_file(request, id: int):
     _require_perm(request, 'signage.media')
     d = get_object_or_404(MediaFile, id=id)
-    # Soft-Delete → Papierkorb (Datei bleibt für Wiederherstellung erhalten)
+    # Soft delete: the file stays for restore.
     d.deleted_at = timezone.now()
     d.save(update_fields=['deleted_at'])
     push.notify_changed_on_commit()
     return {"success": True}
 
-
-# ═══ Admin: Papierkorb (Soft-Delete) ═════════════════════════════
 
 @router.get("/trash", auth=keycloak_auth)
 def get_trash(request):

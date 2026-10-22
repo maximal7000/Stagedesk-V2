@@ -1,4 +1,4 @@
-"""WebUntis-Monitor-Schnittstelle (Format, Kopf, Zeilen). Keine Netzaufrufe: requests.post wird gepatcht."""
+"""No network calls: requests.post is patched."""
 import json
 import time
 from datetime import date
@@ -155,7 +155,7 @@ class FakeResponse:
 
 
 def route(url_part_responses):
-    """requests.post-Ersatz: liefert je nach URL-Endung (format/data) die nächste Antwort."""
+    """requests.post stand-in: returns the next response by URL suffix (format/data)."""
     calls = []
 
     def fake_post(url, json=None, timeout=None, **kwargs):
@@ -307,7 +307,7 @@ class RecordCommandTests(TestCase):
 
 
 class CheckCommandTest(TestCase):
-    """signage_webuntis_check prüft auch die öffentliche Monitor-Schnittstelle: nur Status und Ursache."""
+    """signage_webuntis_check also checks the public monitor endpoint: only status and cause."""
 
     WEBUNTIS_OK = {'login': True, 'substitutions': True, 'timetable': True, 'news': True,
                    'source': 'substitutions'}

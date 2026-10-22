@@ -1,6 +1,3 @@
-"""
-Monitor / Public Display Models
-"""
 import hashlib
 import secrets
 import uuid
@@ -10,8 +7,8 @@ from django.utils import timezone
 from .screen_schedule import active_row
 
 
-# Upload-Ordner bleiben die bisherigen (Spec-Vorgabe: Upload-Pfade ändern sich nicht),
-# auch nachdem die gespeicherten kind-Werte englisch sind.
+# Upload folders stay the old ones (stored paths must not change),
+# even though the stored kind values are English now.
 _UPLOAD_DIRS = {'image': 'bild', 'background': 'hintergrund'}
 
 
@@ -20,8 +17,6 @@ def monitor_upload_path(instance, filename):
 
 
 class MediaFile(models.Model):
-    """Uploadbare Dateien für das Monitor-Display (Logos, Bilder, PDFs)"""
-
     KIND_CHOICES = [
         ('logo', 'Logo'),
         ('image', 'Slideshow-Bild'),
@@ -36,7 +31,6 @@ class MediaFile(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # ─── Verarbeitung (PDF -> Seitenbilder) ───
     STATUS_CHOICES = [
         ('processing', 'Wird verarbeitet'),
         ('ready', 'Bereit'),
@@ -47,7 +41,7 @@ class MediaFile(models.Model):
     error = models.TextField(blank=True, default='')
 
     class Meta:
-        # Feste Reihenfolge der Arten wie vor der Umbenennung (bild, hintergrund, logo, pdf)
+        # Fixed kind order as before the rename (bild, hintergrund, logo, pdf)
         ordering = [
             models.Case(
                 models.When(kind='image', then=0), models.When(kind='background', then=1),
@@ -63,9 +57,7 @@ class MediaFile(models.Model):
 
 
 class WebUntisLink(models.Model):
-    """Benannter, wiederverwendbarer WebUntis-Link (Bibliothek).
-    Wird von Profilen und Klausuren per FK referenziert, damit man Links
-    einmal benennt und dann überall auswählt statt neu einzutippen."""
+    """Named, reusable WebUntis link, referenced by views and exams via FK."""
     name = models.CharField(max_length=120)
     url = models.URLField(max_length=800)
     note = models.CharField(max_length=300, blank=True)
@@ -81,9 +73,6 @@ class WebUntisLink(models.Model):
 
 
 class DisplayView(models.Model):
-    """Konfiguration für ein Monitor-Profil (Multi-Profil-fähig)"""
-
-    # ─── Profil ──────────────────────────
     name = models.CharField(max_length=100, default='Standard')
     slug = models.SlugField(max_length=50, unique=True)
     is_default = models.BooleanField(default=True)
@@ -92,7 +81,6 @@ class DisplayView(models.Model):
         help_text='[{"days": [0-6], "from": "HH:MM", "until": "HH:MM"}]')
     deleted_at = models.DateTimeField(null=True, blank=True, help_text="Papierkorb: gesetzt = gelöscht")
 
-    # ─── Ansichtsart und Aufteilung ───
     KIND_CHOICES = [
         ('departures', 'Abfahrten'),
         ('substitutions', 'Vertretungsplan'),
@@ -118,7 +106,7 @@ class DisplayView(models.Model):
         help_text='[{"view_id": 3, "seconds": 15}]')
     media_items = models.JSONField(default=list, blank=True)
     media_seconds = models.IntegerField(default=10, help_text="Sekunden pro Medium")
-    # Nur noch für den Rückweg nach 0043; ersetzt durch substitutions_format.
+    # Only for rolling back to 0043; replaced by substitutions_format.
     substitutions_next_day = models.BooleanField(default=True)
     SUBSTITUTIONS_SOURCE_CHOICES = [
         ('monitor', 'WebUntis-Vertretungsplan'),
@@ -137,13 +125,12 @@ class DisplayView(models.Model):
                                             default='students_2')
     substitutions_custom_format = models.CharField(max_length=100, blank=True, default='')
     substitutions_show_absences = models.BooleanField(default=True)
-    # None = wie im WebUntis-Format (showExamSupervision)
+    # None = as in the WebUntis format (showExamSupervision)
     substitutions_show_exams = models.BooleanField(null=True, blank=True, default=None)
-    # Ab dieser Uhrzeit (HH:MM) beginnt die Anzeige mit dem nächsten Schultag; leer = aus
+    # From this time (HH:MM) on the display starts with the next school day; empty = off
     substitutions_next_day_from = models.CharField(max_length=5, blank=True, default='16:00')
     page_seconds = models.IntegerField(default=15, help_text="Sekunden pro Seite")
 
-    # ─── Splitscreen (kind='split') ───
     SPLIT_CONTENT_CHOICES = [
         ('exam',     'Klausur'),
         ('on_air',   'On Air'),
@@ -160,20 +147,17 @@ class DisplayView(models.Model):
     split_left_percent = models.IntegerField(default=50,
         help_text="Breite der linken Seite in Prozent (20–80)")
 
-    # ─── Widget-Toggles ───────────────────
     show_clock = models.BooleanField(default=True)
     show_events = models.BooleanField(default=True)
     show_announcements = models.BooleanField(default=True)
     show_countdown = models.BooleanField(default=True)
 
-    # ─── Wetter ────────────────────────────
     show_weather = models.BooleanField(default=False)
     weather_city = models.CharField(max_length=100, blank=True)
     weather_api_key = models.CharField(max_length=64, blank=True)
     weather_cache = models.JSONField(default=dict, blank=True)
     weather_cache_at = models.DateTimeField(null=True, blank=True)
 
-    # ─── PDF-Darstellung (kind='media') ───
     PDF_MODE_CHOICES = [
         ('cycle', 'Seiten automatisch durchschalten'),
         ('static', 'Feste Seite anzeigen'),
@@ -185,11 +169,10 @@ class DisplayView(models.Model):
         help_text="Seiten-Auswahl, z.B. '1,3,5-7'. Leer = alle.")
     pdf_static_page = models.IntegerField(default=1, help_text="Feste Seite (Modus 'static')")
 
-    # ─── WebUntis ──────────────────────────
     webuntis_url = models.URLField(blank=True)
     webuntis_url_next_day = models.URLField(blank=True,
         help_text="Kompakter Link (nur 1 Tag) — wird im Splitscreen genutzt")
-    # Optionale Referenzen auf die Link-Bibliothek (haben Vorrang vor den URL-Feldern)
+    # Optional references to the link library (take precedence over the URL fields)
     webuntis_link = models.ForeignKey('WebUntisLink', on_delete=models.SET_NULL,
         null=True, blank=True, related_name='as_view_link',
         help_text="Gespeicherter Link (2 Tage) — überschreibt webuntis_url")
@@ -198,17 +181,14 @@ class DisplayView(models.Model):
         help_text="Gespeicherter Link (1 Tag) — überschreibt webuntis_url_next_day")
     webuntis_zoom = models.IntegerField(default=100, help_text="Zoom in Prozent")
 
-    # ─── QR-Code ─────────────────────────────
     show_qr_code = models.BooleanField(default=False)
     qr_code_url = models.URLField(blank=True, help_text="URL für den QR-Code")
     qr_code_label = models.CharField(max_length=100, blank=True)
 
-    # ─── Eigener Countdown ───────────────────
     show_custom_countdown = models.BooleanField(default=False)
     custom_countdown_name = models.CharField(max_length=200, blank=True)
     custom_countdown_date = models.DateTimeField(null=True, blank=True)
 
-    # ─── ÖPNV / Abfahrten ──────────────────
     show_transit = models.BooleanField(default=False)
     transit_stops = models.JSONField(default=list, blank=True,
         help_text='[{"id": "...", "name": "...", "filter_lines": [], "filter_direction": "", "show_bus": true, "show_rail": true, "show_long_distance": true, "walk_minutes": 0}]')
@@ -233,7 +213,6 @@ class DisplayView(models.Model):
     transit_font_size = models.CharField(max_length=10, choices=TRANSIT_FONT_SIZE_CHOICES, default='large', help_text="Schriftgröße für Abfahrtsanzeige")
     transit_columns = models.IntegerField(default=3, help_text="Anzahl Spalten im Layout (1-4)")
 
-    # ─── Streik-Modus ────────────────────
     transit_strike_active = models.BooleanField(default=False, help_text="Streik-Modus aktivieren")
     transit_strike_text = models.CharField(max_length=300, default='', blank=True, help_text="Streik-Banner Text")
     transit_strike_lines = models.JSONField(default=list, blank=True, help_text="Ausgeblendete Linien (z.B. ['Bus 1', 'RE80'])")
@@ -242,7 +221,6 @@ class DisplayView(models.Model):
     transit_cache = models.JSONField(null=True, blank=True)
     transit_cache_at = models.DateTimeField(null=True, blank=True)
 
-    # ─── Störungsmeldungen (Bahn: NAH.SH · Bus: SWL Lübeck · manuell) ───
     transit_disruption_rail = models.BooleanField(default=True, help_text="Zug-Störungen (NAH.SH HAFAS)")
     transit_disruption_bus = models.BooleanField(default=True, help_text="Bus-Störungen (Stadtverkehr Lübeck)")
     transit_disruption_rail_lines = models.JSONField(default=list, blank=True,
@@ -262,12 +240,11 @@ class DisplayView(models.Model):
     transit_disruption_position = models.CharField(max_length=10, choices=TRANSIT_DISRUPTION_POSITION_CHOICES,
         default='bottom', help_text="Störungs-Anzeige: 'bottom' (Streifen) oder 'column' (eigene Spalte)")
 
-    # ─── ON AIR (Verhalten pro Ansicht; Status und Text global in MonitorSettings) ───
+    # On air: behaviour per view; status and text are global in MonitorSettings
     SIDE_CHOICES = [('left', 'Links'), ('right', 'Rechts')]
     on_air_split_side = models.CharField(max_length=6, choices=SIDE_CHOICES, default='right',
         help_text="Auf welcher Seite ON AIR im Splitscreen steht")
 
-    # ─── API ───────────────────────────────
     api_token = models.CharField(max_length=64, unique=True, blank=True,
                                  help_text="Token für externe ON AIR Steuerung")
     updated_at = models.DateTimeField(auto_now=True)
@@ -293,7 +270,6 @@ class DisplayView(models.Model):
 
     @classmethod
     def get(cls, slug=None):
-        """Get active view: by slug, by schedule, or default fallback"""
         if slug:
             try:
                 return cls.objects.get(slug=slug, deleted_at__isnull=True)
@@ -304,7 +280,6 @@ class DisplayView(models.Model):
         weekday = now.weekday()
         time = now.strftime('%H:%M')
 
-        # Alle Profile laden, NICHT-Standard zuerst prüfen (gelöschte ausschließen)
         for view in cls.objects.filter(deleted_at__isnull=True).order_by('is_default', 'sort_order', 'name'):
             schedule = view.schedule
             if not schedule or not isinstance(schedule, list) or len(schedule) == 0:
@@ -332,19 +307,19 @@ class DisplayView(models.Model):
         return obj
 
     def get_webuntis_url(self):
-        """Gespeicherter Link (2 Tage) hat Vorrang, sonst Freitext-URL."""
+        """Saved link (2 days) wins over the free-text URL."""
         if self.webuntis_link and self.webuntis_link.url:
             return self.webuntis_link.url
         return self.webuntis_url
 
     def get_webuntis_url_next_day(self):
-        """Gespeicherter Link (1 Tag) hat Vorrang, sonst Freitext-URL."""
+        """Saved link (1 day) wins over the free-text URL."""
         if self.webuntis_link_next_day and self.webuntis_link_next_day.url:
             return self.webuntis_link_next_day.url
         return self.webuntis_url_next_day
 
     def effective_layout(self):
-        """Aufteilung der Anzeige: 'auto' heißt Normal für Info und Medien, sonst Breit."""
+        """'auto' means normal for info and media, otherwise wide."""
         if self.layout != 'auto':
             return self.layout
         return 'normal' if self.kind in ('info', 'media') else 'wide'
@@ -354,7 +329,7 @@ class DisplayView(models.Model):
 
 
 def validate_rotation_items(items, own_id=None):
-    """Prüft die Einträge einer Rotations-Ansicht. Wirft ValueError mit deutscher Meldung."""
+    """Raises ValueError with a German message."""
     if not isinstance(items, list) or not items:
         raise ValueError('Die Rotation braucht mindestens eine Ansicht.')
     for item in items:
@@ -385,8 +360,6 @@ def default_update_window():
 
 
 class Screen(models.Model):
-    """Ein physischer Monitor-Bildschirm mit eigenem Zeitplan"""
-
     SCALE_CHOICES = [(v, v if v == 'auto' else f'{v} %')
                      for v in ('auto', '75', '90', '100', '110', '125', '150', '175', '200')]
     ORIENTATION_CHOICES = [('landscape', 'Querformat'), ('portrait', 'Hochformat')]
@@ -408,7 +381,7 @@ class Screen(models.Model):
     schedule = models.JSONField(default=list, blank=True,
         help_text='Zeitplan: [{"days": [0-6], "from": "HH:MM", "until": "HH:MM", "view_id": 3 | null}]. '
                   'null = Standard-Ansicht, until < from = über Mitternacht. Leer = immer an.')
-    # Manueller Sofort-Override (Cockpit): zeigt bis zum Zurücksetzen/Ablauf diese Ansicht.
+    # Manual override (cockpit): shows this view until reset or expiry.
     override_view = models.ForeignKey(
         DisplayView, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='as_override_screen',
@@ -420,7 +393,7 @@ class Screen(models.Model):
     reload_requested_at = models.DateTimeField(null=True, blank=True,
         help_text="Wird beim Reload-Knopf gesetzt; das Display lädt sich neu wenn dieser Wert steigt.")
 
-    # Manueller Override: deaktiviert den Zeitplan und erzwingt einen Zustand.
+    # Manual override: disables the schedule and forces a state.
     POWER_MODE_CHOICES = [
         ('auto', 'Automatisch (Zeitplan)'),
         ('manual_on', 'Manuell — Immer An'),
@@ -428,13 +401,11 @@ class Screen(models.Model):
     ]
     power_mode = models.CharField(max_length=20, choices=POWER_MODE_CHOICES, default='auto')
 
-    # CEC-Status vom Pi gemeldet
     cec_status = models.CharField(max_length=20, blank=True, default='',
         help_text="Letzter CEC-Status vom Pi (on/standby/unknown)")
     cec_status_at = models.DateTimeField(null=True, blank=True,
         help_text="Zeitpunkt der letzten CEC-Status-Meldung")
 
-    # ─── Geräte-Agent ───
     POWER_METHOD_CHOICES = [('cec', 'CEC'), ('hdmi', 'HDMI'), ('hybrid', 'Hybrid'), ('ddc', 'DDC')]
     power_method = models.CharField(max_length=10, choices=POWER_METHOD_CHOICES, default='cec')
     power_config = models.JSONField(default=dict, blank=True,
@@ -444,7 +415,6 @@ class Screen(models.Model):
         help_text='{"weekday": 0-6 (0=Montag), "from": "HH:MM", "until": "HH:MM"}')
     daily_reboot = models.BooleanField(default=True)
 
-    # ─── Farbschema: Ausnahme vor der Einstellung für alle ───
     COLOR_SCHEME_CHOICES = [
         ('inherit', 'Wie eingestellt'),
         ('light', 'Immer hell'),
@@ -464,13 +434,13 @@ class Screen(models.Model):
         return f"{self.name} ({self.slug})"
 
     def get_power_state(self, now=None):
-        """Soll der Bildschirm gerade an sein? Regel und Reihenfolge: power.compute_power_state."""
+        """Rule and order: power.compute_power_state."""
         from .power import compute_power_state
         return compute_power_state(self, now or timezone.now())
 
     def get_active_event_view(self):
-        """Profil eines aktiven Events für diesen Bildschirm (hat Vorrang vor Zeitplan).
-        Manuell aktivierte Events (is_active=True) gehen vor Zeitfenster-Events."""
+        """View of an active event for this screen (beats the schedule).
+        Manually activated events (is_active=True) beat time-window events."""
         now = timezone.now()
         assignments = (self.event_assignments
                        .select_related('event', 'view')
@@ -483,8 +453,7 @@ class Screen(models.Model):
         return None
 
     def get_active_view(self):
-        """Aktives Profil bestimmen: Sofort-Override > aktives Event > Zeitplan > Default."""
-        # Manueller Sofort-Override (Cockpit) hat höchste Priorität
+        """Precedence: manual override > active event > schedule > default."""
         if (self.override_view_id and self.override_view and self.override_view.deleted_at is None
                 and (self.override_until is None or self.override_until > timezone.now())):
             return self.override_view
@@ -493,7 +462,7 @@ class Screen(models.Model):
         if event_view and event_view.deleted_at is None:
             return event_view
 
-        # Zeitplan-Zeile: Ansicht der oberen passenden Zeile; Standard-Ansicht oder fehlende Ansicht -> Default
+        # Schedule: view of the first matching row; default view or missing view -> default
         row = active_row(self.schedule, timezone.localtime())
         if row and row.get('view_id'):
             view = DisplayView.objects.filter(id=row['view_id'], deleted_at__isnull=True).first()
@@ -505,7 +474,6 @@ class Screen(models.Model):
         return DisplayView.get()
 
     def get_active_exam(self):
-        """Aktive Klausur für diesen Bildschirm (wenn jetzt eine läuft)."""
         now = timezone.now()
         return (self.exams
                 .filter(active_from__lte=now, active_until__gte=now)
@@ -514,7 +482,7 @@ class Screen(models.Model):
 
 
 class HolidayPeriod(models.Model):
-    """Ferienzeitraum: Bildschirme mit off_during_holidays bleiben darin aus."""
+    """Screens with off_during_holidays stay off during this period."""
     name = models.CharField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField()
@@ -530,7 +498,6 @@ class HolidayPeriod(models.Model):
 
 
 class EmergencyTemplate(models.Model):
-    """Vorlage für eine Notfallmeldung."""
     title = models.CharField(max_length=100)
     text = models.CharField(max_length=300)
     note = models.CharField(max_length=300, blank=True, default='')
@@ -546,7 +513,6 @@ class EmergencyTemplate(models.Model):
 
 
 class MediaPage(models.Model):
-    """Eine gerenderte Seite einer PDF-Datei."""
     file = models.ForeignKey(MediaFile, on_delete=models.CASCADE, related_name='pages')
     index = models.IntegerField()
     image = models.ImageField(upload_to='monitor/pages/')
@@ -565,8 +531,6 @@ class MediaPage(models.Model):
 
 
 class Exam(models.Model):
-    """Hinweis auf laufende Klausur — blockiert ausgewählte Bildschirme in Zeitfenster."""
-
     title = models.CharField(max_length=200, default='Klausur')
     text = models.TextField(blank=True, help_text="Optionaler Zusatztext")
     active_from = models.DateTimeField()
@@ -577,7 +541,6 @@ class Exam(models.Model):
         help_text="Auf welchen Bildschirmen angezeigt"
     )
 
-    # ─── Anzeige während der Klausur ───
     DISPLAY_MODE_CHOICES = [
         ('fullscreen', 'Vollbild (Klausur-Hinweis)'),
         ('split', 'Splitscreen (Klausur + Stundenplan)'),
@@ -609,8 +572,6 @@ class Exam(models.Model):
 
 
 class Announcement(models.Model):
-    """Freitext-Ankündigungen für das Display"""
-
     PRIORITY_CHOICES = [
         ('normal', 'Normal'),
         ('important', 'Wichtig'),
@@ -626,7 +587,6 @@ class Announcement(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # Dringlichkeit: urgent vor important vor normal
         ordering = [
             models.Case(
                 models.When(priority='urgent', then=0), models.When(priority='important', then=1),
@@ -652,9 +612,8 @@ class Announcement(models.Model):
 
 
 class DisplayEvent(models.Model):
-    """Benannter, aktivierbarer Modus. Während er aktiv ist, zeigen die
-    zugewiesenen Bildschirme eine andere Ansicht (Profil); danach kehren sie
-    automatisch zur normalen Auflösung (Zeitplan/Default) zurück."""
+    """Named mode that can be activated. While active, the assigned screens show another view;
+    afterwards they return to their normal resolution (schedule/default)."""
     name = models.CharField(max_length=120)
     description = models.CharField(max_length=300, blank=True)
     color = models.CharField(max_length=7, default='#7c3aed', help_text="Akzentfarbe (Hex)")
@@ -687,7 +646,6 @@ class DisplayEvent(models.Model):
 
 
 class DisplayEventScreen(models.Model):
-    """Zuweisung: welches Profil ein Bildschirm während eines Events zeigt."""
     event = models.ForeignKey(DisplayEvent, on_delete=models.CASCADE, related_name='assignments')
     screen = models.ForeignKey(Screen, on_delete=models.CASCADE, related_name='event_assignments')
     view = models.ForeignKey(DisplayView, on_delete=models.CASCADE, related_name='event_assignments')
@@ -702,7 +660,6 @@ class DisplayEventScreen(models.Model):
 
 
 class ExamTemplate(models.Model):
-    """Selbst erstellbare Vorlage für Klausuren (füllt das Formular vor)."""
     name = models.CharField(max_length=120)
     duration_minutes = models.IntegerField(default=90, help_text="Dauer ab jetzt")
     title = models.CharField(max_length=200, default='Klausur')
@@ -724,14 +681,13 @@ class ExamTemplate(models.Model):
 
 
 class MonitorSettings(models.Model):
-    """Einmalige, globale Zugänge (statt pro Profil): Wetter-Key, WebUntis-Login."""
+    """Global singleton settings instead of per view: weather key, WebUntis login."""
     weather_api_key = models.CharField(max_length=64, blank=True, default='')
     webuntis_server = models.CharField(max_length=200, blank=True, default='')
     webuntis_school = models.CharField(max_length=200, blank=True, default='')
     webuntis_username = models.CharField(max_length=200, blank=True, default='')
     webuntis_password = models.CharField(max_length=200, blank=True, default='')
 
-    # ─── ON AIR (global) ───
     ON_AIR_ANIMATION_CHOICES = [('still', 'Still'), ('pulse', 'Pulsieren'), ('blink', 'Blinken')]
     on_air_active = models.BooleanField(default=False)
     on_air_since = models.DateTimeField(null=True, blank=True)
@@ -739,13 +695,11 @@ class MonitorSettings(models.Model):
     on_air_animation = models.CharField(max_length=10, choices=ON_AIR_ANIMATION_CHOICES, default='pulse')
     on_air_show_clock = models.BooleanField(default=True)
 
-    # ─── Notfall (global) ───
     emergency_active = models.BooleanField(default=False)
     emergency_text = models.CharField(max_length=300, blank=True, default='')
     emergency_note = models.CharField(max_length=300, blank=True, default='')
     emergency_since = models.DateTimeField(null=True, blank=True)
 
-    # ─── WebUntis-Status ───
     WEBUNTIS_SOURCE_CHOICES = [
         ('substitutions', 'Vertretungen'),
         ('timetable', 'Stundenplan'),
@@ -755,7 +709,6 @@ class MonitorSettings(models.Model):
     webuntis_source = models.CharField(max_length=20, choices=WEBUNTIS_SOURCE_CHOICES, blank=True, default='')
     webuntis_checked_at = models.DateTimeField(null=True, blank=True)
 
-    # ─── Geräte-Überwachung ───
     device_offline_minutes = models.PositiveIntegerField(default=10)
     warn_temperature_c = models.IntegerField(default=80)
     warn_disk_percent = models.IntegerField(default=90)
@@ -763,7 +716,6 @@ class MonitorSettings(models.Model):
     warn_reboot_days = models.PositiveIntegerField(default=7)
     require_device_token = models.BooleanField(default=False)
 
-    # ─── Farbschema (alle Bildschirme) ───
     COLOR_SCHEME_CHOICES = [
         ('light', 'Hell'),
         ('dark', 'Dunkel'),
@@ -788,7 +740,6 @@ class MonitorSettings(models.Model):
 
 
 class DisplayViewVersion(models.Model):
-    """Snapshot einer Ansicht-Konfiguration für Rollback."""
     view = models.ForeignKey(DisplayView, on_delete=models.CASCADE, related_name='versions')
     data = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -805,7 +756,7 @@ def _hash_secret(raw):
 
 
 class Device(models.Model):
-    """Ein Raspberry Pi mit Stagedesk-Agent; gehört zu höchstens einem Bildschirm."""
+    """A Raspberry Pi running the Stagedesk agent; belongs to at most one screen."""
     screen = models.OneToOneField(Screen, on_delete=models.SET_NULL, null=True, blank=True,
                                   related_name='device')
     token_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
@@ -829,7 +780,7 @@ class Device(models.Model):
         return f"Device {self.serial or self.pk}"
 
     def issue_token(self):
-        """Neuen Token erzeugen, nur den Hash speichern, Klartext einmal zurückgeben."""
+        """Stores only the hash and returns the plaintext once."""
         raw = secrets.token_urlsafe(32)
         self.token_hash = _hash_secret(raw)
         self.token_created_at = timezone.now()

@@ -1,7 +1,5 @@
-"""Das Agent-Paket, das der Server an die Geräte ausliefert (Spec §6, §9).
-
-Das Paket ist ein deterministisches tar.gz aus agent/stagedesk_agent, agent/systemd, agent/kiosk und
-agent/VERSION. Es wird je Version einmal gebaut und im Prozess gehalten."""
+"""Agent package served to devices: a deterministic tar.gz of agent/stagedesk_agent,
+agent/systemd, agent/kiosk and agent/VERSION, built once per version and kept in the process."""
 import gzip
 import hashlib
 import io
@@ -34,7 +32,6 @@ def install_script_path() -> Path:
 
 
 def _files(root: Path):
-    """(Name im Paket, Quelldatei), sortiert; ohne tests/, __pycache__, .pyc und .env."""
     found = {}
     if (root / 'VERSION').is_file():
         found['VERSION'] = root / 'VERSION'
@@ -54,7 +51,7 @@ def _files(root: Path):
 
 def _build(root: Path) -> bytes:
     raw = io.BytesIO()
-    # mtime=0 und kein Dateiname im gzip-Kopf: gleiche Eingabe, gleiche Bytes.
+    # mtime=0 and no file name in the gzip header: same input, same bytes.
     with gzip.GzipFile(filename='', mode='wb', fileobj=raw, mtime=0) as gz:
         with tarfile.open(fileobj=gz, mode='w', format=tarfile.USTAR_FORMAT) as tar:
             for name, path in _files(root):
@@ -84,7 +81,6 @@ def clear_cache() -> None:
 
 
 def agent_package_info() -> tuple:
-    """(Version aus agent/VERSION, SHA-256 des Pakets); ohne Paket ("0.0.0", "")."""
     version = package_version()
     if not (agent_dir() / 'stagedesk_agent').is_dir():
         return ('0.0.0', '')

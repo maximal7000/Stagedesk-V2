@@ -1,4 +1,3 @@
-"""Anzeige-Endpunkte: /display (Vertrag für Bildschirme und vplan-Vorschau) und /clock."""
 import secrets
 
 from django.utils import timezone
@@ -13,11 +12,8 @@ from ..permissions import _require_perm
 router = Router(tags=["Monitor"])
 
 
-# ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
-
 def _display_key_ok(request, screen, key):
-    """Vertretungsdaten nur mit Schlüssel des Bildschirms oder angemeldet mit signage.view (Spec §4.1).
-    Ein ungültiger Login führt nie zu 401: /display bleibt öffentlich."""
+    """An invalid login never yields 401: /display stays public."""
     if screen and key and secrets.compare_digest(key.encode(), screen.access_key.encode()):
         return True
     if not request.headers.get('Authorization', '').startswith('Bearer '):
@@ -37,8 +33,7 @@ def _display_key_ok(request, screen, key):
 def get_display_data(request, view: str = None, screen: str = None,
                      profil: str = None, bildschirm: str = None,
                      key: str = None, preview: str = None):
-    """Öffentlicher Endpunkt: Display-Vertrag (display_payload.build_payload).
-    Die alten Query-Namen `profil` und `bildschirm` gelten weiter (Kiosk-URLs)."""
+    """The old query names `profil` and `bildschirm` still work (kiosk URLs)."""
     now = timezone.now()
     if preview:
         entry = display_payload.load_preview(preview)
@@ -63,9 +58,7 @@ def get_display_data(request, view: str = None, screen: str = None,
 
 @router.get("/clock")
 def get_clock_data(request):
-    """Schlanker öffentlicher Endpunkt für externe Uhr-/Status-Displays:
-    ON-AIR-Status + nächste Veranstaltungen. Kein Login nötig.
-    Die Antwortform bleibt für externe Aufrufer unverändert."""
+    """For external clock/status displays; the response shape stays unchanged for them."""
     now = timezone.now()
     settings = MonitorSettings.load()
 

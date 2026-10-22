@@ -1,4 +1,3 @@
-"""Medien-Umwandlung (Spec §4.4): PDF und Bild zu WebP-Seiten."""
 import io
 import shutil
 import tempfile
@@ -129,7 +128,7 @@ class RenderFileTest(MediaTestBase):
         self.assertEqual([p.id for p in f.pages.all()], [p.id for p in old])
         for name in old_names:
             self.assertTrue(default_storage.exists(name))
-        # Teilweise geschriebene neue Dateien sind weg
+        # Partially written new files are gone
         stored = {n for n in default_storage.listdir('monitor/pages')[1]}
         self.assertEqual(stored, {n.split('/')[-1] for n in old_names})
 
@@ -205,8 +204,6 @@ class GetFileTest(MediaTestBase):
 
 
 class ListFilesTest(MediaTestBase):
-    """GET /files liefert Status, Seitenzahl, Fehler sowie Ausrichtung und Bild der ersten Seite (Kacheln)."""
-
     def test_list_has_status_and_first_page(self):
         ready = self.make('pdf', make_pdf([(595, 842), (842, 595)]), 'pdf')
         media.render_file(ready)

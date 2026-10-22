@@ -1,10 +1,5 @@
-"""
-Display-Vertrag (Spec §4.1): baut die Antwort von GET /api/signage/display.
-
-build_payload() ist die einzige Stelle, die die Form der Antwort festlegt.
-Die Datenquellen (Wetter, ÖPNV, Störungen) cachen ihre Ergebnisse an der Ansicht;
-eine Vorschau-Ansicht (Entwurf) schreibt nie in die Datenbank.
-"""
+"""build_payload() is the only place that defines the response shape. The data sources (weather,
+transit, disruptions) cache on the view; a preview (draft) view never writes to the database."""
 import json
 import logging
 import re
@@ -25,7 +20,7 @@ DEFAULT_MAX_DEPARTURES = 10
 PREVIEW_CACHE_PREFIX = 'signage:preview:'
 PREVIEW_SECONDS = 600
 _PREVIEW_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{32}$')
-# Felder, die im Entwurf ausdrücklich geleert werden dürfen
+# Fields a draft may explicitly clear
 _NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date',
                           'substitutions_show_exams'}
 
@@ -35,7 +30,7 @@ def _iso(value):
 
 
 def _store_cache(view, fields):
-    """Cache-Felder der Ansicht speichern; Entwürfe der Vorschau bleiben unberührt."""
+    """Preview drafts are never written."""
     if getattr(view, '_preview', False) or view.pk is None:
         return
     view.save(update_fields=fields + ['updated_at'])
@@ -47,16 +42,12 @@ def _wants_transit(view):
     return view.kind == 'split' and 'departures' in (view.split_left, view.split_right)
 
 
-# ═══ Datenquellen ═════════════════════════════════════════════════
-
 def _fetch_weather(view):
-    """Wetter von OpenWeatherMap holen und cachen (15 Min)"""
     settings = MonitorSettings.load()
-    api_key = settings.weather_api_key or view.weather_api_key   # global hat Vorrang
+    api_key = settings.weather_api_key or view.weather_api_key   # the global key wins
     if not view.show_weather or not view.weather_city or not api_key:
         return None
 
-    # Cache noch gültig?
     if view.weather_cache and view.weather_cache_at:
         age = (timezone.now() - view.weather_cache_at).total_seconds()
         if age < 900:
@@ -90,16 +81,14 @@ def _fetch_weather(view):
 
 
 def _fetch_transit(view):
-    """ÖPNV-Abfahrten holen und cachen (1 Min, bei Fehler 1 Min Pause)"""
     if not _wants_transit(view):
         return None
     if not view.transit_stops:
         return None
 
-    # Cache noch gültig? (1 Minute, bei Fehler auch 1 Min Pause)
     if view.transit_cache_at:
         age = (timezone.now() - view.transit_cache_at).total_seconds()
-        # Auch bei leerem Cache: min. 60s warten (verhindert API-Spam bei Fehlern)
+        # Even with an empty cache wait at least 60 s (no API spam on errors)
         if age < 60:
             return view.transit_cache
 
@@ -123,20 +112,17 @@ def _fetch_transit(view):
         return result
     except Exception as e:
         logger.warning(f"ÖPNV-Fehler: {e}")
-        # Auch bei Fehler Timestamp setzen → nächster Retry frühestens in 60s
+        # Set the timestamp on errors too: next retry in 60 s at the earliest
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache_at'])
         return view.transit_cache or None
 
 
 def _fetch_disruptions(view):
-    """Störungen/Baumaßnahmen (Bahn: NAH.SH · Bus: SWL · manuell), gecacht 5 Min."""
     if not _wants_transit(view):
         return []
-    # Nur wenn mind. eine Quelle aktiv ist
     if not (view.transit_disruption_rail or view.transit_disruption_bus or (view.transit_disruption_manual or [])):
         return []
-    # Cache 5 Min (Störungen ändern sich langsam)
     if view.transit_disruption_cache_at:
         age = (timezone.now() - view.transit_disruption_cache_at).total_seconds()
         if age < 300:
@@ -155,12 +141,11 @@ def _fetch_disruptions(view):
     except Exception as e:
         all_sources_ok = False
         logger.warning(f"Störungs-Fehler: {e}")
-    # Manuelle Meldungen voranstellen
     for m in (view.transit_disruption_manual or []):
         if isinstance(m, dict) and (m.get('title') or m.get('text')):
             result.insert(0, {
-                # Hash-Eingabe bleibt bei der alten Quellkennung 'manuell', damit ausgeblendete
-                # Meldungen (transit_disruption_hidden) ausgeblendet bleiben (Spec §5.4).
+                # Hash input keeps the old source key 'manuell' so hidden messages
+                # (transit_disruption_hidden) stay hidden.
                 'id': transit.disruption_id('manuell', m.get('title'), m.get('text')),
                 'source': 'manual', 'kind': 'disruption',
                 'title': m.get('title') or 'Hinweis', 'text': m.get('text') or '',
@@ -168,9 +153,8 @@ def _fetch_disruptions(view):
                 'all_lines': False, 'image': m.get('image') or '', 'stops': [], 'suggestion': '',
                 'highlighted': bool(m.get('highlighted')),
             })
-    # Ausblend-Liste auto-bereinigen: nur IDs behalten, die noch existieren.
-    # Nur wenn jede aktive Quelle Daten geliefert hat; ein Ausfall (fehlender Token,
-    # Netzwerkfehler) darf keine Ausblendungen dauerhaft löschen.
+    # Prune the hidden list only when every active source delivered data; an outage
+    # (missing token, network error) must not drop hidden entries for good.
     if all_sources_ok:
         current_ids = {s.get('id') for s in result}
         hidden = [h for h in (view.transit_disruption_hidden or []) if h in current_ids]
@@ -186,8 +170,6 @@ def _fetch_disruptions(view):
     return result
 
 
-# ═══ Daten je Ansichtstyp ═════════════════════════════════════════
-
 def _max_departures(stop):
     value = stop.get('max_departures', DEFAULT_MAX_DEPARTURES) if isinstance(stop, dict) else None
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
@@ -200,7 +182,7 @@ def _departures_data(view):
     stations = []
     for station in _fetch_transit(view) or []:
         limit = _max_departures(stops.get(station.get('station_id'), {}))
-        # Kopie: der Cache an der Ansicht bleibt unverändert
+        # Copy: the cache on the view stays unchanged
         entry = dict(station)
         entry['departures'] = list(station.get('departures') or [])[:limit]
         entry['max_departures'] = limit
@@ -211,10 +193,9 @@ def _departures_data(view):
 
 
 def _substitutions_data(view, key_ok, now, compact=False, single_day=False):
-    """Vertretungen nur mit gültigem Schlüssel (Spec §4.1); sonst nur die eingebettete Seite.
+    """Substitutions only with a valid key; otherwise only the embedded page.
 
-    `mode` 'embed': die Anzeige bettet `embed_url` ein (gewählt, Ausweichen oder ohne Schlüssel).
-    """
+    `mode` 'embed': the display embeds `embed_url` (chosen, fallback or no key)."""
     full, next_day = view.get_webuntis_url(), view.get_webuntis_url_next_day()
     embed_url = (next_day or full) if compact else (full or next_day)
     result = substitutions.load(view, now, single_day=single_day) if key_ok else substitutions.empty()
@@ -241,7 +222,7 @@ def _split_data(view, key_ok, now):
 
 
 def parse_page_selection(text, count):
-    """'1,3,5-7' → [1, 3, 5, 6, 7] (1-basiert), geklammert auf 1..count, ohne Doppelte."""
+    """'1,3,5-7' -> [1, 3, 5, 6, 7] (1-based), clamped to 1..count, no duplicates."""
     out = []
     for part in (text or '').split(','):
         part = part.strip()
@@ -260,7 +241,6 @@ def parse_page_selection(text, count):
 
 
 def _pdf_page_numbers(view, count, per_screen):
-    """Seitenauswahl wie bisher im Frontend (PdfFullscreen): static, selection, cycle."""
     if view.pdf_mode == 'static':
         start = min(max(1, view.pdf_static_page or 1), count)
         return list(range(start, min(start + per_screen, count + 1)))
@@ -278,7 +258,7 @@ def _media_data(view):
         media_file = files.get(file_id)
         if media_file is None:
             continue
-        # Ein fehlgeschlagenes Neu-Rendern behält die alten Seiten (Ruling R10).
+        # A failed re-render keeps the old pages.
         file_pages = list(media_file.pages.all())
         if not file_pages:
             continue
@@ -291,10 +271,9 @@ def _media_data(view):
 
 
 def _upcoming_events(now):
-    """Veranstaltungen: nächste 7 Tage + aktuell laufende"""
     from veranstaltung.models import Veranstaltung
     upcoming = Veranstaltung.objects.filter(
-        status='geplant',  # abgesagte Veranstaltungen nicht zeigen
+        status='geplant',
         datum_bis__gte=now,
         datum_von__lte=now + timezone.timedelta(days=7),
     ).order_by('datum_von')[:10]
@@ -313,7 +292,7 @@ def _upcoming_events(now):
 def _info_data(view, now):
     announcements = []
     if view.show_announcements:
-        # Reihenfolge nach Priorität (Meta.ordering von Announcement)
+        # Ordered by priority via Announcement.Meta.ordering
         for a in Announcement.objects.filter(is_active=True):
             if (a.active_from and now < a.active_from) or (a.active_until and now > a.active_until):
                 continue
@@ -364,7 +343,7 @@ def _view_data(view, key_ok, now, single_day):
 
 
 def _view_object(view, key_ok, now, single_day=False):
-    """`single_day`: der Sondermodus teilt den Bildschirm, der Vertretungsplan zeigt einen Tag."""
+    """`single_day`: the special mode splits the screen, the substitution plan shows one day."""
     qr = None
     if view.show_qr_code and view.qr_code_url:
         qr = {'url': view.qr_code_url, 'label': view.qr_code_label}
@@ -380,15 +359,13 @@ def _view_object(view, key_ok, now, single_day=False):
     }
 
 
-# ═══ Sondermodus ══════════════════════════════════════════════════
-
 def _mode(screen, view, settings):
-    """Vorrang Notfall > Klausur > On-Air (Spec §2)."""
+    """Precedence: emergency > exam > on-air."""
     if settings.emergency_active:
         return {'kind': 'emergency', 'text': settings.emergency_text, 'note': settings.emergency_note,
                 'since': _iso(settings.emergency_since)}
     exam = screen.get_active_exam() if screen else None
-    # display_mode 'standard' erzwingt nichts: die Ansicht bleibt sichtbar.
+    # display_mode 'standard' forces nothing: the view stays visible.
     if exam and exam.display_mode in ('fullscreen', 'split'):
         return {'kind': 'exam', 'display': exam.display_mode, 'side': exam.split_side,
                 'title': exam.title, 'text': exam.text,
@@ -409,11 +386,10 @@ def _screen_object(screen, now, settings):
 
 
 def build_payload(screen, view, *, key_ok, now, preview=False):
-    """Antwort von GET /display. `screen=None, view=None` steht für einen unbekannten Bildschirm.
+    """`screen=None, view=None` stands for an unknown screen.
 
-    `preview=True`: der Entwurf ist immer zu sehen, unabhängig vom Strom des Bildschirms und von
-    Notfall, Klausur oder On-Air.
-    """
+    `preview=True`: the draft always shows, regardless of the screen's power and of emergency,
+    exam or on-air."""
     settings = MonitorSettings.load()
     screen_data = _screen_object(screen, now, settings) if screen else None
     if screen_data and preview:
@@ -424,17 +400,15 @@ def build_payload(screen, view, *, key_ok, now, preview=False):
         'generated_at': now.isoformat(),
         'reload_requested_at': _iso(screen.reload_requested_at) if screen else None,
         'screen': screen_data,
-        # ohne Bildschirm (Vorschau, unbekannter Bildschirm): die Einstellung ohne Ausnahme
+        # no screen (preview, unknown screen): the setting without exception
         'scheme': screen_data['scheme'] if screen_data else color_scheme.resolve(None, settings, now),
         'mode': mode,
         'view': _view_object(view, key_ok, now, single_day) if view else None,
     }
 
 
-# ═══ Vorschau ═════════════════════════════════════════════════════
-
 def store_preview(draft: dict, screen_id=None) -> str:
-    """Entwurf 10 Minuten im Cache ablegen; der Token ist die Berechtigung (Spec §4.5)."""
+    """Keeps the draft in the cache for 10 minutes; the token is the authorization."""
     token = secrets.token_urlsafe(24)[:32]
     cache.set(PREVIEW_CACHE_PREFIX + token, {'view': draft, 'screen_id': screen_id}, PREVIEW_SECONDS)
     return token
@@ -447,7 +421,7 @@ def load_preview(token):
 
 
 def draft_view(draft: dict) -> DisplayView:
-    """Ungespeicherte Ansicht aus einem Entwurf. Basis ist die gespeicherte Ansicht (`id`) oder eine neue."""
+    """Unsaved view from a draft, based on the saved view (`id`) or a new one."""
     draft = dict(draft)
     view_id = draft.pop('id', None)
     view = None
@@ -460,7 +434,7 @@ def draft_view(draft: dict) -> DisplayView:
             continue
         setattr(view, key, value)
     if any(key.startswith('transit_') for key in draft):
-        # geänderte Haltestellen oder Filter: nicht den Cache der gespeicherten Ansicht zeigen
+        # changed stops or filters: do not show the saved view's cache
         view.transit_cache_at = None
         view.transit_disruption_cache_at = None
     view._preview = True

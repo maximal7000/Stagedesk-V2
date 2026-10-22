@@ -1,4 +1,3 @@
-"""Sortierung und Klassenlisten des Vertretungsplans."""
 import json
 from pathlib import Path
 

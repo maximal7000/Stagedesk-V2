@@ -10,17 +10,12 @@ from .nahsh import _fetch_departures_nahsh
 logger = logging.getLogger('signage.transit')
 
 
-# ═══ Abfahrten holen ═════════════════════════════════════════════
-
 def fetch_departures(stops, duration=60, max_per_stop=20,
                      show_bus=True, show_rail=True, show_long_distance=True,
                      use_db=True, use_nahsh=True, show_via=False,
                      strike_lines=None, strike_types=None):
-    """
-    Abfahrten für mehrere Stationen parallel holen.
-    Versucht DB REST, fällt auf NAH.SH HAFAS zurück.
-    Per-Station Produktfilter: station.show_bus/show_rail/show_long_distance überschreibt globale Defaults.
-    """
+    """DB first, NAH.SH HAFAS as fallback. Per-stop product filters
+    (show_bus/show_rail/show_long_distance) override the global defaults."""
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
     def _fetch_single(station):
@@ -31,7 +26,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         filter_via = station.get("filter_via", "").strip()
         walk_minutes = station.get("walk_minutes", 0)
 
-        # Per-Station API-Auswahl: "db", "nahsh", "both" (default: globale Einstellung)
+        # Per-stop API choice: "db", "nahsh", "both" (default: global setting)
         station_source = station.get("source", "")
         if station_source == "db":
             st_use_db, st_use_nahsh = True, False
@@ -40,10 +35,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         elif station_source == "both":
             st_use_db, st_use_nahsh = True, True
         else:
-            # Fallback auf globale Einstellung
             st_use_db, st_use_nahsh = use_db, use_nahsh
 
-        # Per-Station Produktfilter (fallback auf globale Werte)
         st_bus = station.get("show_bus", show_bus)
         st_rail = station.get("show_rail", show_rail)
         st_long_distance = station.get("show_long_distance", show_long_distance)
@@ -54,16 +47,14 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         raw_departures = None
         error = None
 
-        # Stopovers laden wenn Via-Filter gesetzt ODER via-Anzeige aktiv
         need_stopovers = bool(filter_via) or show_via
 
-        # ─── Versuch 1: DB REST API ───
         if st_use_db:
             try:
                 raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
             except Exception as e:
                 logger.warning(f"DB Abfahrten Fehler ({station_name}): {e}")
-                # Stopovers können 500er verursachen — Fallback ohne Stopovers
+                # Stopovers can cause 500s: retry without them
                 if need_stopovers:
                     try:
                         raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2, stopovers=False)
@@ -71,7 +62,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                     except Exception as e2:
                         logger.warning(f"DB Fallback Fehler ({station_name}): {e2}")
 
-        # ─── S-Bahn aus meta-EVA dazuholen (opt-in) — große Bahnhöfe trennen S-Bahn ab ───
+        # S-Bahn from the meta EVA (opt-in): large stations split the S-Bahn off
         if st_use_db and station.get("show_suburban", False) and raw_departures:
             try:
                 sbahn_deps = _fetch_sbahn_meta(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
@@ -81,8 +72,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                     if k not in existing:
                         existing.add(k)
                         raw_departures.append(d)
-                # Zeitlich vorsortieren, sonst schneidet der max-Cap (vor dem finalen Sort) die
-                # hinten angehängten S-Bahnen wieder ab.
+                # Pre-sort by time, otherwise the max cap (before the final sort) cuts off
+                # the appended S-Bahn rows again.
                 _n = datetime.now(TIMEZONE)
                 _nm = _n.hour * 60 + _n.minute
 
@@ -97,7 +88,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             except Exception as e:
                 logger.warning(f"S-Bahn-Merge Fehler ({station_name}): {e}")
 
-        # ─── Versuch 2: NAH.SH HAFAS (Fallback oder wenn beide aktiv) ───
         if st_use_nahsh and (raw_departures is None or len(raw_departures) == 0 or station_source == "both"):
             try:
                 nahsh_deps = _fetch_departures_nahsh(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
@@ -117,7 +107,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         if raw_departures is None:
             raw_departures = []
 
-        # ─── Zusatz-Station (kombiniert) ───
         extra_id = station.get("extra_id", "").strip()
         extra_source = station.get("extra_source", "")
         if extra_id:
@@ -128,7 +117,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                         extra_deps = _fetch_departures_db(extra_id, duration, max_per_stop * 2, stopovers=False)
                     except Exception:
                         pass
-                # NAH.SH: bei explizitem Wunsch, bei „beide", oder wenn DB nichts lieferte
+                # NAH.SH: when asked for explicitly, for "both", or when DB returned nothing
                 if extra_source in ("nahsh", "both") or (extra_source == "" and not extra_deps):
                     try:
                         nahsh_z = _fetch_departures_nahsh(extra_id, duration, max_per_stop * 2, stopovers=False)
@@ -143,7 +132,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                     except Exception:
                         pass
                 if extra_deps:
-                    # Produktfilter für Zusatz-Station
                     z_bus = station.get("extra_show_bus", True)
                     z_rail = station.get("extra_show_rail", True)
                     z_long_distance = station.get("extra_show_long_distance", True)
@@ -177,10 +165,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             except Exception as e:
                 logger.warning(f"Zusatz-Station Fehler ({station_name}): {e}")
 
-        # Aktuelle Zeit für Wegzeit-Filter
         now = datetime.now(TIMEZONE)
 
-        # ─── Filter anwenden ───
         departures = []
         for dep in raw_departures:
             kind = dep.get("kind", "")
@@ -198,19 +184,18 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                 continue
             if kind in ("nationalExpress", "national") and not st_long_distance:
                 continue
-            # ─── Streik-Filter: Linien und Typen ausblenden ───
             if strike_lines:
                 line_lower = dep["line"].strip().lower()
                 if any(sl.strip().lower() == line_lower for sl in strike_lines):
                     continue
-                # Auch Nummer-Match: "Bus 1" matched "1"
+                # Number match too: "Bus 1" matches "1"
                 line_parts = line_lower.split()
                 line_number = line_parts[-1] if line_parts else line_lower
                 if any(sl.strip().lower() == line_number for sl in strike_lines):
                     continue
             if strike_types:
                 kind_icon = dep.get("kind_icon", "")
-                # "re" blendet auch "rb" aus, "ice" auch "ic"
+                # "re" also hides "rb", "ice" also "ic"
                 if kind_icon in strike_types:
                     continue
                 if 're' in strike_types and kind_icon == 'rb':
@@ -236,8 +221,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                 if not any(via_lower in h.lower() for h in via_stops):
                     continue
 
-            # Wegzeit-Filter: Abfahrten die innerhalb der Wegzeit liegen ausfiltern
-            # Nutze departure_actual (echte Abfahrtszeit) falls vorhanden
+            # Walking-time filter: drop departures within the walking time,
+            # using departure_actual (real departure time) when present
             walk_ref_time = dep.get("departure_actual") or dep.get("departure")
             if walk_minutes > 0 and walk_ref_time:
                 try:
@@ -246,8 +231,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                         tzinfo=TIMEZONE
                     )
                     diff_min = (dep_time - now).total_seconds() / 60
-                    # Nur Tageswechsel korrigieren wenn > 12h in der Vergangenheit
-                    # (Abfahrt kurz nach Mitternacht, jetzt kurz vor Mitternacht)
+                    # Only correct the day rollover when > 12 h in the past
+                    # (departure just after midnight, now just before midnight)
                     if diff_min < -720:
                         diff_min += 1440
                     if diff_min < walk_minutes:
@@ -255,7 +240,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                 except (ValueError, TypeError):
                     pass
 
-            # Stopovers behalten wenn via-Anzeige aktiv, sonst entfernen
             if show_via:
                 cleaned = dict(dep)
             else:
@@ -264,8 +248,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             if len(departures) >= max_per_stop:
                 break
 
-        # Tagesbewusst sortieren: "00:03" gehört ans Ende, nicht an den Anfang.
-        # (String-Sortierung stellte Züge nach Mitternacht fälschlich nach oben.)
+        # Day-aware sort: "00:03" goes last, not first
+        # (plain string sort put trains after midnight on top).
         _now = datetime.now(ZoneInfo("Europe/Berlin"))
         _now_min = _now.hour * 60 + _now.minute
 
@@ -274,7 +258,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             try:
                 h, m = map(int, str(t).split(":")[:2])
                 diff = h * 60 + m - _now_min
-                if diff < -120:  # bereits nach Mitternacht → nächster Tag
+                if diff < -120:  # already after midnight -> next day
                     diff += 1440
                 return diff
             except (ValueError, TypeError):
@@ -293,7 +277,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             entry["error"] = error
         return entry
 
-    # Stationen parallel abfragen
     valid = [s for s in stops if s.get("id")]
     if not valid:
         return []

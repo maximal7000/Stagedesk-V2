@@ -1,15 +1,13 @@
-"""
-WebUntis-Vertretungsplan (Spec §4.3).
+"""WebUntis substitution plan via an account (JSON-RPC).
 
-Quelle wird automatisch erkannt: getSubstitutions, bei fehlendem Recht (-8509) der
-Stundenplan aller Klassen, sonst "unavailable". Die gesamte Antwort liegt 5 Minuten
-im Django-Cache (Fehler 60 s), gemeinsam für alle Bildschirme.
+The source is detected automatically: getSubstitutions, on missing permission (-8509) the
+timetables of all classes, otherwise "unavailable". The whole response stays 5 minutes in the
+Django cache (errors 60 s), shared by all screens.
 
-Ein Abruf hat ein Gesamtbudget (DEADLINE_SECONDS). Nur ein Worker lädt gleichzeitig
-(Sperre im Cache); scheitert ein Abruf, gilt das letzte gute Ergebnis weiter.
+A fetch has an overall budget (DEADLINE_SECONDS). Only one worker loads at a time (lock in
+the cache); if a fetch fails, the last good result stays valid.
 
-Es werden keine Zugangsdaten und keine Datenzeilen geloggt.
-"""
+No credentials and no data rows are logged."""
 import http.cookiejar
 import json
 import logging
@@ -38,26 +36,26 @@ CACHE_SECONDS_UNAVAILABLE = 60
 LOCK_SECONDS = 30
 LAST_GOOD_SECONDS = 24 * 3600
 FAILURES_SECONDS = 3600
-# Erst nach so vielen Fehlschlägen in Folge wird "unavailable" gespeichert.
+# Store "unavailable" only after this many failures in a row.
 FAILURES_BEFORE_UNAVAILABLE = 2
 TIMEOUT = 5
 DEADLINE_SECONDS = 20
 NO_RIGHT_CODE = -8509
-# Höchstens so weit nach dem nächsten Schultag suchen (lange Ferien).
+# Search at most this far for the next school day (long holidays).
 MAX_LOOKAHEAD_DAYS = 60
 
 KIND_BY_TYPE = {'cancel': 'cancelled', 'subst': 'substitution', 'rmchg': 'room_change', 'rmlk': 'room_change'}
 WEEKDAY_LABELS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
 KIND_LABELS = {'substitution': 'Vertretung', 'cancelled': 'Entfall', 'room_change': 'Raumänderung',
                'other': 'Änderung'}
-# Zeilenform beider Quellen (Konto-Abfrage hier, öffentlicher Monitor in untis_monitor.py).
+# Row shape of both sources (account query here, public monitor in untis_monitor.py).
 ROW_KEYS = ['classes', 'group', 'periods', 'subject', 'teacher', 'teacher_old', 'room', 'room_old',
             'kind', 'kind_label', 'note']
 ELEMENT_FIELDS = ['id', 'name']
 
 
 class WebUntisError(Exception):
-    """Fehlerantwort des JSON-RPC-Servers (code wie -8509)."""
+    """Error response of the JSON-RPC server (code such as -8509)."""
 
     def __init__(self, code, message=''):
         super().__init__(f'{code}: {message}')
@@ -66,19 +64,17 @@ class WebUntisError(Exception):
 
 
 class DeadlineExceeded(Exception):
-    """Das Gesamtbudget eines Abrufs ist aufgebraucht."""
+    """The overall budget of a fetch is used up."""
 
 
 class WebUntisSession:
-    """Verbindung zu einem WebUntis-Server (Basis-URL plus Cookie-Jar)."""
-
     def __init__(self, server, school):
         self.server = server
         self.school = school
         self.rpc_url = f"https://{server}/WebUntis/jsonrpc.do?school={urllib.parse.quote(school)}"
         self.cookie_jar = http.cookiejar.CookieJar()
         self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.cookie_jar))
-        # time.monotonic()-Zeitpunkt, ab dem keine Aufrufe mehr starten (None = ohne Budget).
+        # time.monotonic() point after which no calls start (None = no budget).
         self.deadline = None
 
     def _timeout(self):
@@ -87,7 +83,7 @@ class WebUntisSession:
         return max(0.1, min(TIMEOUT, self.deadline - time.monotonic()))
 
     def call(self, method, params=None):
-        """JSON-RPC-Aufruf. Gibt `result` zurück, wirft WebUntisError bei Fehlerantwort."""
+        """Returns `result`; raises WebUntisError on an error response."""
         body = json.dumps({"id": "1", "method": method, "params": params or {}, "jsonrpc": "2.0"}).encode()
         req = urllib.request.Request(self.rpc_url, data=body, headers={"Content-Type": "application/json"})
         with self.opener.open(req, timeout=self._timeout()) as resp:
@@ -98,15 +94,12 @@ class WebUntisSession:
         return payload.get('result')
 
     def get_json(self, path, query=None):
-        """GET auf einen REST-Pfad des Servers mit den Cookies aus dem Login."""
         url = f"https://{self.server}{path}"
         if query:
             url += '?' + urllib.parse.urlencode(query)
         with self.opener.open(urllib.request.Request(url), timeout=self._timeout()) as resp:
             return json.loads(resp.read())
 
-
-# ═══ Sitzung ══════════════════════════════════════════════════════
 
 def _credentials():
     from .models import MonitorSettings
@@ -122,13 +115,12 @@ def _check_deadline(session):
 
 
 def _rpc(session, method, params=None):
-    """RPC mit Budgetprüfung vor dem Aufruf."""
     _check_deadline(session)
     return session.call(method, params)
 
 
 def _login(settings, deadline=None):
-    """Anmelden (ohne Benutzername anonym mit '#anonymous#'). Wirft bei Fehler."""
+    """Without a user name logs in anonymously as '#anonymous#'. Raises on error."""
     session = WebUntisSession(settings.webuntis_server, settings.webuntis_school)
     session.deadline = deadline
     _rpc(session, "authenticate", {
@@ -142,12 +134,12 @@ def _login(settings, deadline=None):
 def _logout(session):
     try:
         session.call("logout")
-    except Exception:  # Abmelden ist nur Höflichkeit
+    except Exception:  # logging out is only courtesy
         pass
 
 
 def _save_source(source, now=None):
-    """Speichert eine getroffene Entscheidung, immer mit neuem webuntis_checked_at."""
+    """Always with a new webuntis_checked_at."""
     from .models import MonitorSettings
     MonitorSettings.load()
     MonitorSettings.objects.filter(pk=1).update(webuntis_source=source,
@@ -163,8 +155,6 @@ def _log_failure(step, exc):
     logger.warning('WebUntis %s fehlgeschlagen: %s %s', step, type(exc).__name__, code)
 
 
-# ═══ Schultage ════════════════════════════════════════════════════
-
 def _is_school_day(day: date, holidays=()) -> bool:
     if day.weekday() >= 5 or is_holiday(day):
         return False
@@ -172,7 +162,7 @@ def _is_school_day(day: date, holidays=()) -> bool:
 
 
 def next_school_day(day: date, holidays=()) -> date:
-    """Nächster Schultag nach `day`: überspringt Wochenenden, HolidayPeriod und `holidays`."""
+    """Next school day after `day`: skips weekends, HolidayPeriod and `holidays`."""
     candidate = day
     for _ in range(MAX_LOOKAHEAD_DAYS):
         candidate += timedelta(days=1)
@@ -182,7 +172,7 @@ def next_school_day(day: date, holidays=()) -> date:
 
 
 def school_days(start: date, count: int = 2, holidays=()) -> list:
-    """`count` Schultage ab `start` (ist `start` kein Schultag, ab dem nächsten)."""
+    """`count` school days from `start` (if `start` is not a school day, from the next one)."""
     days = []
     day = start if _is_school_day(start, holidays) else next_school_day(start, holidays)
     for _ in range(max(count, 0)):
@@ -192,7 +182,7 @@ def school_days(start: date, count: int = 2, holidays=()) -> list:
 
 
 def _untis_holidays(session) -> list:
-    """WebUntis-Ferien als [(erster, letzter Tag)], 24 h gecacht. Fehler fallen still weg."""
+    """WebUntis holidays as [(first, last day)], cached 24 h. Errors are dropped silently."""
     cached = cache.get(HOLIDAYS_KEY)
     if cached is not None:
         return cached
@@ -224,10 +214,8 @@ def _parse_untis_date(value) -> date:
     return datetime.strptime(str(value), '%Y%m%d').date()
 
 
-# ═══ Stunden ══════════════════════════════════════════════════════
-
 def _timegrid(session):
-    """{Untis-Wochentag (1 = Sonntag): [(name, start, end)]}. Leer, wenn nicht abrufbar."""
+    """{Untis weekday (1 = Sunday): [(name, start, end)]}. Empty if unavailable."""
     try:
         grid = _rpc(session, "getTimegridUnits") or []
     except DeadlineExceeded:
@@ -241,7 +229,7 @@ def _timegrid(session):
 
 
 def _period_label(timegrid, day: date, start: int, end: int) -> str:
-    """Stunden, die [start, end) überlappen, als "5" bzw. "5-6"; ohne Raster die Uhrzeit."""
+    """Periods overlapping [start, end) as "5" or "5-6"; without a grid the clock time."""
     units = timegrid.get(day.isoweekday() % 7 + 1) or next(iter(timegrid.values()), [])
     names = [name for name, u_start, u_end in units if u_start < end and u_end > start]
     if not names:
@@ -258,10 +246,9 @@ def _period_range(label):
 
 
 def merge_periods(rows):
-    """Fasst aufeinanderfolgende Stunden mit sonst gleichen Angaben zu "5-6" zusammen.
+    """Merges consecutive periods with otherwise equal fields into "5-6".
 
-    Erwartet Zeilen sortiert nach Klasse und Stunde.
-    """
+    Expects rows sorted by class and period."""
     merged = []
     for row in rows:
         prev = merged[-1] if merged else None
@@ -277,8 +264,6 @@ def merge_periods(rows):
 def _natural_key(text):
     return [int(part) if part.isdigit() else part.lower() for part in re.split(r'(\d+)', text or '')]
 
-
-# ═══ Abruf ════════════════════════════════════════════════════════
 
 def _names(elements, key='name'):
     return ', '.join(e[key] for e in elements or [] if e.get(key))
@@ -300,7 +285,7 @@ def _call_substitutions(session, start: date, end: date):
 
 
 def _fetch_substitution_entries(session, start: date, end: date):
-    """[(date, start, end, row)] aus getSubstitutions."""
+    """[(date, start, end, row)] from getSubstitutions."""
     result = _call_substitutions(session, start, end)
     entries = []
     for item in result or []:
@@ -337,7 +322,7 @@ def _timetable_kind(lesson):
 
 
 def _fetch_timetable_entries(session, start: date, end: date):
-    """[(date, start, end, row)] aus den Stundenplänen aller Klassen (nur Abweichungen)."""
+    """[(date, start, end, row)] from the timetables of all classes (changes only)."""
     lessons = {}
     class_names = {}
     for klasse in _rpc(session, "getKlassen") or []:
@@ -364,7 +349,7 @@ def _news_json(session, day: date):
 
 
 def _fetch_news(session, day: date):
-    """Nachricht zum Tag als Text oder None. Fehler fallen still weg."""
+    """Message of the day as text or None. Errors are dropped silently."""
     try:
         data = _news_json(session, day)
         messages = (data.get('data') or {}).get('messagesOfDay') or []
@@ -432,7 +417,7 @@ def _load(settings, now: datetime, start: date | None = None, count: int = 2, de
 
 
 def _relevant_last_good(today: date, suffix=''):
-    """Letztes gutes Ergebnis, nur mit Tagen ab heute und neu beschriftet; sonst None."""
+    """Last good result, only with days from today and relabelled; otherwise None."""
     last_good = cache.get(LAST_GOOD_KEY + suffix)
     if not last_good:
         return None
@@ -444,7 +429,7 @@ def _relevant_last_good(today: date, suffix=''):
 
 
 def _record_failure(now: datetime):
-    """Zählt Fehlschläge in Folge; erst ab dem zweiten wird "unavailable" gespeichert."""
+    """Counts failures in a row; "unavailable" is stored only from the second one on."""
     failures = (cache.get(FAILURES_KEY) or 0) + 1
     cache.set(FAILURES_KEY, failures, FAILURES_SECONDS)
     if failures >= FAILURES_BEFORE_UNAVAILABLE:
@@ -453,12 +438,11 @@ def _record_failure(now: datetime):
 
 def get_substitutions(now: datetime, *, start: date | None = None, count: int = 2,
                       deadline: float | None = None) -> dict:
-    """Vertretungen für `count` Schultage ab `start` (Standard: heute, 2), gecacht (Spec §4.3).
+    """Substitutions for `count` school days from `start` (default: today, 2), cached.
 
-    `deadline` (time.monotonic()-Zeitpunkt) begrenzt den Abruf, wenn er Teil einer längeren Kette
-    ist; ohne Angabe gilt DEADLINE_SECONDS ab jetzt.
-    """
-    # Nur abweichende Abfragen bekommen eigene Cache-Schlüssel.
+    `deadline` (a time.monotonic() point) limits the fetch when it is part of a longer chain;
+    without it DEADLINE_SECONDS from now applies."""
+    # Only non-default queries get their own cache keys.
     if start is None and count == 2:
         suffix = ''
     else:
@@ -474,7 +458,7 @@ def get_substitutions(now: datetime, *, start: date | None = None, count: int = 
         cache.set(CACHE_KEY + suffix, result, CACHE_SECONDS_UNAVAILABLE)
         return result
     if not cache.add(LOCK_KEY, 1, LOCK_SECONDS):
-        # Ein anderer Worker lädt gerade: nicht warten.
+        # Another worker is loading: do not wait.
         return _relevant_last_good(today, suffix) or _unavailable()
     try:
         try:
@@ -494,8 +478,6 @@ def get_substitutions(now: datetime, *, start: date | None = None, count: int = 
         cache.delete(LOCK_KEY)
 
 
-# ═══ Diagnose ═════════════════════════════════════════════════════
-
 def _probe_timetable(session, day: date) -> bool:
     try:
         classes = _rpc(session, "getKlassen") or []
@@ -508,7 +490,7 @@ def _probe_timetable(session, day: date) -> bool:
 
 
 def detect_source(session) -> str:
-    """'substitutions', bei fehlendem Recht 'timetable' (sofern abrufbar), sonst 'unavailable'."""
+    """'substitutions', on missing permission 'timetable' (if available), otherwise 'unavailable'."""
     today = timezone.localdate()
     try:
         _call_substitutions(session, today, today)
@@ -524,7 +506,7 @@ def detect_source(session) -> str:
 
 
 def check() -> dict:
-    """Prüft jeden Weg einzeln. Gibt nur Ja/Nein und die Quelle zurück, keine Daten."""
+    """Checks each path separately. Only yes/no and the source, no data."""
     now = timezone.now()
     today = timezone.localtime(now).date()
     result = {'login': False, 'substitutions': False, 'timetable': False, 'news': False,

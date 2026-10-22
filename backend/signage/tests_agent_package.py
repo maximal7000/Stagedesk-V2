@@ -1,4 +1,3 @@
-"""Auslieferung des Geräte-Agents: Paket, Prüfsumme, öffentliche Routen (Spec §6, §9)."""
 import hashlib
 import io
 import tarfile

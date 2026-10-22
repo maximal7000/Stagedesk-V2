@@ -1,21 +1,17 @@
-"""Shared constants and helpers of the transit package."""
 import json
 import urllib.request
 from zoneinfo import ZoneInfo
 
 
-# Explizite Zeitzone — Server kann in UTC laufen, Abfahrten sind aber CET/CEST
+# Explicit zone: the server may run in UTC, departures are CET/CEST
 TIMEZONE = ZoneInfo("Europe/Berlin")
 
 
-REQUEST_TIMEOUT = 5       # Sekunden pro API-Request
-REQUEST_TIMEOUT_SEARCH = 4  # Schnellerer Timeout für Stationssuche
+REQUEST_TIMEOUT = 5       # seconds per API request
+REQUEST_TIMEOUT_SEARCH = 4
 
-
-# ═══ Hilfsfunktionen ══════════════════════════════════════════════
 
 def _get_json(url, timeout=None):
-    """HTTP GET und JSON parsen"""
     req = urllib.request.Request(url, headers={
         "Accept": "application/json",
         "User-Agent": "Stagedesk-Monitor/1.0",
@@ -25,7 +21,6 @@ def _get_json(url, timeout=None):
 
 
 def _product_icon(product):
-    """Produkttyp zu Icon-Bezeichnung"""
     mapping = {
         "nationalExpress": "ice",
         "national": "ic",

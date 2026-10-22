@@ -1,8 +1,3 @@
-"""
-Monitor API, zweiter Router: Ferien, Notfall-Vorlagen, "bis Tagesende aus", WebUntis-Test, Vorschau.
-
-Wird in api/__init__.py per signage_router.add_router("", router) eingebunden.
-"""
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from ninja import Router
@@ -22,8 +17,6 @@ from ..schemas import (
 
 router = Router()
 
-
-# ═══ Ferienzeiträume ══════════════════════════════════════════════
 
 def _validate_holiday(payload: HolidayPeriodCreateSchema):
     if payload.end_date < payload.start_date:
@@ -68,8 +61,6 @@ def delete_holiday(request, id: int):
     return {"success": True}
 
 
-# ═══ Notfall-Vorlagen ═════════════════════════════════════════════
-
 @router.get("/emergency-templates", response=list[EmergencyTemplateSchema], auth=keycloak_auth)
 def list_emergency_templates(request):
     _require_perm(request, 'signage.emergency')
@@ -99,8 +90,6 @@ def delete_emergency_template(request, id: int):
     return {"success": True}
 
 
-# ═══ "Bis Tagesende aus" ══════════════════════════════════════════
-
 def _selected_screens(payload: ScreenSelectionSchema):
     screens = Screen.objects.all()
     if payload.screen_ids:
@@ -110,7 +99,7 @@ def _selected_screens(payload: ScreenSelectionSchema):
 
 @router.post("/screens/power-off-today", auth=keycloak_auth)
 def power_off_today(request, payload: ScreenSelectionSchema):
-    """Setzt off_until auf den Beginn des nächsten Zeitplan-Fensters (Spec §3.2)."""
+    """Sets off_until to the start of the next schedule window."""
     _require_perm(request, 'signage.power')
     now = timezone.now()
     result = {}
@@ -125,7 +114,6 @@ def power_off_today(request, payload: ScreenSelectionSchema):
 
 @router.delete("/screens/power-off-today", auth=keycloak_auth)
 def undo_power_off_today(request, payload: ScreenSelectionSchema):
-    """Rückgängig: off_until wieder leeren."""
     _require_perm(request, 'signage.power')
     _selected_screens(payload).update(off_until=None, updated_at=timezone.now())
     push.notify_changed_on_commit()
@@ -133,22 +121,18 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
     return {"success": True}
 
 
-# ═══ WebUntis ═════════════════════════════════════════════════════
-
 @router.post("/webuntis/check", auth=keycloak_auth)
 def check_webuntis(request):
-    """Quelle neu erkennen (Spec §4.3). Nur Ja/Nein pro Weg und die Quelle, keine Daten."""
+    """Re-detect the source. Only yes/no per path and the source, no data."""
     _require_perm(request, 'signage.setup')
     result = webuntis.check()
     push.notify_changed_on_commit()
     return result
 
 
-# ═══ Vorschau ═════════════════════════════════════════════════════
-
 @router.post("/views/preview", auth=keycloak_auth)
 def create_view_preview(request, payload: ViewPreviewSchema):
-    """Entwurf ablegen (nichts wird gespeichert) → Token für GET /display?preview= (Spec §4.5)."""
+    """Stores the draft (nothing is saved) and returns a token for GET /display?preview=."""
     _require_perm(request, 'signage.setup')
     draft = payload.view.dict(exclude_unset=True)
     saved = None
@@ -156,7 +140,7 @@ def create_view_preview(request, payload: ViewPreviewSchema):
         saved = DisplayView.objects.filter(id=draft['id'], deleted_at__isnull=True).first()
         if saved is None:
             raise HttpError(404, "Die Ansicht existiert nicht mehr. Bitte die Seite neu laden.")
-    # Wie beim Speichern prüfen: ein fehlerhafter Entwurf ist 422 mit Meldung, nicht 500 beim Anzeigen
+    # Validate as on save: a broken draft is a 422 with a message, not a 500 when displayed
     draft = validate_view_data(draft, own_id=saved.id if saved else None,
                                current_kind=saved.kind if saved else None)
     if payload.screen_id and not Screen.objects.filter(id=payload.screen_id).exists():

@@ -1,4 +1,4 @@
-"""Migrationstests. Die Tests verwenden bewusst die damaligen (historischen) Namen."""
+"""The tests deliberately use the historical names of that time."""
 import importlib
 
 from django.db import connection
@@ -8,16 +8,15 @@ from django.test import TestCase, TransactionTestCase
 
 
 class MigrationTestCase(TransactionTestCase):
-    """Basisklasse: migriert auf `migrate_from`, ruft `setUpBeforeMigration(apps)` mit den
-    historischen Apps auf, migriert auf `migrate_to` und stellt `self.apps` bereit.
+    """Migrates to `migrate_from`, calls `setUpBeforeMigration(apps)` with the historical apps,
+    migrates to `migrate_to` and provides `self.apps`.
 
-    `migrate_from` / `migrate_to` sind (app_label, migrationsname). Nach dem Test wird auf
-    den neuesten Stand zurückmigriert, damit andere Tests unberührt bleiben.
-    """
+    `migrate_from` / `migrate_to` are (app_label, migration name). After the test it migrates back
+    to the latest state so other tests are unaffected."""
     migrate_from = None
     migrate_to = None
-    # PostgreSQL gibt Spalten-Slots gelöschter Spalten nicht frei; viele Hin- und Rückwege über
-    # die alten Breit-Tabellen sprengen die Grenze von 1600 Spalten. Dort nur ausgewählte Tests.
+    # PostgreSQL does not free the column slots of dropped columns; many round trips over the
+    # old wide tables exceed the limit of 1600 columns. Only selected tests run there.
     run_on_postgresql = False
 
     def setUp(self):
@@ -98,7 +97,7 @@ class RemoveDroppedFeaturesKeepsGlobalTest(MigrationTestCase):
 
 
 class EnglishNamesMigrationTest(MigrationTestCase):
-    """0036 benennt Models und Felder um; die Daten (inkl. FK und M2M) bleiben erhalten."""
+    """0036 renames models and fields; the data (incl. FK and M2M) is kept."""
     migrate_from = ('signage', '0035_remove_dropped_features')
     migrate_to = ('signage', '0036_english_names')
 
@@ -155,7 +154,7 @@ class EnglishNamesMigrationTest(MigrationTestCase):
         bs = apps.get_model('signage', 'Bildschirm').objects.get(slug='glocke')
         self.assertEqual((bs.default_profil.slug, [k.titel for k in bs.klausuren.all()]), ('v', ['Mathe']))
         if connection.vendor == 'sqlite':
-            # Fremdschlüssel zeigen wieder auf die alten Tabellen
+            # Foreign keys point at the old tables again
             with connection.cursor() as cursor:
                 cursor.execute('PRAGMA foreign_key_check')
                 self.assertEqual(cursor.fetchall(), [])
@@ -168,7 +167,7 @@ NEW_STOP = {'id': '8000237', 'name': 'Lübeck Hbf', 'walk_minutes': 14, 'source'
 
 
 class EnglishValuesMigrationTest(MigrationTestCase):
-    """0037 übersetzt gespeicherte Auswahlwerte, JSON-Schlüssel und Versionen (Spec §5.3/§5.4)."""
+    """0037 translates stored choice values, JSON keys and versions."""
     migrate_from = ('signage', '0036_english_names')
     migrate_to = ('signage', '0037_english_values')
 
@@ -275,7 +274,7 @@ class EnglishValuesMigrationTest(MigrationTestCase):
 
 
 class EnglishValuesToleratesBadDataTest(MigrationTestCase):
-    """Review Focus 1: fehlende Schlüssel, None und Nicht-Dicts brechen die Migration nicht."""
+    """Missing keys, None and non-dicts do not break the migration."""
     migrate_from = ('signage', '0036_english_names')
     migrate_to = ('signage', '0037_english_values')
 
@@ -283,7 +282,7 @@ class EnglishValuesToleratesBadDataTest(MigrationTestCase):
         View = apps.get_model('signage', 'DisplayView')
         View.objects.create(name='A', slug='a', api_token='t-a', transit_stops=[{'id': '1'}, None, 'x'],
                             schedule=[])
-        json_null = Value(None, JSONField())  # JSON null (die Spalten sind NOT NULL)
+        json_null = Value(None, JSONField())  # JSON null (the columns are NOT NULL)
         View.objects.create(name='B', slug='b', api_token='t-b', transit_stops=json_null,
                             transit_disruption_manual=json_null, page_rotation_pages=json_null,
                             schedule=json_null)
@@ -307,7 +306,7 @@ class EnglishValuesToleratesBadDataTest(MigrationTestCase):
 
 
 class TranslateFunctionsTest(TestCase):
-    """Reine Funktionen aus 0037: Rundreise ohne Datenverlust."""
+    """Pure functions from 0037: round trip without data loss."""
 
     def setUp(self):
         self.m = importlib.import_module('signage.migrations.0037_english_values')
@@ -323,7 +322,7 @@ class TranslateFunctionsTest(TestCase):
 
 
 class EmergencyPermissionMigrationTest(MigrationTestCase):
-    """users/0015: monitor.notfall heißt monitor.emergency, Gruppen-Zuweisungen bleiben (Spec §7)."""
+    """users/0015: monitor.notfall becomes monitor.emergency, group assignments stay."""
     migrate_from = ('users', '0014_userprofile_notify_disabled')
     migrate_to = ('users', '0015_rename_monitor_emergency_permission')
 
@@ -361,7 +360,7 @@ def _make_view(View, slug, **fields):
 
 
 class DisplayAdminDataMigrationTest(MigrationTestCase):
-    """0040/0041: alte Layouts werden Ansichtstypen, globale Zustände wandern in MonitorSettings (Spec §3.6)."""
+    """0040/0041: old layouts become view kinds, global state moves to MonitorSettings."""
     migrate_from = DISPLAY_DATA_FROM
     migrate_to = DISPLAY_DATA_TO
 
@@ -417,7 +416,7 @@ class DisplayAdminDataMigrationTest(MigrationTestCase):
         self.assertIsNone(self._view('std').deleted_at)
 
     def test_on_air_behavior_mapping(self):
-        # std: show_on_air (Standard True) ohne weitere Schalter -> split (Ruling R4)
+        # std: show_on_air (default True) without other switches -> split
         self.assertEqual([self._view(s).on_air_behavior for s in ('tt', 'dep', 'std', 'noair')],
                          ['fullscreen', 'split', 'split', 'none'])
 
@@ -494,7 +493,7 @@ class DisplayAdminDataMigrationTest(MigrationTestCase):
 
 
 class DisplayAdminMessyDataMigrationTest(MigrationTestCase):
-    """Review Focus 1: Altlasten aus der Produktion brechen die Migration nicht."""
+    """Leftovers from production do not break the migration."""
     migrate_from = DISPLAY_DATA_FROM
     migrate_to = DISPLAY_DATA_TO
 
@@ -532,7 +531,7 @@ class DisplayAdminMessyDataMigrationTest(MigrationTestCase):
         self.assertEqual(View.objects.get(slug='img').media_items, [])
         announcements = self.apps.get_model('signage', 'Announcement').objects.all()
         self.assertEqual([(a.title, a.text) for a in announcements], [('Hinweis', 'Nur Inhalt')])
-        # Die gelöschte On-Air-Ansicht gibt den Standard ab
+        # The deleted on-air view hands over the default
         defaults = View.objects.filter(is_default=True, deleted_at__isnull=True)
         self.assertEqual(defaults.count(), 1)
         Screen = self.apps.get_model('signage', 'Screen')
@@ -545,7 +544,7 @@ class DisplayAdminMessyDataMigrationTest(MigrationTestCase):
 
 
 class DisplayAdminTranslateFunctionsTest(TestCase):
-    """Reine Funktionen aus 0040."""
+    """Pure functions from 0040."""
 
     def setUp(self):
         self.m = importlib.import_module('signage.migrations.0040_display_admin_data')
@@ -591,7 +590,7 @@ class DisplayAdminTranslateFunctionsTest(TestCase):
 
 
 class DisplayAdminSettingsRowMigrationTest(MigrationTestCase):
-    """Ruling R6: der globale Zustand landet in MonitorSettings pk=1, wie MonitorSettings.load()."""
+    """The global state lands in MonitorSettings pk=1, like MonitorSettings.load()."""
     migrate_from = DISPLAY_DATA_FROM
     migrate_to = DISPLAY_DATA_TO
 
@@ -609,7 +608,7 @@ class DisplayAdminSettingsRowMigrationTest(MigrationTestCase):
 
 
 class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
-    """Final-Review 1: 0042 -> 0038 in EINEM Lauf zurück, mit Rotations-Ansichten samt Verweisen."""
+    """0042 -> 0038 back in ONE run, with rotation views and their references."""
     migrate_from = DISPLAY_DATA_FROM
     migrate_to = ('signage', '0042_media_page_upload_dir')
     run_on_postgresql = True
@@ -625,7 +624,7 @@ class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
         Assignment = self.apps.get_model('signage', 'DisplayEventScreen')
         Version = self.apps.get_model('signage', 'DisplayViewVersion')
         rotation = View.objects.get(kind='rotation')
-        # Rotation ohne gültige Einträge: Verweise lassen sich nicht umhängen und müssen weg
+        # Rotation without valid items: its references cannot be moved and must go
         empty = View.objects.create(name='Leer', slug='leer', api_token='t-leer', kind='rotation',
                                     rotation_items=[])
         screen = Screen.objects.create(name='Halle', slug='halle', default_view=rotation, override_view=empty)
@@ -652,7 +651,7 @@ class DisplayAdminMultiStepRollbackTest(MigrationTestCase):
 
 
 class SubstitutionSourcesMigrationTest(MigrationTestCase):
-    """0044: Vertretungsplan-Quelle und Ausgabe aus dem alten Schalter „Morgen zeigen“."""
+    """0044: substitution source and output from the old "show tomorrow" switch."""
     migrate_from = ('signage', '0043_device_agent')
     migrate_to = ('signage', '0044_substitution_sources')
 
@@ -689,7 +688,7 @@ FRIDAY_NIGHT = [{'days': [4], 'from': '22:00', 'until': '06:00'}]
 
 
 class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
-    """0045: Einschaltzeiten und Ansichten-Zeitplan werden eine Liste (Spec §2.2), Wirkung unverändert."""
+    """0045: on-times and view schedule become one list, same effect."""
     migrate_from = ('signage', '0044_substitution_sources')
     migrate_to = ('signage', '0045_unified_screen_schedule')
 
@@ -699,7 +698,7 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
         self.view_id = _make_view(View, 'frueh').pk
         gone_id = _make_view(View, 'weg', deleted_at='2026-10-01T00:00:00Z').pk
         self.early = [{'view_id': self.view_id, 'days': [0], 'from': '06:00', 'until': '09:00'}]
-        # griffen nie: ohne Ansicht, Ansicht gelöscht oder fehlt, von >= bis
+        # never matched: no view, view deleted or missing, from >= until
         never = [{'view_id': None, 'days': [0], 'from': '06:00', 'until': '09:00'},
                  {'view_id': gone_id, 'days': [0], 'from': '06:00', 'until': '09:00'},
                  {'view_id': 999, 'days': [0], 'from': '06:00', 'until': '09:00'},
@@ -712,7 +711,7 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
         Screen.objects.create(name='Leer', slug='empty', schedule=[], power_schedule=[])
         Screen.objects.create(name='Nacht', slug='night', schedule=[
             {'view_id': self.view_id, 'days': [4], 'from': '04:00', 'until': '23:00'}], power_schedule=FRIDAY_NIGHT)
-        # Ansicht als Ziffern-Text ("3") griff im alten Code ebenfalls
+        # A view as digit text ("3") also matched in the old code
         Screen.objects.create(name='Ziffern', slug='digits', schedule=[
             {'view_id': str(self.view_id), 'days': [0], 'from': '06:00', 'until': '09:00'},
             {'view_id': 'x3', 'days': [0], 'from': '06:00', 'until': '09:00'}], power_schedule=[])
@@ -743,9 +742,9 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
         from signage.screen_schedule import is_on
         rows = self.schedules(self.apps)['night']
         at = lambda d, h: timezone.localtime(timezone.make_aware(datetime(2026, 10, d, h)))  # noqa: E731
-        self.assertTrue(is_on(rows, at(23, 5)))    # Freitag 05:00
-        self.assertTrue(is_on(rows, at(23, 23)))   # Freitag 23:00
-        self.assertFalse(is_on(rows, at(24, 5)))   # Samstag 05:00
+        self.assertTrue(is_on(rows, at(23, 5)))    # Friday 05:00
+        self.assertTrue(is_on(rows, at(23, 23)))   # Friday 23:00
+        self.assertFalse(is_on(rows, at(24, 5)))   # Saturday 05:00
 
     def test_0045_backward(self):
         executor = MigrationExecutor(connection)
@@ -757,11 +756,11 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
         self.assertEqual(old, {
             'both': ([{'view_id': vid, 'days': [0], 'from': '07:00', 'until': '09:00'}], OFFICE),
             'power': ([], OFFICE),
-            # die angehängte Standard-Zeile ganztags hält den Bildschirm wie vorher immer an
+            # the appended all-day default row keeps the screen always on as before
             'view': (self.early, [{k: v for k, v in FULL_DAY.items() if k != 'view_id'}]),
             'never': ([], []),
             'empty': ([], []),
-            # gleiche Wirkung wie das alte Fr 22:00–06:00 (am selben Tag)
+            # same effect as the old Fri 22:00-06:00 (on the same day)
             'night': ([{'view_id': vid, 'days': [4], 'from': '04:00', 'until': '06:00'},
                        {'view_id': vid, 'days': [4], 'from': '22:00', 'until': '23:00'}],
                       [{'days': [4], 'from': '22:00', 'until': '23:59'},
@@ -771,7 +770,7 @@ class UnifiedScreenScheduleMigrationTest(MigrationTestCase):
 
 
 class LayoutColorSchemeMigrationTest(MigrationTestCase):
-    """0046: Stil wird Aufteilung, „Dunkel“ wandert als Ausnahme an den Bildschirm (Spec §3.2)."""
+    """0046: style becomes layout, "dark" moves to the screen as an exception."""
     migrate_from = ('signage', '0045_unified_screen_schedule')
     migrate_to = ('signage', '0046_layout_color_scheme')
 

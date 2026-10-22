@@ -1,4 +1,3 @@
-"""Alte Endpunkte (ATEM, Pi-Skripte): /onair, /notfall, /bildschirm/…. Sie rufen die neuen Funktionen auf."""
 from ninja import Router
 
 from ..schemas import EmergencySchema, LegacyEmergencySchema, OnAirSchema
@@ -8,9 +7,8 @@ from .settings import toggle_emergency, toggle_on_air
 router = Router(tags=["Monitor"])
 
 
-# ═══ Legacy aliases (ATEM, Pi scripts) ═══════════════════════════
-# Nur für Aufrufer außerhalb dieses Repos. Die Aliase rufen die neuen
-# Funktionen auf, damit Token- und Keycloak-Prüfung identisch bleiben.
+# For callers outside this repo. The aliases call the new functions so token and
+# Keycloak checks stay identical.
 
 @router.post("/onair", response={200: dict, 401: dict, 403: dict})
 def legacy_toggle_on_air(request, payload: OnAirSchema):
@@ -24,10 +22,10 @@ def legacy_toggle_emergency(request, payload: LegacyEmergencySchema):
 
 @router.get("/bildschirm/power")
 def legacy_get_screen_power(request, slug: str):
-    """Alte Antwortform für Pi-Skripte, die vor der Umbenennung installiert wurden."""
+    """Old response shape for Pi scripts installed before the rename."""
     result = get_screen_power(request, slug)
     if 'power_schedule' not in result:
-        return result  # Fehlerantwort: unverändert
+        return result
     return {
         'slug': result['slug'],
         'power': result['power'],

@@ -16,8 +16,6 @@ from .transit import nahsh
 
 
 class ActiveViewPriorityTest(TestCase):
-    """Reihenfolge: Sofort-Override > aktives Event > Zeitplan > Default."""
-
     def setUp(self):
         self.default = DisplayView.objects.create(name='Default', slug='default')
         self.scheduled = DisplayView.objects.create(name='Zeit', slug='scheduled')
@@ -94,7 +92,6 @@ class SoftDeleteTest(TestCase):
         screen = Screen.objects.create(name='B', slug='b', default_view=default)
         default.deleted_at = timezone.now()
         default.save()
-        # gelöschte Default-Ansicht darf nicht mehr angezeigt werden
         self.assertIsNone(screen.get_active_view().deleted_at)
 
     def test_get_skips_deleted(self):
@@ -106,8 +103,6 @@ class SoftDeleteTest(TestCase):
 
 
 class TransitCredentialsTest(TestCase):
-    """ÖPNV-Zugangsdaten kommen aus den Settings (.env), nicht aus dem Code."""
-
     @override_settings(NAHSH_HAFAS_AID='')
     def test_nahsh_without_aid_returns_none_and_logs(self):
         with self.assertLogs('signage.transit', level='WARNING') as log, \
@@ -125,7 +120,7 @@ class TransitCredentialsTest(TestCase):
 
     @override_settings(NAHSH_HAFAS_AID='test-aid')
     def test_nahsh_uses_aid_from_settings(self):
-        # _nahsh_rpc nutzt _post_opener.open (Redirect-Handler), nicht urlopen
+        # _nahsh_rpc uses _post_opener.open (redirect handler), not urlopen
         with mock.patch.object(nahsh._post_opener, 'open') as opener_open:
             opener_open.return_value.__enter__.return_value.read.return_value = b'{"svcResL":[{"res":{}}]}'
             nahsh._nahsh_rpc('StationBoard', {})
@@ -136,7 +131,7 @@ class TransitCredentialsTest(TestCase):
 class DisruptionIdTest(TestCase):
 
     def test_disruption_id_is_stable(self):
-        # Hash-Eingaben bleiben identisch, sonst tauchen ausgeblendete Meldungen wieder auf
+        # Hash inputs must stay identical, otherwise hidden messages reappear
         self.assertEqual(transit.disruption_id('manuell', 'Titel', 'Text'),
                          hashlib.md5('manuell|Titel|Text'.encode()).hexdigest()[:12])
 
@@ -193,8 +188,6 @@ class OrderingTest(TestCase):
 
 
 class DisruptionHiddenPruneTest(TestCase):
-    """Ausblend-Liste wird nur bereinigt, wenn alle aktiven Quellen Daten lieferten."""
-
     def _view(self):
         return DisplayView.objects.create(
             name='D', slug='d', kind='departures',

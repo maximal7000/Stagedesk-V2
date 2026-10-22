@@ -1,13 +1,11 @@
-"""
-Gemeinsamer Zeitplan pro Bildschirm (Spec §2.2): eine Liste für Einschaltzeiten und Ansichten.
+"""Per-screen schedule: one list for on-times and views.
 
-Zeile: {'days': [0-6], 'from': 'HH:MM', 'until': 'HH:MM', 'view_id': int | None}
-- view_id None = Standard-Ansicht des Bildschirms.
-- until < from = über Mitternacht; der Teil nach 0 Uhr zählt zum Folgetag.
-- Enden zählen mit (Minutengenau), 07:00–13:00 und 13:00–18:00 sind also durchgehend an.
-- Überschneiden sich Zeilen, bestimmt die obere die Ansicht; an ist der Bildschirm in der
-  Vereinigung aller Zeilen. Ohne Zeilen ist er immer an.
-"""
+Row: {'days': [0-6], 'from': 'HH:MM', 'until': 'HH:MM', 'view_id': int | None}
+- view_id None = the screen's default view.
+- until < from = across midnight; the part after 00:00 counts for the next day.
+- Ends are inclusive (minute precision), so 07:00-13:00 and 13:00-18:00 are on throughout.
+- If rows overlap, the top one picks the view; the screen is on in the union of all rows.
+  Without rows it is always on."""
 from datetime import datetime
 
 ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
@@ -46,8 +44,8 @@ def is_on(rows, local_now: datetime) -> bool:
 
 
 def _legacy_power_rows(power_rows):
-    """Alte Einschaltzeilen über Mitternacht galten am selben Tag (00:00–bis und von–23:59):
-    in zwei Zeilen auf denselben Tagen umschreiben, damit sie unverändert wirken."""
+    """Legacy power rows across midnight applied to the same day (00:00-until and from-23:59):
+    split them into two rows on the same days so they behave unchanged."""
     rows = []
     for row in power_rows:
         start, end = _window(row)
@@ -61,13 +59,13 @@ def _legacy_power_rows(power_rows):
 
 
 def _legacy_view_row_matched(row):
-    """Alte Ansichten-Zeilen griffen nur mit view_id und bei von < bis (start <= jetzt <= ende)."""
+    """Legacy view rows only matched with a view_id and from < until (start <= now <= end)."""
     start, end = _window(row)
     return bool(row.get('view_id')) and start < end
 
 
 def _clip(view_row, power_rows):
-    """Ansichten-Zeile auf die Einschaltzeiten schneiden; Tage mit gleichem Schnitt in eine Zeile."""
+    """Clip a view row to the on-times; days with the same clip share one row."""
     start, end = _window(view_row)
     windows = {}
     for day in sorted(set(d for d in view_row.get('days', []) if isinstance(d, int))):
@@ -81,9 +79,8 @@ def _clip(view_row, power_rows):
 
 
 def merge_legacy(view_rows: list, power_rows: list) -> list:
-    """Altdaten (Ansichten-Zeitplan, Einschaltzeiten) zu einer Liste zusammenführen.
-    Wirkung bleibt gleich: nie greifende Ansichten-Zeilen entfallen, Einschaltzeilen über
-    Mitternacht gelten weiter am selben Tag."""
+    """Merge legacy data (view schedule, on-times) into one list with the same effect: view rows
+    that never matched are dropped, on-time rows across midnight still apply to the same day."""
     view_rows = [row for row in _rows(view_rows) if _legacy_view_row_matched(row)]
     power_rows = _legacy_power_rows(_rows(power_rows))
     if not power_rows:
@@ -95,7 +92,7 @@ def merge_legacy(view_rows: list, power_rows: list) -> list:
 
 
 def split_legacy(rows):
-    """Rückweg: (Ansichten-Zeitplan, Einschaltzeiten) aus der gemeinsamen Liste."""
+    """Rollback: (view schedule, on-times) from the combined list."""
     rows = _rows(rows)
 
     def bare(row):

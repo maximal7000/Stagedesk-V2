@@ -43,7 +43,7 @@ class RotationItemsTest(TestCase):
 class UpdateViewApiTest(TestCase):
     def test_update_view_rejects_invalid_rotation(self):
         view = DisplayView.objects.create(name='R', slug='r', kind='rotation')
-        # Die Auth ist beim Dekorieren gebunden: Instanzmethode patchen, nicht den Namen.
+        # Auth is bound at decoration time: patch the instance method, not the name.
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}), \
                 mock.patch('signage.api.views._require_perm'):
             r = self.client.put(f'/api/monitor/config?view_id={view.id}',
@@ -114,13 +114,13 @@ class UpdateViewApiTest(TestCase):
         stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30}]
         r = self._put(view, {'page_seconds': 120, 'media_seconds': 3, 'pdf_per_screen': 3, 'transit_stops': stops})
         self.assertEqual(r.status_code, 200, r.content)
-        # Altdaten (T17): 0 hieß "ohne Grenze" und wird zum Standard, bis 50 bleibt erlaubt
+        # Legacy data: 0 meant "no limit" and becomes the default; up to 50 stays allowed
         legacy = [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 0},
                   {'id': '2', 'name': 'Sandstraße', 'max_departures': 50}]
         r = self._put(view, {'transit_stops': legacy})
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual([s['max_departures'] for s in r.json()['transit_stops']], [10, 50])
-        # Breite links wird wie bisher geklemmt
+        # Left width is clamped as before
         self.assertEqual(self._put(view, {'split_left_percent': 95}).json()['split_left_percent'], 80)
 
     def test_update_view_missing_choice_wording(self):

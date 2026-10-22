@@ -1,8 +1,5 @@
-"""Vertretungsplan: Quellenkette, Ausweichen und Tageslogik (Spec §1.1, §1.3).
-
-Keine Netzaufrufe: untis_monitor.load_days und webuntis.get_substitutions werden gepatcht.
-2026-10-19 ist ein Montag.
-"""
+"""No network calls: untis_monitor.load_days and webuntis.get_substitutions are patched.
+2026-10-19 is a Monday."""
 from datetime import date, datetime
 from unittest import mock
 
@@ -141,7 +138,7 @@ class MonitorSourceTest(SubstitutionsTestBase):
         self.assertEqual(self.load_days.call_args.kwargs['start'], TODAY)
 
     def test_next_day_from_friday_monitor_starts_saturday(self):
-        # WebUntis überspringt Wochenende und Ferien selbst; wir geben nur den Folgetag.
+        # WebUntis skips weekends and holidays itself; we only pass the next day.
         self.load(self.view(), local(2026, 10, 23, 17))
         self.assertEqual(self.load_days.call_args.kwargs['start'], date(2026, 10, 24))
 
@@ -163,7 +160,7 @@ class MonitorSourceTest(SubstitutionsTestBase):
         self.assertEqual(self.load_days.call_args.kwargs['overrides'], {})
 
     def test_show_absences_off(self):
-        # Geladen wird immer mit Abwesenheiten (gemeinsamer Cache); die Ansicht blendet sie aus.
+        # Always loaded with absences (shared cache); the view hides them.
         day = self.load(self.view(substitutions_show_absences=False))['days'][0]
         self.assertEqual((day['absent'], day['affected']), ([], {'classes': [], 'teachers': []}))
         self.assertEqual(day['messages'], [{'subject': 'A', 'body': 'B'}])
@@ -205,7 +202,7 @@ class MonitorSourceTest(SubstitutionsTestBase):
     def test_lock_held_after_key_switch_uses_format_last_good(self):
         view = self.view()
         self.load(view, MONDAY_1559)
-        # 16:00: Wechsel auf den nächsten Schultag, neuer Schlüssel, ein anderer Worker lädt gerade.
+        # 16:00: switch to the next school day, new key, another worker is loading.
         cache.add('signage:subs:monitor:vplan-schueler:2026-10-20:2:lock', 1, 30)
         result = self.load(view, MONDAY_16)
         self.assertEqual(self.load_days.call_count, 1)
@@ -306,7 +303,7 @@ class FallbackTest(SubstitutionsTestBase):
         self.load(view)
         cache.delete('signage:subs:monitor:vplan-schueler:2026-10-19:2')
         self.load_days.side_effect = MonitorUnavailable('Timeout')
-        # Folgetag: neuer Schlüssel ohne eigenen Stand; vom Stand des Formats bleibt nur der Folgetag.
+        # Next day: new key without its own state; of the format's state only the next day remains.
         result = self.load(view, local(2026, 10, 20, 8))
         self.assertEqual((result['source'], result['fallback']), ('monitor', False))
         self.assertEqual([(d['date'], d['label']) for d in result['days']], [('2026-10-20', 'Heute')])
@@ -369,7 +366,7 @@ class AccountDeadlineTest(TestCase):
 
 
 class AccountSingleDayTest(TestCase):
-    """Ausweichen auf die echte Konto-Abfrage mit einem Tag ab heute (start=None, count=1)."""
+    """Fallback to the real account query with one day from today (start=None, count=1)."""
 
     def test_single_day_fallback_through_real_account(self):
         cache.clear()
