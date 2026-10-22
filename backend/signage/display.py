@@ -79,6 +79,15 @@ def _fetch_weather(view):
         return view.weather_cache or None
 
 
+def _as_transit(cache):
+    """A cache saved before the sources field existed is a plain list of stations."""
+    if isinstance(cache, list):
+        return {'stations': cache, 'sources': {}}
+    if isinstance(cache, dict):
+        return {'stations': cache.get('stations') or [], 'sources': cache.get('sources') or {}}
+    return None
+
+
 def _fetch_transit(view):
     if not _wants_transit(view):
         return None
@@ -89,7 +98,7 @@ def _fetch_transit(view):
         age = (timezone.now() - view.transit_cache_at).total_seconds()
         # Even with an empty cache wait at least 60 s (no API spam on errors)
         if age < 60:
-            return view.transit_cache
+            return _as_transit(view.transit_cache)
 
     try:
         result = transit.fetch_departures(
@@ -108,13 +117,13 @@ def _fetch_transit(view):
         view.transit_cache = result
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache', 'transit_cache_at'])
-        return result
+        return _as_transit(result)
     except Exception as e:
         logger.warning(f"ÖPNV-Fehler: {e}")
         # Set the timestamp on errors too: next retry in 60 s at the earliest
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache_at'])
-        return view.transit_cache or None
+        return _as_transit(view.transit_cache) if view.transit_cache else None
 
 
 def _fetch_disruptions(view):
@@ -179,7 +188,7 @@ def _max_departures(stop):
 def _departures_data(view):
     stops = {s.get('id'): s for s in (view.transit_stops or []) if isinstance(s, dict)}
     stations = []
-    for station in _fetch_transit(view) or []:
+    for station in (_fetch_transit(view) or {}).get('stations', []):
         limit = _max_departures(stops.get(station.get('station_id'), {}))
         # Copy: the cache on the view stays unchanged
         entry = dict(station)

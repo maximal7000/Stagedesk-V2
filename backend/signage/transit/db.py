@@ -199,10 +199,12 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             cancelled = ch.get("cs") == "c"
             delay = 0
             dt_real = dt_plan
+            realtime = False
             if ct and len(ct) >= 10:
                 try:
                     dt_real = datetime.strptime(ct, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
                     delay = int((dt_real - dt_plan).total_seconds() // 60)
+                    realtime = True
                 except Exception:
                     pass
             min_until = (dt_real - now).total_seconds() / 60
@@ -250,6 +252,7 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                 "departure": dt_plan.strftime("%H:%M"),
                 "departure_actual": dt_real.strftime("%H:%M"),
                 "delay": delay,
+                "realtime": realtime,
                 "platform": str(platform_actual),
                 "kind": product,
                 "kind_icon": _product_icon(product),
@@ -308,6 +311,7 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             "line": line, "direction": ppth[-1] if ppth else "",
             "departure": dt_plan.strftime("%H:%M"), "departure_actual": dt_real.strftime("%H:%M"),
             "delay": int((dt_real - dt_plan).total_seconds() // 60),
+            "realtime": bool(ct and len(ct) >= 10),
             "platform": str(dp.get("cp") or dp.get("pp") or ""),
             "kind": product, "kind_icon": _product_icon(product) if product != 'bus' else 'bus',
             "cancelled": False, "remarks": [], "rail_replacement": True,

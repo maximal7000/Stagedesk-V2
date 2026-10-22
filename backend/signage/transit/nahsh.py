@@ -194,6 +194,7 @@ def _parse_nahsh_departure(jny, prod_list, loc_list, rem_list, ref_date):
             "departure": departure_planned,
             "departure_actual": departure_actual,
             "delay": delay,
+            "realtime": bool(d_time_r),
             "platform": str(platform),
             "kind": product,
             "kind_icon": _product_icon(product),
