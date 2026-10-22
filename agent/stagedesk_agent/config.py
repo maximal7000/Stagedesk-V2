@@ -55,7 +55,7 @@ class Config:
         self.save()
 
     def apply_hello(self, message):
-        """Übernimmt die Felder aus dem Hello des Servers, denn der Slug kann sich serverseitig geändert haben."""
+        """The server may rename the slug, so the stored value must follow the hello."""
         for name in _HELLO_FIELDS:
             if name in message and message[name] is not None:
                 setattr(self, name, message[name])

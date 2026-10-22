@@ -66,3 +66,5 @@ dist-ssr/
 logs/
 *.log
 *.kate-swp
+
+.superpowers/
