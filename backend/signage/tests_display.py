@@ -17,7 +17,8 @@ TOP_KEYS = {'generated_at', 'reload_requested_at', 'screen', 'scheme', 'mode', '
 SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power', 'scheme'}
 VIEW_KEYS = {'id', 'kind', 'layout', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
 DATA_KEYS = {
-    'departures': {'stations', 'disruptions'},
+    'departures': {'stations', 'disruptions', 'columns', 'time_format', 'show_disruptions', 'strip_city',
+                   'status'},
     'substitutions': {'source', 'fallback', 'group_by', 'columns', 'days', 'news', 'updated_at',
                       'fetched_at', 'embed_url', 'mode'},
     'split': {'left', 'right', 'left_percent'},
@@ -81,6 +82,28 @@ class DisplayTestBase(TestCase):
         return DisplayView.objects.create(kind=kind, is_default=False, **kwargs)
 
 
+class DeparturesPayloadTest(DisplayTestBase):
+    def test_disruptions_off_skips_fetch_and_empties_list(self):
+        view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf'}],
+                         transit_show_disruptions=False, transit_columns=2, transit_time_format='mixed',
+                         transit_strip_city=False,
+                         transit_disruption_manual=[{'title': 'Hinweis', 'text': 'T'}])
+        with mock.patch('signage.display._fetch_disruptions') as fetch:
+            data = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']
+        fetch.assert_not_called()
+        self.assertEqual((data['disruptions'], data['columns'], data['time_format'], data['strip_city'],
+                          data['show_disruptions']), ([], 2, 'mixed', False, False))
+
+    def test_status_carries_sources_and_cache_time(self):
+        result = {'stations': [dict(STATION)], 'sources': {'db': 'ok', 'nahsh': 'error'}}
+        view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf'}])
+        with mock.patch('signage.display.transit.fetch_departures', return_value=result):
+            data = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']
+        view.refresh_from_db()
+        self.assertEqual(data['status'], {'fetched_at': view.transit_cache_at.isoformat(),
+                                          'sources': {'db': 'ok', 'nahsh': 'error'}})
+
+
 class ContractTest(DisplayTestBase):
 
     def _payload(self, view, screen=None, key_ok=True):
@@ -120,6 +143,12 @@ class ContractTest(DisplayTestBase):
         [station] = self._payload(views['departures'])['view']['data']['stations']
         self.assertEqual(station['max_departures'], 10)
         self.assertEqual(len(station['departures']), 10)
+
+        data = self._payload(views['departures'])['view']['data']
+        self.assertEqual((data['columns'], data['time_format'], data['show_disruptions'], data['strip_city']),
+                         (4, 'minutes', True, True))
+        self.assertEqual(data['status']['sources'], {})
+        self.assertIsNotNone(data['status']['fetched_at'])
 
         pages = self._payload(views['media'])['view']['data']['pages']
         self.assertEqual(len(pages), 2)
@@ -381,6 +410,15 @@ class PreviewValidationTest(PreviewTestBase):
         self.assert_rejected({'view': {'id': self.saved.id, 'transit_duration': None}}, 'Vorausschau')
         self.assert_rejected({'view': {'id': self.saved.id, 'transit_source_db': None}}, 'Deutsche Bahn')
         self.assert_rejected({'view': {'id': self.saved.id, 'transit_disruption_hidden': [3]}}, 'Ausgeblendete Meldungen')
+
+    def test_invalid_columns_and_time_format_rejected(self):
+        for value in (0, 6, None):
+            with self.subTest(value=value):
+                self.assert_rejected({'view': {'id': self.saved.id, 'transit_columns': value}}, 'Spaltenzahl 1 bis 5.')
+        self.assert_rejected({'view': {'id': self.saved.id, 'transit_time_format': 'sekunden'}}, 'Zeitangabe')
+        for value in (1, 5):
+            r = self.post_preview({'view': {'id': self.saved.id, 'transit_columns': value}})
+            self.assertEqual(r.status_code, 200, r.content)
 
     def test_invalid_choices_rejected(self):
         self.assert_rejected({'view': {'kind': 'tabelle'}}, 'Typ')

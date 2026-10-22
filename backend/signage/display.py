@@ -187,17 +187,29 @@ def _max_departures(stop):
 
 def _departures_data(view):
     stops = {s.get('id'): s for s in (view.transit_stops or []) if isinstance(s, dict)}
+    fetched = _fetch_transit(view) or {}
     stations = []
-    for station in (_fetch_transit(view) or {}).get('stations', []):
+    for station in fetched.get('stations', []):
         limit = _max_departures(stops.get(station.get('station_id'), {}))
         # Copy: the cache on the view stays unchanged
         entry = dict(station)
         entry['departures'] = list(station.get('departures') or [])[:limit]
         entry['max_departures'] = limit
         stations.append(entry)
-    hidden = set(view.transit_disruption_hidden or [])
-    disruptions = [s for s in _fetch_disruptions(view) if s.get('id') not in hidden]
-    return {'stations': stations, 'disruptions': disruptions}
+    disruptions = []
+    if view.transit_show_disruptions:
+        hidden = set(view.transit_disruption_hidden or [])
+        disruptions = [s for s in _fetch_disruptions(view) if s.get('id') not in hidden]
+    fetched_at = view.transit_cache_at.isoformat() if view.transit_cache_at else None
+    return {
+        'stations': stations,
+        'disruptions': disruptions,
+        'columns': view.transit_columns,
+        'time_format': view.transit_time_format,
+        'show_disruptions': view.transit_show_disruptions,
+        'strip_city': view.transit_strip_city,
+        'status': {'fetched_at': fetched_at, 'sources': fetched.get('sources') or {}},
+    }
 
 
 def _substitutions_data(view, key_ok, now, compact=False, single_day=False):
