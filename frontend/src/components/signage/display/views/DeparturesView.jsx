@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useBoxSize } from '../lib/fit'
+import { useBoxSize, wrapColumns } from '../lib/fit'
 import { formatTemperature, formatTime, formatWeekday } from '../lib/format'
 import { chipTextColor } from '../lib/lines'
 import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
@@ -14,7 +14,7 @@ const ROW_EM = 1.55
 const GAP_REM = 1.25
 // Below these widths a column cannot show time, chip and a readable destination (trains also need the
 // platform); the columns then wrap into several rows (portrait, split screen).
-const MIN_COLUMN_REM = { bus: 16, train: 20, disruptions: 16 }
+const MIN_COLUMN_REM = { bus: 16, train: 22, disruptions: 16 }
 const LONG_CHIP = 7
 // Time and chip are shared by all rows of a list so destinations line up; the platform sits inside the
 // destination cell per row, so one wide platform change does not narrow every destination.
@@ -50,10 +50,8 @@ export default function DeparturesView({ view }) {
     ...columns.map((list) => MIN_COLUMN_REM[list.some(hasTrains) ? 'train' : 'bus']),
     ...(withDisruptions ? [MIN_COLUMN_REM.disruptions] : []),
   ]
-  const needed = (mins.reduce((a, b) => a + b, 0) + GAP_REM * (cells - 1)) * remPx
-  const wrapped = width > 0 && needed > width
-  const widest = Math.max(...mins) * remPx
-  const fit = wrapped ? Math.max(1, Math.floor((width + GAP_REM * remPx) / (widest + GAP_REM * remPx))) : cells
+  const fit = wrapColumns(mins, width / remPx, GAP_REM)
+  const wrapped = fit < cells
   const grid = wrapped
     ? {
       gridTemplateColumns: `repeat(${fit}, minmax(0, 1fr))`,
@@ -210,8 +208,9 @@ function Platform({ dep }) {
   const planned = dep.platform_planned
   if (planned && planned !== dep.platform) {
     return (
-      <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em] text-(--d-warn)">
-        <s className="text-(--d-muted)"><PlatformPrefix />{planned}</s> <PlatformPrefix />{dep.platform}
+      <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em]">
+        <s className="pr-[0.35em] text-[0.8em] text-(--d-muted) decoration-[0.1em]"><PlatformPrefix />{planned}</s>{' '}
+        <span data-platform-new className="text-(--d-warn)"><PlatformPrefix />{dep.platform}</span>
       </span>
     )
   }

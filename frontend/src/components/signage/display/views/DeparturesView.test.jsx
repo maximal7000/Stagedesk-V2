@@ -116,8 +116,11 @@ describe('DeparturesView', () => {
     ]
     const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps)] })} />)
     const [changed, plain] = rows(el).map((r) => r.querySelector('[data-platform]'))
-    expect(changed.querySelector('s').textContent).toBe('Gl. 5')
-    expect(changed.className).toContain('text-(--d-warn)')
+    const old = changed.querySelector('s')
+    expect(old.textContent).toBe('Gl. 5')
+    expect(old.className).toContain('text-(--d-muted)')
+    expect(old.className).toContain('text-[0.8em]')
+    expect(changed.querySelector('[data-platform-new]').className).toContain('text-(--d-warn)')
     expect(changed.textContent).toBe('Gl. 5 Gl. 6')
     expect(plain.textContent).toBe('Gl. 4')
     expect(plain.querySelector('s')).toBeNull()

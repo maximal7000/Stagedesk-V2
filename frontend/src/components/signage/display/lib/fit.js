@@ -59,3 +59,13 @@ export function packByHeight(heights, height, gap = 0) {
   if (page.length) pages.push(page)
   return pages
 }
+
+// Number of grid columns for cells with minimum widths (all in rem): all side by side when they fit,
+// otherwise as many as the widest minimum allows. Width 0 (not measured yet) keeps all.
+export function wrapColumns(mins, width, gap) {
+  const count = mins.length
+  if (!(width > 0) || !count) return count
+  const needed = mins.reduce((a, b) => a + b, 0) + gap * (count - 1)
+  if (needed <= width) return count
+  return Math.max(1, Math.floor((width + gap) / (Math.max(...mins) + gap)))
+}
