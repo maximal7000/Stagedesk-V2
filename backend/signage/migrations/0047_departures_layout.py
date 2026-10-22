@@ -34,8 +34,11 @@ def backward(apps, schema_editor):
         view.transit_show_relative = view.transit_time_format != 'clock'
         view.transit_disruption_banner = view.transit_show_disruptions
         view.transit_disruption_position = 'bottom'
+        # The old code reads only the list-shaped cache, the new one is a dict
+        view.transit_cache = None
+        view.transit_cache_at = None
         view.save(update_fields=['transit_show_relative', 'transit_disruption_banner',
-                                 'transit_disruption_position'])
+                                 'transit_disruption_position', 'transit_cache', 'transit_cache_at'])
     for version, data in _each_version(Version):
         if not {'transit_time_format', 'transit_show_disruptions', 'transit_strip_city'} & set(data):
             continue

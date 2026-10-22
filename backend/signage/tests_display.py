@@ -104,6 +104,27 @@ class DeparturesPayloadTest(DisplayTestBase):
                                           'sources': {'db': 'ok', 'nahsh': 'error'}})
 
 
+    def test_split_modes_limits_buses_and_trains_separately(self):
+        buses = [{'line': '5', 'direction': 'Eichholz', 'departure': f'10:{i:02d}', 'kind_icon': 'bus'}
+                 for i in range(4)]
+        trains = [{'line': 'RE8', 'direction': 'Hamburg', 'departure': f'10:{i:02d}', 'kind_icon': 're'}
+                  for i in range(10, 14)]
+        result = {'stations': [{'station_name': 'Hbf', 'station_id': '8000237', 'split_modes': True,
+                                'departures': buses + trains}], 'sources': {}}
+        view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf', 'max_departures': 3}])
+        with mock.patch('signage.display.transit.fetch_departures', return_value=result):
+            [station] = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']['stations']
+        self.assertEqual([d['departure'] for d in station['departures']],
+                         ['10:00', '10:01', '10:02', '10:10', '10:11', '10:12'])
+
+        result['stations'][0]['split_modes'] = False
+        view.transit_cache_at = None
+        view.save()
+        with mock.patch('signage.display.transit.fetch_departures', return_value=result):
+            [station] = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']['stations']
+        self.assertEqual([d['departure'] for d in station['departures']], ['10:00', '10:01', '10:02'])
+
+
 class ContractTest(DisplayTestBase):
 
     def _payload(self, view, screen=None, key_ok=True):

@@ -102,6 +102,12 @@ class UpdateViewApiTest(TestCase):
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': -1}]}, 'Max. Zeilen'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 'viele'}]}, 'Max. Zeilen'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': True}]}, 'Max. Zeilen'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': 0}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': 6}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': True}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': '2'}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'split_modes': 'ja'}]}, 'Busse und Züge getrennt'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'split_modes': None}]}, 'Busse und Züge getrennt'),
         ]
         for body, fragment in cases:
             r = self._put(view, body)
@@ -111,7 +117,8 @@ class UpdateViewApiTest(TestCase):
             self.assertIn(fragment, detail)
         view.refresh_from_db()
         self.assertEqual((view.page_seconds, view.media_seconds, view.transit_stops), (15, 10, []))
-        stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30}]
+        stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30, 'column': 5,
+                  'split_modes': False}, {'id': '2', 'name': 'Sandstraße', 'column': None, 'split_modes': True}]
         r = self._put(view, {'page_seconds': 120, 'media_seconds': 3, 'pdf_per_screen': 3, 'transit_stops': stops})
         self.assertEqual(r.status_code, 200, r.content)
         legacy = [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 0},

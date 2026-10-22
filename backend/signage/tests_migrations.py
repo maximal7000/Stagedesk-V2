@@ -823,6 +823,8 @@ class DeparturesLayoutMigrationTest(MigrationTestCase):
         View = self.apps.get_model('signage', 'DisplayView')
         mixed = View.objects.get(slug='rel')
         mixed.transit_time_format, mixed.transit_columns = 'mixed', 5
+        mixed.transit_cache = {'stations': [], 'sources': {'db': 'ok'}}
+        mixed.transit_cache_at = '2026-10-22T08:00Z'
         mixed.save()
         executor = MigrationExecutor(connection)
         executor.loader.build_graph()
@@ -831,6 +833,8 @@ class DeparturesLayoutMigrationTest(MigrationTestCase):
         rows = {v.slug: (v.transit_show_relative, v.transit_disruption_banner, v.transit_disruption_position,
                          v.transit_columns) for v in apps.get_model('signage', 'DisplayView').objects.all()}
         self.assertEqual(rows, {'rel': (True, True, 'bottom', 5), 'abs': (False, False, 'bottom', 4)})
+        caches = [(v.transit_cache, v.transit_cache_at) for v in apps.get_model('signage', 'DisplayView').objects.all()]
+        self.assertEqual(caches, [(None, None), (None, None)])
         version = apps.get_model('signage', 'DisplayViewVersion').objects.get()
         self.assertEqual(version.data, {'kind': 'departures', 'transit_show_relative': False,
                                         'transit_disruption_banner': False,

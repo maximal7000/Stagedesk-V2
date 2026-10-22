@@ -86,6 +86,11 @@ def _check_stops(stops):
                                      ('max_departures', 'Max. Zeilen', MAX_DEPARTURES)):
             if key in stop and not (_is_int(stop[key]) and lo <= stop[key] <= hi):
                 raise HttpError(422, f"Haltestelle „{name}“: {number_message(label, lo, hi)}")
+        column = stop.get('column')
+        if column is not None and not (_is_int(column) and 1 <= column <= 5):
+            raise HttpError(422, "Spalte der Haltestelle ungültig (1 bis 5).")
+        if 'split_modes' in stop and not isinstance(stop['split_modes'], bool):
+            raise HttpError(422, "„Busse und Züge getrennt“ ungültig.")
 
 
 def _check_next_day_from(data):

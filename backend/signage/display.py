@@ -185,6 +185,25 @@ def _max_departures(stop):
     return value
 
 
+BUS_KINDS = ('bus', 'faehre', 'taxi')
+
+
+def _limit_departures(station, limit):
+    """With buses and trains shown separately each half gets its own limit, so buses do not crowd out
+    the trains."""
+    departures = [d for d in station.get('departures') or [] if isinstance(d, dict)]
+    if station.get('split_modes') is False:
+        return departures[:limit]
+    counts = {True: 0, False: 0}
+    kept = []
+    for dep in departures:
+        bus = dep.get('kind_icon') in BUS_KINDS
+        if counts[bus] < limit:
+            counts[bus] += 1
+            kept.append(dep)
+    return kept
+
+
 def _departures_data(view):
     stops = {s.get('id'): s for s in (view.transit_stops or []) if isinstance(s, dict)}
     fetched = _fetch_transit(view) or {}
@@ -193,7 +212,7 @@ def _departures_data(view):
         limit = _max_departures(stops.get(station.get('station_id'), {}))
         # Copy: the cache on the view stays unchanged
         entry = dict(station)
-        entry['departures'] = list(station.get('departures') or [])[:limit]
+        entry['departures'] = _limit_departures(station, limit)
         entry['max_departures'] = limit
         stations.append(entry)
     disruptions = []
