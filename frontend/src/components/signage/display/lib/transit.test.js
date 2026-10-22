@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   BUS_FALLBACK_COLOR, assignColumns, delayLabel, disruptionLabel, formatDepartureTime, isBus, lineColor, lineLabel,
-  minutesUntil, stripCommonCity, visibleDisruptions,
+  isDeparted, minutesUntil, stripCommonCity, visibleDisruptions,
 } from './transit'
 
 const at = (hh, mm) => new Date(2026, 9, 19, hh, mm, 30)
@@ -65,6 +65,13 @@ describe('transit', () => {
       expect(formatDepartureTime(dep('22:14', { departure_actual: '22:20', delay: 6 }), at('22:11'), 'minutes')).toBe('3 min')
       expect(formatDepartureTime(dep('00:05'), at('23:58'), 'minutes')).toBe('7 min')
       expect(formatDepartureTime(dep('22:14'), at('22:11'), undefined)).toBe('3 min')
+    })
+
+    it('abgefahren erst mehr als 1 min nach der tatsächlichen Abfahrt', () => {
+      expect(isDeparted(dep('22:10'), at('22:11'))).toBe(false)
+      expect(isDeparted(dep('22:09'), at('22:11'))).toBe(true)
+      expect(isDeparted(dep('22:03', { departure_actual: '22:12', delay: 9 }), at('22:11'))).toBe(false)
+      expect(isDeparted(dep(''), at('22:11'))).toBe(false)
     })
 
     it('Verspätung als +N, ohne bei 0', () => {

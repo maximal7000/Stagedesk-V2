@@ -83,6 +83,11 @@ export function minutesUntil(dep, now) {
   return wrapDay(depMin - (now.getHours() * 60 + now.getMinutes()))
 }
 
+export function isDeparted(dep, now) {
+  const min = minutesUntil(dep, now)
+  return min != null && min < -1
+}
+
 export function visibleDisruptions(items) {
   return (items || [])
     .filter((d) => !(DISRUPTION_GENERIC_RE.test(`${d.title || ''} ${d.text || ''}`)

@@ -104,8 +104,9 @@ describe('DeparturesView', () => {
     const [row] = rows(el)
     expect(row.firstChild.textContent).toBe('3 min')
     expect(row.firstChild.className).toContain('line-through')
-    expect(row.lastChild.textContent).toBe('fällt aus')
-    expect(row.lastChild.className).toContain('text-(--d-red)')
+    const label = row.querySelector('[data-cancelled]')
+    expect(label.textContent).toBe('fällt aus')
+    expect(label.className).toContain('text-(--d-red)')
   })
 
   it('Gleis bei Zügen, Gleiswechsel mit altem Gleis durchgestrichen', () => {
@@ -120,6 +121,44 @@ describe('DeparturesView', () => {
     expect(changed.textContent).toBe('Gl. 5 Gl. 6')
     expect(plain.textContent).toBe('Gl. 4')
     expect(plain.querySelector('s')).toBeNull()
+    expect(plain.querySelector('[data-platform-prefix]').className).toContain('@max-[20rem]:hidden')
+  })
+
+  it('Ziel behält Mindestbreite: Gleis steht pro Zeile im Zielfeld, nicht in einer gemeinsamen Spalte', () => {
+    const deps = [
+      train('22:23', 'SEV RE83', 'Lübeck-Travemünde Strand', ''),
+      train('22:30', 'RE8', 'Hamburg Hbf', '6', { platform_planned: '5' }),
+    ]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps)] })} />)
+    const list = el.querySelector('[data-departure-list]')
+    const tracks = list.style.gridTemplateColumns
+    expect(tracks).toContain('minmax(6em, 1fr)')
+    expect(tracks.trim().endsWith('minmax(6em, 1fr)')).toBe(true)
+    const [, changed] = rows(el)
+    expect(changed.children).toHaveLength(3)
+    expect(changed.querySelector('[data-destination] [data-platform]')).not.toBeNull()
+  })
+
+  it('abgefahrene Fahrten (mehr als 1 min vorbei) verschwinden bis zum nächsten Abruf', () => {
+    const deps = [
+      bus('22:08', '5', 'Eichholz'),
+      bus('22:10', '11', 'Schlutup'),
+      train('22:03', 'RE8', 'Travemünde', '7', { departure_actual: '22:12', delay: 9 }),
+    ]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps, { split_modes: false })] })} />)
+    expect(rows(el).map((r) => r.querySelector('[data-chip]').textContent)).toEqual(['11', 'RE 8'])
+  })
+
+  it('Haltestellen ohne index bekommen trotzdem eindeutige Schlüssel', () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stations = [
+      { ...station(0, 'Katharineum', []), index: undefined, column: 1 },
+      { ...station(0, 'Katharineum', []), index: undefined, column: 1 },
+    ]
+    const el = render(<DeparturesView view={view({ stations })} />)
+    expect(el.querySelectorAll('h2')).toHaveLength(2)
+    expect(spy.mock.calls.some((c) => String(c[0]).includes('same key'))).toBe(false)
+    spy.mockRestore()
   })
 
   it('lange Linien bekommen kleinere Schrift', () => {

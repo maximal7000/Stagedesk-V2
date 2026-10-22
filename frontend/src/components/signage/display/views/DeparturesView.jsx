@@ -1,23 +1,25 @@
-import { useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useBoxSize } from '../lib/fit'
 import { formatTemperature, formatTime, formatWeekday } from '../lib/format'
 import { chipTextColor } from '../lib/lines'
 import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
 import {
-  assignColumns, delayLabel, disruptionLabel, formatDepartureTime, isBus, lineColor, lineLabel, stripCommonCity,
-  visibleDisruptions,
+  assignColumns, delayLabel, disruptionLabel, formatDepartureTime, isBus, isDeparted, lineColor, lineLabel,
+  stripCommonCity, visibleDisruptions,
 } from '../lib/transit'
 import { useClockMinute } from '../lib/useClock'
-import { Heading } from './parts'
 
 const ROW_REM = 1.1875
 const ROW_EM = 1.55
 const GAP_REM = 1.25
-// Below this width a column cannot show time, chip and a readable destination; the columns then wrap
-// into several rows (portrait, split screen).
-const MIN_COLUMN_REM = 16
+// Below these widths a column cannot show time, chip and a readable destination (trains also need the
+// platform); the columns then wrap into several rows (portrait, split screen).
+const MIN_COLUMN_REM = { bus: 16, train: 20, disruptions: 16 }
 const LONG_CHIP = 7
-const ROW_TEMPLATE = 'minmax(4.3em, max-content) max-content minmax(0, 1fr) max-content'
+// Time and chip are shared by all rows of a list so destinations line up; the platform sits inside the
+// destination cell per row, so one wide platform change does not narrow every destination.
+const ROW_TEMPLATE = 'minmax(4.3em, max-content) max-content minmax(6em, 1fr)'
+const HEADING_REM = [1.875, 1.625, 1.4375, 1.25]
 const SOURCE_NAMES = [['db', 'DB'], ['nahsh', 'NAH.SH']]
 const DAY_MONTH_LONG = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long' })
 
@@ -44,9 +46,14 @@ export default function DeparturesView({ view }) {
   }
 
   const cells = columns.length + (withDisruptions ? 1 : 0)
-  const gapPx = GAP_REM * remPx
-  const fit = width > 0 ? Math.max(1, Math.floor((width + gapPx) / (MIN_COLUMN_REM * remPx + gapPx))) : cells
-  const wrapped = fit < cells
+  const mins = [
+    ...columns.map((list) => MIN_COLUMN_REM[list.some(hasTrains) ? 'train' : 'bus']),
+    ...(withDisruptions ? [MIN_COLUMN_REM.disruptions] : []),
+  ]
+  const needed = (mins.reduce((a, b) => a + b, 0) + GAP_REM * (cells - 1)) * remPx
+  const wrapped = width > 0 && needed > width
+  const widest = Math.max(...mins) * remPx
+  const fit = wrapped ? Math.max(1, Math.floor((width + GAP_REM * remPx) / (widest + GAP_REM * remPx))) : cells
   const grid = wrapped
     ? {
       gridTemplateColumns: `repeat(${fit}, minmax(0, 1fr))`,
@@ -67,8 +74,10 @@ export default function DeparturesView({ view }) {
           className="grid min-h-0 min-w-0 gap-[1.25rem]"
           style={{ gridTemplateRows: `repeat(${Math.max(1, list.length)}, minmax(0, 1fr))` }}
         >
-          {list.map((s) => (
-            <StationCard key={`${s.station_id}-${s.index}`} station={s} name={nameOf(s.station_name)} format={data.time_format} />
+          {list.map((s, pos) => (
+            <StationCard
+              key={`${s.station_id}-${s.index ?? `p${pos}`}`} station={s} name={nameOf(s.station_name)} format={data.time_format}
+            />
           ))}
         </div>
       ))}
@@ -79,23 +88,58 @@ export default function DeparturesView({ view }) {
   )
 }
 
+const hasTrains = (station) => (station.departures ?? []).some((d) => !isBus(d))
+
+// Long names ("ZOB/Hauptbahnhof") step down in size until they fit next to the walking time.
+function useFittedHeading(ref, name, width) {
+  const [step, setStep] = useState(0)
+  useLayoutEffect(() => {
+    let alive = true
+    const fit = () => {
+      const el = ref.current
+      if (!alive || !el) return
+      const previous = el.style.fontSize
+      let next = 0
+      for (; next < HEADING_REM.length - 1; next++) {
+        el.style.fontSize = `${HEADING_REM[next]}rem`
+        // Sub-pixel widths: scrollWidth rounds up, clientWidth down
+        if (el.scrollWidth <= el.clientWidth + 1) break
+      }
+      // React does not rewrite the style when the step stays the same
+      el.style.fontSize = previous
+      setStep(next)
+    }
+    fit()
+    document.fonts?.ready?.then(fit)
+    return () => { alive = false }
+  }, [ref, name, width])
+  return HEADING_REM[step]
+}
+
 function StationCard({ station, name, format }) {
+  const cardRef = useRef(null)
+  const headingRef = useRef(null)
+  const { width } = useBoxSize(cardRef)
+  const headingRem = useFittedHeading(headingRef, name, width)
   const deps = station.departures ?? []
   const split = station.split_modes !== false && deps.some(isBus) && deps.some((d) => !isBus(d))
   const sections = split
     ? [['bus', 'Busse', deps.filter(isBus)], ['train', 'Züge', deps.filter((d) => !isBus(d))]]
     : [[null, null, deps]]
   return (
-    <section className="d-card flex min-h-0 min-w-0 flex-col px-[1.375rem] pb-[0.75rem] pt-[1.125rem]">
-      <Heading
-        size="text-[1.875rem]"
-        className="d-line-bottom mb-[0.25rem] pb-[0.375rem]"
-        aside={station.walk_minutes > 0 && (
+    <section ref={cardRef} className="d-card @container flex min-h-0 min-w-0 flex-col px-[1.375rem] pb-[0.75rem] pt-[1.125rem]">
+      <header className="d-line-bottom mb-[0.25rem] flex items-baseline justify-between gap-[0.75rem] pb-[0.375rem]">
+        <h2
+          ref={headingRef}
+          className="d-kicker d-oswald min-w-0 truncate font-normal uppercase leading-[1.15] tracking-[0.03em]"
+          style={{ fontSize: `${headingRem}rem` }}
+        >
+          {name}
+        </h2>
+        {station.walk_minutes > 0 && (
           <span className="d-lato shrink-0 whitespace-nowrap text-[0.9375rem] text-(--d-muted)">{station.walk_minutes} min</span>
         )}
-      >
-        {name}
-      </Heading>
+      </header>
       {deps.length === 0 ? (
         <p className="d-lato pt-[0.625rem] text-[1.0625rem] text-(--d-muted)">
           {station.error ? 'Abfahrten nicht verfügbar' : 'Keine Abfahrten'}
@@ -115,14 +159,18 @@ function StationCard({ station, name, format }) {
 }
 
 // Only whole rows: as many as fit into the measured height, the rest is cut off (no paging).
+// Departed trips stay hidden between two server updates instead of reading "jetzt".
 function DepartureList({ deps, format }) {
   const ref = useRef(null)
   const { height, remPx } = useBoxSize(ref)
+  const now = useClockMinute()
   const rowPx = ROW_EM * ROW_REM * remPx
-  const shown = height > 0 ? deps.slice(0, Math.floor(height / rowPx)) : deps
+  const current = deps.filter((d) => !isDeparted(d, now))
+  const shown = height > 0 ? current.slice(0, Math.floor(height / rowPx)) : current
   return (
     <div
       ref={ref}
+      data-departure-list
       className="grid min-h-0 flex-1 content-start gap-x-[0.5em] overflow-hidden"
       style={{ fontSize: `${ROW_REM}rem`, gridTemplateColumns: ROW_TEMPLATE, gridAutoRows: `${ROW_EM}em` }}
     >
@@ -136,7 +184,6 @@ function DepartureRow({ dep, format }) {
   const cancelled = !!dep.cancelled
   const label = lineLabel(dep)
   const long = label.length >= LONG_CHIP
-  const end = cancelled || (!isBus(dep) && !!dep.platform)
   return (
     <div data-departure-row className="d-line-bottom col-span-full grid grid-cols-subgrid items-center">
       <DepartureTime dep={dep} format={format} cancelled={cancelled} />
@@ -149,13 +196,12 @@ function DepartureRow({ dep, format }) {
       >
         {label}
       </span>
-      {/* Without platform or cancellation the destination may use the last column too */}
-      <span className={`d-lato min-w-0 truncate ${end ? '' : 'col-span-2'} ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>
-        {dep.direction}
+      <span data-destination className="flex min-w-0 items-center gap-x-[0.4em]">
+        <span className={`d-lato min-w-0 flex-1 truncate ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>{dep.direction}</span>
+        {cancelled
+          ? <span data-cancelled className="d-oswald shrink-0 whitespace-nowrap text-[0.85em] uppercase tracking-[0.02em] text-(--d-red)">fällt aus</span>
+          : !isBus(dep) && dep.platform && <Platform dep={dep} />}
       </span>
-      {cancelled
-        ? <span className="d-oswald whitespace-nowrap text-[0.85em] uppercase tracking-[0.02em] text-(--d-red)">fällt aus</span>
-        : end && <Platform dep={dep} />}
     </div>
   )
 }
@@ -164,13 +210,20 @@ function Platform({ dep }) {
   const planned = dep.platform_planned
   if (planned && planned !== dep.platform) {
     return (
-      <span data-platform className="d-oswald whitespace-nowrap text-[0.85em] text-(--d-warn)">
-        <s className="text-(--d-muted)">Gl. {planned}</s> Gl. {dep.platform}
+      <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em] text-(--d-warn)">
+        <s className="text-(--d-muted)"><PlatformPrefix />{planned}</s> <PlatformPrefix />{dep.platform}
       </span>
     )
   }
-  return <span data-platform className="d-oswald whitespace-nowrap text-[0.85em] text-(--d-muted)">Gl. {dep.platform}</span>
+  return (
+    <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em] text-(--d-muted)">
+      <PlatformPrefix />{dep.platform}
+    </span>
+  )
 }
+
+// In narrow cards the number alone, so the destination keeps its room.
+const PlatformPrefix = () => <span data-platform-prefix className="@max-[20rem]:hidden">Gl. </span>
 
 // Own leaf component: re-renders only when the minute changes
 function DepartureTime({ dep, format, cancelled }) {
