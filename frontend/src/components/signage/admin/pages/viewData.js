@@ -46,7 +46,10 @@ export const NUMBER_RULES = {
   pdf_static_page: { label: 'Feste Seite', min: 1, max: 999 },
   split_left_percent: { label: 'Breite links', min: 20, max: 80 },
   transit_duration: { label: 'Vorausschau', min: 10, max: 240 },
+  transit_columns: { label: 'Spalten', min: 1, max: 5 },
 }
+export const DEFAULT_COLUMNS = 4
+export const MAX_COLUMNS = 5
 export const WALK_MINUTES_LIMIT = 60
 export const MAX_DEPARTURES_LIMIT = 50
 
@@ -59,7 +62,7 @@ export const EDITABLE_FIELDS = [
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
-  'transit_duration', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
+  'transit_duration', 'transit_columns', 'transit_time_format', 'transit_show_disruptions', 'transit_strip_city', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
   'transit_strike_active', 'transit_strike_text', 'transit_strike_lines', 'transit_strike_types',
   'substitutions_source', 'substitutions_format', 'substitutions_custom_format', 'substitutions_show_absences',
   'substitutions_show_exams', 'substitutions_next_day_from', 'webuntis_url', 'webuntis_url_next_day', 'webuntis_link_id', 'webuntis_link_next_day_id',
@@ -70,7 +73,7 @@ export const EDITABLE_FIELDS = [
   'rotation_items',
 ]
 
-const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'transit_duration'])
+const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'transit_duration', 'transit_columns'])
 const TEXT_FIELDS = new Set(['name', 'substitutions_custom_format', 'weather_city', 'qr_code_url', 'qr_code_label', 'transit_strike_text',
   'webuntis_url', 'webuntis_url_next_day', 'pdf_pages', 'custom_countdown_name'])
 const LINK_FIELDS = new Set(['webuntis_link_id', 'webuntis_link_next_day_id'])
@@ -224,7 +227,7 @@ export function usedOn(viewId, screens, now = new Date()) {
 export function newStop(result) {
   return {
     id: result.id, name: result.name, walk_minutes: 0, max_departures: DEFAULT_MAX_DEPARTURES, filter_lines: [],
-    filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true,
+    filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
   }
 }
 

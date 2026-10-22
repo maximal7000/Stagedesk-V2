@@ -131,7 +131,7 @@ describe('Haltestellen', () => {
   it('legt neue Haltestellen mit 10 Zeilen und allen Verkehrsmitteln an', () => {
     expect(newStop({ id: '8000237', name: 'Lübeck Hbf', source: 'db' })).toEqual({
       id: '8000237', name: 'Lübeck Hbf', walk_minutes: 0, max_departures: 10, filter_lines: [],
-      filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true,
+      filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
     })
   })
   it('beschreibt die Verkehrsmittel', () => {
