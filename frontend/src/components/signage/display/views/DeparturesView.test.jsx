@@ -47,6 +47,7 @@ beforeEach(() => {
 
 afterEach(() => {
   act(() => root.unmount())
+  vi.restoreAllMocks()
   vi.useRealTimers()
 })
 
@@ -119,12 +120,12 @@ describe('DeparturesView', () => {
     const old = changed.querySelector('s')
     expect(old.textContent).toBe('Gl. 5')
     expect(old.className).toContain('text-(--d-muted)')
-    expect(old.className).toContain('text-[0.8em]')
+    expect(old.className).not.toContain('text-[0.8em]')
     expect(changed.querySelector('[data-platform-new]').className).toContain('text-(--d-warn)')
     expect(changed.textContent).toBe('Gl. 5 Gl. 6')
     expect(plain.textContent).toBe('Gl. 4')
     expect(plain.querySelector('s')).toBeNull()
-    expect(plain.querySelector('[data-platform-prefix]').className).toContain('@max-[20rem]:hidden')
+    expect(plain.querySelector('[data-platform-prefix]').className).toContain('@max-[16rem]:hidden')
   })
 
   it('Ziel behält Mindestbreite: Gleis steht pro Zeile im Zielfeld, nicht in einer gemeinsamen Spalte', () => {
@@ -150,6 +151,42 @@ describe('DeparturesView', () => {
     ]
     const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps, { split_modes: false })] })} />)
     expect(rows(el).map((r) => r.querySelector('[data-chip]').textContent)).toEqual(['11', 'RE 8'])
+  })
+
+  it('alle Fahrten abgefahren: „Keine Abfahrten“ statt einer leeren Karte', () => {
+    const deps = [bus('22:05', '5', 'Eichholz'), train('22:08', 'RE8', 'Hamburg Hbf', '5')]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Lübeck Hbf', deps)] })} />)
+    expect(rows(el)).toHaveLength(0)
+    expect(el.querySelector('section').textContent).toContain('Keine Abfahrten')
+  })
+
+  it('zu niedrige Liste zeigt trotzdem eine Zeile', () => {
+    const real = Element.prototype.getBoundingClientRect
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+      return this.hasAttribute('data-departure-list') ? { width: 300, height: 10 } : real.call(this)
+    })
+    const deps = [bus('22:14', '5', 'Eichholz'), bus('22:20', '11', 'Schlutup')]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)] })} />)
+    expect(rows(el)).toHaveLength(1)
+  })
+
+  it('Störungsspalte blättert im Takt der Ansicht', () => {
+    const real = Element.prototype.getBoundingClientRect
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+      if (this.parentElement?.hasAttribute('data-disruptions')) return { width: 400, height: 250 }
+      if (this.tagName === 'ARTICLE') return { width: 400, height: 120 }
+      return real.call(this)
+    })
+    const disruptions = ['A', 'B', 'C'].map((t) => ({ id: t, kind: 'disruption', title: `Meldung ${t}`, text: '', lines: ['5'] }))
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', [])], disruptions })} />)
+    const column = el.querySelector('[data-disruptions]')
+    const shown = () => [...column.querySelectorAll('article')].filter((a) => !a.closest('[aria-hidden]'))
+      .map((a) => a.textContent.replace('Störung · Linie 5', ''))
+    expect(column.textContent).toContain('1 / 2')
+    expect(shown()).toEqual(['Meldung A', 'Meldung B'])
+    act(() => { vi.advanceTimersByTime(15000) })
+    expect(column.textContent).toContain('2 / 2')
+    expect(shown()).toEqual(['Meldung C'])
   })
 
   it('Haltestellen ohne index bekommen trotzdem eindeutige Schlüssel', () => {
@@ -187,12 +224,12 @@ describe('DeparturesView', () => {
     expect(el.querySelector('[data-disruptions]')).toBeNull()
   })
 
-  it('Footer: Datum, Wetter und Stand, Quellen-Ausfall dahinter', () => {
+  it('Footer: Datum, Quellen-Ausfall vor Wetter und Stand', () => {
     const weather = { temperature: 12.4, description: 'Regen' }
     const status = { fetched_at: '2026-10-22T22:11:00', sources: { db: 'error', nahsh: 'ok' } }
     const el = render(<DeparturesView.Footer view={view({ status }, { show_weather: true, weather })} />)
     const items = [...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)
-    expect(items).toEqual(['Donnerstag, 22. Oktober', '12 °C Regen', 'Stand 22:11', 'DB nicht erreichbar'])
+    expect(items).toEqual(['Donnerstag, 22. Oktober', 'DB nicht erreichbar', '12 °C Regen', 'Stand 22:11'])
   })
 
   it('Footer ohne Wetterdaten und ohne Ausfall', () => {

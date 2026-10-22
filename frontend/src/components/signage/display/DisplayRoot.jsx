@@ -94,7 +94,8 @@ function ViewScreen({ view, scheme = 'light', orientation, staleSince = null, wh
   if (View?.ownFrame) {
     return <View view={view} orientation={orientation} frame={{ scheme, staleSince, wheel, stripe }} screen={ViewScreen} />
   }
-  const clock = { showWeather: view.show_weather && !View?.weatherInFooter, weather: view.weather, staleSince }
+  const weatherInFooter = typeof View?.weatherInFooter === 'function' ? View.weatherInFooter(view) : !!View?.weatherInFooter
+  const clock = { showWeather: view.show_weather && !weatherInFooter, weather: view.weather, staleSince }
   const footer = View?.Footer ? <View.Footer view={view} /> : null
   return (
     <Frame layout={view.layout} scheme={scheme} orientation={orientation} clock={clock} footer={footer} wheel={wheel} stripe={stripe}>

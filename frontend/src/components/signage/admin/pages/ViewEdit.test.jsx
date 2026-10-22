@@ -125,6 +125,18 @@ describe('ViewEdit', () => {
     expect(body.transit_stops.map((s) => s.id)).toEqual(['c', 'b', 'a'])
   })
 
+  it('Wetter anzeigen: Hinweis, wo es erscheint', async () => {
+    const weatherHelp = () => [...container.querySelectorAll('label')].find((l) => l.textContent === 'Wetter anzeigen')
+      ?.parentElement.querySelector('p')?.textContent
+    await mount('/signage-admin/views/1')
+    expect(container.textContent).not.toContain('Wetter in der Uhr-Box')
+    expect(weatherHelp()).toBe('Erscheint unten neben dem Datum.')
+    act(() => root.unmount())
+    container.remove()
+    await mount('/signage-admin/views/2')
+    expect(weatherHelp()).toBe('Erscheint in der Uhr-Box.')
+  })
+
   it('bietet im Wechsel keine Wechsel-Ansichten an', async () => {
     await mount('/signage-admin/views/4')
     const select = container.querySelector('#rotation-view-0')

@@ -30,9 +30,14 @@ export default function SplitView({ view }) {
 function SplitFooter({ view }) {
   const data = view.data ?? {}
   const percent = clampPercent(data.left_percent)
+  let weatherShown = false
   const cells = [data.left, data.right].map((side) => {
     const { View, sub } = sideView(view, side)
-    return View?.Footer ? <View.Footer view={sub} /> : null
+    if (!View?.Footer) return null
+    // Two departure sides: the weather only once
+    const showWeather = sub.show_weather && !weatherShown
+    if (View.weatherInFooter === true && showWeather) weatherShown = true
+    return <View.Footer view={{ ...sub, show_weather: showWeather }} />
   })
   if (!cells.some(Boolean)) return null
   return (
@@ -44,3 +49,5 @@ function SplitFooter({ view }) {
 }
 
 SplitView.Footer = SplitFooter
+SplitView.weatherInFooter = (view) => [view.data?.left, view.data?.right]
+  .some((side) => sideView(view, side).View?.weatherInFooter === true)

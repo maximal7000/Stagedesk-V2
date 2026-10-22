@@ -119,7 +119,9 @@ function StationCard({ station, name, format }) {
   const headingRef = useRef(null)
   const { width } = useBoxSize(cardRef)
   const headingRem = useFittedHeading(headingRef, name, width)
-  const deps = station.departures ?? []
+  const now = useClockMinute()
+  // Departed trips stay hidden between two server updates instead of reading "jetzt".
+  const deps = (station.departures ?? []).filter((d) => !isDeparted(d, now))
   const split = station.split_modes !== false && deps.some(isBus) && deps.some((d) => !isBus(d))
   const sections = split
     ? [['bus', 'Busse', deps.filter(isBus)], ['train', 'Züge', deps.filter((d) => !isBus(d))]]
@@ -157,14 +159,12 @@ function StationCard({ station, name, format }) {
 }
 
 // Only whole rows: as many as fit into the measured height, the rest is cut off (no paging).
-// Departed trips stay hidden between two server updates instead of reading "jetzt".
+// At least one row, so a very low card still shows the next departure.
 function DepartureList({ deps, format }) {
   const ref = useRef(null)
   const { height, remPx } = useBoxSize(ref)
-  const now = useClockMinute()
   const rowPx = ROW_EM * ROW_REM * remPx
-  const current = deps.filter((d) => !isDeparted(d, now))
-  const shown = height > 0 ? current.slice(0, Math.floor(height / rowPx)) : current
+  const shown = height > 0 ? deps.slice(0, Math.max(1, Math.floor(height / rowPx))) : deps
   return (
     <div
       ref={ref}
@@ -209,7 +209,7 @@ function Platform({ dep }) {
   if (planned && planned !== dep.platform) {
     return (
       <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em]">
-        <s className="pr-[0.35em] text-[0.8em] text-(--d-muted) decoration-[0.1em]"><PlatformPrefix />{planned}</s>{' '}
+        <s className="pr-[0.35em] text-(--d-muted) decoration-[0.1em]"><PlatformPrefix />{planned}</s>{' '}
         <span data-platform-new className="text-(--d-warn)"><PlatformPrefix />{dep.platform}</span>
       </span>
     )
@@ -221,8 +221,9 @@ function Platform({ dep }) {
   )
 }
 
-// In narrow cards the number alone, so the destination keeps its room.
-const PlatformPrefix = () => <span data-platform-prefix className="@max-[20rem]:hidden">Gl. </span>
+// Only in very narrow cards the number alone, so the destination keeps its room; the 4K landscape
+// columns (about 19rem) keep "Gl.".
+const PlatformPrefix = () => <span data-platform-prefix className="@max-[16rem]:hidden">Gl. </span>
 
 // Own leaf component: re-renders only when the minute changes
 function DepartureTime({ dep, format, cancelled }) {
@@ -294,10 +295,11 @@ function StatusBox({ view }) {
   const sources = data.status?.sources ?? {}
   const parts = [
     ['date', `${formatWeekday(now)}, ${DAY_MONTH_LONG.format(now)}`, ''],
-    temperature && ['weather', [temperature, weather.description].filter(Boolean).join(' '), ''],
-    stand && ['stand', `Stand ${stand}`, 'text-[1rem] text-(--d-muted)'],
+    // Warnings before the weather: in a narrow split cell the end of the row is cut off first
     ...SOURCE_NAMES.filter(([key]) => sources[key] === 'error')
       .map(([key, label]) => [key, `${label} nicht erreichbar`, 'text-[1rem] text-(--d-warn)']),
+    temperature && ['weather', [temperature, weather.description].filter(Boolean).join(' '), ''],
+    stand && ['stand', `Stand ${stand}`, 'text-[1rem] text-(--d-muted)'],
   ].filter(Boolean)
   return (
     <div className="d-card d-footer-item flex h-full min-w-0 items-center gap-[1.75rem] overflow-hidden px-[1.625rem] text-[1.1875rem]">
