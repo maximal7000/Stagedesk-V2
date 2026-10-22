@@ -14,7 +14,7 @@ import urllib.request
 from django.core.cache import cache
 from django.utils import timezone
 
-from . import color_scheme, oepnv, substitutions
+from . import color_scheme, substitutions, transit
 from .models import Announcement, DisplayView, MediaFile, MonitorSettings
 from .power import compute_power_state
 
@@ -101,7 +101,7 @@ def _fetch_transit(view):
             return view.transit_cache
 
     try:
-        result = oepnv.fetch_departures(
+        result = transit.fetch_departures(
             stops=view.transit_stops,
             duration=view.transit_duration,
             max_per_stop=view.transit_max_departures,
@@ -142,11 +142,11 @@ def _fetch_disruptions(view):
     all_sources_ok = True
     try:
         if view.transit_disruption_rail:
-            rail = oepnv.fetch_disruptions_nahsh(view.transit_disruption_rail_lines or None)
+            rail = transit.fetch_disruptions_nahsh(view.transit_disruption_rail_lines or None)
             all_sources_ok = all_sources_ok and bool(rail)
             result += rail
         if view.transit_disruption_bus:
-            bus = oepnv.fetch_disruptions_swl(view.transit_disruption_bus_lines or None)
+            bus = transit.fetch_disruptions_swl(view.transit_disruption_bus_lines or None)
             all_sources_ok = all_sources_ok and bool(bus)
             result += bus
     except Exception as e:
@@ -158,7 +158,7 @@ def _fetch_disruptions(view):
             result.insert(0, {
                 # Hash-Eingabe bleibt bei der alten Quellkennung 'manuell', damit ausgeblendete
                 # Meldungen (transit_disruption_hidden) ausgeblendet bleiben (Spec §5.4).
-                'id': oepnv._disruption_id('manuell', m.get('title'), m.get('text')),
+                'id': transit.disruption_id('manuell', m.get('title'), m.get('text')),
                 'source': 'manual', 'kind': 'disruption',
                 'title': m.get('title') or 'Hinweis', 'text': m.get('text') or '',
                 'lines': [], 'from': '', 'until': '',

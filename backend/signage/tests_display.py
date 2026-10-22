@@ -61,9 +61,9 @@ STATION = {
 
 def _mock_sources():
     return [
-        mock.patch('signage.display.oepnv.fetch_departures', return_value=[dict(STATION)]),
-        mock.patch('signage.display.oepnv.fetch_disruptions_nahsh', return_value=[]),
-        mock.patch('signage.display.oepnv.fetch_disruptions_swl', return_value=[]),
+        mock.patch('signage.display.transit.fetch_departures', return_value=[dict(STATION)]),
+        mock.patch('signage.display.transit.fetch_disruptions_nahsh', return_value=[]),
+        mock.patch('signage.display.transit.fetch_disruptions_swl', return_value=[]),
         mock.patch('signage.substitutions.untis_monitor.load_days', side_effect=fake_load_days),
     ]
 

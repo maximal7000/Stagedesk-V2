@@ -9,7 +9,8 @@ from ninja.errors import HttpError
 
 from .models import DisplayView, Screen, DisplayEvent, DisplayEventScreen
 from .api import _validate_view_data, _validate_exam_data, _fetch_disruptions
-from . import oepnv
+from . import transit
+from .transit import nahsh
 
 
 class ActiveViewPriorityTest(TestCase):
@@ -107,25 +108,25 @@ class TransitCredentialsTest(TestCase):
 
     @override_settings(NAHSH_HAFAS_AID='')
     def test_nahsh_without_aid_returns_none_and_logs(self):
-        with self.assertLogs('signage.oepnv', level='WARNING') as log, \
-             mock.patch.object(oepnv._post_opener, 'open') as opener_open:
-            self.assertIsNone(oepnv._nahsh_rpc('StationBoard', {}))
+        with self.assertLogs('signage.transit', level='WARNING') as log, \
+             mock.patch.object(nahsh._post_opener, 'open') as opener_open:
+            self.assertIsNone(nahsh._nahsh_rpc('StationBoard', {}))
         opener_open.assert_not_called()
         self.assertIn('NAHSH_HAFAS_AID', log.output[0])
 
     @override_settings(SWHL_STORYBLOK_TOKEN='')
     def test_swl_without_token_returns_empty_list(self):
-        with self.assertLogs('signage.oepnv', level='WARNING'), \
+        with self.assertLogs('signage.transit', level='WARNING'), \
              mock.patch('urllib.request.urlopen') as urlopen:
-            self.assertEqual(oepnv.fetch_disruptions_swl(), [])
+            self.assertEqual(transit.fetch_disruptions_swl(), [])
         urlopen.assert_not_called()
 
     @override_settings(NAHSH_HAFAS_AID='test-aid')
     def test_nahsh_uses_aid_from_settings(self):
         # _nahsh_rpc nutzt _post_opener.open (Redirect-Handler), nicht urlopen
-        with mock.patch.object(oepnv._post_opener, 'open') as opener_open:
+        with mock.patch.object(nahsh._post_opener, 'open') as opener_open:
             opener_open.return_value.__enter__.return_value.read.return_value = b'{"svcResL":[{"res":{}}]}'
-            oepnv._nahsh_rpc('StationBoard', {})
+            nahsh._nahsh_rpc('StationBoard', {})
         body = json.loads(opener_open.call_args[0][0].data)
         self.assertEqual(body['auth'], {'type': 'AID', 'aid': 'test-aid'})
 
@@ -134,7 +135,7 @@ class DisruptionIdTest(TestCase):
 
     def test_disruption_id_is_stable(self):
         # Hash-Eingaben bleiben identisch, sonst tauchen ausgeblendete Meldungen wieder auf
-        self.assertEqual(oepnv._disruption_id('manuell', 'Titel', 'Text'),
+        self.assertEqual(transit.disruption_id('manuell', 'Titel', 'Text'),
                          hashlib.md5('manuell|Titel|Text'.encode()).hexdigest()[:12])
 
 
@@ -145,7 +146,7 @@ class ManualDisruptionTest(TestCase):
             name='V', slug='v', kind='departures', transit_disruption_rail=False, transit_disruption_bus=False,
             transit_disruption_manual=[{'title': 'Titel', 'text': 'Text', 'image': 'k.png', 'highlighted': True}])
         [d] = _fetch_disruptions(view)
-        self.assertEqual(d['id'], oepnv._disruption_id('manuell', 'Titel', 'Text'))
+        self.assertEqual(d['id'], transit.disruption_id('manuell', 'Titel', 'Text'))
         self.assertEqual((d['source'], d['kind'], d['title'], d['image'], d['lines'], d['from'], d['until']),
                          ('manual', 'disruption', 'Titel', 'k.png', [], '', ''))
 
@@ -206,16 +207,16 @@ class DisruptionHiddenPruneTest(TestCase):
 
     def test_failed_source_keeps_hidden_list(self):
         view = self._view()
-        with mock.patch.object(oepnv, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
-             mock.patch.object(oepnv, 'fetch_disruptions_swl', return_value=[]):
+        with mock.patch.object(transit, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
+             mock.patch.object(transit, 'fetch_disruptions_swl', return_value=[]):
             _fetch_disruptions(view)
         view.refresh_from_db()
         self.assertEqual(view.transit_disruption_hidden, ['rail1', 'bus1', 'gone'])
 
     def test_all_sources_ok_prunes_stale_ids(self):
         view = self._view()
-        with mock.patch.object(oepnv, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
-             mock.patch.object(oepnv, 'fetch_disruptions_swl', return_value=[self._item('bus1', 'swl')]):
+        with mock.patch.object(transit, 'fetch_disruptions_nahsh', return_value=[self._item('rail1', 'nahsh')]), \
+             mock.patch.object(transit, 'fetch_disruptions_swl', return_value=[self._item('bus1', 'swl')]):
             _fetch_disruptions(view)
         view.refresh_from_db()
         self.assertEqual(view.transit_disruption_hidden, ['rail1', 'bus1'])

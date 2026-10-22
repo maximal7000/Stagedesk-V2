@@ -52,7 +52,7 @@ from .schemas import (
     ExamTemplateSchema, ExamTemplateCreateSchema,
     MonitorSettingsSchema, MonitorSettingsUpdateSchema,
 )
-from . import devices, display, media, oepnv
+from . import devices, display, media, transit
 from .display import _fetch_disruptions  # Admin-Störungsliste; Datenquellen liegen in display.py
 from .consumers import push_power_to_all
 from .permissions import _require_perm
@@ -615,7 +615,7 @@ def search_transit_stops(request, q: str = "", results: int = 10,
     _require_perm(request, 'signage.setup')
     if len(q) < 2:
         return []
-    return oepnv.search_stations(q, results=min(results, 20),
+    return transit.search_stations(q, results=min(results, 20),
                                  use_db=use_db, use_nahsh=use_nahsh)
 
 
