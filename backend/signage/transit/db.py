@@ -121,8 +121,10 @@ def _fetch_sbahn_meta(eva, duration, max_results, stopovers=False):
     return out
 
 
-def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
-    """/plan (planned) plus /fchg (real-time changes)."""
+def _fetch_departures_db(station_id, duration, max_results, stopovers=False, failed=None):
+    """/plan (planned) plus /fchg (real-time changes). A failed /fchg or /plan hour
+    still yields the remaining data; it is appended to `failed` so the caller can
+    report the source as degraded. Raises when every /plan request failed."""
     if not DB_TT_CLIENT_ID:
         return []
     now = datetime.now(TIMEZONE)
@@ -163,17 +165,23 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                     replaced_by[orig_key] = repl_label
                     replacement_trips.append(s)
     except Exception:
-        pass
+        if failed is not None:
+            failed.append("fchg")
 
     hours = 1 + min(3, int(duration) // 60)
     # Also load the previous hour (i=-1): delayed trains with an early planned time
     # are in the plan of the PLANNED hour, not the current one.
     deps = []
+    plan_failures, last_plan_error = 0, None
     for i in range(-1, hours):
         t = now + timedelta(hours=i)
         try:
             plan = _db_tt_get(f"/plan/{station_id}/{t.strftime('%y%m%d')}/{t.strftime('%H')}")
-        except Exception:
+        except Exception as e:
+            plan_failures += 1
+            last_plan_error = e
+            if failed is not None:
+                failed.append("plan")
             continue
         for s in plan.findall("s"):
             dp = s.find("dp")
@@ -283,6 +291,9 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             if stopovers:
                 result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
             deps.append(result)
+
+    if plan_failures == hours + 1:
+        raise last_plan_error
 
     for s in replacement_trips:
         dp = s.find("dp"); tl = s.find("tl"); ref = s.find("ref")

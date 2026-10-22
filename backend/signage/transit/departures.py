@@ -26,15 +26,13 @@ def departure_visible(dep, now, walk_minutes):
     ahead = _minutes_ahead(actual, now)
     if ahead is None:
         return True
-    if dep.get("realtime", False):
-        if ahead < -720:
-            ahead += 1440
-        return ahead >= walk_minutes
+    # The look-ahead is capped at 240 min, so a gap beyond 12 h is a day change
     if ahead < -720:
         ahead += 1440
     elif ahead > 720:
-        # Planned just before midnight, seen after midnight: it lies in the past
         ahead -= 1440
+    if dep.get("realtime", False):
+        return ahead >= walk_minutes
     return ahead >= (walk_minutes if walk_minutes > 0 else -1)
 
 
@@ -84,18 +82,25 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         need_stopovers = bool(filter_via) or show_via
 
         if st_use_db:
+            failed = []
             try:
-                raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2, stopovers=need_stopovers)
+                raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2,
+                                                      stopovers=need_stopovers, failed=failed)
             except Exception as e:
                 logger.warning(f"DB Abfahrten Fehler ({station_name}): {e}")
-                errors.add("db")
+                failed = ["all"]
                 # Stopovers can cause 500s: retry without them
                 if need_stopovers:
+                    failed = []
                     try:
-                        raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2, stopovers=False)
+                        raw_departures = _fetch_departures_db(station_id, duration, max_per_stop * 2,
+                                                              stopovers=False, failed=failed)
                         logger.info(f"DB Fallback ohne Stopovers OK ({station_name})")
                     except Exception as e2:
                         logger.warning(f"DB Fallback Fehler ({station_name}): {e2}")
+                        failed = ["all"]
+            if failed:
+                errors.add("db")
 
         # S-Bahn from the meta EVA (opt-in): large stations split the S-Bahn off
         if st_use_db and station.get("show_suburban", False) and raw_departures:
@@ -150,9 +155,13 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             try:
                 extra_deps = None
                 if extra_source in ("db", "both", ""):
+                    extra_failed = []
                     try:
-                        extra_deps = _fetch_departures_db(extra_id, duration, max_per_stop * 2, stopovers=False)
+                        extra_deps = _fetch_departures_db(extra_id, duration, max_per_stop * 2,
+                                                          stopovers=False, failed=extra_failed)
                     except Exception:
+                        extra_failed = ["all"]
+                    if extra_failed:
                         errors.add("db")
                 # NAH.SH: when asked for explicitly, for "both", or when DB returned nothing
                 if extra_source in ("nahsh", "both") or (extra_source == "" and not extra_deps):
@@ -309,7 +318,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         return "error" if name in errors else "ok"
 
     def _result(stations):
-        db_active = bool(db_api.DB_TT_CLIENT_ID) and any(
+        db_active = bool(db_api.DB_TT_CLIENT_ID and db_api.DB_TT_API_KEY) and any(
             _stop_sources(s)[0] or (s.get("extra_id", "").strip() and s.get("extra_source", "") != "nahsh")
             for _, s in valid)
         nahsh_active = any(

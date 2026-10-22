@@ -67,12 +67,15 @@ class DepartureVisibleTest(SimpleTestCase):
     def test_midnight_wrap(self):
         self.assertTrue(self.visible(_dep('00:05', realtime=False), '23:58'))
         self.assertFalse(self.visible(_dep('23:59', realtime=False), '00:02'))
+        self.assertFalse(self.visible(_dep('23:55', '23:59'), '00:02'))
+        self.assertTrue(self.visible(_dep('00:00', '00:05'), '23:58'))
 
 
 class FetchDeparturesTest(SimpleTestCase):
     def run_fetch(self, stops, db_deps=None, nahsh=None, client_id='id'):
         from signage.transit import db, departures
         with mock.patch.object(db, 'DB_TT_CLIENT_ID', client_id), \
+             mock.patch.object(db, 'DB_TT_API_KEY', 'key'), \
              mock.patch.object(departures, '_fetch_departures_db',
                                **(db_deps or {'return_value': []})), \
              mock.patch.object(departures, '_fetch_departures_nahsh',
@@ -117,3 +120,66 @@ class TransitCacheTest(SimpleTestCase):
         self.assertEqual(_as_transit([{'station_id': '1'}]),
                          {'stations': [{'station_id': '1'}], 'sources': {}})
         self.assertIsNone(_as_transit(None))
+
+
+class DbFailureStatusTest(SimpleTestCase):
+    STOP = [{'id': '1', 'name': 'A', 'source': 'db'}]
+
+    def fetch(self, tt_get, stops=None):
+        from signage.transit import db, departures
+        with mock.patch.object(db, 'DB_TT_CLIENT_ID', 'id'), \
+             mock.patch.object(db, 'DB_TT_API_KEY', 'key'), \
+             mock.patch.object(db, '_db_tt_get', side_effect=tt_get):
+            return departures.fetch_departures(stops or self.STOP)
+
+    @staticmethod
+    def _plan():
+        from xml.etree import ElementTree as ET
+        return ET.fromstring('<timetable/>')
+
+    def test_all_plan_requests_failing_is_an_error(self):
+        result = self.fetch(OSError('down'))
+        self.assertEqual(result['sources']['db'], 'error')
+        self.assertEqual(result['stations'][0]['departures'], [])
+
+    def test_fchg_failure_is_an_error(self):
+        def tt_get(path):
+            if path.startswith('/fchg'):
+                raise OSError('down')
+            return self._plan()
+        self.assertEqual(self.fetch(tt_get)['sources']['db'], 'error')
+
+    def test_single_plan_hour_failure_is_an_error(self):
+        calls = []
+
+        def tt_get(path):
+            calls.append(path)
+            if path.startswith('/plan') and len(calls) == 2:
+                raise OSError('down')
+            return self._plan()
+        self.assertEqual(self.fetch(tt_get)['sources']['db'], 'error')
+
+    def test_healthy_db_is_ok(self):
+        self.assertEqual(self.fetch(lambda path: self._plan())['sources']['db'], 'ok')
+
+    def test_stopover_retry_success_is_not_an_error(self):
+        from signage.transit import db, departures
+        calls = []
+
+        def fake(station_id, duration, max_results, stopovers=False, failed=None):
+            calls.append(stopovers)
+            if stopovers:
+                raise OSError('500')
+            return []
+        with mock.patch.object(db, 'DB_TT_CLIENT_ID', 'id'), mock.patch.object(db, 'DB_TT_API_KEY', 'key'), \
+             mock.patch.object(departures, '_fetch_departures_db', side_effect=fake):
+            result = departures.fetch_departures([{'id': '1', 'name': 'A', 'source': 'db', 'filter_via': 'Kiel'}])
+        self.assertEqual(calls, [True, False])
+        self.assertEqual(result['sources']['db'], 'ok')
+
+    def test_missing_api_key_is_off(self):
+        from signage.transit import db, departures
+        with mock.patch.object(db, 'DB_TT_CLIENT_ID', 'id'), mock.patch.object(db, 'DB_TT_API_KEY', ''), \
+             mock.patch.object(departures, '_fetch_departures_db', return_value=[]):
+            result = departures.fetch_departures(self.STOP)
+        self.assertEqual(result['sources']['db'], 'off')
