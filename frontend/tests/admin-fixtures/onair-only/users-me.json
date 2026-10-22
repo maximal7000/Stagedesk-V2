@@ -9,8 +9,8 @@
   "permissions": [
     "veranstaltung.view",
     "inventar.view",
-    "monitor.view",
-    "monitor.onair"
+    "signage.view",
+    "signage.onair"
   ],
   "theme": "dark",
   "theme_locked": false,

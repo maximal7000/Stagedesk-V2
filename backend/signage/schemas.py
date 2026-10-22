@@ -619,7 +619,7 @@ class DevicePairSchema(Schema):
 
 class DeviceSchema(Schema):
     """Gerät mit Ampel. `id` ist leer bei Bildschirmen mit altem Skript (`legacy`).
-    serial, telemetry.network.ip/mac: nur mit monitor.devices, sonst null."""
+    serial, telemetry.network.ip/mac: nur mit signage.devices, sonst null."""
     id: Optional[int] = None
     screen_id: Optional[int] = None
     serial: Optional[str] = None

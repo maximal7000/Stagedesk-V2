@@ -263,8 +263,8 @@ class WatchTest(WatchBase):
 
 class RecipientsTest(TestCase):
     def test_recipients_only_with_devices_permission(self):
-        perm, _ = Permission.objects.get_or_create(code='monitor.devices', defaults={'name': 'Geräte'})
-        other, _ = Permission.objects.get_or_create(code='monitor.view', defaults={'name': 'Ansehen'})
+        perm, _ = Permission.objects.get_or_create(code='signage.devices', defaults={'name': 'Geräte'})
+        other, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Ansehen'})
         direct = UserProfile.objects.create(keycloak_id='direct', username='direct')
         direct.permissions.add(perm)
         grouped = UserProfile.objects.create(keycloak_id='grouped', username='grouped')

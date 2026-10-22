@@ -102,7 +102,7 @@ class AgentEndToEndTest(TransactionTestCase):
         self.port = live_server_port()
         self.base = f'http://127.0.0.1:{self.port}'
         profile = UserProfile.objects.create(keycloak_id='tester')
-        for code in ('monitor.view', 'monitor.devices', 'monitor.power'):
+        for code in ('signage.view', 'signage.devices', 'signage.power'):
             perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
             profile.permissions.add(perm)
         auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester', 'name': 'Tester'})

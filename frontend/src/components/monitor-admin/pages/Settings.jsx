@@ -1,7 +1,7 @@
 // Einstellungen (Spec §6.2): WebUntis-Zugang mit "Verbindung testen", Notfall-Vorlagen (sortierbar), On-Air-Darstellung
 // und Wetter-Schlüssel. ÖPNV-Werte gehören zur Ansicht und stehen im Abfahrts-Editor (Ruling R26). Eine SaveBar für
 // die ganze Seite; jeder geänderte Teil wird mit eigener Anfrage gespeichert, weil die Rechte getrennt sind: WebUntis
-// und Wetter brauchen monitor.setup, On-Air monitor.onair, Notfall-Vorlagen monitor.emergency. Ohne Recht ist ein
+// und Wetter brauchen signage.setup, On-Air signage.onair, Notfall-Vorlagen signage.emergency. Ohne Recht ist ein
 // Abschnitt nur lesend (Notfall-Vorlagen fehlen dann ganz, weil schon das Lesen das Recht braucht).
 // Zugangsdaten sind write-only (Ruling R22): ein leeres Feld behält den gespeicherten Wert.
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
@@ -256,9 +256,9 @@ const CLEAR = {
 
 export default function Settings() {
   const { hasPermission } = useUser()
-  const canSetup = hasPermission('monitor.setup')
-  const canOnAir = hasPermission('monitor.onair')
-  const canEmergency = hasPermission('monitor.emergency')
+  const canSetup = hasPermission('signage.setup')
+  const canOnAir = hasPermission('signage.onair')
+  const canEmergency = hasPermission('signage.emergency')
 
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)

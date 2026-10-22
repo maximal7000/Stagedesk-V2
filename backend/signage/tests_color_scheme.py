@@ -137,7 +137,7 @@ class ColorSchemeApiTest(TestCase):
                                HTTP_AUTHORIZATION='Bearer x')
 
     def test_get_settings_has_scheme_and_daylight_today(self):
-        self.grant('monitor.view')
+        self.grant('signage.view')
         r = self.client.get('/api/monitor/settings', HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 200)
         data = r.json()
@@ -148,16 +148,16 @@ class ColorSchemeApiTest(TestCase):
             self.assertRegex(value, r'^\d\d:\d\d$')
 
     def test_settings_scheme_needs_setup(self):
-        self.grant('monitor.view', 'monitor.onair')
+        self.grant('signage.view', 'signage.onair')
         self.assertEqual(self.put('/settings', {'color_scheme': 'dark'}).status_code, 403)
-        self.grant('monitor.setup')
+        self.grant('signage.setup')
         r = self.put('/settings', {'color_scheme': 'schedule', 'light_from': '06:30', 'light_until': '19:00'})
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual((r.json()['color_scheme'], r.json()['light_from'], r.json()['light_until']),
                          ('schedule', '06:30', '19:00'))
 
     def test_settings_light_times_validated(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         for body in ({'light_from': '18:00', 'light_until': '07:00'}, {'light_from': '19:00'},
                      {'light_until': '07:00'}):
             with self.subTest(body=body):
@@ -174,9 +174,9 @@ class ColorSchemeApiTest(TestCase):
 
     def test_screen_scheme_needs_setup(self):
         screen = Screen.objects.create(name='Halle', slug='halle')
-        self.grant('monitor.view', 'monitor.power', 'monitor.devices')
+        self.grant('signage.view', 'signage.power', 'signage.devices')
         self.assertEqual(self.put(f'/screens/{screen.id}', {'color_scheme': 'dark'}).status_code, 403)
-        self.grant('monitor.setup')
+        self.grant('signage.setup')
         r = self.put(f'/screens/{screen.id}', {'color_scheme': 'dark'})
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()['color_scheme'], 'dark')
@@ -184,7 +184,7 @@ class ColorSchemeApiTest(TestCase):
 
     def test_screen_scheme_null_is_ignored(self):
         screen = Screen.objects.create(name='Halle', slug='halle', color_scheme='dark')
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         r = self.put(f'/screens/{screen.id}', {'color_scheme': None, 'name': 'Aula'})
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()['color_scheme'], 'dark')

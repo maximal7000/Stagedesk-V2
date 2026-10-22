@@ -1,6 +1,6 @@
 // Klausuren & Termine (Spec §6.2): eine Liste "Läuft gerade / Kommt / Vergangen" mit Klausuren und Terminen
 // gemischt nach Zeit, darunter die Ankündigungen. Anlegen und Bearbeiten im Seitenpanel; "Aus Vorlage" übernimmt
-// eine Klausur-Vorlage. Schreiben braucht monitor.exams (Route), Lesen monitor.view.
+// eine Klausur-Vorlage. Schreiben braucht signage.exams (Route), Lesen signage.view.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { BookmarkPlus, CalendarClock, ChevronDown, Megaphone, Pencil, Plus, Power, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'

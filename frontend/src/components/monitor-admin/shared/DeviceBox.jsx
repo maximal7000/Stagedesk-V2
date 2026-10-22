@@ -40,7 +40,7 @@ function LargeScreenshot({ url, caption, onClose }) {
   )
 }
 
-// onReload: nur für Nutzer mit monitor.setup ohne monitor.devices (Neu laden wie vor dem Geräte-Agent)
+// onReload: nur für Nutzer mit signage.setup ohne signage.devices (Neu laden wie vor dem Geräte-Agent)
 export default function DeviceBox({ device, screen, can, onChanged, onReload }) {
   const [busy, setBusy] = useState({}) // kind -> true, solange der Befehl läuft
   const [confirm, setConfirm] = useState(null) // { kind, ... } | 'unpair' | 'revoke'
@@ -63,7 +63,7 @@ export default function DeviceBox({ device, screen, can, onChanged, onReload }) 
   const { items, hint } = commandsFor(device, can)
   const groups = telemetryGroups(device)
   const stand = reportTime(device)
-  const canManage = can('monitor.devices')
+  const canManage = can('signage.devices')
 
   const finish = (kind, command) => {
     if (!alive.current) return

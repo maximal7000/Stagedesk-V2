@@ -9,14 +9,14 @@
   "permissions": [
     "veranstaltung.view",
     "inventar.view",
-    "monitor.view",
-    "monitor.onair",
-    "monitor.emergency",
-    "monitor.setup",
-    "monitor.exams",
-    "monitor.media",
-    "monitor.power",
-    "monitor.devices"
+    "signage.view",
+    "signage.onair",
+    "signage.emergency",
+    "signage.setup",
+    "signage.exams",
+    "signage.media",
+    "signage.power",
+    "signage.devices"
   ],
   "theme": "dark",
   "theme_locked": false,

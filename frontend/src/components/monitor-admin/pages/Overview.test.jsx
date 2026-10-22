@@ -36,7 +36,7 @@ afterEach(() => {
 
 describe('Overview', () => {
   it('verlinkt den Bildschirmnamen auch nur mit Strom-Recht', async () => {
-    perms.allow = (p) => p === 'monitor.view' || p === 'monitor.power'
+    perms.allow = (p) => p === 'signage.view' || p === 'signage.power'
     api.getScreens.mockImplementation(() => Promise.resolve([screen('Glocke')]))
     container = document.createElement('div')
     root = createRoot(container)
@@ -139,10 +139,10 @@ describe('Overview', () => {
     expect(container.textContent).not.toContain('Kopplung folgt')
   })
 
-  it('Koppeln-Knopf nur mit monitor.devices', async () => {
+  it('Koppeln-Knopf nur mit signage.devices', async () => {
     api.getScreens.mockImplementation(() => Promise.resolve([screen('Glocke')]))
     const buttons = () => [...container.querySelectorAll('button')].filter((b) => b.textContent === 'Bildschirm koppeln')
-    perms.allow = (p) => p !== 'monitor.devices'
+    perms.allow = (p) => p !== 'signage.devices'
     container = document.createElement('div')
     root = createRoot(container)
     await act(async () => { root.render(createElement(MemoryRouter, null, createElement(Overview))) })

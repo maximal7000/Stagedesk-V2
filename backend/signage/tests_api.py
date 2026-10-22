@@ -124,20 +124,20 @@ class RegenerateScreenKeyTest(TestCase):
                                 HTTP_AUTHORIZATION='Bearer x')
 
     def test_requires_setup(self):
-        self.grant('monitor.view')
-        self.grant('monitor.power')
+        self.grant('signage.view')
+        self.grant('signage.power')
         old = self.screen.access_key
         self.assertEqual(self.regenerate().status_code, 403)
         self.screen.refresh_from_db()
         self.assertEqual(self.screen.access_key, old)
 
     def test_unknown_screen_404(self):
-        self.grant('monitor.setup')
+        self.grant('signage.setup')
         r = self.client.post('/api/monitor/screens/9999/regenerate-key', HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 404)
 
     def test_key_changes_and_is_returned(self):
-        self.grant('monitor.setup')
+        self.grant('signage.setup')
         old = self.screen.access_key
         with mock.patch('signage.api.push.notify_changed') as notify, \
                 self.captureOnCommitCallbacks(execute=True):
@@ -151,7 +151,7 @@ class RegenerateScreenKeyTest(TestCase):
         notify.assert_called_once_with(['halle'])
 
     def test_old_key_loses_substitutions(self):
-        self.grant('monitor.setup')
+        self.grant('signage.setup')
         old = self.screen.access_key
         self.regenerate()
         new = Screen.objects.get(id=self.screen.id).access_key
@@ -165,7 +165,7 @@ class RegenerateScreenKeyTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ScreenAccessKeyVisibilityTest(TestCase):
-    """access_key gibt den Vertretungsplan frei: nur mit monitor.setup in Antworten (Review T16)."""
+    """access_key gibt den Vertretungsplan frei: nur mit signage.setup in Antworten (Review T16)."""
 
     def setUp(self):
         self.screen = Screen.objects.create(name='Halle', slug='halle')
@@ -189,11 +189,11 @@ class ScreenAccessKeyVisibilityTest(TestCase):
                                content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
 
     def test_view_only_gets_no_key(self):
-        self.grant('monitor.view')
+        self.grant('signage.view')
         self.assertEqual(self.list_keys(), [''])
 
     def test_power_only_update_response_has_no_key(self):
-        self.grant('monitor.view', 'monitor.power')
+        self.grant('signage.view', 'signage.power')
         r = self.update({'power_mode': 'manual_off'})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()['access_key'], '')
@@ -202,7 +202,7 @@ class ScreenAccessKeyVisibilityTest(TestCase):
         self.assertEqual(len(self.screen.access_key), 32)
 
     def test_setup_gets_key(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         self.assertEqual(self.list_keys(), [self.screen.access_key])
         self.assertEqual(self.update({'location': 'Foyer'}).json()['access_key'], self.screen.access_key)
 
@@ -237,7 +237,7 @@ class SettingsSecretsTest(TestCase):
                                HTTP_AUTHORIZATION='Bearer x')
 
     def test_get_hides_secrets_and_reports_set(self):
-        self.grant('monitor.view')
+        self.grant('signage.view')
         data = self.get()
         self.assertEqual((data['webuntis_password'], data['weather_api_key']), ('', ''))
         self.assertIs(data['webuntis_password_set'], True)
@@ -246,14 +246,14 @@ class SettingsSecretsTest(TestCase):
         self.assertNotIn('geheim', str(data))
 
     def test_get_reports_unset(self):
-        self.grant('monitor.view')
+        self.grant('signage.view')
         MonitorSettings.objects.update(webuntis_password='', weather_api_key='')
         data = self.get()
         self.assertIs(data['webuntis_password_set'], False)
         self.assertIs(data['weather_api_key_set'], False)
 
     def test_put_empty_or_missing_secret_keeps_it(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         r = self.put({'webuntis_password': '', 'webuntis_server': 'neu.webuntis.com'})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()['webuntis_password'], '')
@@ -264,7 +264,7 @@ class SettingsSecretsTest(TestCase):
         self.assertEqual(settings.webuntis_server, 'neu.webuntis.com')
 
     def test_put_new_secret_is_stored_not_returned(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         r = self.put({'webuntis_password': 'neu', 'weather_api_key': 'k2'})
         self.assertEqual(r.status_code, 200)
         self.assertEqual((r.json()['webuntis_password'], r.json()['weather_api_key']), ('', ''))
@@ -272,7 +272,7 @@ class SettingsSecretsTest(TestCase):
         self.assertEqual((settings.webuntis_password, settings.weather_api_key), ('neu', 'k2'))
 
     def test_put_clear_flags_empty_the_secret(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         r = self.put({'webuntis_password_clear': True, 'weather_api_key_clear': True})
         self.assertEqual(r.status_code, 200)
         self.assertIs(r.json()['webuntis_password_set'], False)
@@ -281,12 +281,12 @@ class SettingsSecretsTest(TestCase):
         self.assertEqual((settings.webuntis_password, settings.weather_api_key), ('', ''))
 
     def test_clear_needs_setup(self):
-        self.grant('monitor.view', 'monitor.onair')
+        self.grant('signage.view', 'signage.onair')
         self.assertEqual(self.put({'webuntis_password_clear': True}).status_code, 403)
         self.assertEqual(MonitorSettings.load().webuntis_password, 'geheim')
 
     def test_on_air_only_update_response_hides_secrets(self):
-        self.grant('monitor.view', 'monitor.onair')
+        self.grant('signage.view', 'signage.onair')
         r = self.put({'on_air_text': 'LIVE'})
         self.assertEqual(r.status_code, 200)
         self.assertNotIn('geheim', r.content.decode())
@@ -295,7 +295,7 @@ class SettingsSecretsTest(TestCase):
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class ViewSecretsTest(TestCase):
-    """GET /config: alter Wetter-Schlüssel der Ansicht nie, api_token (ATEM) nur mit monitor.setup."""
+    """GET /config: alter Wetter-Schlüssel der Ansicht nie, api_token (ATEM) nur mit signage.setup."""
 
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', weather_api_key='alt-key',
@@ -316,18 +316,18 @@ class ViewSecretsTest(TestCase):
         return r.json()
 
     def test_view_only_gets_neither_secret(self):
-        self.grant('monitor.view')
+        self.grant('signage.view')
         data = self.config()
         self.assertEqual((data['weather_api_key'], data['api_token']), ('', ''))
         self.assertIs(data['weather_api_key_set'], True)
 
     def test_setup_gets_token_but_not_weather_key(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         data = self.config()
         self.assertEqual((data['weather_api_key'], data['api_token']), ('', 't' * 32))
 
     def test_put_empty_weather_key_keeps_it_and_restore_keeps_it(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         r = self.client.put(f'/api/monitor/config?view_id={self.view.id}', {'weather_api_key': '', 'name': 'Neu'},
                             content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 200)
@@ -350,7 +350,7 @@ class ChangeViewKindTest(TestCase):
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', kind='departures', page_seconds=33)
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        perm, _ = Permission.objects.get_or_create(code='monitor.setup', defaults={'name': 'monitor.setup'})
+        perm, _ = Permission.objects.get_or_create(code='signage.setup', defaults={'name': 'signage.setup'})
         self.profile.permissions.add(perm)
         auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
         auth.start()
@@ -395,7 +395,7 @@ class ChangeViewKindTest(TestCase):
     def test_list_carries_rotation_items(self):
         rot = DisplayView.objects.create(name='W', slug='w', kind='rotation',
                                          rotation_items=[{'view_id': self.view.id, 'seconds': 20}])
-        perm, _ = Permission.objects.get_or_create(code='monitor.view', defaults={'name': 'monitor.view'})
+        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'signage.view'})
         self.profile.permissions.add(perm)
         rows = self.client.get('/api/monitor/views', HTTP_AUTHORIZATION='Bearer x').json()
         row = next(x for x in rows if x['id'] == rot.id)

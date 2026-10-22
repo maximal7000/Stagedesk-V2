@@ -138,7 +138,7 @@ const PAGES = {
       await page.locator('[data-section="schedule"]').evaluate((el) => el.scrollIntoView({ block: 'center' }))
     },
   },
-  // Nur Ein- und Ausschalten (ohne monitor.setup): Anzeige lesend, keine Kiosk-URL
+  // Nur Ein- und Ausschalten (ohne signage.setup): Anzeige lesend, keine Kiosk-URL
   'screen-detail-power-only': { path: '/monitor-admin/screens/1', variant: 'power-only', height: 1100 },
   'screen-detail-key': {
     path: '/monitor-admin/screens/1',

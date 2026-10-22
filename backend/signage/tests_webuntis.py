@@ -427,4 +427,4 @@ class CheckTest(WebUntisTestBase):
         with mock.patch.object(api_setup, '_require_perm') as guard, \
                 mock.patch.object(webuntis, 'check', return_value={'source': 'timetable'}):
             self.assertEqual(api_setup.check_webuntis(object()), {'source': 'timetable'})
-        self.assertEqual(guard.call_args.args[1], 'monitor.setup')
+        self.assertEqual(guard.call_args.args[1], 'signage.setup')

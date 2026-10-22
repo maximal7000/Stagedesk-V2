@@ -6,19 +6,19 @@ const device = { id: 5, screen_id: 1, status: 'online', legacy: false }
 const kinds = (list) => list.items.map((i) => i.kind)
 
 describe('commandsFor', () => {
-  it('ohne monitor.devices gibt es keine Befehle', () => {
-    expect(commandsFor(device, can('monitor.view', 'monitor.power')).items).toEqual([])
+  it('ohne signage.devices gibt es keine Befehle', () => {
+    expect(commandsFor(device, can('signage.view', 'signage.power')).items).toEqual([])
   })
 
-  it('Power-Knöpfe nur mit monitor.power', () => {
-    expect(kinds(commandsFor(device, can('monitor.devices')))).toEqual(
+  it('Power-Knöpfe nur mit signage.power', () => {
+    expect(kinds(commandsFor(device, can('signage.devices')))).toEqual(
       ['reload', 'restart_browser', 'reboot', 'update_now', 'screenshot', 'test_pattern'])
-    expect(kinds(commandsFor(device, can('monitor.devices', 'monitor.power')))).toEqual(
+    expect(kinds(commandsFor(device, can('signage.devices', 'signage.power')))).toEqual(
       ['reload', 'restart_browser', 'reboot', 'power_on', 'power_off', 'update_now', 'screenshot', 'test_pattern'])
   })
 
   it('Beschriftung und Nachfrage stehen wörtlich fest', () => {
-    const items = commandsFor(device, can('monitor.devices', 'monitor.power')).items
+    const items = commandsFor(device, can('signage.devices', 'signage.power')).items
     expect(items.map((i) => i.label)).toEqual([
       'Neu laden', 'Browser neu starten', 'Pi neu starten', 'Bildschirm an', 'Bildschirm aus',
       'Jetzt aktualisieren', 'Screenshot aufnehmen', 'Testbild'])
@@ -29,16 +29,16 @@ describe('commandsFor', () => {
   })
 
   it('offline: Befehle bleiben, dazu der Hinweis', () => {
-    const list = commandsFor({ ...device, status: 'offline' }, can('monitor.devices'))
+    const list = commandsFor({ ...device, status: 'offline' }, can('signage.devices'))
     expect(list.items.length).toBeGreaterThan(0)
     expect(list.hint).toBe('Der Befehl wird gesendet, sobald das Gerät wieder verbunden ist (höchstens 5 Minuten).')
     expect(list.hint).toBe(OFFLINE_HINT)
-    expect(commandsFor(device, can('monitor.devices')).hint).toBe('')
+    expect(commandsFor(device, can('signage.devices')).hint).toBe('')
   })
 
   it('ohne gekoppeltes Gerät keine Befehle', () => {
-    expect(commandsFor(null, can('monitor.devices')).items).toEqual([])
-    expect(commandsFor({ id: null, legacy: true, status: 'legacy' }, can('monitor.devices')).items).toEqual([])
+    expect(commandsFor(null, can('signage.devices')).items).toEqual([])
+    expect(commandsFor({ id: null, legacy: true, status: 'legacy' }, can('signage.devices')).items).toEqual([])
   })
 })
 

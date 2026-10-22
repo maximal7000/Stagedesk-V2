@@ -16,7 +16,7 @@ export const DEVICE_FIELDS = [...DEVICE_NUMBER_FIELDS.map((f) => f.key), 'requir
 const NUMBER_KEYS = new Set(DEVICE_NUMBER_FIELDS.map((f) => f.key))
 export const SETUP_FIELDS = ['webuntis_server', 'webuntis_school', 'webuntis_username', 'webuntis_password', 'weather_api_key', ...DEVICE_FIELDS]
 export const ON_AIR_FIELDS = ['on_air_text', 'on_air_animation', 'on_air_show_clock']
-// Farbschema (Spec 3.2): Recht monitor.setup, eigene Anfrage; daylight_today ist nur lesend und wird nie gesendet
+// Farbschema (Spec 3.2): Recht signage.setup, eigene Anfrage; daylight_today ist nur lesend und wird nie gesendet
 export const SCHEME_FIELDS = ['color_scheme', 'light_from', 'light_until']
 export const COLOR_SCHEME_OPTIONS = [
   { value: 'light', label: 'Hell' },

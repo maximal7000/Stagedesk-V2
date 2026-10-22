@@ -1,10 +1,10 @@
 // Bildschirm-Detail (Spec §6.2, Mockup admin-screen-detail.png): Anzeige, Zeitplan, Ein- und Ausschalten,
 // Kiosk-URL und rechts das Gerät. Anzeige und Zeitplan samt Ein- und Ausschalten haben je einen Entwurf
 // (useDraft); die gemeinsame SaveBar speichert jeden geänderten Entwurf mit einer eigenen Anfrage, die nur
-// dessen Felder enthält. Anzeige braucht monitor.setup, Zeitplan und Ein- und Ausschalten monitor.power
+// dessen Felder enthält. Anzeige braucht signage.setup, Zeitplan und Ein- und Ausschalten signage.power
 // (ohne Recht nur lesend). Die Geräte-Felder
-// (Power-Methode, Updates, täglicher Neustart) bilden einen dritten Entwurf und brauchen monitor.devices.
-// "Andere Ansicht vorübergehend" und "Löschen" wirken sofort (ohne Entwurf) und brauchen monitor.setup.
+// (Power-Methode, Updates, täglicher Neustart) bilden einen dritten Entwurf und brauchen signage.devices.
+// "Andere Ansicht vorübergehend" und "Löschen" wirken sofort (ohne Entwurf) und brauchen signage.setup.
 import { useCallback, useEffect, useId, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Copy, Eye, KeyRound, MonitorOff, RotateCw, Trash2 } from 'lucide-react'
@@ -102,7 +102,7 @@ const CONFIG_FIELDS = {
   ],
 }
 
-// Steuerung des Bildschirms (Power-Methode): eigener Entwurf, braucht monitor.devices
+// Steuerung des Bildschirms (Power-Methode): eigener Entwurf, braucht signage.devices
 function PowerMethodBlock({ device, original, canDevices, problems }) {
   const methodId = useId()
   const idBase = useId()
@@ -169,7 +169,7 @@ function PowerSection({ draft, set, disabled, readOnly, problems, methodBlock })
   )
 }
 
-// Updates (Spec §6): automatische Updates, Zeitfenster, täglicher Neustart; braucht monitor.devices
+// Updates (Spec §6): automatische Updates, Zeitfenster, täglicher Neustart; braucht signage.devices
 function UpdatesSection({ device, canDevices, problem }) {
   const ids = { weekday: useId(), from: useId(), until: useId() }
   const values = deviceDefaults(device.draft)
@@ -211,7 +211,7 @@ function UpdatesSection({ device, canDevices, problem }) {
   )
 }
 
-// Andere Ansicht vorübergehend: gilt sofort, ohne Speichern-Leiste. Ohne monitor.setup nur die Anzeige des Stands.
+// Andere Ansicht vorübergehend: gilt sofort, ohne Speichern-Leiste. Ohne signage.setup nur die Anzeige des Stands.
 function OverrideSection({ screen, views, now, canEdit, onApply, onClear, busy }) {
   const ids = { view: useId(), until: useId() }
   const [viewId, setViewId] = useState('')
@@ -287,7 +287,7 @@ function KioskSection({ screen, onRegenerate }) {
 // Bildschirm ohne gekoppeltes Gerät: CEC-Stand des alten Skripts oder Hinweis. devicesError: die Geräteliste
 // ließ sich nicht laden, ob ein Gerät gekoppelt ist, ist dann unbekannt.
 function DeviceSection({ screen, device, devicesError, now, onReload }) {
-  // onReload fehlt ohne monitor.setup (Backend: reload_screen braucht setup)
+  // onReload fehlt ohne signage.setup (Backend: reload_screen braucht setup)
   const legacy = !!device?.legacy
   const state = devicesError ? 'unknown' : legacy ? 'legacy' : 'unpaired'
   return (
@@ -329,9 +329,9 @@ export default function ScreenDetail() {
   const navigate = useNavigate()
   const screenId = Number(id)
   const { hasPermission } = useUser()
-  const canSetup = hasPermission('monitor.setup')
-  const canPower = hasPermission('monitor.power')
-  const canDevices = hasPermission('monitor.devices')
+  const canSetup = hasPermission('signage.setup')
+  const canPower = hasPermission('signage.power')
+  const canDevices = hasPermission('signage.devices')
 
   const [screen, setScreen] = useState(null)
   // Ausgangsstände der Abschnitte: nur beim Laden und nach vollständigem Speichern neu gesetzt, damit ein

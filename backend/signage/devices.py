@@ -398,11 +398,11 @@ def compute_warnings(telemetry: dict, settings, now) -> list:
 
 
 def notification_recipients() -> list:
-    """keycloak_ids aller Nutzer mit effektivem Recht `monitor.devices` (Admins zählen über das
+    """keycloak_ids aller Nutzer mit effektivem Recht `signage.devices` (Admins zählen über das
     gecachte Admin-Flag am Profil)."""
     from users.models import UserProfile
     return [p.keycloak_id for p in UserProfile.objects.all()
-            if p.keycloak_id and p.has_permission('monitor.devices', p.is_admin_cached)]
+            if p.keycloak_id and p.has_permission('signage.devices', p.is_admin_cached)]
 
 
 def _link(screen) -> str:

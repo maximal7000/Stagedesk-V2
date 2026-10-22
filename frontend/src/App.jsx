@@ -123,17 +123,17 @@ function AppContent() {
                     <Route path="/admin/audit" element={<PermissionRoute adminOnly><AuditLogPage /></PermissionRoute>} />
                     <Route path="/admin/system" element={<PermissionRoute adminOnly><SystemAdminPage /></PermissionRoute>} />
                     <Route path="/aufgaben" element={<PermissionRoute anyOf={['aufgaben.view', 'aufgaben.manage']} adminOnly><AufgabenPage /></PermissionRoute>} />
-                    <Route path="/monitor-admin" element={<PermissionRoute permission="monitor.view"><MonitorAdminLayout /></PermissionRoute>}>
+                    <Route path="/monitor-admin" element={<PermissionRoute permission="signage.view"><MonitorAdminLayout /></PermissionRoute>}>
                       <Route index element={<MonitorOverview />} />
-                      <Route path="screens" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power', 'monitor.devices']}><MonitorScreens /></PermissionRoute>} />
-                      <Route path="screens/:id" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.power', 'monitor.devices']}><MonitorScreenDetail /></PermissionRoute>} />
-                      <Route path="views" element={<PermissionRoute permission="monitor.setup"><MonitorViews /></PermissionRoute>} />
-                      <Route path="views/new" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
-                      <Route path="views/:id" element={<PermissionRoute permission="monitor.setup"><MonitorViewEdit /></PermissionRoute>} />
-                      <Route path="exams" element={<PermissionRoute permission="monitor.exams"><MonitorExams /></PermissionRoute>} />
-                      <Route path="media" element={<PermissionRoute permission="monitor.media"><MonitorMedia /></PermissionRoute>} />
-                      <Route path="schedules" element={<PermissionRoute permission="monitor.power"><MonitorSchedules /></PermissionRoute>} />
-                      <Route path="settings" element={<PermissionRoute anyOf={['monitor.setup', 'monitor.onair', 'monitor.emergency']}><MonitorSettings /></PermissionRoute>} />
+                      <Route path="screens" element={<PermissionRoute anyOf={['signage.setup', 'signage.power', 'signage.devices']}><MonitorScreens /></PermissionRoute>} />
+                      <Route path="screens/:id" element={<PermissionRoute anyOf={['signage.setup', 'signage.power', 'signage.devices']}><MonitorScreenDetail /></PermissionRoute>} />
+                      <Route path="views" element={<PermissionRoute permission="signage.setup"><MonitorViews /></PermissionRoute>} />
+                      <Route path="views/new" element={<PermissionRoute permission="signage.setup"><MonitorViewEdit /></PermissionRoute>} />
+                      <Route path="views/:id" element={<PermissionRoute permission="signage.setup"><MonitorViewEdit /></PermissionRoute>} />
+                      <Route path="exams" element={<PermissionRoute permission="signage.exams"><MonitorExams /></PermissionRoute>} />
+                      <Route path="media" element={<PermissionRoute permission="signage.media"><MonitorMedia /></PermissionRoute>} />
+                      <Route path="schedules" element={<PermissionRoute permission="signage.power"><MonitorSchedules /></PermissionRoute>} />
+                      <Route path="settings" element={<PermissionRoute anyOf={['signage.setup', 'signage.onair', 'signage.emergency']}><MonitorSettings /></PermissionRoute>} />
                       <Route path="*" element={<Navigate to="/monitor-admin" replace />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/" replace />} />

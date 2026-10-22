@@ -66,7 +66,7 @@ afterEach(() => {
 
 describe('Settings', () => {
   it('Passwort: gespeichert als Platzhalter, leer bleibt unverändert, nur geänderte Felder gehen raus', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.updateSettings.mockResolvedValue({ ...settings(), webuntis_school: 'neu' })
     await mount()
     const password = byLabel('Passwort')
@@ -79,7 +79,7 @@ describe('Settings', () => {
   })
 
   it('On-Air und Einrichtung getrennt gespeichert; ohne setup nur On-Air bearbeitbar', async () => {
-    perms.add('monitor.onair')
+    perms.add('signage.onair')
     api.updateSettings.mockResolvedValue({ ...settings(), on_air_text: 'LIVE' })
     await mount()
     expect(byLabel('Schule').disabled).toBe(true)
@@ -91,7 +91,7 @@ describe('Settings', () => {
   })
 
   it('Verbindung testen zeigt die Quelle als Satz und ist bei ungespeicherten Zugangsdaten gesperrt', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.checkWebuntis.mockResolvedValue({ login: true, substitutions: true, timetable: true, source: 'substitutions' })
     await mount()
     await click(button('Verbindung testen'))
@@ -101,7 +101,7 @@ describe('Settings', () => {
   })
 
   it('Notfall-Vorlagen: Verschieben per Pfeiltaste speichert die neue Reihenfolge', async () => {
-    perms.add('monitor.emergency')
+    perms.add('signage.emergency')
     api.updateEmergencyTemplate.mockResolvedValue({})
     await mount()
     const grip = container.querySelector('[aria-label="Räumung verschieben"]')
@@ -115,7 +115,7 @@ describe('Settings', () => {
   })
 
   it('Passwort entfernen behält ungespeicherte Änderungen der anderen Felder', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.updateSettings.mockResolvedValue({ ...settings(), webuntis_password_set: false })
     await mount()
     await act(async () => { typeInto(byLabel('Schule'), 'neu') })
@@ -128,13 +128,13 @@ describe('Settings', () => {
   })
 
   it('zeigt keinen ÖPNV-Abschnitt mehr (gehört zur Ansicht)', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     expect(container.querySelector('[data-section="transit"]')).toBeNull()
   })
 
   it('nach dem Speichern nur eines neuen Passworts ist der Entwurf sauber und der Test wieder möglich', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.updateSettings.mockResolvedValue(settings())
     await mount()
     await act(async () => { typeInto(byLabel('Passwort'), 'neu') })
@@ -148,7 +148,7 @@ describe('Settings', () => {
   })
 
   it('Geräte: Payload nur mit geänderten Feldern, Hinweis zu altem Skript', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.updateSettings.mockResolvedValue({ ...settings(), warn_temperature_c: 70, require_device_token: true })
     await mount()
     expect(container.querySelector('[data-section="devices"]').textContent).toContain('Noch mit altem Skript: Mensa.')
@@ -160,7 +160,7 @@ describe('Settings', () => {
   })
 
   it('Geräte: Wert außerhalb des Bereichs blockiert das Speichern mit Hinweis', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     await act(async () => { typeInto(byLabel('Offline melden nach'), '1') })
     await click(button('Speichern'))
@@ -170,7 +170,7 @@ describe('Settings', () => {
   })
 
   it('Geräte: ohne altes Skript steht der Hinweis für alle Bildschirme, ohne Recht nur lesend', async () => {
-    perms.add('monitor.view')
+    perms.add('signage.view')
     api.getDevices.mockResolvedValue([])
     await mount()
     expect(container.querySelector('[data-section="devices"]').textContent).toContain('Aktuell meldet sich kein Bildschirm mit altem Skript.')
@@ -178,7 +178,7 @@ describe('Settings', () => {
   })
 
   it('Geräte: Installationsbefehl mit Kopieren', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     const writeText = vi.fn().mockResolvedValue()
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     await mount()
@@ -189,7 +189,7 @@ describe('Settings', () => {
   })
 
   it('Farbschema: Zeitfelder nur bei Zeitplan, Tageslicht-Text mit Werten, nur Geändertes gesendet', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.updateSettings.mockResolvedValue({ ...settings(), color_scheme: 'schedule', light_until: '17:30' })
     await mount()
     const radio = (t) => [...container.querySelectorAll('[role="radiogroup"][aria-label="Farbschema"] button')].find((b) => b.textContent === t)

@@ -140,8 +140,8 @@ def _legacy_row(screen, cfg, now) -> dict:
 
 @devices_router.get("/devices", response=list[DeviceSchema], auth=keycloak_auth)
 def list_devices(request):
-    _require_perm(request, 'monitor.view')
-    can_see_ids = _can(request, 'monitor.devices')
+    _require_perm(request, 'signage.view')
+    can_see_ids = _can(request, 'signage.devices')
     cfg, now = MonitorSettings.load(), timezone.now()
     active = list(Device.objects.filter(revoked_at__isnull=True).select_related('screen'))
     rows = [device_row(d, d.screen, cfg, now, can_see_ids) for d in active]
@@ -154,7 +154,7 @@ def list_devices(request):
 
 @devices_router.post("/devices/pair", response=DeviceSchema, auth=keycloak_auth)
 def pair_device(request, payload: DevicePairSchema):
-    _require_perm(request, 'monitor.devices')
+    _require_perm(request, 'signage.devices')
     key = _failed_key(request)
     if cache.get(key, 0) >= MAX_FAILED_ATTEMPTS:
         raise HttpError(429, "Zu viele Versuche. Bitte eine Minute warten.")
@@ -183,14 +183,14 @@ def pair_device(request, payload: DevicePairSchema):
 
 @devices_router.post("/devices/{int:id}/unpair", auth=keycloak_auth)
 def unpair_device(request, id: int):
-    _require_perm(request, 'monitor.devices')
+    _require_perm(request, 'signage.devices')
     devices.unpair(get_object_or_404(Device, id=id))
     return {"success": True}
 
 
 @devices_router.post("/devices/{int:id}/revoke", auth=keycloak_auth)
 def revoke_device(request, id: int):
-    _require_perm(request, 'monitor.devices')
+    _require_perm(request, 'signage.devices')
     devices.revoke_token(get_object_or_404(Device, id=id))
     return {"success": True}
 
@@ -203,9 +203,9 @@ def _author(request):
 
 @devices_router.post("/devices/{int:id}/commands", response=DeviceCommandSchema, auth=keycloak_auth)
 def create_device_command(request, id: int, payload: DeviceCommandCreateSchema):
-    _require_perm(request, 'monitor.devices')
+    _require_perm(request, 'signage.devices')
     if payload.kind in POWER_COMMANDS:
-        _require_perm(request, 'monitor.power')
+        _require_perm(request, 'signage.power')
     device = get_object_or_404(Device.objects.select_related('screen'), id=id)
     if device.revoked_at is not None or device.screen is None:
         raise HttpError(409, "Das Gerät ist nicht mehr gekoppelt. Bitte den Bildschirm neu koppeln.")
@@ -220,7 +220,7 @@ def create_device_command(request, id: int, payload: DeviceCommandCreateSchema):
 
 @devices_router.get("/devices/{int:id}/commands/{int:cid}", response=DeviceCommandSchema, auth=keycloak_auth)
 def get_device_command(request, id: int, cid: int):
-    _require_perm(request, 'monitor.devices')
+    _require_perm(request, 'signage.devices')
     device = get_object_or_404(Device, id=id)
     devices.expire_old_commands(device)
     return get_object_or_404(DeviceCommand, id=cid, device=device)
@@ -228,7 +228,7 @@ def get_device_command(request, id: int, cid: int):
 
 @devices_router.get("/screens/{int:id}/events", response=list[DeviceEventSchema], auth=keycloak_auth)
 def list_screen_events(request, id: int, kind: str = '', limit: int = 100):
-    _require_perm(request, 'monitor.devices')
+    _require_perm(request, 'signage.devices')
     get_object_or_404(Screen, id=id)
     qs = DeviceEvent.objects.filter(screen_id=id)
     if kind:

@@ -33,18 +33,18 @@ afterEach(() => {
 
 describe('Screens', () => {
   it('zeigt "Neuer Bildschirm" nur mit Recht für die Einrichtung', async () => {
-    perms.add('monitor.power')
+    perms.add('signage.power')
     await mount()
     expect(container.textContent).toContain('Glocke')
     expect(container.textContent).not.toContain('Neuer Bildschirm')
     act(() => root.unmount())
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     expect(container.textContent).toContain('Neuer Bildschirm')
   })
 
   it('beschreibt einen Bildschirm ohne Zeitplan ohne Widerspruch', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     expect(container.textContent).toContain('Ohne Zeitplan')
     expect(container.textContent).toContain('In den Ferien aus')

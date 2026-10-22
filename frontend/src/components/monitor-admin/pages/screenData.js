@@ -4,10 +4,10 @@ import { formatDayTime } from '../shared/explain'
 import { describeSchedule, normalizeExceptions, normalizeSchedule } from '../shared/schedule'
 
 // Abschnitte des Details: Speichern sendet nur die Felder des eigenen Abschnitts.
-// Anzeige braucht monitor.setup, Zeitplan und Ein- und Ausschalten monitor.power (Backend: SCREEN_POWER_FIELDS).
+// Anzeige braucht signage.setup, Zeitplan und Ein- und Ausschalten signage.power (Backend: SCREEN_POWER_FIELDS).
 export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme']
 export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'power_exceptions']
-// Geräte-Agent (Spec §3.4): Power-Methode, Updates und Neustart; Backend braucht dafür monitor.devices.
+// Geräte-Agent (Spec §3.4): Power-Methode, Updates und Neustart; Backend braucht dafür signage.devices.
 export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot']
 
 export const POWER_METHOD_OPTIONS = [
@@ -176,7 +176,7 @@ export function lastReport(value, now = new Date()) {
   return formatDayTime(at)
 }
 
-// Andere Ansicht vorübergehend (override_view_id/override_until, Recht monitor.setup).
+// Andere Ansicht vorübergehend (override_view_id/override_until, Recht signage.setup).
 // Gilt wie im Backend (Screen.get_active_view) ohne Ende oder bis zu einem Zeitpunkt in der Zukunft.
 // views (optional, Liste der Ansichten ohne Papierkorb): eine Ansicht, die dort fehlt, gilt wie im
 // Backend nicht (override_view.deleted_at). Leere Liste = noch nicht geladen, dann nichts verwerfen.

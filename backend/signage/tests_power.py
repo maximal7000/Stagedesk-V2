@@ -175,7 +175,7 @@ class HolidayAndTemplateCrudTest(TestCase):
         r = self.client.post('/api/monitor/holidays', body, content_type='application/json')
         self.assertEqual(r.status_code, 200, r.content)
         hid = r.json()['id']
-        self.assertEqual(self.guard.call_args.args[1], 'monitor.power')
+        self.assertEqual(self.guard.call_args.args[1], 'signage.power')
         self.assertEqual(len(self.client.get('/api/monitor/holidays').json()), 1)
         body['name'] = 'Herbst'
         r = self.client.put(f'/api/monitor/holidays/{hid}', body, content_type='application/json')
@@ -194,7 +194,7 @@ class HolidayAndTemplateCrudTest(TestCase):
         r = self.client.post('/api/monitor/emergency-templates',
                              {'title': 'Feueralarm', 'text': 'Gebäude verlassen'}, content_type='application/json')
         self.assertEqual(r.status_code, 200, r.content)
-        self.assertEqual(self.guard.call_args.args[1], 'monitor.emergency')
+        self.assertEqual(self.guard.call_args.args[1], 'signage.emergency')
         tid = r.json()['id']
         r = self.client.put(f'/api/monitor/emergency-templates/{tid}',
                             {'title': 'Feueralarm', 'text': 'Gebäude verlassen', 'note': 'Sammelplatz Hof',
@@ -287,12 +287,12 @@ class SettingsPermissionSplitTest(SimpleTestCase):
 
     def test_on_air_fields_need_onair(self):
         self.assertEqual(self.required(on_air_text='LIVE', on_air_animation='blink', on_air_show_clock=False),
-                         'monitor.onair')
+                         'signage.onair')
 
     def test_other_fields_need_setup(self):
-        self.assertEqual(self.required(weather_api_key='k'), 'monitor.setup')
-        self.assertEqual(self.required(weather_api_key='k', on_air_text='LIVE'), 'monitor.setup')
-        self.assertEqual(self.required(), 'monitor.setup')
+        self.assertEqual(self.required(weather_api_key='k'), 'signage.setup')
+        self.assertEqual(self.required(weather_api_key='k', on_air_text='LIVE'), 'signage.setup')
+        self.assertEqual(self.required(), 'signage.setup')
 
 
 class FreshImportTest(SimpleTestCase):
@@ -322,17 +322,17 @@ class ScreenUpdatePermissionSplitTest(SimpleTestCase):
 
     def test_power_only_needs_power(self):
         self.assertEqual(self.required(power_mode='manual_off', schedule=[], power_exceptions=[],
-                                       off_during_holidays=False, off_until=None), ['monitor.power'])
+                                       off_during_holidays=False, off_until=None), ['signage.power'])
 
     def test_setup_only_needs_setup(self):
-        self.assertEqual(self.required(name='Halle'), ['monitor.setup'])
-        self.assertEqual(self.required(schedule=[]), ['monitor.power'])
-        self.assertEqual(self.required(), ['monitor.setup'])
+        self.assertEqual(self.required(name='Halle'), ['signage.setup'])
+        self.assertEqual(self.required(schedule=[]), ['signage.power'])
+        self.assertEqual(self.required(), ['signage.setup'])
 
     def test_mixed_needs_both(self):
-        self.assertEqual(self.required(name='Halle', power_mode='auto'), ['monitor.setup', 'monitor.power'])
+        self.assertEqual(self.required(name='Halle', power_mode='auto'), ['signage.setup', 'signage.power'])
 
     def test_override_needs_setup(self):
         # Andere Ansicht vorübergehend gehört zu Bildschirme (setup), nicht zu Ein- und Ausschalten
-        self.assertEqual(self.required(override_view_id=3, override_until=None), ['monitor.setup'])
-        self.assertEqual(self.required(override_view_id=None, override_until=None), ['monitor.setup'])
+        self.assertEqual(self.required(override_view_id=3, override_until=None), ['signage.setup'])
+        self.assertEqual(self.required(override_view_id=None, override_until=None), ['signage.setup'])

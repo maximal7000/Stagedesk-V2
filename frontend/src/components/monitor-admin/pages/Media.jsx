@@ -246,7 +246,7 @@ export default function Media() {
       </div>
 
       {openFile && (
-        <DetailPanel file={openFile} detail={detail} error={detailError} canOpenViews={hasPermission('monitor.setup')}
+        <DetailPanel file={openFile} detail={detail} error={detailError} canOpenViews={hasPermission('signage.setup')}
           onClose={closePanel} onDelete={askDelete} />
       )}
       {confirmDelete && openFile && (

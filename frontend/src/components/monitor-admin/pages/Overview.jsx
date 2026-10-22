@@ -111,12 +111,12 @@ function InfoList({ title, rows, empty }) {
 export default function Overview() {
   const { hasPermission } = useUser()
   const can = {
-    power: hasPermission('monitor.power'),
-    onair: hasPermission('monitor.onair'),
-    emergency: hasPermission('monitor.emergency'),
-    setup: hasPermission('monitor.setup'),
-    exams: hasPermission('monitor.exams'),
-    devices: hasPermission('monitor.devices'),
+    power: hasPermission('signage.power'),
+    onair: hasPermission('signage.onair'),
+    emergency: hasPermission('signage.emergency'),
+    setup: hasPermission('signage.setup'),
+    exams: hasPermission('signage.exams'),
+    devices: hasPermission('signage.devices'),
   }
 
   const [screens, setScreens] = useState(null)
@@ -268,7 +268,7 @@ export default function Overview() {
     load()
   }
 
-  // Zeilenmenü: Ein- und Ausschalten mit monitor.power, "Manuelle Ansicht aufheben" mit monitor.setup
+  // Zeilenmenü: Ein- und Ausschalten mit signage.power, "Manuelle Ansicht aufheben" mit signage.setup
   const screenMenu = (s) => {
     const isOn = displays?.[s.slug]?.screen?.power ?? s.power_mode !== 'manual_off'
     const { items, hint } = can.power ? powerMenu(s, { now, isOn, emergencyActive }) : { items: [], hint: '' }
@@ -283,7 +283,7 @@ export default function Overview() {
         () => api.powerOffToday([s.id]),
         (r) => (r?.off_until?.[String(s.id)] ? `${s.name} aus bis ${formatDayTime(r.off_until[String(s.id)])}` : `${s.name} bis Tagesende aus`),
         () => api.undoPowerOffToday([s.id])),
-      // Rückgängig setzt genau den bisherigen Zeitpunkt wieder (off_until ist mit monitor.power schreibbar)
+      // Rückgängig setzt genau den bisherigen Zeitpunkt wieder (off_until ist mit signage.power schreibbar)
       'clear-off': (item) => instant(
         () => api.undoPowerOffToday([s.id]), `${s.name} folgt wieder dem Zeitplan`,
         () => api.updateScreen(s.id, { off_until: item.previous })),

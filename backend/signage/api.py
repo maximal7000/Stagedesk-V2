@@ -94,7 +94,7 @@ def _validate_exam_data(data: dict) -> dict:
 # ═══ Öffentlicher Endpunkt (kein Auth) ═══════════════════════════
 
 def _display_key_ok(request, screen, key):
-    """Vertretungsdaten nur mit Schlüssel des Bildschirms oder angemeldet mit monitor.view (Spec §4.1).
+    """Vertretungsdaten nur mit Schlüssel des Bildschirms oder angemeldet mit signage.view (Spec §4.1).
     Ein ungültiger Login führt nie zu 401: /display bleibt öffentlich."""
     if screen and key and secrets.compare_digest(key.encode(), screen.access_key.encode()):
         return True
@@ -105,7 +105,7 @@ def _display_key_ok(request, screen, key):
         if not auth:
             return False
         request.auth = auth
-        _require_perm(request, 'monitor.view')
+        _require_perm(request, 'signage.view')
         return True
     except Exception:
         return False
@@ -207,7 +207,7 @@ def toggle_on_air(request, payload: OnAirSchema):
         return 401, {"success": False, "message": "Nicht autorisiert"}
     request.auth = auth_result
     try:
-        _require_perm(request, 'monitor.onair')
+        _require_perm(request, 'signage.onair')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
     _set_on_air(payload.on_air)
@@ -233,7 +233,7 @@ def toggle_emergency(request, payload: EmergencySchema):
         return 401, {"success": False, "message": "Nicht autorisiert"}
     request.auth = auth_result
     try:
-        _require_perm(request, 'monitor.emergency')
+        _require_perm(request, 'signage.emergency')
     except HttpError as e:
         return 403, {"success": False, "message": e.message}
     _set_emergency(payload.active, payload.text, payload.note)
@@ -245,13 +245,13 @@ def toggle_emergency(request, payload: EmergencySchema):
 
 @signage_router.get("/views", response=list[DisplayViewListSchema], auth=keycloak_auth)
 def list_views(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return DisplayView.objects.filter(deleted_at__isnull=True).order_by('sort_order', 'name')
 
 
 @signage_router.post("/views", auth=keycloak_auth)
 def create_view(request, payload: DisplayViewCreateSchema):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
 
     # Slug-Kollision vermeiden
@@ -287,7 +287,7 @@ def create_view(request, payload: DisplayViewCreateSchema):
 
 @signage_router.delete("/views/{int:id}", auth=keycloak_auth)
 def delete_view(request, id: int):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     view = get_object_or_404(DisplayView, id=id)
     if view.is_default:
         return {"success": False, "message": "Standard-Profil kann nicht gelöscht werden"}
@@ -301,15 +301,15 @@ def delete_view(request, id: int):
 
 @signage_router.get("/config", response=DisplayViewSchema, auth=keycloak_auth)
 def get_view(request, view_id: int = None):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     if view_id:
         # Ansichten im Papierkorb gelten als nicht vorhanden (Wiederherstellen über /trash/restore)
         view = get_object_or_404(DisplayView, id=view_id, deleted_at__isnull=True)
     else:
         view = DisplayView.get()
-    # api_token schaltet On-Air und Notfall (ATEM): nur mit monitor.setup ausliefern, gespeichert wird nichts
+    # api_token schaltet On-Air und Notfall (ATEM): nur mit signage.setup ausliefern, gespeichert wird nichts
     try:
-        _require_perm(request, 'monitor.setup')
+        _require_perm(request, 'signage.setup')
     except HttpError:
         view.api_token = ''
     return view
@@ -318,7 +318,7 @@ def get_view(request, view_id: int = None):
 @signage_router.get("/disruptions", auth=keycloak_auth)
 def list_disruptions(request, view_id: int = None):
     """Admin: alle aktuellen Störungen (aller Quellen) mit hidden-Flag zum Ausblenden."""
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     view = get_object_or_404(DisplayView, id=view_id) if view_id else DisplayView.get()
     hidden = set(view.transit_disruption_hidden or [])
     out = []
@@ -354,7 +354,7 @@ def _snapshot_view(view):
 
 @signage_router.put("/config", response=DisplayViewSchema, auth=keycloak_auth)
 def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     if view_id:
         view = get_object_or_404(DisplayView, id=view_id)
     else:
@@ -385,14 +385,14 @@ def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
 
 @signage_router.get("/config/versions", response=list[DisplayViewVersionSchema], auth=keycloak_auth)
 def list_view_versions(request, view_id: int):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     from .models import DisplayViewVersion
     return list(DisplayViewVersion.objects.filter(view_id=view_id)[:15])
 
 
 @signage_router.post("/config/restore", response=DisplayViewSchema, auth=keycloak_auth)
 def restore_view_version(request, version_id: int):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     from .models import DisplayViewVersion
     version = get_object_or_404(DisplayViewVersion, id=version_id)
     view = version.view
@@ -411,7 +411,7 @@ def restore_view_version(request, version_id: int):
 
 @signage_router.post("/config/regenerate-token", auth=keycloak_auth)
 def regenerate_token(request, view_id: int = None):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     if view_id:
         view = get_object_or_404(DisplayView, id=view_id)
     else:
@@ -425,7 +425,7 @@ def regenerate_token(request, view_id: int = None):
 
 @signage_router.get("/files", response=list[MediaFileSchema], auth=keycloak_auth)
 def list_files(request, kind: str = None):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     qs = MediaFile.objects.filter(deleted_at__isnull=True).prefetch_related('pages')
     if kind:
         qs = qs.filter(kind=kind)
@@ -434,7 +434,7 @@ def list_files(request, kind: str = None):
 
 @signage_router.post("/files", auth=keycloak_auth)
 def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), kind: str = Form("image")):
-    _require_perm(request, 'monitor.media')
+    _require_perm(request, 'signage.media')
     if file.size > media.MAX_BYTES:
         raise HttpError(422, "Datei zu groß: höchstens 50 MB.")
     obj = MediaFile.objects.create(
@@ -453,7 +453,7 @@ def upload_file(request, file: UploadedFile = File(...), name: str = Form(""), k
 
 @signage_router.get("/files/{id}", auth=keycloak_auth)
 def get_file(request, id: int):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     obj = get_object_or_404(MediaFile, id=id, deleted_at__isnull=True)
     used_in = [
         {'view_id': v.id, 'name': v.name}
@@ -476,7 +476,7 @@ def get_file(request, id: int):
 
 @signage_router.delete("/files/{id}", auth=keycloak_auth)
 def delete_file(request, id: int):
-    _require_perm(request, 'monitor.media')
+    _require_perm(request, 'signage.media')
     d = get_object_or_404(MediaFile, id=id)
     # Soft-Delete → Papierkorb (Datei bleibt für Wiederherstellung erhalten)
     d.deleted_at = timezone.now()
@@ -489,7 +489,7 @@ def delete_file(request, id: int):
 
 @signage_router.get("/trash", auth=keycloak_auth)
 def get_trash(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     views = [
         {'id': c.id, 'name': c.name, 'deleted_at': c.deleted_at}
         for c in DisplayView.objects.filter(deleted_at__isnull=False).order_by('-deleted_at')
@@ -503,7 +503,7 @@ def get_trash(request):
 
 @signage_router.post("/trash/restore", auth=keycloak_auth)
 def restore_trash(request, kind: str, id: int):
-    _require_perm(request, 'monitor.media' if kind == 'media' else 'monitor.setup')
+    _require_perm(request, 'signage.media' if kind == 'media' else 'signage.setup')
     if kind == 'view':
         obj = get_object_or_404(DisplayView, id=id)
         obj.deleted_at = None
@@ -520,7 +520,7 @@ def restore_trash(request, kind: str, id: int):
 
 @signage_router.delete("/trash/purge", auth=keycloak_auth)
 def purge_trash(request, kind: str, id: int):
-    _require_perm(request, 'monitor.media' if kind == 'media' else 'monitor.setup')
+    _require_perm(request, 'signage.media' if kind == 'media' else 'signage.setup')
     if kind == 'view':
         obj = get_object_or_404(DisplayView, id=id, deleted_at__isnull=False)
         obj.delete()
@@ -539,13 +539,13 @@ def purge_trash(request, kind: str, id: int):
 
 @signage_router.get("/announcements", response=list[AnnouncementSchema], auth=keycloak_auth)
 def list_announcements(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return Announcement.objects.all()
 
 
 @signage_router.post("/announcements", response=AnnouncementSchema, auth=keycloak_auth)
 def create_announcement(request, payload: AnnouncementCreateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     announcement = Announcement.objects.create(**payload.dict())
     push.notify_changed_on_commit()
     return announcement
@@ -553,7 +553,7 @@ def create_announcement(request, payload: AnnouncementCreateSchema):
 
 @signage_router.put("/announcements/{id}", response=AnnouncementSchema, auth=keycloak_auth)
 def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     a = get_object_or_404(Announcement, id=id)
     for key, value in payload.dict().items():
         setattr(a, key, value)
@@ -564,7 +564,7 @@ def update_announcement(request, id: int, payload: AnnouncementCreateSchema):
 
 @signage_router.delete("/announcements/{id}", auth=keycloak_auth)
 def delete_announcement(request, id: int):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     a = get_object_or_404(Announcement, id=id)
     a.delete()
     push.notify_changed_on_commit()
@@ -575,13 +575,13 @@ def delete_announcement(request, id: int):
 
 @signage_router.get("/webuntis-links", response=list[WebUntisLinkSchema], auth=keycloak_auth)
 def list_webuntis_links(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return WebUntisLink.objects.all()
 
 
 @signage_router.post("/webuntis-links", response=WebUntisLinkSchema, auth=keycloak_auth)
 def create_webuntis_link(request, payload: WebUntisLinkCreateSchema):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     link = WebUntisLink.objects.create(**payload.dict())
     push.notify_changed_on_commit()
     return link
@@ -589,7 +589,7 @@ def create_webuntis_link(request, payload: WebUntisLinkCreateSchema):
 
 @signage_router.put("/webuntis-links/{id}", response=WebUntisLinkSchema, auth=keycloak_auth)
 def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     link = get_object_or_404(WebUntisLink, id=id)
     for key, value in payload.dict().items():
         setattr(link, key, value)
@@ -600,7 +600,7 @@ def update_webuntis_link(request, id: int, payload: WebUntisLinkCreateSchema):
 
 @signage_router.delete("/webuntis-links/{id}", auth=keycloak_auth)
 def delete_webuntis_link(request, id: int):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     get_object_or_404(WebUntisLink, id=id).delete()
     push.notify_changed_on_commit()
     return {"success": True}
@@ -612,7 +612,7 @@ def delete_webuntis_link(request, id: int):
 def search_transit_stops(request, q: str = "", results: int = 10,
                          use_db: bool = True, use_nahsh: bool = True):
     """Stationen für ÖPNV-Abfahrtsmonitor suchen"""
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     if len(q) < 2:
         return []
     return oepnv.search_stations(q, results=min(results, 20),
@@ -662,10 +662,10 @@ def report_cec_status(request, slug: str, status: str):
 # ═══ Admin: Bildschirme ═══════════════════════════════════════════
 
 def _hide_key_without_setup(request, screens):
-    """access_key gibt den Vertretungsplan frei: nur mit monitor.setup ausliefern.
+    """access_key gibt den Vertretungsplan frei: nur mit signage.setup ausliefern.
     Leert nur das Attribut der Antwort-Objekte, gespeichert wird nichts."""
     try:
-        _require_perm(request, 'monitor.setup')
+        _require_perm(request, 'signage.setup')
     except HttpError:
         for screen in screens:
             screen.access_key = ''
@@ -674,13 +674,13 @@ def _hide_key_without_setup(request, screens):
 
 @signage_router.get("/screens", response=list[ScreenListSchema], auth=keycloak_auth)
 def list_screens(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return _hide_key_without_setup(request, list(Screen.objects.all()))
 
 
 @signage_router.post("/screens", auth=keycloak_auth)
 def create_screen(request, payload: ScreenCreateSchema):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     slug = slugify(payload.slug or payload.name) or uuid.uuid4().hex[:8]
     base_slug = slug
     counter = 1
@@ -711,11 +711,11 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
     # Power-Felder gehören zum Recht power, alles andere zu setup (Spec §3.5).
     data = payload.dict(exclude_unset=True)
     if not data or set(data) - SCREEN_POWER_FIELDS - SCREEN_DEVICE_FIELDS:
-        _require_perm(request, 'monitor.setup')
+        _require_perm(request, 'signage.setup')
     if set(data) & SCREEN_POWER_FIELDS:
-        _require_perm(request, 'monitor.power')
+        _require_perm(request, 'signage.power')
     if set(data) & SCREEN_DEVICE_FIELDS:
-        _require_perm(request, 'monitor.devices')
+        _require_perm(request, 'signage.devices')
     screen = get_object_or_404(Screen, id=id)
     # Ein ausdrückliches null hieße "leeren"; diese Felder sind nie leer, also wie nicht gesendet behandeln.
     for key in NON_NULL_SCREEN_FIELDS:
@@ -751,7 +751,7 @@ def update_screen(request, id: int, payload: ScreenUpdateSchema):
 
 @signage_router.delete("/screens/{int:id}", auth=keycloak_auth)
 def delete_screen(request, id: int):
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     screen = get_object_or_404(Screen, id=id)
     with transaction.atomic():
         device = Device.objects.filter(screen=screen).first()
@@ -765,7 +765,7 @@ def delete_screen(request, id: int):
 @signage_router.post("/screens/{int:id}/reload", auth=keycloak_auth)
 def reload_screen(request, id: int):
     """Fordert einen Neuladen der Ansicht auf dem Display an (das Display pollt reload_requested_at)."""
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     screen = get_object_or_404(Screen, id=id)
     screen.reload_requested_at = timezone.now()
     screen.save(update_fields=['reload_requested_at'])
@@ -777,7 +777,7 @@ def reload_screen(request, id: int):
 @signage_router.post("/screens/{int:id}/regenerate-key", response=ScreenListSchema, auth=keycloak_auth)
 def regenerate_screen_key(request, id: int):
     """Neuer access_key; die alte Kiosk-URL bekommt danach keine Vertretungsdaten mehr."""
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     screen = get_object_or_404(Screen, id=id)
     screen.access_key = generate_access_key()
     screen.save(update_fields=['access_key', 'updated_at'])
@@ -790,13 +790,13 @@ def regenerate_screen_key(request, id: int):
 
 @signage_router.get("/exams", response=list[ExamSchema], auth=keycloak_auth)
 def list_exams(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return list(Exam.objects.prefetch_related('screens').all())
 
 
 @signage_router.post("/exams", response=ExamSchema, auth=keycloak_auth)
 def create_exam(request, payload: ExamCreateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     data = payload.dict()
     _validate_exam_data(data)
     screen_ids = data.pop('screen_ids', [])
@@ -809,7 +809,7 @@ def create_exam(request, payload: ExamCreateSchema):
 
 @signage_router.put("/exams/{id}", response=ExamSchema, auth=keycloak_auth)
 def update_exam(request, id: int, payload: ExamUpdateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     exam = get_object_or_404(Exam, id=id)
     data = payload.dict(exclude_unset=True)
     _validate_exam_data(data)
@@ -825,7 +825,7 @@ def update_exam(request, id: int, payload: ExamUpdateSchema):
 
 @signage_router.delete("/exams/{id}", auth=keycloak_auth)
 def delete_exam(request, id: int):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     exam = get_object_or_404(Exam, id=id)
     exam.delete()
     push.notify_changed_on_commit()
@@ -846,13 +846,13 @@ def _apply_event_assignments(event, assignments):
 
 @signage_router.get("/events", response=list[DisplayEventSchema], auth=keycloak_auth)
 def list_events(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return DisplayEvent.objects.all()
 
 
 @signage_router.post("/events", response=DisplayEventSchema, auth=keycloak_auth)
 def create_event(request, payload: DisplayEventCreateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     data = payload.dict()
     assignments = data.pop('assignments', [])
     event = DisplayEvent.objects.create(**data)
@@ -863,7 +863,7 @@ def create_event(request, payload: DisplayEventCreateSchema):
 
 @signage_router.put("/events/{id}", response=DisplayEventSchema, auth=keycloak_auth)
 def update_event(request, id: int, payload: DisplayEventUpdateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     event = get_object_or_404(DisplayEvent, id=id)
     data = payload.dict(exclude_unset=True)
     assignments = data.pop('assignments', None)
@@ -878,7 +878,7 @@ def update_event(request, id: int, payload: DisplayEventUpdateSchema):
 
 @signage_router.delete("/events/{id}", auth=keycloak_auth)
 def delete_event(request, id: int):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     get_object_or_404(DisplayEvent, id=id).delete()
     push.notify_changed_on_commit()
     return {"success": True}
@@ -886,7 +886,7 @@ def delete_event(request, id: int):
 
 @signage_router.post("/events/{id}/activate", response=DisplayEventSchema, auth=keycloak_auth)
 def activate_event(request, id: int):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = True
     event.save(update_fields=['is_active'])
@@ -897,7 +897,7 @@ def activate_event(request, id: int):
 
 @signage_router.post("/events/{id}/deactivate", response=DisplayEventSchema, auth=keycloak_auth)
 def deactivate_event(request, id: int):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = False
     event.save(update_fields=['is_active'])
@@ -910,13 +910,13 @@ def deactivate_event(request, id: int):
 
 @signage_router.get("/exam-templates", response=list[ExamTemplateSchema], auth=keycloak_auth)
 def list_exam_templates(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return ExamTemplate.objects.all()
 
 
 @signage_router.post("/exam-templates", response=ExamTemplateSchema, auth=keycloak_auth)
 def create_exam_template(request, payload: ExamTemplateCreateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     template = ExamTemplate.objects.create(**payload.dict())
     push.notify_changed_on_commit()
     return template
@@ -924,7 +924,7 @@ def create_exam_template(request, payload: ExamTemplateCreateSchema):
 
 @signage_router.put("/exam-templates/{id}", response=ExamTemplateSchema, auth=keycloak_auth)
 def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     template = get_object_or_404(ExamTemplate, id=id)
     for key, value in payload.dict().items():
         setattr(template, key, value)
@@ -935,7 +935,7 @@ def update_exam_template(request, id: int, payload: ExamTemplateCreateSchema):
 
 @signage_router.delete("/exam-templates/{id}", auth=keycloak_auth)
 def delete_exam_template(request, id: int):
-    _require_perm(request, 'monitor.exams')
+    _require_perm(request, 'signage.exams')
     get_object_or_404(ExamTemplate, id=id).delete()
     push.notify_changed_on_commit()
     return {"success": True}
@@ -949,7 +949,7 @@ SETTINGS_SECRET_FIELDS = ('webuntis_password', 'weather_api_key')
 
 @signage_router.get("/settings", response=MonitorSettingsSchema, auth=keycloak_auth)
 def get_settings(request):
-    _require_perm(request, 'monitor.view')
+    _require_perm(request, 'signage.view')
     return MonitorSettings.load()
 
 
@@ -964,9 +964,9 @@ def update_settings(request, payload: MonitorSettingsUpdateSchema):
         if data.pop(f'{secret}_clear', False):
             data[secret] = ''
     if not data or set(data) - ON_AIR_SETTINGS_FIELDS:
-        _require_perm(request, 'monitor.setup')
+        _require_perm(request, 'signage.setup')
     if set(data) & ON_AIR_SETTINGS_FIELDS:
-        _require_perm(request, 'monitor.onair')
+        _require_perm(request, 'signage.onair')
     validate_settings_device_data(data)
     settings = MonitorSettings.load()
     validate_settings_light_times(data, settings.light_from, settings.light_until)

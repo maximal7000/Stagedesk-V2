@@ -65,8 +65,8 @@ function NewScreenDialog({ views, busy, onCreate, onCancel }) {
 
 export default function Screens() {
   const navigate = useNavigate()
-  // Ohne monitor.setup (nur Ein- und Ausschalten) kein Anlegen
-  const canSetup = useUser().hasPermission('monitor.setup')
+  // Ohne signage.setup (nur Ein- und Ausschalten) kein Anlegen
+  const canSetup = useUser().hasPermission('signage.setup')
   const [screens, setScreens] = useState(null)
   const [views, setViews] = useState([])
   const [error, setError] = useState(null)

@@ -241,13 +241,13 @@ class ScheduleApiTest(TestCase):
                                content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
 
     def test_schedule_requires_power_permission(self):
-        self.grant('monitor.view', 'monitor.setup')
+        self.grant('signage.view', 'signage.setup')
         self.assertEqual(self.put({'schedule': [r([0], '07:00', '18:00')]}).status_code, 403)
         self.screen.refresh_from_db()
         self.assertEqual(self.screen.schedule, [])
 
     def test_schedule_saves_and_pushes_power(self):
-        self.grant('monitor.view', 'monitor.power')
+        self.grant('signage.view', 'signage.power')
         res = self.put({'schedule': [r([0], '07:00', '09:00', self.view.id), r([0, 1], '07:00', '18:00')]})
         self.assertEqual(res.status_code, 200, res.content)
         self.assertNotIn('power_schedule', res.json())
@@ -258,7 +258,7 @@ class ScheduleApiTest(TestCase):
         self.assertEqual(legacy['power_zeitplan'], power_res['power_schedule'])
 
     def test_schedule_validation_error(self):
-        self.grant('monitor.view', 'monitor.power')
+        self.grant('signage.view', 'signage.power')
         res = self.put({'schedule': [r([], '07:00', '18:00')]})
         self.assertEqual(res.status_code, 422)
         self.assertEqual(res.json()['detail'], 'Zeile 1: Bitte mindestens einen Wochentag wählen.')

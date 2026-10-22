@@ -9,7 +9,7 @@
   "permissions": [
     "veranstaltung.view",
     "inventar.view",
-    "monitor.view"
+    "signage.view"
   ],
   "theme": "dark",
   "theme_locked": false,

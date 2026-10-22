@@ -27,7 +27,7 @@ const device = (extra = {}) => ({
   },
   ...extra,
 })
-const all = (p) => ['monitor.view', 'monitor.devices', 'monitor.power'].includes(p)
+const all = (p) => ['signage.view', 'signage.devices', 'signage.power'].includes(p)
 
 let root, container
 async function mount(props = {}) {
@@ -118,15 +118,15 @@ describe('DeviceBox', () => {
       .toContain('Updates jetzt installieren? Ein nötiger Neustart wird danach hier angezeigt und nicht automatisch ausgeführt.')
   })
 
-  it('ohne monitor.power keine Knöpfe für Bildschirm an und aus', async () => {
-    await mount({ can: (p) => p === 'monitor.devices' })
+  it('ohne signage.power keine Knöpfe für Bildschirm an und aus', async () => {
+    await mount({ can: (p) => p === 'signage.devices' })
     expect(button('Bildschirm an')).toBeUndefined()
     expect(button('Bildschirm aus')).toBeUndefined()
     expect(button('Neu laden')).toBeDefined()
   })
 
-  it('ohne monitor.devices keine Befehle und keine Kopplungsaktionen', async () => {
-    await mount({ can: (p) => p === 'monitor.view' })
+  it('ohne signage.devices keine Befehle und keine Kopplungsaktionen', async () => {
+    await mount({ can: (p) => p === 'signage.view' })
     expect(button('Neu laden')).toBeUndefined()
     expect(button('Entkoppeln')).toBeUndefined()
     expect(container.textContent).toContain('Netz')
@@ -208,9 +208,9 @@ describe('DeviceBox', () => {
     expect(api.getDeviceCommand.mock.calls.length).toBe(calls)
   })
 
-  it('ohne monitor.devices: Neu laden nur über onReload, keine Geräte-Befehle', async () => {
+  it('ohne signage.devices: Neu laden nur über onReload, keine Geräte-Befehle', async () => {
     const onReload = vi.fn()
-    await mount({ can: (p) => p === 'monitor.setup', onReload })
+    await mount({ can: (p) => p === 'signage.setup', onReload })
     expect(button('Pi neu starten')).toBeUndefined()
     await click(button('Neu laden'))
     expect(onReload).toHaveBeenCalled()

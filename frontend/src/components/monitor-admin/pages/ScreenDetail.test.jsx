@@ -90,7 +90,7 @@ afterEach(() => {
 
 describe('ScreenDetail', () => {
   it('speichert jeden geänderten Abschnitt mit nur seinen Feldern', async () => {
-    perms.add('monitor.setup').add('monitor.power')
+    perms.add('signage.setup').add('signage.power')
     await mount()
     await act(async () => { typeInto(byLabel('Ort'), 'Eingangshalle Nord') })
     const saturday = [...container.querySelectorAll('[data-schedule-editor] button[aria-pressed]')].find((b) => b.textContent === 'Sa')
@@ -109,7 +109,7 @@ describe('ScreenDetail', () => {
   })
 
   it('ohne Recht für Ein- und Ausschalten ist der Abschnitt nur lesend', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     expect(container.textContent).toContain('Nur lesend')
     expect(button('Zeile hinzufügen')).toBeUndefined()
@@ -117,7 +117,7 @@ describe('ScreenDetail', () => {
   })
 
   it('nur mit Recht für Ein- und Ausschalten: Anzeige lesend, Ein- und Ausschalten bearbeitbar, keine Setup-Aktionen', async () => {
-    perms.add('monitor.power')
+    perms.add('signage.power')
     await mount()
     expect(byLabel('Name').disabled).toBe(true)
     expect(byLabel('Ort').disabled).toBe(true)
@@ -143,7 +143,7 @@ describe('ScreenDetail', () => {
     const withSchedule = (schedule) => api.getScreens.mockImplementation(() => Promise.resolve([{ ...glocke(), schedule }]))
 
     it('steht als eigener Abschnitt zwischen Anzeige und Ein- und Ausschalten', async () => {
-      perms.add('monitor.setup').add('monitor.power')
+      perms.add('signage.setup').add('signage.power')
       await mount()
       const order = [...container.querySelectorAll('[data-section]')].map((el) => el.dataset.section)
       expect(order.indexOf('display')).toBeLessThan(order.indexOf('schedule'))
@@ -153,7 +153,7 @@ describe('ScreenDetail', () => {
     })
 
     it('leerer Zeitplan ist kompakt', async () => {
-      perms.add('monitor.setup').add('monitor.power')
+      perms.add('signage.setup').add('signage.power')
       withSchedule([])
       await mount()
       expect(section().textContent).toBe('ZeitplanKein Zeitplan·Zeitplan hinzufügen')
@@ -162,7 +162,7 @@ describe('ScreenDetail', () => {
     })
 
     it('Zeitplan ohne Recht power nur lesend', async () => {
-      perms.add('monitor.setup')
+      perms.add('signage.setup')
       await mount()
       expect(section().textContent).toContain('Nur lesend')
       expect(button('Zeile hinzufügen', section())).toBeUndefined()
@@ -178,7 +178,7 @@ describe('ScreenDetail', () => {
     })
 
     it('speichert schedule mit view_id null für Standard-Ansicht', async () => {
-      perms.add('monitor.power')
+      perms.add('signage.power')
       withSchedule([])
       await mount()
       await click(button('Zeitplan hinzufügen', section()))
@@ -203,7 +203,7 @@ describe('ScreenDetail', () => {
     })
 
     it('zeigt unter überschneidenden Zeilen, welche Vorrang hat', async () => {
-      perms.add('monitor.power')
+      perms.add('signage.power')
       withSchedule([
         { days: [0], from: '07:00', until: '13:00', view_id: 1 },
         { days: [0], from: '12:00', until: '15:00', view_id: null },
@@ -225,7 +225,7 @@ describe('ScreenDetail', () => {
     })
 
     it('verschiebt Zeilen mit dem Griff per Tastatur', async () => {
-      perms.add('monitor.power')
+      perms.add('signage.power')
       withSchedule([
         { days: [0], from: '07:00', until: '13:00', view_id: 1 },
         { days: [1], from: '12:00', until: '15:00', view_id: null },
@@ -239,7 +239,7 @@ describe('ScreenDetail', () => {
   })
 
   it('Farbschema pro Bildschirm wird mit der Anzeige gespeichert', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     const group = container.querySelector('[role="radiogroup"][aria-label="Farbschema"]')
     expect([...group.querySelectorAll('button')].map((b) => b.textContent)).toEqual(['Wie eingestellt', 'Immer hell', 'Immer dunkel'])
@@ -249,7 +249,7 @@ describe('ScreenDetail', () => {
   })
 
   it('verwirft Stand und Entwurf beim Wechsel zu einem anderen Bildschirm', async () => {
-    perms.add('monitor.setup').add('monitor.power')
+    perms.add('signage.setup').add('signage.power')
     const aula = { ...glocke(), id: 2, name: 'Aula', slug: 'aula', location: 'Bühne' }
     let resolveSecond
     api.getScreens
@@ -276,8 +276,8 @@ describe('ScreenDetail', () => {
     expect(container.textContent).not.toContain('ungespeicherte')
   })
 
-  it('zeigt mit nur monitor.devices die Geräte-Box und keine Einrichtung', async () => {
-    perms.add('monitor.devices')
+  it('zeigt mit nur signage.devices die Geräte-Box und keine Einrichtung', async () => {
+    perms.add('signage.devices')
     api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
     await mount()
     expect(container.textContent).toContain('Glocke')
@@ -288,7 +288,7 @@ describe('ScreenDetail', () => {
   })
 
   it('hält das Speichern bei unvollständigem Zeitplan an', async () => {
-    perms.add('monitor.setup').add('monitor.power')
+    perms.add('signage.setup').add('signage.power')
     await mount()
     const fromInput = container.querySelector('[data-schedule-editor] input[aria-label="Von"]')
     await act(async () => { typeInto(fromInput, '') })
@@ -299,7 +299,7 @@ describe('ScreenDetail', () => {
   })
 
   it('erzeugt nach Bestätigung einen neuen Schlüssel und zeigt die neue URL', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.regenerateScreenKey.mockResolvedValue({ ...glocke(), access_key: 'neu-key' })
     await mount()
     expect(byLabel('Kiosk-URL').value).toBe(`${window.location.origin}/monitor?screen=glocke&key=alt-key`)
@@ -313,7 +313,7 @@ describe('ScreenDetail', () => {
   })
 
   it('setzt eine andere Ansicht vorübergehend und hebt sie wieder auf', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     api.getViews.mockImplementation(() => Promise.resolve([{ id: 1, name: 'Abfahrten' }, { id: 2, name: 'Info' }]))
     await mount()
     const section = container.querySelector('[data-section="override"]')
@@ -337,7 +337,7 @@ describe('ScreenDetail', () => {
   })
 
   it('löscht den Bildschirm nach Bestätigung endgültig und wechselt zur Liste', async () => {
-    perms.add('monitor.setup')
+    perms.add('signage.setup')
     await mount()
     await click(button('Löschen'))
     const dialog = container.querySelector('[role="alertdialog"]')
@@ -349,7 +349,7 @@ describe('ScreenDetail', () => {
   })
 
   it('ohne Recht für die Einrichtung: kein Löschen, vorübergehende Ansicht nur lesend', async () => {
-    perms.add('monitor.power')
+    perms.add('signage.power')
     api.getScreens.mockImplementation(() => Promise.resolve([{ ...glocke(), override_view_id: 1, override_until: null }]))
     await mount()
     expect(button('Löschen')).toBeUndefined()
@@ -367,7 +367,7 @@ describe('ScreenDetail', () => {
     })
 
     it('Methodenwechsel sendet Methode und Konfiguration zusammen, nur für den Geräte-Entwurf', async () => {
-      perms.add('monitor.devices')
+      perms.add('signage.devices')
       await mount()
       await select('Steuerung des Bildschirms', 'hybrid')
       await act(async () => { typeInto(byLabel('SICP-IP'), '192.0.2.30') })
@@ -381,7 +381,7 @@ describe('ScreenDetail', () => {
     })
 
     it('Hybrid ohne SICP-IP wird nicht gespeichert', async () => {
-      perms.add('monitor.devices')
+      perms.add('signage.devices')
       await mount()
       await select('Steuerung des Bildschirms', 'hybrid')
       await click(button('Speichern'))
@@ -391,7 +391,7 @@ describe('ScreenDetail', () => {
     })
 
     it('Update-Fenster: von muss vor bis liegen, gespeichert wird nur das Geänderte', async () => {
-      perms.add('monitor.devices')
+      perms.add('signage.devices')
       await mount()
       await act(async () => { typeInto(byLabel('Von'), '06:00') })
       expect(container.querySelector('[data-section="updates"]').textContent).toContain('„Von“ muss vor „Bis“ liegen.')
@@ -403,8 +403,8 @@ describe('ScreenDetail', () => {
       expect(api.updateScreen).toHaveBeenCalledWith(1, { auto_updates: false, update_window: { weekday: 6, from: '02:00', until: '05:00' } })
     })
 
-    it('ohne monitor.devices sind die Geräte-Felder nur lesend', async () => {
-      perms.add('monitor.power')
+    it('ohne signage.devices sind die Geräte-Felder nur lesend', async () => {
+      perms.add('signage.power')
       await mount()
       expect(byLabel('Steuerung des Bildschirms').disabled).toBe(true)
       expect(container.querySelector('[data-section="updates"]')).toBeNull()
@@ -412,7 +412,7 @@ describe('ScreenDetail', () => {
     })
 
     it('mit gekoppeltem Gerät: Geräte-Box, Ampel im Kopf und Protokoll', async () => {
-      perms.add('monitor.devices')
+      perms.add('signage.devices')
       api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
       await mount()
       expect(container.querySelector('[data-section="device"]').textContent).toContain('Stand 09:59')
@@ -422,7 +422,7 @@ describe('ScreenDetail', () => {
     })
 
     it('ohne Gerät: Hinweis, bei Ladefehler Unbekannt statt Kein Gerät gekoppelt', async () => {
-      perms.add('monitor.devices')
+      perms.add('signage.devices')
       await mount()
       expect(container.querySelector('[data-section="device"]').dataset.deviceState).toBe('unpaired')
       expect(container.textContent).toContain('Kein Gerät gekoppelt')
@@ -436,8 +436,8 @@ describe('ScreenDetail', () => {
       expect(box.textContent).not.toContain('Kein Gerät gekoppelt')
     })
 
-    it('mit monitor.setup ohne monitor.devices bleibt Neu laden über reloadScreen, sonst keine Befehle', async () => {
-      perms.add('monitor.setup')
+    it('mit signage.setup ohne signage.devices bleibt Neu laden über reloadScreen, sonst keine Befehle', async () => {
+      perms.add('signage.setup')
       api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
       api.reloadScreen.mockResolvedValue({ success: true })
       await mount()
@@ -449,7 +449,7 @@ describe('ScreenDetail', () => {
     })
 
     it('altes Skript: CEC-Stand und Hinweis', async () => {
-      perms.add('monitor.setup')
+      perms.add('signage.setup')
       api.getDevices.mockImplementation(() => Promise.resolve([{ id: null, screen_id: 1, status: 'legacy', legacy: true, warnings: [], telemetry: {} }]))
       await mount()
       expect(container.querySelector('[data-section="device"]').textContent).toContain('Altes Skript')

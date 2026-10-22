@@ -32,13 +32,13 @@ def _validate_holiday(payload: HolidayPeriodCreateSchema):
 
 @setup_router.get("/holidays", response=list[HolidayPeriodSchema], auth=keycloak_auth)
 def list_holidays(request):
-    _require_perm(request, 'monitor.power')
+    _require_perm(request, 'signage.power')
     return HolidayPeriod.objects.all()
 
 
 @setup_router.post("/holidays", response=HolidayPeriodSchema, auth=keycloak_auth)
 def create_holiday(request, payload: HolidayPeriodCreateSchema):
-    _require_perm(request, 'monitor.power')
+    _require_perm(request, 'signage.power')
     _validate_holiday(payload)
     holiday = HolidayPeriod.objects.create(**payload.dict())
     push.notify_changed_on_commit()
@@ -48,7 +48,7 @@ def create_holiday(request, payload: HolidayPeriodCreateSchema):
 
 @setup_router.put("/holidays/{id}", response=HolidayPeriodSchema, auth=keycloak_auth)
 def update_holiday(request, id: int, payload: HolidayPeriodCreateSchema):
-    _require_perm(request, 'monitor.power')
+    _require_perm(request, 'signage.power')
     _validate_holiday(payload)
     holiday = get_object_or_404(HolidayPeriod, id=id)
     for key, value in payload.dict().items():
@@ -61,7 +61,7 @@ def update_holiday(request, id: int, payload: HolidayPeriodCreateSchema):
 
 @setup_router.delete("/holidays/{id}", auth=keycloak_auth)
 def delete_holiday(request, id: int):
-    _require_perm(request, 'monitor.power')
+    _require_perm(request, 'signage.power')
     get_object_or_404(HolidayPeriod, id=id).delete()
     push.notify_changed_on_commit()
     push_power_to_all()
@@ -72,19 +72,19 @@ def delete_holiday(request, id: int):
 
 @setup_router.get("/emergency-templates", response=list[EmergencyTemplateSchema], auth=keycloak_auth)
 def list_emergency_templates(request):
-    _require_perm(request, 'monitor.emergency')
+    _require_perm(request, 'signage.emergency')
     return EmergencyTemplate.objects.all()
 
 
 @setup_router.post("/emergency-templates", response=EmergencyTemplateSchema, auth=keycloak_auth)
 def create_emergency_template(request, payload: EmergencyTemplateCreateSchema):
-    _require_perm(request, 'monitor.emergency')
+    _require_perm(request, 'signage.emergency')
     return EmergencyTemplate.objects.create(**payload.dict())
 
 
 @setup_router.put("/emergency-templates/{id}", response=EmergencyTemplateSchema, auth=keycloak_auth)
 def update_emergency_template(request, id: int, payload: EmergencyTemplateCreateSchema):
-    _require_perm(request, 'monitor.emergency')
+    _require_perm(request, 'signage.emergency')
     template = get_object_or_404(EmergencyTemplate, id=id)
     for key, value in payload.dict().items():
         setattr(template, key, value)
@@ -94,7 +94,7 @@ def update_emergency_template(request, id: int, payload: EmergencyTemplateCreate
 
 @setup_router.delete("/emergency-templates/{id}", auth=keycloak_auth)
 def delete_emergency_template(request, id: int):
-    _require_perm(request, 'monitor.emergency')
+    _require_perm(request, 'signage.emergency')
     get_object_or_404(EmergencyTemplate, id=id).delete()
     return {"success": True}
 
@@ -111,7 +111,7 @@ def _selected_screens(payload: ScreenSelectionSchema):
 @setup_router.post("/screens/power-off-today", auth=keycloak_auth)
 def power_off_today(request, payload: ScreenSelectionSchema):
     """Setzt off_until auf den Beginn des nächsten Zeitplan-Fensters (Spec §3.2)."""
-    _require_perm(request, 'monitor.power')
+    _require_perm(request, 'signage.power')
     now = timezone.now()
     result = {}
     for screen in _selected_screens(payload):
@@ -126,7 +126,7 @@ def power_off_today(request, payload: ScreenSelectionSchema):
 @setup_router.delete("/screens/power-off-today", auth=keycloak_auth)
 def undo_power_off_today(request, payload: ScreenSelectionSchema):
     """Rückgängig: off_until wieder leeren."""
-    _require_perm(request, 'monitor.power')
+    _require_perm(request, 'signage.power')
     _selected_screens(payload).update(off_until=None, updated_at=timezone.now())
     push.notify_changed_on_commit()
     push_power_to_all()
@@ -138,7 +138,7 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
 @setup_router.post("/webuntis/check", auth=keycloak_auth)
 def check_webuntis(request):
     """Quelle neu erkennen (Spec §4.3). Nur Ja/Nein pro Weg und die Quelle, keine Daten."""
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     result = webuntis.check()
     push.notify_changed_on_commit()
     return result
@@ -149,7 +149,7 @@ def check_webuntis(request):
 @setup_router.post("/views/preview", auth=keycloak_auth)
 def create_view_preview(request, payload: ViewPreviewSchema):
     """Entwurf ablegen (nichts wird gespeichert) → Token für GET /display?preview= (Spec §4.5)."""
-    _require_perm(request, 'monitor.setup')
+    _require_perm(request, 'signage.setup')
     draft = payload.view.dict(exclude_unset=True)
     saved = None
     if draft.get('id'):

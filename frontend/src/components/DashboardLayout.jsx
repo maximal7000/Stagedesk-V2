@@ -154,16 +154,16 @@ export default function DashboardLayout({ children }) {
   // Inventar-Unternavigation (aktuell leer; bei Bedarf hier ergänzen)
   const inventarSubNav = [];
 
-  // Monitor-Navigation (Spec §6.1): alle Unterseiten setzen monitor.view voraus, dazu je ein eigenes Recht
-  const monitorNavigation = hasPermission('monitor.view') ? [
-    { name: 'Übersicht', href: '/monitor-admin', icon: LayoutDashboard, permission: 'monitor.view' },
+  // Monitor-Navigation (Spec §6.1): alle Unterseiten setzen signage.view voraus, dazu je ein eigenes Recht
+  const monitorNavigation = hasPermission('signage.view') ? [
+    { name: 'Übersicht', href: '/monitor-admin', icon: LayoutDashboard, permission: 'signage.view' },
     // Bildschirme: setup bearbeitet die Anzeige, power nur das Ein- und Ausschalten
-    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['monitor.setup', 'monitor.power', 'monitor.devices'] },
-    { name: 'Ansichten', href: '/monitor-admin/views', icon: PanelsTopLeft, permission: 'monitor.setup' },
-    { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'monitor.exams' },
-    { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'monitor.media' },
-    { name: 'Ferien & Zeitpläne', href: '/monitor-admin/schedules', icon: CalendarRange, permission: 'monitor.power' },
-    { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, anyOf: ['monitor.setup', 'monitor.onair', 'monitor.emergency'] },
+    { name: 'Bildschirme', href: '/monitor-admin/screens', icon: Monitor, anyOf: ['signage.setup', 'signage.power', 'signage.devices'] },
+    { name: 'Ansichten', href: '/monitor-admin/views', icon: PanelsTopLeft, permission: 'signage.setup' },
+    { name: 'Klausuren & Termine', href: '/monitor-admin/exams', icon: CalendarClock, permission: 'signage.exams' },
+    { name: 'Medien', href: '/monitor-admin/media', icon: Image, permission: 'signage.media' },
+    { name: 'Ferien & Zeitpläne', href: '/monitor-admin/schedules', icon: CalendarRange, permission: 'signage.power' },
+    { name: 'Einstellungen', href: '/monitor-admin/settings', icon: SlidersHorizontal, anyOf: ['signage.setup', 'signage.onair', 'signage.emergency'] },
   ].filter(item => (item.anyOf ? item.anyOf.some(p => hasPermission(p)) : hasPermission(item.permission))) : [];
 
   // Admin-Navigation

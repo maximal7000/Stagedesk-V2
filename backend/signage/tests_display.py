@@ -212,7 +212,7 @@ class ContractTest(DisplayTestBase):
     def test_substitutions_with_bearer_and_monitor_view(self):
         view = self.view('substitutions')
         Screen.objects.create(name='Halle', slug='halle', default_view=view)
-        perm, _ = Permission.objects.get_or_create(code='monitor.view', defaults={'name': 'Monitor ansehen'})
+        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Monitor ansehen'})
         UserProfile.objects.create(keycloak_id='tester').permissions.add(perm)
         with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}):
             data = self.client.get('/api/monitor/display', {'screen': 'halle'},
@@ -290,7 +290,7 @@ class PreviewTestBase(DisplayTestBase):
         self.addCleanup(auth.stop)
 
     def grant_setup(self):
-        perm, _ = Permission.objects.get_or_create(code='monitor.setup', defaults={'name': 'Monitor einrichten'})
+        perm, _ = Permission.objects.get_or_create(code='signage.setup', defaults={'name': 'Monitor einrichten'})
         self.profile.permissions.add(perm)
 
     def post_preview(self, body):

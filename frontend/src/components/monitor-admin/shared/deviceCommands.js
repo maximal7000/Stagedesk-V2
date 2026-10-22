@@ -5,7 +5,7 @@ export const OFFLINE_HINT = 'Der Befehl wird gesendet, sobald das Gerät wieder 
 export const POLL_MS = 2000
 export const POLL_MAX_MS = 2 * 60 * 1000
 
-// Reihenfolge der Knöpfe. power: nur mit monitor.power (Backend: POWER_COMMANDS). confirm: Nachfrage vor dem Senden.
+// Reihenfolge der Knöpfe. power: nur mit signage.power (Backend: POWER_COMMANDS). confirm: Nachfrage vor dem Senden.
 export const COMMANDS = [
   { kind: 'reload', label: 'Neu laden' },
   { kind: 'restart_browser', label: 'Browser neu starten' },
@@ -30,11 +30,11 @@ export const COMMANDS = [
 export const isPaired = (device) => !!device && device.id != null && !device.legacy
 
 // can: hasPermission(permission). -> { items: [{ kind, label, confirm? }], hint }
-// Ohne monitor.devices oder ohne gekoppeltes Gerät gibt es keine Befehle. Offline bleiben sie möglich
+// Ohne signage.devices oder ohne gekoppeltes Gerät gibt es keine Befehle. Offline bleiben sie möglich
 // (der Server hält sie 5 Minuten), dazu der Hinweis.
 export function commandsFor(device, can) {
-  if (!isPaired(device) || !can('monitor.devices')) return { items: [], hint: '' }
-  const items = COMMANDS.filter((c) => !c.power || can('monitor.power')).map((c) => ({ kind: c.kind, label: c.label, confirm: c.confirm }))
+  if (!isPaired(device) || !can('signage.devices')) return { items: [], hint: '' }
+  const items = COMMANDS.filter((c) => !c.power || can('signage.power')).map((c) => ({ kind: c.kind, label: c.label, confirm: c.confirm }))
   return { items, hint: device.status === 'offline' ? OFFLINE_HINT : '' }
 }
 
