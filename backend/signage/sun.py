@@ -12,7 +12,7 @@ SUN_ALTITUDE = -0.833
 
 
 def _utc_minutes(day: date):
-    """Minutes after 00:00 UTC for sunrise and sunset (NOAA, fractional year at noon)."""
+    """NOAA approximation, fractional year at noon."""
     gamma = 2 * math.pi / 365 * (day.timetuple().tm_yday - 1)
     eqtime = 229.18 * (0.000075 + 0.001868 * math.cos(gamma) - 0.032077 * math.sin(gamma)
                        - 0.014615 * math.cos(2 * gamma) - 0.040849 * math.sin(2 * gamma))

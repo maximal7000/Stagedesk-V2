@@ -61,7 +61,7 @@ class PairingClient:
         return f"{self.config.server.rstrip('/')}/api/signage/agent/pair/{name}"
 
     def _lifetime(self, value):
-        """Seconds the code stays valid, measured at receipt (immune to a wrong device clock)."""
+        """Measured at receipt (immune to a wrong device clock)."""
         expires = _parse_time(value)
         lifetime = (expires - self.now()) if expires else DEFAULT_LIFETIME
         if not timedelta(0) < lifetime <= MAX_LIFETIME:
@@ -78,7 +78,6 @@ class PairingClient:
         return code, pairing_id, expires
 
     def poll(self, pairing_id):
-        """None while waiting, {"status": "paired"} on success, {"status": "expired"} when a new code is needed."""
         status, body = self.http_post(self._url("poll"), {"pairing_id": pairing_id})
         if status == 202:
             return None
@@ -93,7 +92,6 @@ class PairingClient:
         raise ServerBusy(f"pair/poll answered {status}")
 
     def run(self, on_code, on_unreachable=None, sleep=None, poll_interval=POLL_INTERVAL):
-        """Block until paired (True) or stopped (False). Shows a new code after expiry."""
         sleep = sleep or self._stop_event.wait
         delays = backoff_delays(jitter=False)
         pairing_id = code = None

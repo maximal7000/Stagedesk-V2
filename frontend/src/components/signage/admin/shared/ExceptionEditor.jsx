@@ -8,7 +8,7 @@ function Problem({ text }) {
   return text ? <p className="text-xs text-bad mt-1.5">{text}</p> : null
 }
 
-// Exceptions by date: on these days only the given window applies (without times: on all day)
+// Without times: on all day.
 export default function ExceptionEditor({ value, onChange, problems = [], disabled = false, today }) {
   const rows = Array.isArray(value) ? value : []
   const update = (index, patch) => onChange(rows.map((r, i) => (i === index ? { ...r, ...patch } : r)))

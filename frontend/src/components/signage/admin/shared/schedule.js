@@ -1,7 +1,5 @@
-// Row: { days, from, until, view_id }, view_id null = default view. Days as in the backend
-// (screen_schedule.py, date.weekday()): 0 = Monday … 6 = Sunday. A row that ends before it starts
-// crosses midnight; the part after 00:00 belongs to the next day. Overlapping rows: the top one wins;
-// the screen is on in the union of all rows. An exception without times means on all day.
+// Days as in the backend (date.weekday()): 0 = Monday. A row that ends before it starts crosses
+// midnight; the part after 00:00 belongs to the next day. An exception without times means on all day.
 export const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
 
 const text = (v) => (typeof v === 'string' ? v.trim() : '')
@@ -121,7 +119,7 @@ function segments(row) {
 
 const overlaps = (a, b) => a.day === b.day && a.start < b.end && b.start < a.end
 
-// Hint per row that overlaps an earlier one (the top one wins); touching rows do not count
+// Touching rows do not count as overlap
 export function overlapHints(rows) {
   const list = Array.isArray(rows) ? rows : []
   const parts = list.map(segments)
@@ -172,8 +170,6 @@ function mergeRanges(ranges) {
   return out
 }
 
-// On-times per weekday (power.compute_power_state): empty schedule = always on,
-// otherwise the union of all rows
 export function powerWeek(screen) {
   if (screen?.power_mode === 'manual_off') return { mode: 'off', days: Array(7).fill([]) }
   if (screen?.power_mode === 'manual_on') return { mode: 'on', days: Array(7).fill(FULL_DAY) }
@@ -184,7 +180,7 @@ export function powerWeek(screen) {
   return { mode: 'schedule', days: days.map(mergeRanges) }
 }
 
-// Row that applies now (screen_schedule.active_row): ends inclusive, top first. weekday 0 = Monday.
+// Like screen_schedule.active_row: ends inclusive, top row first.
 export function activeRow(rows, weekday, hhmm) {
   for (const row of Array.isArray(rows) ? rows : []) {
     if (!isEntry(row) || (row.days !== undefined && !Array.isArray(row.days))) continue
@@ -198,8 +194,7 @@ export function activeRow(rows, weekday, hhmm) {
   return null
 }
 
-// Colour slot per view (series with count tones): default view first, then the others by id.
-// The colour follows the view, so moving rows recolours nothing. -> Map(viewId | null -> slot)
+// The colour follows the view, so moving rows recolours nothing.
 export function seriesSlots(rows, count) {
   const ids = [...new Set((Array.isArray(rows) ? rows : []).map((r) => r?.view_id).filter((id) => Number.isInteger(id)))]
     .sort((a, b) => a - b)

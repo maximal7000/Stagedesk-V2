@@ -76,7 +76,7 @@ def start_pairing(serial: str, model: str):
 
 
 def poll_pairing(pairing_id: str):
-    """None while open; the credentials once; PairingGone afterwards. Unknown: LookupError."""
+    """The credentials are delivered only once; afterwards PairingGone."""
     req = PairingRequest.objects.select_related('confirmed_device__screen').filter(
         pairing_id_hash=hash_pairing_id(pairing_id)).first()
     if req is None:
@@ -236,9 +236,7 @@ ONLINE_WINDOW = timedelta(minutes=2)
 
 
 def device_status(device, screen, settings, now) -> tuple:
-    """(status, text) for the status light. Without a device (or revoked), a screen with a recent
-    `cec_status_at` falls back to "legacy script". Warnings come from `device.active_warnings`
-    (maintained by the watcher)."""
+    """Without a device (or revoked), a screen with a recent `cec_status_at` falls back to "legacy script"."""
     from . import power
     if device is None or device.revoked_at is not None:
         if screen is not None and screen.cec_status_at and now - screen.cec_status_at <= ONLINE_WINDOW:
@@ -259,8 +257,7 @@ def device_status(device, screen, settings, now) -> tuple:
 
 
 def update_gate(screen: Screen, now) -> tuple:
-    """May the agent update or restart now? Same rules as `display._mode` (emergency, exam with
-    forced display, on-air of the current view) plus an active event assigned to this screen."""
+    """Same rules as `display._mode` plus an active event assigned to this screen."""
     cfg = MonitorSettings.load()
     if cfg.emergency_active:
         return False, "Notfall aktiv"
@@ -297,7 +294,7 @@ def record_update_result(device: Device, data: dict) -> None:
 
 
 def record_agent_update(device: Device, event) -> None:
-    """Event `agent_updated` for a finished self-update, once per from/to/at."""
+    """Recorded once per from/to/at."""
     if not isinstance(event, dict):
         return
     old, new, at = event.get("from"), event.get("to"), event.get("at")
@@ -377,8 +374,7 @@ def compute_warnings(telemetry: dict, settings, now) -> list:
 
 
 def notification_recipients() -> list:
-    """keycloak_ids of all users with the effective permission `signage.devices` (admins count via
-    the cached admin flag on the profile)."""
+    """Admins count via the cached admin flag on the profile."""
     from users.models import UserProfile
     return [p.keycloak_id for p in UserProfile.objects.all()
             if p.keycloak_id and p.has_permission('signage.devices', p.is_admin_cached)]

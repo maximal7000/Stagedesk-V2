@@ -1,4 +1,3 @@
-"""NAH.SH HAFAS (mgate.exe): JSON-RPC client, departures and time parsing."""
 import json
 import logging
 import urllib.request
@@ -237,7 +236,6 @@ def _parse_iso_time(iso_str):
 
 
 def _hafas_to_minutes(time_str):
-    """HAFAS time (HHMMSS or DDHHMMSS) to minutes after midnight"""
     if len(time_str) >= 8:
         d = int(time_str[:2])
         h = int(time_str[2:4])

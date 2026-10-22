@@ -179,7 +179,6 @@ class SelfUpdater:
         return parse_version(_read(self.paths.opt_dir / "VERSION"))
 
     def check(self, hello):
-        """None when nothing to do; {"updated": v} after the swap (the service restarts); {"error": text}."""
         version = hello.get("agent_version")
         sha256 = str(hello.get("agent_sha256") or "").lower()
         wanted, own = parse_version(version), self.current_version()
@@ -266,9 +265,7 @@ class SelfUpdater:
         _checked(self.runner, ["systemctl", "is-active", timer_name])
 
     def confirm(self):
-        """Call after a successful hello. Returns the agent_updated event once, then None.
-
-        Only the version that is running right now can be confirmed."""
+        """Call after a successful hello. Only the version that is running right now can be confirmed."""
         with _locked(self.paths):
             event = _read_json(self.paths.pending_confirm)
             if not event:
@@ -293,9 +290,7 @@ def _uptime(paths):
 
 
 def rollback(paths, runner, sleep=time.sleep, uptime=None):
-    """Restore .prev when the new version was never confirmed. True if a rollback happened.
-
-    Shortly after boot (power cut during the trial) the new version gets until BOOT_MINUTES of uptime;
+    """Shortly after boot (power cut during the trial) the new version gets until BOOT_MINUTES of uptime;
     pending-confirm is re-checked under the lock afterwards."""
     current = (uptime or (lambda: _uptime(paths)))()
     if current is not None and current < BOOT_MINUTES * 60 and paths.pending_confirm.exists():

@@ -58,7 +58,7 @@ def get_display_data(request, view: str = None, screen: str = None,
 
 @router.get("/clock")
 def get_clock_data(request):
-    """For external clock/status displays; the response shape stays unchanged for them."""
+    """The response shape stays unchanged for external callers."""
     now = timezone.now()
     settings = MonitorSettings.load()
 

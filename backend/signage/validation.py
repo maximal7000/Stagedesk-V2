@@ -26,7 +26,7 @@ CHOICE_FIELDS = {
 NEXT_DAY_FROM_MESSAGE = "Uhrzeit ungültig: bitte im Format HH:MM eintragen oder leer lassen"
 
 
-# Number fields -> (label, min, max); ranges as in the admin editors
+# Ranges as in the admin editors
 NUMBER_FIELDS = {
     'page_seconds': ('Blättertakt', 5, 120),
     'media_seconds': ('Sekunden pro Seite', 3, 600),
@@ -96,7 +96,7 @@ def _check_next_day_from(data):
 
 
 def _check_custom_format(data):
-    """Custom format: format name from WebUntis; empty allowed (then the next source applies)."""
+    """Empty is allowed (then the next source applies)."""
     if 'substitutions_custom_format' not in data:
         return
     value = (data['substitutions_custom_format'] or '').strip()
@@ -124,7 +124,7 @@ def _check_choices(data):
 
 
 def parse_countdown_date(value):
-    """Countdown date: empty -> None, without a zone -> local time (Europe/Berlin)."""
+    """Without a zone: local time (Europe/Berlin)."""
     if value in (None, ''):
         return None
     parsed = value if isinstance(value, datetime) else None
@@ -186,7 +186,7 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
     return data
 
 
-# Allowed power_config keys per method (names as in the agent)
+# Key names as in the agent
 POWER_CONFIG_KEYS = {
     'cec': {'cec_device'},
     'hdmi': {'output'},
@@ -288,7 +288,7 @@ LIGHT_ORDER_MESSAGE = "Die helle Zeit muss vor ihrem Ende beginnen."
 
 
 def validate_settings_light_times(data: dict, current_from: str, current_until: str) -> None:
-    """Light schedule from/until: HH:MM, start before end (stored value if only one is sent)."""
+    """Uses the stored value if only one of from/until is sent."""
     for key, label in (('light_from', 'Hell ab'), ('light_until', 'Hell bis')):
         if key in data and not (isinstance(data[key], str) and _HHMM.match(data[key])):
             raise HttpError(422, f"{label}: Uhrzeit ungültig. Bitte im Format HH:MM eintragen.")

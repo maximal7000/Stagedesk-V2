@@ -3,7 +3,7 @@ const TIME_SECONDS = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute:
 const WEEKDAY = new Intl.DateTimeFormat('de-DE', { weekday: 'long' })
 const LONG_DATE = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long', year: 'numeric' })
 
-// Date or null for missing and invalid values (Intl would throw on Invalid Date)
+// Intl would throw on Invalid Date
 function asDate(value) {
   if (value == null || value === '') return null
   const d = value instanceof Date ? value : new Date(value)
@@ -34,8 +34,7 @@ export function formatShortDate(value) {
   return d ? `${WEEKDAY_SHORT.format(d).replace(/\.$/, '')} ${DAY_MONTH.format(d)}` : ''
 }
 
-// "2026-10-19" as a local date (no time zone shift from UTC parsing).
-// Other values are parsed normally; invalid ones give an Invalid Date that the formats print as ''.
+// Parsed as a local date (no time zone shift from UTC parsing).
 export function parseLocalDate(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''))
   return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : (asDate(iso) ?? new Date(NaN))

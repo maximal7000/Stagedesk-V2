@@ -117,7 +117,7 @@ def _rpc(session, method, params=None):
 
 
 def _login(settings, deadline=None):
-    """Without a user name logs in anonymously as '#anonymous#'. Raises on error."""
+    """Without a user name logs in anonymously as '#anonymous#'."""
     session = WebUntisSession(settings.webuntis_server, settings.webuntis_school)
     session.deadline = deadline
     _rpc(session, "authenticate", {
@@ -176,7 +176,7 @@ def school_days(start: date, count: int = 2, holidays=()) -> list:
 
 
 def _untis_holidays(session) -> list:
-    """WebUntis holidays as [(first, last day)], cached 24 h. Errors are dropped silently."""
+    """Cached 24 h; errors are dropped silently."""
     cached = cache.get(HOLIDAYS_KEY)
     if cached is not None:
         return cached
@@ -209,7 +209,7 @@ def _parse_untis_date(value) -> date:
 
 
 def _timegrid(session):
-    """{Untis weekday (1 = Sunday): [(name, start, end)]}. Empty if unavailable."""
+    """Untis weekday: 1 = Sunday. Empty if unavailable."""
     try:
         grid = _rpc(session, "getTimegridUnits") or []
     except DeadlineExceeded:
@@ -223,7 +223,6 @@ def _timegrid(session):
 
 
 def _period_label(timegrid, day: date, start: int, end: int) -> str:
-    """Periods overlapping [start, end) as "5" or "5-6"; without a grid the clock time."""
     units = timegrid.get(day.isoweekday() % 7 + 1) or next(iter(timegrid.values()), [])
     names = [name for name, u_start, u_end in units if u_start < end and u_end > start]
     if not names:
@@ -240,9 +239,7 @@ def _period_range(label):
 
 
 def merge_periods(rows):
-    """Merges consecutive periods with otherwise equal fields into "5-6".
-
-    Expects rows sorted by class and period."""
+    """Expects rows sorted by class and period."""
     merged = []
     for row in rows:
         prev = merged[-1] if merged else None
@@ -315,7 +312,7 @@ def _timetable_kind(lesson):
 
 
 def _fetch_timetable_entries(session, start: date, end: date):
-    """[(date, start, end, row)] from the timetables of all classes (changes only)."""
+    """Only entries that differ from the regular timetable."""
     lessons = {}
     class_names = {}
     for klasse in _rpc(session, "getKlassen") or []:
@@ -342,7 +339,7 @@ def _news_json(session, day: date):
 
 
 def _fetch_news(session, day: date):
-    """Message of the day as text or None. Errors are dropped silently."""
+    """Errors are dropped silently."""
     try:
         data = _news_json(session, day)
         messages = (data.get('data') or {}).get('messagesOfDay') or []
@@ -410,7 +407,6 @@ def _load(settings, now: datetime, start: date | None = None, count: int = 2, de
 
 
 def _relevant_last_good(today: date, suffix=''):
-    """Last good result, only with days from today and relabelled; otherwise None."""
     last_good = cache.get(LAST_GOOD_KEY + suffix)
     if not last_good:
         return None
@@ -422,7 +418,7 @@ def _relevant_last_good(today: date, suffix=''):
 
 
 def _record_failure(now: datetime):
-    """Counts failures in a row; "unavailable" is stored only from the second one on."""
+    """Stores "unavailable" only from the second failure in a row on."""
     failures = (cache.get(FAILURES_KEY) or 0) + 1
     cache.set(FAILURES_KEY, failures, FAILURES_SECONDS)
     if failures >= FAILURES_BEFORE_UNAVAILABLE:
@@ -431,9 +427,7 @@ def _record_failure(now: datetime):
 
 def get_substitutions(now: datetime, *, start: date | None = None, count: int = 2,
                       deadline: float | None = None) -> dict:
-    """Substitutions for `count` school days from `start` (default: today, 2), cached.
-
-    `deadline` (a time.monotonic() point) limits the fetch when it is part of a longer chain;
+    """`deadline` (a time.monotonic() point) limits the fetch when it is part of a longer chain;
     without it DEADLINE_SECONDS from now applies."""
     # Only non-default queries get their own cache keys.
     if start is None and count == 2:
@@ -483,7 +477,6 @@ def _probe_timetable(session, day: date) -> bool:
 
 
 def detect_source(session) -> str:
-    """'substitutions', on missing permission 'timetable' (if available), otherwise 'unavailable'."""
     today = timezone.localdate()
     try:
         _call_substitutions(session, today, today)
@@ -499,7 +492,7 @@ def detect_source(session) -> str:
 
 
 def check() -> dict:
-    """Checks each path separately. Only yes/no and the source, no data."""
+    """Only yes/no and the source, no data."""
     now = timezone.now()
     today = timezone.localtime(now).date()
     result = {'login': False, 'substitutions': False, 'timetable': False, 'news': False,

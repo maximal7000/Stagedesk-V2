@@ -56,7 +56,7 @@ def pair_poll(request, payload: PairPollSchema):
 
 @router.get("/agent/install.sh", auth=None)
 def agent_install_script(request):
-    """Install script with the server URL filled in; public, contains no secrets."""
+    """Public; contains no secrets."""
     try:
         text = agent_package.install_script_path().read_text(encoding="utf-8")
     except OSError:

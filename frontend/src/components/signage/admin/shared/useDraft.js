@@ -1,5 +1,3 @@
-// set('name', v) or set('schedule.0.end', v) changes the draft; changed top-level fields are counted
-// (deep compare). save(fn) calls fn(draft) and makes the saved state the original.
 // `original` must be stable (e.g. state from loading): a new object resets the draft.
 import { useCallback, useMemo, useState } from 'react'
 

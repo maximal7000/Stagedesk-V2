@@ -1,4 +1,3 @@
-// Renders the iframe at the screen's original size and scales it down with transform: scale().
 // Resolution and orientation come from the screen (4K landscape, portrait 2160 × 3840).
 import { useEffect, useId, useRef, useState } from 'react'
 import { previewErrorText, usePreviewToken } from './usePreviewToken'

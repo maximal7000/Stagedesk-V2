@@ -192,9 +192,7 @@ def _departures_data(view):
 
 
 def _substitutions_data(view, key_ok, now, compact=False, single_day=False):
-    """Substitutions only with a valid key; otherwise only the embedded page.
-
-    `mode` 'embed': the display embeds `embed_url` (chosen, fallback or no key)."""
+    """Without a valid key only the embedded page, no substitution rows."""
     full, next_day = view.get_webuntis_url(), view.get_webuntis_url_next_day()
     embed_url = (next_day or full) if compact else (full or next_day)
     result = substitutions.load(view, now, single_day=single_day) if key_ok else substitutions.empty()
@@ -221,7 +219,6 @@ def _split_data(view, key_ok, now):
 
 
 def parse_page_selection(text, count):
-    """'1,3,5-7' -> [1, 3, 5, 6, 7] (1-based), clamped to 1..count, no duplicates."""
     out = []
     for part in (text or '').split(','):
         part = part.strip()
@@ -406,7 +403,7 @@ def build_payload(screen, view, *, key_ok, now, preview=False):
 
 
 def store_preview(draft: dict, screen_id=None) -> str:
-    """Keeps the draft in the cache for 10 minutes; the token is the authorization."""
+    """The token is the authorization; the draft expires after 10 minutes."""
     token = secrets.token_urlsafe(24)[:32]
     cache.set(PREVIEW_CACHE_PREFIX + token, {'view': draft, 'screen_id': screen_id}, PREVIEW_SECONDS)
     return token

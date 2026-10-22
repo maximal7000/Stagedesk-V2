@@ -1,6 +1,4 @@
-"""systemd timers for the update window and the daily reboot.
-
-The timer services only send a signal to the running agent (SIGUSR1: update, SIGUSR2: daily reboot).
+"""The timer services only send a signal to the running agent (SIGUSR1: update, SIGUSR2: daily reboot).
 The agent then asks the server for the gate over its existing connection."""
 import logging
 import re
@@ -20,7 +18,7 @@ def _minutes(text):
 
 
 def parse_window(window):
-    """(weekday name, 'HH:MM', random delay seconds); invalid values fall back to the default window."""
+    """Invalid values fall back to the default window."""
     window = window if isinstance(window, dict) else {}
     weekday = window.get("weekday")
     start = _minutes(window.get("from"))
@@ -55,7 +53,7 @@ def _write_if_changed(path, text):
 
 
 def write_timers(update_window, auto_updates, daily_reboot, runner, paths):
-    """Write the unit files, reload systemd only when something changed, enable or disable the timers."""
+    """systemd is reloaded only when something changed."""
     day, start, delay = parse_window(update_window)
     directory = paths.systemd_dir
     files = {

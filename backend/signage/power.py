@@ -82,8 +82,7 @@ def _at(day: date, at: time) -> datetime:
 
 
 def next_on_time(screen, now: datetime) -> datetime:
-    """Start of the next schedule window that is not today. Days without a window are skipped
-    (at most 14 days). Without a schedule or matching window: next day 05:00."""
+    """Days without a window are skipped (at most 14); without a schedule or match: next day 05:00."""
     today = timezone.localtime(now).date()
     entries = _schedule_entries(screen)
     for offset in range(1, MAX_LOOKAHEAD_DAYS + 1):

@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-// Shared second tick: all callers share one timer; it only runs with at least one subscriber.
+// All callers share one timer; it only runs with at least one subscriber.
 const listeners = new Set()
 let timer = null
 let current = new Date()
@@ -29,7 +29,7 @@ export function useClock() {
   return useSyncExternalStore(subscribe, getSnapshot)
 }
 
-// Same tick at minute precision: the value changes (and re-renders) only when the minute changes.
+// Changes (and re-renders) only when the minute changes.
 const getMinute = () => Math.floor(current.getTime() / 60000)
 
 export function useClockMinute() {

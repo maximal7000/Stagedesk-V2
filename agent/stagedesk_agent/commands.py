@@ -1,4 +1,3 @@
-"""Server commands: execute one and return (ok, text). The caller sends the command_result."""
 import logging
 import os
 import stat
@@ -110,7 +109,7 @@ def _output(config):
 
 
 def _read_screenshot(path):
-    """Read the PNG grim wrote as user pi. pi controls the directory, so never follow links or open pipes."""
+    """pi controls the directory, so never follow links or open pipes."""
     try:
         fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except OSError as exc:

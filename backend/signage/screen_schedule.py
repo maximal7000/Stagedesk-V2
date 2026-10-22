@@ -1,6 +1,4 @@
-"""Per-screen schedule: one list for on-times and views.
-
-Row: {'days': [0-6], 'from': 'HH:MM', 'until': 'HH:MM', 'view_id': int | None}
+"""Row: {'days': [0-6], 'from': 'HH:MM', 'until': 'HH:MM', 'view_id': int | None}
 - view_id None = the screen's default view.
 - until < from = across midnight; the part after 00:00 counts for the next day.
 - Ends are inclusive (minute precision), so 07:00-13:00 and 13:00-18:00 are on throughout.
@@ -59,13 +57,11 @@ def _legacy_power_rows(power_rows):
 
 
 def _legacy_view_row_matched(row):
-    """Legacy view rows only matched with a view_id and from < until (start <= now <= end)."""
     start, end = _window(row)
     return bool(row.get('view_id')) and start < end
 
 
 def _clip(view_row, power_rows):
-    """Clip a view row to the on-times; days with the same clip share one row."""
     start, end = _window(view_row)
     windows = {}
     for day in sorted(set(d for d in view_row.get('days', []) if isinstance(d, int))):
@@ -79,8 +75,8 @@ def _clip(view_row, power_rows):
 
 
 def merge_legacy(view_rows: list, power_rows: list) -> list:
-    """Merge legacy data (view schedule, on-times) into one list with the same effect: view rows
-    that never matched are dropped, on-time rows across midnight still apply to the same day."""
+    """View rows that never matched are dropped; on-time rows across midnight still apply to the
+    same day, as before."""
     view_rows = [row for row in _rows(view_rows) if _legacy_view_row_matched(row)]
     power_rows = _legacy_power_rows(_rows(power_rows))
     if not power_rows:
@@ -92,7 +88,6 @@ def merge_legacy(view_rows: list, power_rows: list) -> list:
 
 
 def split_legacy(rows):
-    """Rollback: (view schedule, on-times) from the combined list."""
     rows = _rows(rows)
 
     def bare(row):

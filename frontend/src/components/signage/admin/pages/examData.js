@@ -77,8 +77,6 @@ export function scheduleItems(exams, events, screens) {
 
 const byFrom = (a, b) => (a.from?.getTime() ?? Infinity) - (b.from?.getTime() ?? Infinity)
 
-// Running: manually active, or start reached and end not yet. Upcoming: start in the future, then events
-// without a time range. Past: end reached, the last ten, newest first.
 export function groupItems(items, now) {
   const running = []
   const upcoming = []

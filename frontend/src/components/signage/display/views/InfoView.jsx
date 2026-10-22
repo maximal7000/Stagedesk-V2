@@ -30,7 +30,6 @@ export default function InfoView({ view }) {
   const seconds = view.page_seconds
   const ref = useRef(null)
   const { width, height, remPx } = useBoxSize(ref)
-  // Natural height per section (all items on one page), independent of the page shown
   const [natural, setNatural] = useState({ a: null, b: null })
   const setA = useCallback((v) => setNatural((n) => (n.a === v ? n : { ...n, a: v })), [])
   const setB = useCallback((v) => setNatural((n) => (n.b === v ? n : { ...n, b: v })), [])
@@ -64,9 +63,6 @@ export default function InfoView({ view }) {
   )
 }
 
-// Shows as many items as fit and pages otherwise. `after` follows the list directly and always
-// gets its space. The heights are measured on an invisible copy,
-// only when the width or the data change.
 function PagedSection({ title, items, seconds, renderItem, after = null, onNatural = null }) {
   const sectionRef = useRef(null)
   const bodyRef = useRef(null)
@@ -144,7 +140,6 @@ function renderEvent(ev) {
   )
 }
 
-// Re-renders only when the minute changes (day change)
 function Countdown({ countdown, first = false }) {
   const now = useClockMinute()
   const days = daysUntil(countdown.date, now)

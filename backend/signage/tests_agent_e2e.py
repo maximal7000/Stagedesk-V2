@@ -37,7 +37,7 @@ _server = {}
 
 
 def live_server_port():
-    """Start Daphne once per process in a thread (the Twisted reactor only runs once)."""
+    """The Twisted reactor only runs once per process."""
     if 'port' in _server:
         return _server['port']
     from daphne.server import Server

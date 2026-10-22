@@ -37,7 +37,6 @@ SUBSTITUTION_ROW = {'classes': ['7b'], 'group': '', 'periods': '3.–4.', 'subje
 
 
 def fake_load_days(server, school, format_name, *, start, count, overrides, show_absences, deadline):
-    """Monitor endpoint without network: `count` calendar days from `start`."""
     days = [{'date': (start + timedelta(days=i)).isoformat(), 'next_date': None, 'updated_at': None,
              'absent': [], 'affected': {'classes': [], 'teachers': []},
              'messages': [{'subject': '', 'body': 'Heute 3. Stunde Vollversammlung'}],

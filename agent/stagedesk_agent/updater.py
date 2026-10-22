@@ -1,4 +1,3 @@
-"""apt updates inside the update window and the daily reboot, both guarded by the server's gate."""
 import json
 import logging
 import re
@@ -42,7 +41,7 @@ class Updater:
             event.set()
 
     def gate(self):
-        """(allowed, reason). No answer or no connection means not allowed."""
+        """No answer or no connection means not allowed."""
         with self._gate_lock:
             event = self._gate_event = threading.Event()
             self._gate_reply = None

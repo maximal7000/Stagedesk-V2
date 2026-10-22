@@ -1,4 +1,3 @@
-"""Disruption messages: rail from NAH.SH HAFAS, bus from Stadtverkehr Luebeck (Storyblok)."""
 import hashlib
 import html as _html
 import json
@@ -41,8 +40,6 @@ _IMG_URL_RE = re.compile(r'(https?://[^\s"\'<>]+?\.(?:png|jpe?g|gif|webp))', re.
 
 
 def _clean_html_text(raw):
-    """Strip HTML from a disruption text and extract an embedded image (e.g. detour map).
-    Returns (text, image_url)."""
     if not raw:
         return '', ''
     s = str(raw)
@@ -79,10 +76,9 @@ def _him_date(d, t):
 
 
 def disruption_id(source, title, text):
-    """Stable short ID of a disruption (for hiding). Unchanged while the content is unchanged;
-    when the provider drops the message the ID disappears and the hidden entry is pruned.
-    `source` is the old source key ('bahn', 'bus', 'manuell'), not the response value,
-    so the IDs in transit_disruption_hidden stay valid."""
+    """Unchanged while the content is unchanged; when the provider drops the message the ID disappears
+    and the hidden entry is pruned. `source` is the old source key ('bahn', 'bus', 'manuell'), not
+    the response value, so the IDs in transit_disruption_hidden stay valid."""
     key = f"{source}|{(title or '').strip()}|{(text or '').strip()[:120]}"
     return hashlib.md5(key.encode('utf-8')).hexdigest()[:12]
 

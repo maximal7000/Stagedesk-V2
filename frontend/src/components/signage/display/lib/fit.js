@@ -2,10 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react'
 
 const rootRemPx = () => parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
 
-// Size of an element in px plus the rem base. Measured when the element is (re)attached, then only
-// on resize (ResizeObserver), never every second. The element may appear later
-// (e.g. only after the data loads instead of an empty state): each render checks whether ref.current
-// is a different element and then moves measurement and observer.
+// Measured on (re)attach, then only on resize, never every second. Each render checks whether
+// ref.current is a different element (it may appear only after the data loads).
 export function useBoxSize(ref) {
   const [size, setSize] = useState({ width: 0, height: 0, remPx: 16 })
   const watched = useRef({ el: null, observer: null })
@@ -35,8 +33,6 @@ export function useBoxSize(ref) {
   return size
 }
 
-// Row count for a list: as many as fit at the minimum font minRem, at most max and count.
-// The font then grows up to prefRem as far as the height allows. lineFactor = line height / font size.
 export function fitRows({ height, remPx, count, max, minRem, prefRem, lineFactor }) {
   const pref = prefRem * remPx
   if (!(height > 0) || !(count > 0)) return { rows: 0, fontPx: pref }

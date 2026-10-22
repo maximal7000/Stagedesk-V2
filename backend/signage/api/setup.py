@@ -123,7 +123,7 @@ def undo_power_off_today(request, payload: ScreenSelectionSchema):
 
 @router.post("/webuntis/check", auth=keycloak_auth)
 def check_webuntis(request):
-    """Re-detect the source. Only yes/no per path and the source, no data."""
+    """Only yes/no per path and the source, no data."""
     _require_perm(request, 'signage.setup')
     result = webuntis.check()
     push.notify_changed_on_commit()
@@ -132,7 +132,7 @@ def check_webuntis(request):
 
 @router.post("/views/preview", auth=keycloak_auth)
 def create_view_preview(request, payload: ViewPreviewSchema):
-    """Stores the draft (nothing is saved) and returns a token for GET /display?preview=."""
+    """Nothing is saved; the token authorizes GET /display?preview=."""
     _require_perm(request, 'signage.setup')
     draft = payload.view.dict(exclude_unset=True)
     saved = None

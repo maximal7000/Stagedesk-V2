@@ -253,9 +253,8 @@ class Agent:
         return bool(self.connection and self.connection.send(msg))
 
     def _power_controller(self, target=None):
-        """Controller for the last applied (method, config); rebuilt when it changes. Hold _power_lock.
-
-        `target` comes from a hello job, so queued commands see the config of their time, not a later one."""
+        """Hold _power_lock. `target` comes from a hello job, so queued commands see the config of their
+        time, not a later one."""
         if target is not None:
             self._power_target = target
         elif self._power_target is None:
@@ -332,7 +331,7 @@ class Agent:
         return True if check is None else check()
 
     def _telemetry_loop(self, ended, wake):
-        """Send after each hello, then every interval while connected. Offline: no collecting at all."""
+        """Offline: no collecting at all."""
         while not ended.is_set() and not self.stop_event.is_set():
             triggered = wake.wait(self.telemetry_interval)
             if ended.is_set() or self.stop_event.is_set():

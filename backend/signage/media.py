@@ -35,7 +35,7 @@ def _store_page(media_file, index, image):
 
 
 def _iter_pdf(media_file):
-    """Yields the PDF pages one by one as PIL images; checks run before the first render."""
+    """One page at a time to bound memory; checks run before the first render."""
     import pypdfium2 as pdfium
 
     pdf = pdfium.PdfDocument(media_file.file.path)
@@ -80,8 +80,8 @@ def _delete_stored(names):
 
 
 def render_file(media_file):
-    """Page by page: render, store, release. The old pages are deleted from storage only after
-    a successful swap (transaction) and after the commit; on an error they stay unchanged."""
+    """Old pages are deleted from storage only after a successful swap (transaction) and after the
+    commit; on an error they stay unchanged."""
     media_file = MediaFile.objects.get(pk=media_file.pk)
     staged = []
     try:

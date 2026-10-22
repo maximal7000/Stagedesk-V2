@@ -1,5 +1,4 @@
-"""Agent package served to devices: a deterministic tar.gz of agent/stagedesk_agent,
-agent/systemd, agent/kiosk and agent/VERSION, built once per version and kept in the process."""
+"""Built deterministically once per version and kept in the process."""
 import gzip
 import hashlib
 import io

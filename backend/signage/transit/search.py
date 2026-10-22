@@ -10,8 +10,6 @@ logger = logging.getLogger('signage.transit')
 
 
 def search_stations(query, results=10, use_db=True, use_nahsh=True):
-    """Queries DB and NAH.SH HAFAS in parallel.
-    Returns [{"id": "...", "name": "...", "kind": "...", "source": "...", "products": [...]}]"""
     if not query or len(query) < 2:
         return []
     if not use_db and not use_nahsh:

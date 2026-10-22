@@ -1,4 +1,4 @@
-"""Persistent agent configuration (config.json, mode 600) and reconnect backoff."""
+"""config.json is written with mode 600."""
 import json
 import os
 import random
@@ -55,7 +55,7 @@ class Config:
         self.save()
 
     def apply_hello(self, message):
-        """Take over the server's view (the slug may have changed) and persist it."""
+        """The slug may have changed on the server."""
         for name in _HELLO_FIELDS:
             if name in message and message[name] is not None:
                 setattr(self, name, message[name])

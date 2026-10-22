@@ -89,15 +89,12 @@ def _monitor_key(format_name, start, count, overrides):
 
 
 def _family_key(format_name, overrides):
-    """Last good state per format, independent of start and day count."""
     return f'{CACHE_PREFIX}monitor:{format_name}' + _exams_suffix(overrides) + ':last_good'
 
 
 def _last_good(key, family_key, start, count):
-    """Last good state of this key, else the format's one from `start`, cut to `count` days.
-
-    Applies when the key has just changed (midnight, switch to the next school day, first fetch)
-    and the new one has no state yet."""
+    """Falls back to the format's state when the key has just changed (midnight, switch to the next
+    school day, first fetch) and the new one has no state yet."""
     stored = cache.get(key + ':last_good')
     if stored:
         return stored
@@ -109,7 +106,7 @@ def _last_good(key, family_key, start, count):
 
 
 def _store_monitor(data, now):
-    """Raw state for cache and last good state: absences always included."""
+    """Absences are always included (shared cache)."""
     days = [{'date': d.get('date'), 'absent': d.get('absent') or [],
              'affected': d.get('affected') or _no_affected(), 'messages': d.get('messages') or [],
              'rows': d.get('rows') or []} for d in data.get('days') or []]

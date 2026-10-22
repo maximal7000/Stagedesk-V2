@@ -114,7 +114,7 @@ export function powerMenu(screen, { now, isOn, emergencyActive }) {
   return { items, hint: disabled ? EMERGENCY_POWER_HINT : '' }
 }
 
-// "3 Bildschirme · 2 online"; online counts the device status light (warning counts as online), otherwise the CEC fallback
+// A warning counts as online; without a device the CEC fallback applies.
 export function screensMeta(screens, now, devices = {}) {
   const online = screens.filter((s) => screenStatus(s, now, devices[s.id]).state === 'online').length
   const count = screens.length === 1 ? '1 Bildschirm' : `${screens.length} Bildschirme`

@@ -1,7 +1,4 @@
-/**
- * Public display page, full screen, no login. Reads only the URL and leaves rendering to DisplayRoot.
- * URL: ?screen=<slug> (old ?bildschirm=), ?view=<slug> (old ?profil=), ?key=, ?preview=<token>, ?zoom=
- */
+/* URL: ?screen=<slug> (old ?bildschirm=), ?view=<slug> (old ?profil=), ?key=, ?preview=<token>, ?zoom= */
 import { useEffect, useMemo } from 'react'
 import DisplayRoot from '../components/signage/display/DisplayRoot'
 import { useDisplayData } from '../components/signage/display/lib/useDisplayData'

@@ -98,9 +98,7 @@ def fetch_day(server, school, format_name, options, day: date, deadline) -> dict
 
 
 def check(server, school, format_name, deadline):
-    """Fetches the format (fresh, not from the cache) and today. None if it works, otherwise the cause.
-
-    Returns no data."""
+    """The format is fetched fresh, not from the cache; no data is returned."""
     cache.delete(FORMAT_CACHE_PREFIX + format_name)
     try:
         options = fetch_format(server, school, format_name, deadline)
@@ -136,7 +134,6 @@ def _unit(value):
 
 
 def _absence_periods(absences):
-    """'' (all day or unknown), '3.' or '3.–4.' from the span of all absences."""
     starts, ends = [], []
     for absence in absences or []:
         start, end = _unit(absence.get('startUnit')), _unit(absence.get('endUnit'))
@@ -203,7 +200,7 @@ def _kind(label, css_classes):
 
 
 def parse_rows(payload: dict, options: dict) -> list:
-    """Rows as delivered (repeated per group); the caller dedupes."""
+    """Repeated per group as delivered; the caller dedupes."""
     fields = [field for option, field in COLUMN_ORDER if options.get(option)]
     rows = []
     for raw in payload.get('rows') or []:
@@ -227,7 +224,7 @@ def parse_rows(payload: dict, options: dict) -> list:
 
 def load_days(server, school, format_name, *, start: date, count: int, overrides: dict,
               show_absences: bool, deadline: float) -> dict:
-    """Loads the format, then `count` days from `start`; the next day comes from the previous day's next_date."""
+    """The next day comes from the previous day's next_date."""
     options = {**fetch_format(server, school, format_name, deadline), **(overrides or {})}
     days = []
     day = start

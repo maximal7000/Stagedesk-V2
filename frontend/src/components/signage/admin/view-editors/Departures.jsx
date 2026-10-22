@@ -147,7 +147,7 @@ function ManualMessages({ value, onChange }) {
   )
 }
 
-// Current messages of the saved view (GET /disruptions); hiding changes transit_disruption_hidden in the draft
+// Hiding changes transit_disruption_hidden in the draft
 function CurrentMessages({ viewId, hidden, onChange }) {
   const [state, setState] = useState({ viewId: null, list: null, error: null })
   useEffect(() => {

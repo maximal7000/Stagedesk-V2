@@ -206,7 +206,7 @@ def _updates(runner, paths, now):
 
 
 def collect(runner, paths, now, power_status=None):
-    """The four telemetry groups; `power_status` is the last known status text of the power module."""
+    """`power_status` is the last known status text of the power module."""
     return {
         "network": _safe(_network, runner) or {"kind": None, "ssid": None, "signal_dbm": None, "ip": None, "mac": None},
         "system": _system(runner, paths),

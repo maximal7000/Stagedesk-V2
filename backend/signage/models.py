@@ -431,8 +431,7 @@ class Screen(models.Model):
         return compute_power_state(self, now or timezone.now())
 
     def get_active_event_view(self):
-        """View of an active event for this screen (beats the schedule).
-        Manually activated events (is_active=True) beat time-window events."""
+        """Manually activated events (is_active=True) beat time-window events."""
         now = timezone.now()
         assignments = (self.event_assignments
                        .select_related('event', 'view')
@@ -445,7 +444,6 @@ class Screen(models.Model):
         return None
 
     def get_active_view(self):
-        """Precedence: manual override > active event > schedule > default."""
         if (self.override_view_id and self.override_view and self.override_view.deleted_at is None
                 and (self.override_until is None or self.override_until > timezone.now())):
             return self.override_view
@@ -766,7 +764,6 @@ class Device(models.Model):
         return f"Device {self.serial or self.pk}"
 
     def issue_token(self):
-        """Stores only the hash and returns the plaintext once."""
         raw = secrets.token_urlsafe(32)
         self.token_hash = _hash_secret(raw)
         self.token_created_at = timezone.now()

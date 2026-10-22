@@ -199,7 +199,7 @@ function DayCard({ day, news, columns, seconds, onDone }) {
   )
 }
 
-// Heights of ref's children (px), re-measured when deps change and after the fonts load
+// Re-measured after the fonts load too.
 function useRowHeights(ref, deps) {
   const [heights, setHeights] = useState([])
   useLayoutEffect(() => {
@@ -267,7 +267,7 @@ function stamp(data) {
   return formatTime(data.fetched_at)
 }
 
-// Footer: data age (only for own data, the iframe shows it itself) and the fallback source hint
+// The iframe shows its own data age.
 function SourceNote({ view }) {
   const data = view.data ?? {}
   const when = isLive(data) ? stamp(data) : ''

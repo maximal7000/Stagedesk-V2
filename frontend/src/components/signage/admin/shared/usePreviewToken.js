@@ -1,6 +1,5 @@
-// Requests POST /views/preview only after 600 ms without change, drops responses overtaken by a
-// newer request and fetches a new token before the 10 minutes (backend cache) run out. The same
-// content in a new object does not request again.
+// The token is renewed before the backend cache (10 minutes) expires; the same content in a new
+// object does not request again.
 import { useEffect, useRef, useState } from 'react'
 import { previewView } from './api'
 import { errorText } from './errorText'

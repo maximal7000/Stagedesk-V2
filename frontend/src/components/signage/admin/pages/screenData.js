@@ -6,7 +6,7 @@ import { describeSchedule, normalizeExceptions, normalizeSchedule } from '../sha
 // power signage.power (backend: SCREEN_POWER_FIELDS).
 export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme']
 export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'power_exceptions']
-// Device agent fields; the backend needs signage.devices for them.
+// The backend needs signage.devices for these fields.
 export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot']
 
 export const POWER_METHOD_OPTIONS = [
@@ -170,10 +170,8 @@ export function lastReport(value, now = new Date()) {
   return formatDayTime(at)
 }
 
-// Temporary other view (override_view_id/override_until). Applies like the backend
-// (Screen.get_active_view): without an end or until a time in the future.
-// views (optional, views not in the trash): a view missing there does not count, as in the
-// backend (override_view.deleted_at). Empty list = not loaded yet, then discard nothing.
+// Applies like the backend (Screen.get_active_view): without an end or until a future time. A view
+// missing from `views` does not count (override_view.deleted_at); empty list = not loaded, discard nothing.
 export function activeOverride(screen, now = new Date(), views = null) {
   if (!screen?.override_view_id) return null
   const until = screen.override_until ? new Date(screen.override_until) : null

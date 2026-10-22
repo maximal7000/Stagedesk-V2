@@ -1,6 +1,4 @@
-"""WebSocket consumers for the Raspberry Pi (power, agent protocol) and the display.
-
-The Pi consumer re-evaluates the power state every 30 s and pushes only on change, so schedule
+"""The Pi consumer re-evaluates the power state every 30 s and pushes only on change, so schedule
 transitions apply on long-lived connections. A 60 s ping detects dead connections (closed after
 90 s without pong). With a device token (Authorization: Bearer ...) the full agent protocol
 applies; without one the legacy protocol (power_command, cec_status, ping/pong)."""

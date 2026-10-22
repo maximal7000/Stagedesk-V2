@@ -1,6 +1,5 @@
 import { swlColorForLine } from './lines'
 
-// Modes that count as bus; everything else (re, rb, ice, sbahn …) counts as train
 const BUS_KINDS = ['bus', 'faehre', 'taxi']
 
 const DISRUPTION_GENERIC_RE = /(tretroller|e-?scooter|e-?roller|fahrr[aä]d|gep[aä]ck|mitnahme|hund|ferienfahrplan|schulfrei|kurzstrecke|heiligabend|silvester|rollstuhl|autokraft|barrierefrei|informationen zum)/i
@@ -32,7 +31,6 @@ export function minutesUntil(dep, now) {
   return diff
 }
 
-// Disruption bar: drop general notices without a line; strike first, then highlighted ones
 export function visibleDisruptions(items) {
   return (items || [])
     .filter((d) => !(DISRUPTION_GENERIC_RE.test(`${d.title || ''} ${d.text || ''}`)

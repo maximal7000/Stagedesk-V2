@@ -3,7 +3,6 @@ export const OFFLINE_HINT = 'Der Befehl wird gesendet, sobald das Gerät wieder 
 export const POLL_MS = 2000
 export const POLL_MAX_MS = 2 * 60 * 1000
 
-// Button order. power: only with signage.power (backend: POWER_COMMANDS). confirm: question before sending.
 export const COMMANDS = [
   { kind: 'reload', label: 'Neu laden' },
   { kind: 'restart_browser', label: 'Browser neu starten' },
@@ -59,8 +58,7 @@ export function commandResult(kind, command) {
 export const timeoutText = (kind) =>
   `${labelOf(kind)}: noch keine Antwort des Geräts. Der Befehl läuft weiter, das Ergebnis steht im Protokoll.`
 
-// Polls get() every 2 s until the command is ok, failed or expired, at most 2 minutes.
-// A polling error is not a result; the next round runs. Returns stop().
+// A polling error is not a result; the next round runs.
 export function watchCommand({ get, onDone, onTimeout, intervalMs = POLL_MS, maxMs = POLL_MAX_MS }) {
   let stopped = false
   let timer = null

@@ -11,7 +11,7 @@ const MODES = [
   { value: 'new', label: 'Neuer Bildschirm' },
 ]
 
-// Six single fields grouped 3 + 3 as on the Pi ("482 913"). cells: array of six chars, empty = ''; gaps are kept.
+// Grouped 3 + 3 as on the Pi ("482 913"); gaps are kept.
 const EMPTY_CELLS = ['', '', '', '', '', '']
 
 function CodeInput({ cells, onChange }) {

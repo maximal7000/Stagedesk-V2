@@ -1,4 +1,3 @@
-"""Departures for several stops: merges DB Timetables and NAH.SH, applies the filters."""
 import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo

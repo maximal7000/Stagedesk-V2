@@ -1,4 +1,4 @@
-"""All file system locations of the agent, relative to a root so tests can use a temp dir."""
+"""Relative to a root so tests can use a temp dir."""
 from pathlib import Path
 
 
@@ -36,7 +36,7 @@ class Paths:
 
     @property
     def runtime_dir(self):
-        """XDG_RUNTIME_DIR of the kiosk user pi (owned by pi, not world-writable)."""
+        """Owned by pi and not world-writable."""
         return self.root / "run" / "user" / "1000"
 
     @property

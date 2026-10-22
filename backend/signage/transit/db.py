@@ -1,4 +1,3 @@
-"""DB Timetables API (DB API Marketplace): departures from the official timetable XML."""
 import os
 import re
 import urllib.parse
@@ -88,8 +87,8 @@ _DB_META_CACHE = {}  # eva -> (meta_evas, timestamp); large stations split the S
 
 
 def _db_meta_evas(eva):
-    """Sibling EVAs of a station (from the meta field), e.g. the separate S-Bahn EVA.
-    IRIS splits platform groups: Hamburg Hbf = 8002549 (long-distance/regional), S-Bahn = 8098549."""
+    """IRIS splits platform groups into sibling EVAs (meta field): Hamburg Hbf = 8002549
+    (long-distance/regional), S-Bahn = 8098549."""
     import time as _time
     now = _time.time()
     hit = _DB_META_CACHE.get(str(eva))
