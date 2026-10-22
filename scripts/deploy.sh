@@ -21,6 +21,7 @@ fi
 
 echo "→ migrate"
 cd "$APP_DIR/backend"
+"$VENV/bin/python" manage.py signage_rename_from_monitor
 "$VENV/bin/python" manage.py migrate --noinput
 
 echo "→ collectstatic"

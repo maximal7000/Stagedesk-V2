@@ -53,7 +53,7 @@ INSTALLED_APPS = [
     'kalender',
     'inventar',
     'veranstaltung',
-    'monitor',
+    'signage',
     'anwesenheit',
     'kompetenzen',
     'aufgaben',
