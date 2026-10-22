@@ -68,3 +68,6 @@ logs/
 *.kate-swp
 
 .superpowers/
+
+# Media
+backend/media/

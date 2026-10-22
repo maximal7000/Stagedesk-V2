@@ -394,7 +394,7 @@ export default function Settings() {
           Einstellungen konnten nicht geladen werden. {errorText(error, '')}
         </div>
       ) : settings && values.draft ? (
-        <div className="space-y-4 max-w-4xl">
+        <div className="space-y-4">
           <WebuntisSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             dirty={webuntisDirty} onClear={() => setClearing('webuntis_password')} />
           {canEmergency && templates && <TemplatesSection list={templateList} setList={setTemplateList} />}
