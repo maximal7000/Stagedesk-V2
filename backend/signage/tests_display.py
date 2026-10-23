@@ -331,6 +331,54 @@ class ContractTest(DisplayTestBase):
                          ['screen']['slug'], 'glocke')
 
 
+class DepartureOrderTest(DisplayTestBase):
+    def times(self, view):
+        [station] = display.build_payload(None, view, key_ok=True, now=AT_0958)['view']['data']['stations']
+        return [d['departure'] for d in station['departures']]
+
+    def test_minutes_sort_by_actual_departure_clock_by_plan(self):
+        deps = [{'line': '5', 'direction': 'A', 'departure': '10:00', 'departure_actual': '10:15', 'realtime': True},
+                {'line': '5', 'direction': 'B', 'departure': '10:05', 'departure_actual': '10:05', 'realtime': True},
+                {'line': '5', 'direction': 'C', 'departure': '10:10', 'departure_actual': '10:10', 'realtime': True,
+                 'cancelled': True}]
+        result = {'stations': [{'station_name': 'Hbf', 'station_id': '1', 'departures': deps}], 'sources': {}}
+        with mock.patch('signage.display.transit.fetch_departures', return_value=result):
+            for fmt, order in (('minutes', ['10:05', '10:10', '10:00']), ('mixed', ['10:05', '10:10', '10:00']),
+                               ('clock', ['10:00', '10:05', '10:10'])):
+                view = self.view('departures', slug=f'o-{fmt}', transit_time_format=fmt,
+                                 transit_stops=[{'id': '1', 'name': 'Hbf'}])
+                self.assertEqual(self.times(view), order, fmt)
+
+    def test_fetch_asks_for_enough_departures_to_cover_the_walk(self):
+        view = self.view('departures', transit_stops=[{'id': '1', 'name': 'ZOB', 'walk_minutes': 10}],
+                         transit_max_departures=20)
+        self.assertGreaterEqual(display.transit_fetch_args(view)['max_per_stop'], display.FETCH_PER_STOP)
+
+
+class FailedStationKeepsDataTest(DisplayTestBase):
+    def test_station_error_keeps_the_previous_departures(self):
+        stop = {'id': '8000237', 'name': 'Hbf'}
+        old = {'stations': [dict(STATION)], 'sources': {}}
+        view = self.view('departures', transit_stops=[stop], transit_cache=old,
+                         transit_cache_at=timezone.now() - timedelta(minutes=2))
+        failed = {'stations': [{'station_name': 'Lübeck Hbf', 'station_id': '8000237', 'departures': [],
+                                'error': 'NAH.SH nicht erreichbar'}], 'sources': {'nahsh': 'error'}}
+        with mock.patch('signage.display.transit.fetch_departures', return_value=failed):
+            [station] = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']['stations']
+        self.assertEqual(len(station['departures']), 10)
+        self.assertNotIn('error', station)
+
+    def test_old_data_is_not_kept_forever(self):
+        old = {'stations': [dict(STATION)], 'sources': {}}
+        view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf'}], transit_cache=old,
+                         transit_cache_at=timezone.now() - timedelta(minutes=20))
+        failed = {'stations': [{'station_name': 'Lübeck Hbf', 'station_id': '8000237', 'departures': [],
+                                'error': 'x'}], 'sources': {}}
+        with mock.patch('signage.display.transit.fetch_departures', return_value=failed):
+            [station] = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']['stations']
+        self.assertEqual((station['departures'], station['error']), ([], 'x'))
+
+
 class TransitFetchLockTest(DisplayTestBase):
     def test_concurrent_request_serves_the_cache_instead_of_fetching_again(self):
         cached = {'stations': [dict(STATION)], 'sources': {}}

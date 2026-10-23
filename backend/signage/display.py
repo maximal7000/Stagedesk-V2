@@ -24,6 +24,10 @@ PREVIEW_SECONDS = 600
 PREVIEW_TRANSIT_SECONDS = 60
 PREVIEW_DISRUPTION_SECONDS = 300
 TRANSIT_LOCK_SECONDS = 30
+# Fetched per stop regardless of the rows shown: the walk filter runs later and drops the first ones
+FETCH_PER_STOP = 50
+# A stop whose source failed keeps its previous departures for this long
+KEEP_FAILED_SECONDS = 600
 _PREVIEW_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{32}$')
 _NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date',
                           'substitutions_show_exams', 'transit_disruption_column'}
@@ -93,7 +97,7 @@ def transit_fetch_args(view):
         'stops': [{k: v for k, v in s.items() if k not in _STOP_DISPLAY_KEYS}
                   for s in (view.transit_stops or []) if isinstance(s, dict)],
         'duration': view.transit_duration,
-        'max_per_stop': view.transit_max_departures,
+        'max_per_stop': max(view.transit_max_departures or 0, FETCH_PER_STOP),
         'show_bus': view.transit_show_bus,
         'show_rail': view.transit_show_rail,
         'show_long_distance': view.transit_show_long_distance,
@@ -126,6 +130,22 @@ def _preview_key(kind, args):
     return f'signage:preview-{kind}:{digest}'
 
 
+def _keep_failed_stations(result, previous, previous_at):
+    """A stop whose source failed this time (timeouts happen) keeps its recent departures."""
+    if not previous or not previous_at or (timezone.now() - previous_at).total_seconds() > KEEP_FAILED_SECONDS:
+        return result
+    before = {s.get('station_id'): s for s in (_as_transit(previous) or {}).get('stations', [])
+              if s.get('departures') and not s.get('error')}
+    stations = []
+    for station in result.get('stations') or []:
+        old = before.get(station.get('station_id'))
+        if station.get('error') and not station.get('departures') and old:
+            station = {**station, 'departures': old['departures']}
+            station.pop('error')
+        stations.append(station)
+    return {**result, 'stations': stations}
+
+
 def _as_transit(cache):
     """A cache saved before the sources field existed is a plain list of stations."""
     if isinstance(cache, list):
@@ -153,7 +173,8 @@ def _fetch_transit(view):
         result = cache.get(key)
         if result is None:
             try:
-                result = transit.fetch_departures(**args)
+                result = _keep_failed_stations(transit.fetch_departures(**args), view.transit_cache,
+                                               view.transit_cache_at)
             except Exception as e:
                 logger.warning(f"ÖPNV-Fehler: {e}")
                 result = {'stations': [], 'sources': {}}
@@ -166,7 +187,7 @@ def _fetch_transit(view):
     if not cache.add(lock, 1, TRANSIT_LOCK_SECONDS):
         return _as_transit(view.transit_cache) if view.transit_cache else None
     try:
-        result = transit.fetch_departures(**args)
+        result = _keep_failed_stations(transit.fetch_departures(**args), view.transit_cache, view.transit_cache_at)
         view.transit_cache = result
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache', 'transit_cache_at'])
@@ -292,6 +313,9 @@ def _departures_data(view, now):
         entry['split_modes'] = stop.get('split_modes') is not False
         entry['departures'] = [d for d in station.get('departures') or []
                                if isinstance(d, dict) and transit.departure_visible(d, local_now, walk)]
+        if view.transit_time_format != 'clock':
+            # Minutes count to the actual departure, so a late trip moves down the list
+            entry['departures'].sort(key=lambda d: transit.minutes_until(d, local_now) or 0)
         entry['departures'] = _limit_departures(entry, limit)
         entry['max_departures'] = limit
         if walk:

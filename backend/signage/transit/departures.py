@@ -34,19 +34,27 @@ def _minutes_ahead(hhmm, now):
     return h * 60 + m - (now.hour * 60 + now.minute)
 
 
-def departure_visible(dep, now, walk_minutes):
-    """Reachable by the actual time. Without real-time data the planned time is
-    all there is, and it stays visible for one minute past it when no walk applies."""
+def minutes_until(dep, now):
+    """Minutes to the actual departure (a cancelled trip counts from the plan), None without a time."""
     planned = dep.get("departure")
     actual = planned if dep.get("cancelled") else (dep.get("departure_actual") or planned)
     ahead = _minutes_ahead(actual, now)
     if ahead is None:
-        return True
+        return None
     # The look-ahead is capped at 240 min, so a gap beyond 12 h is a day change
     if ahead < -720:
         ahead += 1440
     elif ahead > 720:
         ahead -= 1440
+    return ahead
+
+
+def departure_visible(dep, now, walk_minutes):
+    """Reachable by the actual time. Without real-time data the planned time is
+    all there is, and it stays visible for one minute past it when no walk applies."""
+    ahead = minutes_until(dep, now)
+    if ahead is None:
+        return True
     if dep.get("realtime", False):
         return ahead >= walk_minutes
     return ahead >= (walk_minutes if walk_minutes > 0 else -1)

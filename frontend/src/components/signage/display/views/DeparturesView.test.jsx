@@ -91,7 +91,8 @@ describe('DeparturesView', () => {
     const deps = [bus('22:14', '5', 'Eichholz', { departure_actual: '22:20', delay: 6 }), bus('22:40', '8710', 'Mölln'),
       bus('22:35', '11', 'Schlutup', { departure_actual: '22:38', delay: 3 })]
     const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)], time_format: 'mixed' })} />)
-    const [first, second, third] = rows(el)
+    // sorted by the actual departure: 22:20, 22:38, 22:40
+    const [first, third, second] = rows(el)
     expect(first.children).toHaveLength(3)
     expect(first.firstChild.textContent).toBe('9 min')
     expect(first.querySelector('[data-delay]')).toBeNull()
@@ -244,6 +245,42 @@ describe('DeparturesView', () => {
     const el = render(<DeparturesView view={view({ stations, columns: 2, disruption_column: 5 })} />)
     const columns = [...el.querySelectorAll('[data-station-column]')]
     expect(columns[1].querySelector('[data-disruptions]')).not.toBeNull()
+  })
+
+  it('Minuten sortiert nach tatsächlicher Abfahrt, Uhrzeit nach Plan', () => {
+    const deps = [bus('22:14', '5', 'Eichholz', { departure_actual: '22:29', delay: 15 }), bus('22:16', '11', 'Schlutup'),
+      bus('22:20', '30', 'Travemünde')]
+    let el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)] })} />)
+    expect(rows(el).map((r) => r.lastChild.textContent)).toEqual(['Schlutup', 'Travemünde', 'Eichholz'])
+    act(() => root.unmount())
+    el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)], time_format: 'clock' })} />)
+    expect(rows(el).map((r) => r.lastChild.textContent)).toEqual(['Eichholz', 'Schlutup', 'Travemünde'])
+  })
+
+  it('Fußweg mit Symbol', () => {
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', [])] })} />)
+    const walk = el.querySelector('[data-walk]')
+    expect(walk.textContent).toBe('3 min')
+    expect(walk.getAttribute('title')).toBe('Fußweg')
+    expect(walk.querySelector('svg[aria-label="Fußweg"]')).not.toBeNull()
+  })
+
+  it('zu lange Störung scrollt im Blättertakt durch', () => {
+    const real = Element.prototype.getBoundingClientRect
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+      if (this.parentElement?.hasAttribute('data-disruptions')) return { width: 400, height: 300 }
+      if (this.tagName === 'ARTICLE') return { width: 400, height: 420 }
+      return real.call(this)
+    })
+    const cancel = vi.fn()
+    Element.prototype.animate = vi.fn(() => ({ cancel }))
+    const disruptions = [{ id: 'a', kind: 'disruption', title: 'Vollsperrung', text: 'Lang', lines: ['40'], image: '/media/x.png' }]
+    render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', [])], disruptions })} />)
+    expect(Element.prototype.animate).toHaveBeenCalledTimes(1)
+    const [frames, options] = Element.prototype.animate.mock.calls[0]
+    expect(frames.at(-1).transform).toBe('translateY(-120px)')
+    expect(options).toMatchObject({ duration: 15000, iterations: Infinity })
+    delete Element.prototype.animate
   })
 
   it('Störungsbild volle Breite, Text ungekürzt', () => {

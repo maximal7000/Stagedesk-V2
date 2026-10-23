@@ -1,10 +1,11 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Footprints } from 'lucide-react'
 import { useBoxSize, wrapColumns } from '../lib/fit'
 import { formatTemperature, formatTime, formatWeekday } from '../lib/format'
 import { chipTextColor } from '../lib/lines'
 import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
 import {
-  assignColumns, departureTime, disruptionLabel, isBus, isDeparted, lineColor, lineLabel,
+  assignColumns, departureTime, disruptionLabel, isBus, isDeparted, lineColor, lineLabel, minutesUntil,
   stripCommonCity, visibleDisruptions,
 } from '../lib/transit'
 import { useClockMinute } from '../lib/useClock'
@@ -130,6 +131,8 @@ function StationCard({ station, name, format }) {
   const now = useClockMinute()
   // Departed trips stay hidden between two server updates instead of reading "jetzt".
   const deps = (station.departures ?? []).filter((d) => !isDeparted(d, now))
+  // Minutes count to the actual departure, so late trips move down; the clock keeps the planned order
+  if (format !== 'clock') deps.sort((a, b) => (minutesUntil(a, now) ?? 0) - (minutesUntil(b, now) ?? 0))
   const split = station.split_modes !== false && deps.some(isBus) && deps.some((d) => !isBus(d))
   const sections = split
     ? [['bus', 'Busse', deps.filter(isBus)], ['train', 'Züge', deps.filter((d) => !isBus(d))]]
@@ -145,7 +148,10 @@ function StationCard({ station, name, format }) {
           {name}
         </h2>
         {station.walk_minutes > 0 && (
-          <span className="d-lato shrink-0 whitespace-nowrap text-[0.9375rem] text-(--d-muted)">{station.walk_minutes} min</span>
+          <span data-walk title="Fußweg" className="d-lato flex shrink-0 items-center gap-[0.3em] whitespace-nowrap text-[0.9375rem] text-(--d-muted)">
+            <Footprints aria-label="Fußweg" className="h-[1.1em] w-[1.1em]" strokeWidth={2} />
+            {station.walk_minutes} min
+          </span>
         )}
       </header>
       {deps.length === 0 ? (
@@ -263,6 +269,10 @@ function DisruptionColumn({ items, seconds, span = 1, heading = false }) {
   }, [items, heights, height])
   const { index, count } = usePager(pages, seconds)
   const page = (pages[index] ?? []).map((i) => items[i])
+  // A single message taller than the column scrolls through during its page time
+  const overflow = page.length === 1 && height > 0 ? Math.max(0, Math.round((heights[pages[index][0]] ?? 0) - height)) : 0
+  const scrollRef = useRef(null)
+  useOverflowScroll(scrollRef, overflow, seconds, index)
   return (
     <section
       data-disruptions
@@ -277,7 +287,11 @@ function DisruptionColumn({ items, seconds, span = 1, heading = false }) {
       <div ref={bodyRef} className="relative min-h-0 flex-1 overflow-hidden">
         {items.length === 0
           ? <p className="d-lato text-[1.0625rem] text-(--d-muted)">Keine Störungen</p>
-          : page.map((d, i) => <Disruption key={d.id ?? i} item={d} imageMax={imageMax} />)}
+          : (
+            <div ref={scrollRef} data-disruption-page>
+              {page.map((d, i) => <Disruption key={d.id ?? i} item={d} imageMax={imageMax} />)}
+            </div>
+          )}
         <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">
           {items.map((d, i) => <Disruption key={d.id ?? i} item={d} imageMax={imageMax} />)}
         </div>
@@ -287,6 +301,24 @@ function DisruptionColumn({ items, seconds, span = 1, heading = false }) {
       )}
     </section>
   )
+}
+
+// Holds at the top, scrolls down, holds at the end; repeats when the page stays (only one page).
+const SCROLL_HOLD = 0.15
+
+function useOverflowScroll(ref, overflow, seconds, page) {
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !(overflow > 0) || typeof el.animate !== 'function') return undefined
+    const end = `translateY(-${overflow}px)`
+    const animation = el.animate([
+      { transform: 'translateY(0)', offset: 0 },
+      { transform: 'translateY(0)', offset: SCROLL_HOLD },
+      { transform: end, offset: 1 - SCROLL_HOLD },
+      { transform: end, offset: 1 },
+    ], { duration: Math.max(6, seconds || 15) * 1000, iterations: Infinity, easing: 'linear' })
+    return () => animation.cancel()
+  }, [ref, overflow, seconds, page])
 }
 
 // Spacing as padding, not margin: the measured heights must contain it.

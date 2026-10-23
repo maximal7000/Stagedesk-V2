@@ -43,7 +43,7 @@ export function departureTime(dep, now, format = 'minutes') {
   if (planned == null) return { text: '', delay: null }
   const clock = { text: dep.departure, delay: dep.cancelled ? null : delayLabel(dep) }
   if (format === 'clock') return clock
-  const diff = dep.cancelled ? wrapDay(planned - (now.getHours() * 60 + now.getMinutes())) : minutesUntil(dep, now)
+  const diff = minutesUntil(dep, now)
   if (format === 'mixed' && diff > MIXED_LIMIT_MIN) return clock
   return { text: diff < 1 ? 'jetzt' : `${diff} min`, delay: null }
 }
@@ -78,12 +78,17 @@ export function stripCommonCity(names) {
   }
 }
 
+// To the actual departure; a cancelled trip counts from the plan (as in the backend).
 export function minutesUntil(dep, now) {
-  const value = dep?.departure_actual || dep?.departure
-  const base = clockMinutes(value)
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  if (dep?.cancelled) {
+    const planned = clockMinutes(dep.departure)
+    return planned == null ? null : wrapDay(planned - nowMin)
+  }
+  const base = clockMinutes(dep?.departure_actual || dep?.departure)
   if (base == null) return null
   const depMin = base + (dep.departure_actual ? 0 : Number(dep.delay) || 0)
-  return wrapDay(depMin - (now.getHours() * 60 + now.getMinutes()))
+  return wrapDay(depMin - nowMin)
 }
 
 export function isDeparted(dep, now) {
