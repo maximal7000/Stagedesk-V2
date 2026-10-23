@@ -1,4 +1,5 @@
 import logging
+import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -8,6 +9,15 @@ from .db import _fetch_departures_db, _fetch_sbahn_meta
 from .nahsh import _fetch_departures_nahsh
 
 logger = logging.getLogger('signage.transit')
+
+
+# DB Timetables knows only railway stations (EVA numbers, 80xxxxx in Germany) and answers
+# 400 for NAH.SH bus stop numbers.
+_EVA_RE = re.compile(r"^80\d{5}$")
+
+
+def _is_eva(station_id):
+    return bool(_EVA_RE.match(str(station_id or "").strip()))
 
 
 def _minutes_ahead(hhmm, now):
@@ -54,7 +64,11 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             return False, True
         if source == "both":
             return True, True
-        return use_db, use_nahsh
+        return use_db and _is_eva(station.get("id")), use_nahsh
+
+    def _extra_uses_db(station):
+        source = station.get("extra_source", "")
+        return source in ("db", "both") or (source == "" and _is_eva(station.get("extra_id")))
 
     def _fetch_single(station, index):
         station_id = station.get("id", "")
@@ -153,7 +167,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         if extra_id:
             try:
                 extra_deps = None
-                if extra_source in ("db", "both", ""):
+                if _extra_uses_db(station):
                     extra_failed = []
                     try:
                         extra_deps = _fetch_departures_db(extra_id, duration, max_per_stop * 2,
@@ -317,7 +331,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
 
     def _result(stations):
         db_active = bool(db_api.DB_TT_CLIENT_ID and db_api.DB_TT_API_KEY) and any(
-            _stop_sources(s)[0] or (s.get("extra_id", "").strip() and s.get("extra_source", "") != "nahsh")
+            _stop_sources(s)[0] or (s.get("extra_id", "").strip() and _extra_uses_db(s))
             for _, s in valid)
         nahsh_active = any(
             _stop_sources(s)[1] or (s.get("extra_id", "").strip() and s.get("extra_source", "") != "db")

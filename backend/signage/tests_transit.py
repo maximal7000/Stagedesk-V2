@@ -104,6 +104,20 @@ class FetchDeparturesTest(SimpleTestCase):
                                 db_deps={'side_effect': RuntimeError('down')})
         self.assertEqual(result['sources']['db'], 'error')
 
+    def test_db_only_for_station_numbers_without_source(self):
+        """NAH.SH bus stop numbers are no DB station numbers (EVA); DB answers 400 for them."""
+        db_mock = mock.MagicMock(return_value=[])
+        result = self.run_fetch([{'id': '708049', 'name': 'Wahmstraße'}, {'id': '8000237', 'name': 'Lübeck Hbf'},
+                                 {'id': '9000001', 'name': 'Extra', 'extra_id': '708050'}],
+                                db_deps={'new': db_mock})
+        self.assertEqual([c.args[0] for c in db_mock.call_args_list], ['8000237'])
+        self.assertEqual(result['sources'], {'db': 'ok', 'nahsh': 'ok'})
+        result = self.run_fetch([{'id': '708049', 'name': 'Wahmstraße'}], db_deps={'new': db_mock})
+        self.assertEqual(result['sources']['db'], 'off')
+        db_mock.reset_mock()
+        self.run_fetch([{'id': '708049', 'name': 'Wahmstraße', 'source': 'db'}], db_deps={'new': db_mock})
+        db_mock.assert_called_once()
+
     def test_filter_applied_in_fetch(self):
         deps = [_dep('22:00', '22:00', realtime=True), _dep('23:50', '23:50')]
         with mock.patch('signage.transit.departures.datetime') as dt:
