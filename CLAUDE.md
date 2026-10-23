@@ -24,7 +24,7 @@ ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"
 ```
 
 ## Workflow
-- Feature → eigener Branch → `git merge --no-ff` nach `main` → push → Deploy-Skript.
+- Feature → eigener Branch → **Pull Request** nach `main` (kein lokaler Merge) → nach Merge Deploy-Skript.
 - Commit-Trailer: `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 - Vor größeren Umbauten: Backup-Tag + Tarball (`~/stagedesk-backups/`).
 - DB-/API-Credentials **niemals** committen (Repo ist öffentlich) — nur in `/opt/stagedesk/backend/.env` auf dem Server.
