@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   EDITABLE_FIELDS, KIND_OPTIONS, LAYOUT_OPTIONS, layoutHelp, changedKeys, draftFromView, moveItem, newStop, normalizeStop, previewPayload, rotationChoices,
-  kindChangeProblem, stopTransport, usedOn, viewPayload, viewProblems,
+  kindChangeProblem, stopSource, stopTransport, usedOn, viewPayload, viewProblems,
 } from './viewData'
 
 const VIEW = {
@@ -132,7 +132,21 @@ describe('Haltestellen', () => {
     expect(newStop({ id: '8000237', name: 'Lübeck Hbf', source: 'db' })).toEqual({
       id: '8000237', name: 'Lübeck Hbf', walk_minutes: 0, max_departures: 10, filter_lines: [],
       filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
+      source: '',
     })
+    expect(newStop({ id: '708049', name: 'Wahmstraße', source: 'nahsh' }).source).toBe('nahsh')
+    expect(newStop({ id: '8000237', name: 'Lübeck Hbf', source: 'db+nahsh' }).source).toBe('')
+  })
+  it('nennt die tatsächlich benutzte Quelle', () => {
+    const both = {}
+    expect(stopSource({ id: '708049' }, both)).toBe('NAH.SH')
+    expect(stopSource({ id: '8000237' }, both)).toBe('DB, Ersatz NAH.SH')
+    expect(stopSource({ id: '8000237' }, { transit_source_nahsh: false })).toBe('DB')
+    expect(stopSource({ id: '8000237' }, { transit_source_db: false })).toBe('NAH.SH')
+    expect(stopSource({ id: '708049' }, { transit_source_nahsh: false })).toBe('keine')
+    expect(stopSource({ id: '708049', source: 'db' }, { transit_source_db: false })).toBe('DB')
+    expect(stopSource({ id: '8000237', source: 'nahsh' }, both)).toBe('NAH.SH')
+    expect(stopSource({ id: '8000237', source: 'both' }, both)).toBe('DB und NAH.SH')
   })
   it('beschreibt die Verkehrsmittel', () => {
     expect(stopTransport({})).toBe('Bus, Zug, Fernzug')

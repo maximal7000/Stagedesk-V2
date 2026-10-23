@@ -225,11 +225,36 @@ export function usedOn(viewId, screens, now = new Date()) {
   return out
 }
 
+// A station found only at NAH.SH stays there; railway stations keep "automatic" (DB with NAH.SH as fallback).
 export function newStop(result) {
   return {
     id: result.id, name: result.name, walk_minutes: 0, max_departures: DEFAULT_MAX_DEPARTURES, filter_lines: [],
     filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
+    source: result.source === 'nahsh' ? 'nahsh' : '',
   }
+}
+
+export const STOP_SOURCES = [
+  { value: '', label: 'Automatisch' },
+  { value: 'db', label: 'Deutsche Bahn' },
+  { value: 'nahsh', label: 'NAH.SH' },
+  { value: 'both', label: 'Beide (zusammengeführt)' },
+]
+
+// Same rule as the backend (transit/departures.py): DB Timetables knows only railway stations (EVA 80xxxxx).
+export const isRailwayStation = (id) => /^80\d{5}$/.test(String(id ?? '').trim())
+
+// Which source the backend actually asks for this stop; the view-wide switches apply only to "automatic".
+export function stopSource(stop, draft) {
+  if (stop.source === 'db') return 'DB'
+  if (stop.source === 'nahsh') return 'NAH.SH'
+  if (stop.source === 'both') return 'DB und NAH.SH'
+  const db = draft.transit_source_db !== false && isRailwayStation(stop.id)
+  const nahsh = draft.transit_source_nahsh !== false
+  if (db && nahsh) return 'DB, Ersatz NAH.SH'
+  if (db) return 'DB'
+  if (nahsh) return 'NAH.SH'
+  return 'keine'
 }
 
 export function stopTransport(stop) {

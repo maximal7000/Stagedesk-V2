@@ -10,7 +10,7 @@ import DragHandle from '../shared/DragHandle'
 import { dragRowClass, useListDrag } from '../shared/useListDrag'
 import { assignColumns } from '../../display/lib/transit'
 import {
-  DEFAULT_MAX_DEPARTURES, DEFAULT_COLUMNS, MAX_COLUMNS, MAX_DEPARTURES_LIMIT, NUMBER_RULES, WALK_MINUTES_LIMIT, moveItem, newStop, stopTransport,
+  DEFAULT_MAX_DEPARTURES, DEFAULT_COLUMNS, MAX_COLUMNS, MAX_DEPARTURES_LIMIT, NUMBER_RULES, WALK_MINUTES_LIMIT, moveItem, newStop, stopSource, stopTransport,
 } from '../pages/viewData'
 
 const numberClass = `${fieldClass} tabular-nums`
@@ -51,7 +51,7 @@ function disruptionColumn(draft) {
   return Number.isInteger(n) && n >= 1 ? Math.min(n, columnCount(draft)) : 0
 }
 
-function StopRow({ stop, index, columns, column, drag, onChange, onFilter }) {
+function StopRow({ stop, index, columns, column, source, drag, onChange, onFilter }) {
   return (
     <tr {...drag.rowProps(index)} data-stop-row={stop.id} className={`border-t border-line-subtle ${dragRowClass}`}>
       <td className="py-2 align-middle">
@@ -59,7 +59,7 @@ function StopRow({ stop, index, columns, column, drag, onChange, onFilter }) {
       </td>
       <td className="py-2 pr-3 align-middle">
         <div className="text-sm text-fg break-words">{stop.name}</div>
-        <div className="text-xs text-fg-subtle truncate">{[stopTransport(stop), filterSummary(stop)].filter(Boolean).join(' · ')}</div>
+        <div className="text-xs text-fg-subtle truncate">{[stopTransport(stop), `Quelle: ${source}`, filterSummary(stop)].filter(Boolean).join(' · ')}</div>
         <label className="inline-flex items-center gap-2 mt-1 text-xs whitespace-nowrap text-fg-muted cursor-pointer">
           <input type="checkbox" aria-label={`Busse und Züge getrennt ${stop.name}`} checked={stop.split_modes !== false}
             onChange={(e) => onChange({ split_modes: e.target.checked })} className="w-3.5 h-3.5 accent-accent" />
@@ -130,7 +130,7 @@ function StopsSection({ draft, set }) {
           </thead>
           <tbody>
             {stops.map((stop, i) => (
-              <StopRow key={stop.id} stop={stop} index={i} columns={columns} column={columnOf(stop)} drag={drag}
+              <StopRow key={stop.id} stop={stop} index={i} columns={columns} column={columnOf(stop)} source={stopSource(stop, draft)} drag={drag}
                 onChange={(patch) => setStops(stops.map((s, j) => (j === i ? { ...s, ...patch } : s)))}
                 onFilter={() => setFilterIndex(i)} />
             ))}

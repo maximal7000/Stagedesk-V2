@@ -20,7 +20,6 @@ const LONG_CHIP = 7
 // destination cell per row, so one wide platform change does not narrow every destination.
 const ROW_TEMPLATE = 'minmax(4.3em, max-content) max-content minmax(6em, 1fr)'
 const HEADING_REM = [1.875, 1.625, 1.4375, 1.25]
-const SOURCE_NAMES = [['db', 'DB'], ['nahsh', 'NAH.SH']]
 const DAY_MONTH_LONG = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'long' })
 
 const clampColumns = (value) => {
@@ -316,12 +315,8 @@ function StatusBox({ view }) {
   const weather = view.show_weather ? view.weather : null
   const temperature = weather ? formatTemperature(weather.temperature) : ''
   const stand = formatTime(data.status?.fetched_at)
-  const sources = data.status?.sources ?? {}
   const parts = [
     ['date', `${formatWeekday(now)}, ${DAY_MONTH_LONG.format(now)}`, ''],
-    // Warnings before the weather: in a narrow split cell the end of the row is cut off first
-    ...SOURCE_NAMES.filter(([key]) => sources[key] === 'error')
-      .map(([key, label]) => [key, `${label} nicht erreichbar`, 'text-[1rem] text-(--d-warn)']),
     temperature && ['weather', [temperature, weather.description].filter(Boolean).join(' '), ''],
     stand && ['stand', `Stand ${stand}`, 'text-[1rem] text-(--d-muted)'],
   ].filter(Boolean)

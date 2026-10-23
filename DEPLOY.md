@@ -297,7 +297,7 @@ Migrationen `signage` 0047 (`0047_departures_layout`) und 0048 (`0048_disruption
 - **Nach dem Deploy:**
   - Im Admin unter `/signage-admin/views` in jeder Abfahrten-Ansicht den Haltestellen eine Spalte zuordnen (die Migration setzt nur die Spaltenzahl auf 4).
   - Zeitangabe (Minuten, Uhrzeit, Gemischt) und "Störungen anzeigen" der Ansicht prüfen.
-  - Anzeige am Bildschirm ansehen: Fußzeile mit Datum, Wetter und Stand; "DB nicht erreichbar" oder "NAH.SH nicht erreichbar" dort zeigt eine ausgefallene Quelle.
+  - Anzeige am Bildschirm ansehen: Fußzeile mit Datum, Wetter und Stand. Welche Quelle eine Haltestelle nutzt, steht im Editor unter ihrem Namen ("Quelle: …"); festlegen im Filter-Dialog (›) unter "Quelle".
   - Kiosks über "Neu laden" neu laden, sonst bleibt das alte Bundle bis zum nächtlichen Neuladen.
 - **Rückweg:** im venv `python manage.py migrate signage 0046` (nimmt 0048 mit zurück; Störungen stehen dann wieder in der eigenen Spalte), dann Code auf den Backup-Tag zurücksetzen und `tag-backend.service` neu starten. Die Zeitangabe "Gemischt" kommt als Minuten zurück. Spaltenzahl bleibt erhalten; Spalte je Haltestelle und Ortsnamen kürzen werden ignoriert. Der Abfahrten-Zwischenspeicher wird geleert und beim nächsten Abruf neu gefüllt.
 

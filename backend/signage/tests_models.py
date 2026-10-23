@@ -118,9 +118,12 @@ class UpdateViewApiTest(TestCase):
         view.refresh_from_db()
         self.assertEqual((view.page_seconds, view.media_seconds, view.transit_stops), (15, 10, []))
         stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30, 'column': 5,
-                  'split_modes': False}, {'id': '2', 'name': 'Sandstraße', 'column': None, 'split_modes': True}]
+                  'split_modes': False, 'source': 'nahsh'},
+                 {'id': '2', 'name': 'Sandstraße', 'column': None, 'split_modes': True, 'source': 'db+nahsh'}]
         r = self._put(view, {'page_seconds': 120, 'media_seconds': 3, 'pdf_per_screen': 3, 'transit_stops': stops})
         self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual([s['source'] for s in view.transit_stops], ['nahsh', ''])
         legacy = [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 0},
                   {'id': '2', 'name': 'Sandstraße', 'max_departures': 50}]
         r = self._put(view, {'transit_stops': legacy})

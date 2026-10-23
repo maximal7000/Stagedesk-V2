@@ -186,6 +186,13 @@ describe('DeparturesEditor Darstellung', () => {
     expect(text()).not.toContain('Zug-Störungen von NAH.SH')
   })
 
+  it('zeigt die Quelle je Haltestelle', async () => {
+    await mount({ transit_stops: [stop('708049', 'Wahmstraße'), stop('8000237', 'Lübeck Hbf'), stop('1', 'Kohlmarkt', { source: 'db' })] })
+    const lines = [...container.querySelectorAll('[data-stop-row] .text-xs.truncate')].map((el) => el.textContent)
+    expect(lines).toEqual(['Bus, Zug, Fernzug · Quelle: NAH.SH', 'Bus, Zug, Fernzug · Quelle: DB, Ersatz NAH.SH',
+      'Bus, Zug, Fernzug · Quelle: DB'])
+  })
+
   it('erklärt den Fußweg', async () => {
     await mount()
     expect(text()).toContain('Abfahrten, die man zu Fuß nicht mehr schafft, werden ausgeblendet.')

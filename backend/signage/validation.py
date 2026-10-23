@@ -76,6 +76,10 @@ def _check_numbers(data):
         raise HttpError(422, number_message('Breite links', 20, 80))
 
 
+# '' = automatic: DB for railway stations, NAH.SH for everything else
+STOP_SOURCES = ('', 'db', 'nahsh', 'both')
+
+
 def _check_stops(stops):
     if not isinstance(stops, list):
         raise HttpError(422, "Haltestellen ungültig.")
@@ -94,6 +98,8 @@ def _check_stops(stops):
             raise HttpError(422, "Spalte der Haltestelle ungültig (1 bis 5).")
         if 'split_modes' in stop and not isinstance(stop['split_modes'], bool):
             raise HttpError(422, "„Busse und Züge getrennt“ ungültig.")
+        if 'source' in stop and stop['source'] not in STOP_SOURCES:
+            stop['source'] = ''  # unknown or legacy value: automatic
 
 
 def _check_next_day_from(data):

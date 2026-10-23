@@ -260,12 +260,12 @@ describe('DeparturesView', () => {
     expect(img.style.maxHeight).toBe('200px')
   })
 
-  it('Footer: Datum, Quellen-Ausfall vor Wetter und Stand', () => {
+  it('Footer: Datum, Wetter und Stand, ohne Hinweis auf ausgefallene Quellen', () => {
     const weather = { temperature: 12.4, description: 'Regen' }
     const status = { fetched_at: '2026-10-22T22:11:00', sources: { db: 'error', nahsh: 'ok' } }
     const el = render(<DeparturesView.Footer view={view({ status }, { show_weather: true, weather })} />)
     const items = [...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)
-    expect(items).toEqual(['Donnerstag, 22. Oktober', 'DB nicht erreichbar', '12 °C Regen', 'Stand 22:11'])
+    expect(items).toEqual(['Donnerstag, 22. Oktober', '12 °C Regen', 'Stand 22:11'])
   })
 
   it('Footer ohne Wetterdaten und ohne Ausfall', () => {

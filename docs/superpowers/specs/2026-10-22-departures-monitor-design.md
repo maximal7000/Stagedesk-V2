@@ -26,7 +26,7 @@ Setzt auf der Umbenennung `monitor` → `signage` auf (Spec `2026-10-22-signage-
 
 ### 1.4 Kasten links neben der Uhr
 
-Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22. Oktober · 12 °C Regen · Stand 22:11“. Wetter nur, wenn in der Ansicht eingeschaltet und ein Wetter-Schlüssel eingerichtet ist. Liefert eine Quelle gerade nichts, steht hinter dem Stand „NAH.SH nicht erreichbar“ bzw. „DB nicht erreichbar“.
+Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22. Oktober · 12 °C Regen · Stand 22:11“. Wetter nur, wenn in der Ansicht eingeschaltet und ein Wetter-Schlüssel eingerichtet ist. (Nachtrag: Kein Hinweis auf ausgefallene Quellen in der Fußzeile; auf Wunsch entfernt.)
 
 ## 2. Abfahrtszeilen
 
