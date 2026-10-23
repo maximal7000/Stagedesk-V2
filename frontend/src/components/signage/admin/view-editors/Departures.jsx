@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { ChevronRight, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { Button, StatusBadge } from '../../../ui'
 import { errorText } from '../shared/errorText'
 import * as api from '../shared/api'
@@ -45,6 +45,12 @@ function columnCount(draft) {
   return Number.isInteger(n) && n >= 1 && n <= MAX_COLUMNS ? n : DEFAULT_COLUMNS
 }
 
+// Like the display: a column above the column count means the last one; 0 means a column of its own
+function disruptionColumn(draft) {
+  const n = Number(draft.transit_disruption_column)
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, columnCount(draft)) : 0
+}
+
 function StopRow({ stop, index, columns, column, drag, onChange, onFilter }) {
   return (
     <tr {...drag.rowProps(index)} data-stop-row={stop.id} className={`border-t border-line-subtle ${dragRowClass}`}>
@@ -86,12 +92,14 @@ function StopRow({ stop, index, columns, column, drag, onChange, onFilter }) {
   )
 }
 
-function ColumnOverview({ stops, columns }) {
-  const groups = assignColumns(stops, columns)
+function ColumnOverview({ stops, columns, disruptions }) {
+  const groups = assignColumns(stops, columns).map((group, i) => [
+    ...group.map((s) => s.name), ...(disruptions === i + 1 ? ['Störungen'] : []),
+  ])
+  const parts = groups.map((names, i) => `Spalte ${i + 1}: ${names.length ? names.join(', ') : 'leer'}`)
+  if (disruptions === 0) parts.push('Störungen: eigene Spalte rechts')
   return (
-    <p className="text-xs text-fg-muted mt-4" data-column-overview>
-      {groups.map((group, i) => `Spalte ${i + 1}: ${group.length ? group.map((s) => s.name).join(', ') : 'leer'}`).join(' · ')}
-    </p>
+    <p className="text-xs text-fg-muted mt-4" data-column-overview>{parts.join(' · ')}</p>
   )
 }
 
@@ -131,7 +139,10 @@ function StopsSection({ draft, set }) {
       ) : (
         <p className="text-sm text-fg-muted">Noch keine Haltestelle. Ohne Haltestelle bleibt die Ansicht leer.</p>
       )}
-      {stops.length > 0 && <ColumnOverview stops={stops} columns={columns} />}
+      {stops.length > 0 && (
+        <ColumnOverview stops={stops} columns={columns}
+          disruptions={draft.transit_show_disruptions !== false ? disruptionColumn(draft) : null} />
+      )}
       <div className="mt-4">
         {adding ? (
           <div className="flex items-start gap-2">
@@ -201,9 +212,27 @@ function ManualMessages({ value, onChange }) {
   )
 }
 
+const MESSAGE_FILTERS = [
+  { value: 'all', label: 'Alle' },
+  { value: 'disruption', label: 'Störungen' },
+  { value: 'construction', label: 'Baumaßnahmen' },
+  { value: 'hidden', label: 'Ausgeblendet' },
+]
+
+function matchesFilter(message, filter, hidden) {
+  if (filter === 'hidden') return hidden.includes(message.id)
+  if (filter === 'construction') return message.kind === 'construction'
+  if (filter === 'disruption') return message.kind !== 'construction'
+  return true
+}
+
 // Hiding changes transit_disruption_hidden in the draft
 function CurrentMessages({ viewId, hidden, onChange }) {
   const [state, setState] = useState({ viewId: null, list: null, error: null })
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [expanded, setExpanded] = useState(null)
   useEffect(() => {
     if (viewId == null) return undefined
     let alive = true
@@ -215,28 +244,74 @@ function CurrentMessages({ viewId, hidden, onChange }) {
   if (viewId == null || state.viewId !== viewId) return null
   if (state.error) return <p className="text-sm text-bad">Meldungen konnten nicht geladen werden. {errorText(state.error, '')}</p>
   if (!state.list.length) return <p className="text-sm text-fg-subtle">Aktuell keine Meldungen.</p>
+  const list = state.list
+  const hiddenCount = list.filter((d) => hidden.includes(d.id)).length
+  const summary = `${list.length} ${list.length === 1 ? 'aktuelle Meldung' : 'aktuelle Meldungen'}${hiddenCount ? `, ${hiddenCount} ausgeblendet` : ''}`
+  const q = query.trim().toLowerCase()
+  const shown = list
+    .filter((d) => matchesFilter(d, filter, hidden))
+    .filter((d) => !q || [d.title, d.text, ...(d.lines ?? [])].join(' ').toLowerCase().includes(q))
   const toggle = (id) => onChange(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])
   return (
-    <ul className="divide-y divide-line-subtle border-y border-line-subtle" data-disruptions>
-      {state.list.map((d) => {
-        const isHidden = hidden.includes(d.id)
-        return (
-          <li key={d.id} className="flex items-start gap-3 py-2.5" data-disruption-hidden={isHidden ? '' : undefined}>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <StatusBadge label={d.kind === 'construction' ? 'Baumaßnahme' : 'Störung'} tone={d.kind === 'construction' ? 'warning' : 'danger'} />
-                {d.lines?.length > 0 && <span className="text-xs text-fg-muted truncate">{d.lines.join(', ')}</span>}
-              </div>
-              <div className={`text-sm mt-1 ${isHidden ? 'text-fg-subtle line-through' : 'text-fg'}`}>{d.title}</div>
-            </div>
-            <Button size="sm" variant="ghost" icon={isHidden ? Eye : EyeOff} onClick={() => toggle(d.id)}
-              aria-label={`${d.title} ${isHidden ? 'einblenden' : 'ausblenden'}`}>
-              {isHidden ? 'Einblenden' : 'Ausblenden'}
-            </Button>
-          </li>
-        )
-      })}
-    </ul>
+    <div data-disruptions>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-fg" data-disruption-summary>{summary}</span>
+        <Button size="sm" variant="ghost" icon={open ? ChevronUp : ChevronDown} aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? 'Meldungen schließen' : 'Meldungen anzeigen'}
+        </Button>
+      </div>
+      {open && (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+            <input type="search" aria-label="Meldungen durchsuchen" placeholder="Suchen, zum Beispiel RE8 oder Umleitung"
+              value={query} onChange={(e) => setQuery(e.target.value)} className={fieldClass} />
+            <Segmented label="Meldungen filtern" value={filter} onChange={setFilter} options={MESSAGE_FILTERS} />
+          </div>
+          {shown.length ? (
+            <ul className="max-h-[28rem] overflow-y-auto divide-y divide-line-subtle border-y border-line-subtle" data-disruption-list>
+              {shown.map((d) => (
+                <MessageRow key={d.id} message={d} hidden={hidden.includes(d.id)} open={expanded === d.id}
+                  onOpen={() => setExpanded(expanded === d.id ? null : d.id)} onToggle={() => toggle(d.id)} />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-fg-subtle">Keine passenden Meldungen.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MessageRow({ message: d, hidden, open, onOpen, onToggle }) {
+  return (
+    <li data-disruption-hidden={hidden ? '' : undefined}>
+      <div className="flex items-start gap-3 py-2.5">
+        <button type="button" aria-expanded={open} onClick={onOpen}
+          className="flex flex-1 min-w-0 items-start gap-2 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <ChevronRight className={`w-4 h-4 mt-0.5 shrink-0 text-fg-subtle transition-transform ${open ? 'rotate-90' : ''}`} />
+          <span className="flex-1 min-w-0">
+            <span className="flex items-center gap-2">
+              <StatusBadge label={d.kind === 'construction' ? 'Baumaßnahme' : 'Störung'} tone={d.kind === 'construction' ? 'warning' : 'danger'} />
+              {d.lines?.length > 0 && <span className="text-xs text-fg-muted truncate">{d.lines.join(', ')}</span>}
+            </span>
+            <span className={`block text-sm mt-1 ${hidden ? 'text-fg-subtle line-through' : 'text-fg'}`}>{d.title}</span>
+          </span>
+        </button>
+        <Button size="sm" variant="ghost" icon={hidden ? Eye : EyeOff} onClick={onToggle}
+          aria-label={`${d.title} ${hidden ? 'einblenden' : 'ausblenden'}`}>
+          {hidden ? 'Einblenden' : 'Ausblenden'}
+        </Button>
+      </div>
+      {open && (
+        <div className="pb-3 pl-6 space-y-2" data-disruption-detail>
+          {d.text
+            ? <p className="text-sm text-fg-muted whitespace-pre-line">{d.text}</p>
+            : <p className="text-sm text-fg-subtle">Kein weiterer Text.</p>}
+          {d.image && <img src={d.image} alt="" className="max-h-72 w-full rounded-md bg-raised object-contain" />}
+        </div>
+      )}
+    </li>
   )
 }
 
@@ -293,6 +368,13 @@ function DisruptionsSection({ draft, set, viewId }) {
             </div>
           )}
         </div>
+        <Field label="Störungen in Spalte" help="In einer Abfahrten-Spalte stehen die Meldungen unter deren Haltestellen.">
+          <select aria-label="Störungen in Spalte" value={disruptionColumn(draft)} className={`${fieldClass} max-w-64`}
+            onChange={(e) => set('transit_disruption_column', Number(e.target.value) || null)}>
+            <option value={0}>Eigene Spalte rechts</option>
+            {Array.from({ length: columnCount(draft) }, (_, n) => <option key={n + 1} value={n + 1}>Spalte {n + 1}</option>)}
+          </select>
+        </Field>
         <Field label="Eigene Meldungen" help="Erscheinen vor den Meldungen der Verkehrsbetriebe in der Störungsspalte.">
           <ManualMessages value={draft.transit_disruption_manual} onChange={(v) => set('transit_disruption_manual', v)} />
         </Field>

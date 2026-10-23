@@ -114,6 +114,7 @@ class DisplayViewSchema(Schema):
     transit_auto_scroll: bool
     transit_show_disruptions: bool
     transit_strip_city: bool
+    transit_disruption_column: Optional[int] = None
     transit_font_size: str
     transit_columns: int
     transit_strike_active: bool
@@ -200,6 +201,7 @@ class DisplayViewUpdateSchema(Schema):
     transit_auto_scroll: Optional[bool] = None
     transit_show_disruptions: Optional[bool] = None
     transit_strip_city: Optional[bool] = None
+    transit_disruption_column: Optional[int] = None
     transit_font_size: Optional[str] = None
     transit_columns: Optional[int] = None
     transit_strike_active: Optional[bool] = None

@@ -202,6 +202,7 @@ describe('ViewEdit', () => {
   it('Abfahrten: blendet eine aktuelle Meldung aus und speichert die Vorausschau', async () => {
     await mount('/signage-admin/views/1')
     expect(api.getDisruptions).toHaveBeenCalledWith(1)
+    await act(async () => button('Meldungen anzeigen').click())
     await act(async () => button('RE8 fällt aus ausblenden').click())
     await act(async () => typeInto(container.querySelector('[data-editor-section="transit-advanced"] input[type="number"]'), '90'))
     await act(async () => button('Speichern').click())

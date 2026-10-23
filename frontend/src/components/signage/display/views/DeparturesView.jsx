@@ -40,15 +40,20 @@ export default function DeparturesView({ view }) {
   )
   const disruptions = useMemo(() => visibleDisruptions(data.disruptions), [data.disruptions])
   const withDisruptions = data.show_disruptions !== false
+  // A set column puts the messages below that column's stops instead of into a column of their own
+  const shared = withDisruptions && Number.isInteger(data.disruption_column) && data.disruption_column >= 1
+    ? Math.min(data.disruption_column, columns.length) - 1
+    : null
+  const ownColumn = withDisruptions && shared === null
 
   if (!stations.length) {
     return <p className="d-oswald pt-[2rem] text-[2rem] text-(--d-muted)">Keine Haltestellen eingerichtet.</p>
   }
 
-  const cells = columns.length + (withDisruptions ? 1 : 0)
+  const cells = columns.length + (ownColumn ? 1 : 0)
   const mins = [
     ...columns.map((list) => MIN_COLUMN_REM[list.some(hasTrains) ? 'train' : 'bus']),
-    ...(withDisruptions ? [MIN_COLUMN_REM.disruptions] : []),
+    ...(ownColumn ? [MIN_COLUMN_REM.disruptions] : []),
   ]
   const fit = wrapColumns(mins, width / remPx, GAP_REM)
   const wrapped = fit < cells
@@ -58,28 +63,32 @@ export default function DeparturesView({ view }) {
       gridTemplateRows: `repeat(${Math.ceil(cells / fit)}, minmax(0, 1fr))`,
     }
     : {
-      gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))${withDisruptions ? ' minmax(0, 0.95fr)' : ''}`,
+      gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))${ownColumn ? ' minmax(0, 0.95fr)' : ''}`,
       gridTemplateRows: 'minmax(0, 1fr)',
     }
   const disruptionSpan = wrapped ? fit - (columns.length % fit) : 1
 
   return (
     <div ref={ref} className="grid h-full gap-[1.25rem]" style={grid}>
-      {columns.map((list, i) => (
-        <div
-          key={i}
-          data-station-column
-          className="grid min-h-0 min-w-0 gap-[1.25rem]"
-          style={{ gridTemplateRows: `repeat(${Math.max(1, list.length)}, minmax(0, 1fr))` }}
-        >
-          {list.map((s, pos) => (
-            <StationCard
-              key={`${s.station_id}-${s.index ?? `p${pos}`}`} station={s} name={nameOf(s.station_name)} format={data.time_format}
-            />
-          ))}
-        </div>
-      ))}
-      {withDisruptions && (
+      {columns.map((list, i) => {
+        const rows = list.length + (shared === i ? 1 : 0)
+        return (
+          <div
+            key={i}
+            data-station-column
+            className="grid min-h-0 min-w-0 gap-[1.25rem]"
+            style={{ gridTemplateRows: `repeat(${Math.max(1, rows)}, minmax(0, 1fr))` }}
+          >
+            {list.map((s, pos) => (
+              <StationCard
+                key={`${s.station_id}-${s.index ?? `p${pos}`}`} station={s} name={nameOf(s.station_name)} format={data.time_format}
+              />
+            ))}
+            {shared === i && <DisruptionColumn items={disruptions} seconds={view.page_seconds} heading />}
+          </div>
+        )
+      })}
+      {ownColumn && (
         <DisruptionColumn items={disruptions} seconds={view.page_seconds} span={disruptionSpan} />
       )}
     </div>
@@ -237,11 +246,17 @@ function DepartureTime({ dep, format, cancelled }) {
   )
 }
 
-function DisruptionColumn({ items, seconds, span }) {
+// Images take the full width in their own aspect ratio, but at most this share of the box height, so
+// one tall map does not push every message onto its own page. A box shared with stops is lower and
+// allows a larger share, or the image would not reach the full width.
+const IMAGE_SHARE = { column: 0.4, shared: 0.6 }
+
+function DisruptionColumn({ items, seconds, span = 1, heading = false }) {
   const bodyRef = useRef(null)
   const measureRef = useRef(null)
   const { width, height, remPx } = useBoxSize(bodyRef)
-  const heights = useChildHeights(measureRef, [items, width, remPx])
+  const imageMax = height > 0 ? Math.round(height * IMAGE_SHARE[heading ? 'shared' : 'column']) : undefined
+  const heights = useChildHeights(measureRef, [items, width, remPx, imageMax])
   const pages = useMemo(() => {
     if (!items.length) return []
     if (heights.length !== items.length) return [items.map((_, i) => i)]
@@ -255,12 +270,17 @@ function DisruptionColumn({ items, seconds, span }) {
       className="d-card flex min-h-0 min-w-0 flex-col px-[1.375rem] pb-[0.875rem] pt-[1.125rem]"
       style={span > 1 ? { gridColumn: `span ${span}` } : undefined}
     >
+      {heading && (
+        <header className="d-line-bottom mb-[0.625rem] pb-[0.375rem]">
+          <h2 className="d-kicker d-oswald truncate text-[1.875rem] font-normal uppercase leading-[1.15] tracking-[0.03em]">Störungen</h2>
+        </header>
+      )}
       <div ref={bodyRef} className="relative min-h-0 flex-1 overflow-hidden">
         {items.length === 0
           ? <p className="d-lato text-[1.0625rem] text-(--d-muted)">Keine Störungen</p>
-          : page.map((d, i) => <Disruption key={d.id ?? i} item={d} />)}
+          : page.map((d, i) => <Disruption key={d.id ?? i} item={d} imageMax={imageMax} />)}
         <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">
-          {items.map((d, i) => <Disruption key={d.id ?? i} item={d} />)}
+          {items.map((d, i) => <Disruption key={d.id ?? i} item={d} imageMax={imageMax} />)}
         </div>
       </div>
       {count > 1 && (
@@ -271,15 +291,19 @@ function DisruptionColumn({ items, seconds, span }) {
 }
 
 // Spacing as padding, not margin: the measured heights must contain it.
-function Disruption({ item }) {
+function Disruption({ item, imageMax }) {
   return (
     <article className="pb-[0.875rem]">
       <div className="d-line-bottom pb-[0.75rem]">
         <div className="d-oswald text-[0.9375rem] uppercase tracking-[0.05em] text-(--d-red)">{disruptionLabel(item)}</div>
         {item.title && <div className="d-lato mt-[0.1875rem] text-[1.0625rem] font-bold leading-[1.3]">{item.title}</div>}
-        {item.text && <p className="d-lato mt-[0.1875rem] line-clamp-6 text-[0.96875rem] leading-[1.35]">{item.text}</p>}
+        {item.text && <p className="d-lato mt-[0.1875rem] text-[0.96875rem] leading-[1.35]">{item.text}</p>}
         {item.image && (
-          <img src={item.image} alt="" className="mt-[0.5rem] block h-[7.375rem] w-full bg-(--d-soft) object-contain" />
+          <img
+            src={item.image} alt="" data-disruption-image
+            className="mt-[0.5rem] block h-auto w-full object-contain"
+            style={imageMax ? { maxHeight: `${imageMax}px` } : undefined}
+          />
         )}
       </div>
     </article>

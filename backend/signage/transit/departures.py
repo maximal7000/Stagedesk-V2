@@ -62,7 +62,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         filter_lines = station.get("filter_lines", [])
         filter_direction = station.get("filter_direction", "")
         filter_via = station.get("filter_via", "").strip()
-        walk_minutes = station.get("walk_minutes", 0)
         column = station.get("column")
 
         # Per-stop API choice: "db", "nahsh", "both" (default: global setting)
@@ -267,7 +266,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                 if not any(via_lower in h.lower() for h in via_stops):
                     continue
 
-            if not departure_visible(dep, now, walk_minutes):
+            # The walk filter runs per request in the display payload
+            if not departure_visible(dep, now, 0):
                 continue
 
             if show_via:
@@ -304,8 +304,6 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             "column": column if isinstance(column, int) and not isinstance(column, bool) else None,
             "split_modes": bool(station.get("split_modes", True)),
         }
-        if walk_minutes > 0:
-            entry["walk_minutes"] = walk_minutes
         if error:
             entry["error"] = error
         return entry

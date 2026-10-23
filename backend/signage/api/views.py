@@ -98,9 +98,9 @@ def list_disruptions(request, view_id: int = None):
     for s in _fetch_disruptions(view):
         out.append({
             'id': s.get('id'), 'source': s.get('source'), 'kind': s.get('kind'),
-            'title': s.get('title'), 'text': (s.get('text') or '')[:160],
+            'title': s.get('title'), 'text': s.get('text') or '',
             'lines': s.get('lines', []), 'from': s.get('from', ''), 'until': s.get('until', ''),
-            'has_image': bool(s.get('image')), 'hidden': s.get('id') in hidden,
+            'image': s.get('image') or '', 'hidden': s.get('id') in hidden,
         })
     return out
 

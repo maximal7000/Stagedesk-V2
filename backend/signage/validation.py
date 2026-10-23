@@ -68,6 +68,9 @@ def _check_numbers(data):
             raise HttpError(422, "Ausgeblendete Meldungen ungültig.")
     if 'transit_columns' in data and not (_is_int(data['transit_columns']) and 1 <= data['transit_columns'] <= 5):
         raise HttpError(422, "Spaltenzahl 1 bis 5.")
+    column = data.get('transit_disruption_column')
+    if column is not None and not (_is_int(column) and 1 <= column <= 5):
+        raise HttpError(422, "Spalte der Störungen ungültig (1 bis 5).")
     # Left width: clamped into the range as before, but never empty
     if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
         raise HttpError(422, number_message('Breite links', 20, 80))

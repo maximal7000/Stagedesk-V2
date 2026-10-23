@@ -1,0 +1,669 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true,
+    "scheme": "dark"
+  },
+  "scheme": "dark",
+  "mode": null,
+  "view": {
+    "id": 2,
+    "kind": "departures",
+    "layout": "wide",
+    "page_seconds": 15,
+    "show_weather": true,
+    "weather": {
+      "temperature": 12.3,
+      "description": "Regen",
+      "icon": "10d"
+    },
+    "qr": null,
+    "data": {
+      "stations": [
+        {
+          "station_name": "Lübeck Wahmstraße",
+          "station_id": "8001002",
+          "index": 0,
+          "column": 1,
+          "split_modes": true,
+          "walk_minutes": 2,
+          "departures": [
+            {
+              "line": "1",
+              "direction": "Dorothea-Erxleben-Straße",
+              "departure": "10:43",
+              "departure_actual": "10:48",
+              "delay": 5,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "12",
+              "direction": "Gothmund",
+              "departure": "10:43",
+              "departure_actual": "10:48",
+              "delay": 5,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "16",
+              "direction": "Krummesse",
+              "departure": "10:44",
+              "departure_actual": "10:48",
+              "delay": 4,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "3",
+              "direction": "Eichholz",
+              "departure": "10:45",
+              "departure_actual": "10:45",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "5",
+              "direction": "Eichholz",
+              "departure": "10:46",
+              "departure_actual": "10:48",
+              "delay": 2,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "30",
+              "direction": "Travemünde",
+              "departure": "10:48",
+              "departure_actual": "10:48",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "8",
+              "direction": "Bornkamp",
+              "departure": "10:51",
+              "departure_actual": "10:51",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "7",
+              "direction": "ZOB/Hauptbahnhof",
+              "departure": "10:55",
+              "departure_actual": "10:55",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "10",
+              "direction": "Wesloer Brücke",
+              "departure": "11:07",
+              "departure_actual": "11:07",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            }
+          ],
+          "max_departures": 10
+        },
+        {
+          "station_name": "Lübeck Sandstraße",
+          "station_id": "8001003",
+          "index": 1,
+          "column": 1,
+          "split_modes": true,
+          "walk_minutes": 3,
+          "departures": [
+            {
+              "line": "11",
+              "direction": "Schlutup Zarnewenzweg",
+              "departure": "10:46",
+              "departure_actual": "10:46",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "6",
+              "direction": "Blankensee",
+              "departure": "10:54",
+              "departure_actual": "10:54",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "17",
+              "direction": "Schlutup",
+              "departure": "11:01",
+              "departure_actual": "11:04",
+              "delay": 3,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "11",
+              "direction": "Schlutup Zarnewenzweg",
+              "departure": "11:09",
+              "departure_actual": "11:09",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            }
+          ],
+          "max_departures": 10
+        },
+        {
+          "station_name": "Lübeck Kohlmarkt",
+          "station_id": "8001001",
+          "index": 2,
+          "column": 2,
+          "split_modes": true,
+          "walk_minutes": 4,
+          "departures": [],
+          "max_departures": 10
+        },
+        {
+          "station_name": "Lübeck Breite Straße",
+          "station_id": "8001004",
+          "index": 3,
+          "column": 2,
+          "split_modes": true,
+          "walk_minutes": 4,
+          "departures": [
+            {
+              "line": "4",
+              "direction": "Brandenbaum",
+              "departure": "10:47",
+              "departure_actual": "10:47",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "15",
+              "direction": "Hochschulstadtteil",
+              "departure": "10:57",
+              "departure_actual": "10:59",
+              "delay": 2,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "40",
+              "direction": "Ratekau",
+              "departure": "11:11",
+              "departure_actual": "11:11",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            }
+          ],
+          "max_departures": 10
+        },
+        {
+          "station_name": "Lübeck Katharineum",
+          "station_id": "8000999",
+          "index": 4,
+          "column": 3,
+          "split_modes": true,
+          "walk_minutes": 1,
+          "departures": [
+            {
+              "line": "12",
+              "direction": "Gothmund",
+              "departure": "10:45",
+              "departure_actual": "10:51",
+              "delay": 6,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "3",
+              "direction": "Eichholz",
+              "departure": "10:45",
+              "departure_actual": "10:51",
+              "delay": 6,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "30",
+              "direction": "Travemünde",
+              "departure": "10:46",
+              "departure_actual": "10:52",
+              "delay": 6,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "11",
+              "direction": "Schlutup Zarnewenzweg",
+              "departure": "10:46",
+              "departure_actual": "10:47",
+              "delay": 1,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "10",
+              "direction": "Wesloer Brücke",
+              "departure": "11:09",
+              "departure_actual": "11:09",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "34",
+              "direction": "Travemünde",
+              "departure": "11:09",
+              "departure_actual": "11:09",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "11",
+              "direction": "Schlutup Zarnewenzweg",
+              "departure": "11:15",
+              "departure_actual": "11:15",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "12",
+              "direction": "Gothmund",
+              "departure": "11:39",
+              "departure_actual": "11:39",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "3",
+              "direction": "Eichholz",
+              "departure": "11:39",
+              "departure_actual": "11:39",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "30",
+              "direction": "Travemünde",
+              "departure": "11:39",
+              "departure_actual": "11:39",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": true,
+              "realtime": true,
+              "remarks": []
+            }
+          ],
+          "max_departures": 10
+        },
+        {
+          "station_name": "Lübeck ZOB/Hauptbahnhof",
+          "station_id": "8000238",
+          "index": 5,
+          "column": 4,
+          "split_modes": true,
+          "walk_minutes": 14,
+          "departures": [
+            {
+              "line": "8710",
+              "direction": "Mölln",
+              "departure": "10:42",
+              "departure_actual": "10:42",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "X85",
+              "direction": "Puttgarden Bahnhof",
+              "departure": "10:43",
+              "departure_actual": "10:43",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "7650",
+              "direction": "Bad Segeberg ZOB/Bahnhof",
+              "departure": "10:44",
+              "departure_actual": "10:44",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "8720",
+              "direction": "Trittau Vorburg",
+              "departure": "10:47",
+              "departure_actual": "10:47",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "11",
+              "direction": "Bahnhof Moisling",
+              "departure": "10:52",
+              "departure_actual": "10:52",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "9",
+              "direction": "Kücknitz",
+              "departure": "10:56",
+              "departure_actual": "10:56",
+              "delay": 0,
+              "platform": "",
+              "kind": "bus",
+              "kind_icon": "bus",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            }
+          ],
+          "max_departures": 10
+        },
+        {
+          "station_name": "Lübeck Hbf",
+          "station_id": "8000237",
+          "index": 6,
+          "column": 4,
+          "split_modes": true,
+          "walk_minutes": 14,
+          "departures": [
+            {
+              "line": "RE8",
+              "direction": "Lübeck-Travemünde Strand",
+              "departure": "10:34",
+              "departure_actual": "10:43",
+              "delay": 9,
+              "platform": "7",
+              "kind": "regionalExpress",
+              "kind_icon": "re",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "RB85",
+              "direction": "Neustadt in Holstein",
+              "departure": "10:43",
+              "departure_actual": "10:43",
+              "delay": 0,
+              "platform": "5",
+              "kind": "regional",
+              "kind_icon": "rb",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "SEV X85",
+              "direction": "Puttgarden Bahnhof, Fehmarn",
+              "departure": "10:43",
+              "departure_actual": "10:43",
+              "delay": 0,
+              "platform": "",
+              "kind": "regionalExpress",
+              "kind_icon": "re",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "SEV RE83",
+              "direction": "Büchen",
+              "departure": "10:46",
+              "departure_actual": "10:46",
+              "delay": 0,
+              "platform": "",
+              "kind": "regionalExpress",
+              "kind_icon": "re",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            },
+            {
+              "line": "RE8",
+              "direction": "Hamburg Hbf",
+              "departure": "10:54",
+              "departure_actual": "10:57",
+              "delay": 3,
+              "platform": "6",
+              "kind": "regionalExpress",
+              "kind_icon": "re",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": [],
+              "platform_planned": "5"
+            },
+            {
+              "line": "RB84",
+              "direction": "Kiel Hbf",
+              "departure": "11:01",
+              "departure_actual": "11:01",
+              "delay": 0,
+              "platform": "4",
+              "kind": "regional",
+              "kind_icon": "rb",
+              "cancelled": false,
+              "realtime": true,
+              "remarks": []
+            }
+          ],
+          "max_departures": 10
+        }
+      ],
+      "disruptions": [
+        {
+          "id": "nahsh-faehre",
+          "source": "nahsh",
+          "kind": "disruption",
+          "title": "Nur eine Autofähre in Travemünde",
+          "text": "Bis auf Weiteres ist nur eine Autofähre im Einsatz. Mit längeren Wartezeiten ist zu rechnen, besonders im Berufsverkehr am Morgen und am Nachmittag. Fußgänger und Radfahrer nutzen bitte die Personenfähre am Priwall.",
+          "lines": [
+            "Autofähre"
+          ],
+          "from": "2026-10-12T05:00:00+02:00",
+          "until": null,
+          "all_lines": false,
+          "image": "",
+          "stops": [],
+          "suggestion": "",
+          "highlighted": false
+        },
+        {
+          "id": "swl-1a2b3c",
+          "source": "swl",
+          "kind": "construction",
+          "title": "Umleitung Moislinger Allee",
+          "text": "Haltestellen Lindenplatz bis Holstentor entfallen, Ersatzhalt Possehlstraße.",
+          "lines": [
+            "5",
+            "11"
+          ],
+          "from": "2026-10-12T05:00:00+02:00",
+          "until": "2026-10-30T23:59:00+01:00",
+          "all_lines": false,
+          "image": "/media/monitor/fixture-landscape.svg",
+          "stops": [],
+          "suggestion": "",
+          "highlighted": true
+        },
+        {
+          "id": "db-re8-bau",
+          "source": "db",
+          "kind": "construction",
+          "title": "Bauarbeiten Bad Oldesloe",
+          "text": "Einzelne Züge fallen zwischen Lübeck Hbf und Bad Oldesloe aus, Ersatzverkehr mit Bussen.",
+          "lines": [
+            "RE 8"
+          ],
+          "from": "2026-10-19T00:00:00+02:00",
+          "until": "2026-10-25T23:59:00+01:00",
+          "all_lines": false,
+          "image": "",
+          "stops": [],
+          "suggestion": "",
+          "highlighted": false
+        }
+      ],
+      "columns": 4,
+      "time_format": "minutes",
+      "show_disruptions": true,
+      "strip_city": true,
+      "status": {
+        "fetched_at": "2026-10-19T10:41:30+02:00",
+        "sources": {
+          "db": "ok",
+          "nahsh": "ok"
+        }
+      },
+      "disruption_column": 3
+    }
+  }
+}

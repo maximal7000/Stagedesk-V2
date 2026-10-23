@@ -224,6 +224,42 @@ describe('DeparturesView', () => {
     expect(el.querySelector('[data-disruptions]')).toBeNull()
   })
 
+  it('Störungen in einer Abfahrten-Spalte: unter den Haltestellen, keine eigene Spalte', () => {
+    const disruptions = [{ id: 'a', kind: 'disruption', title: 'Umleitung', text: '', lines: ['5'] }]
+    const stations = [station(0, 'Wahmstraße', [], { column: 1 }), station(1, 'Hbf', [], { column: 2 })]
+    const el = render(<DeparturesView view={view({ stations, disruptions, columns: 2, disruption_column: 2 })} />)
+    const columns = [...el.querySelectorAll('[data-station-column]')]
+    expect(columns[1].querySelector('[data-disruptions]')).not.toBeNull()
+    expect(columns[1].style.gridTemplateRows).toBe('repeat(2, minmax(0, 1fr))')
+    expect(columns[1].textContent).toContain('Störungen')
+    expect(el.querySelectorAll('[data-disruptions]')).toHaveLength(1)
+    expect(el.firstChild.style.gridTemplateColumns).toBe('repeat(2, minmax(0, 1fr))')
+  })
+
+  it('Störungs-Spalte über der Spaltenzahl landet in der letzten Spalte', () => {
+    const stations = [station(0, 'Wahmstraße', [], { column: 1 })]
+    const el = render(<DeparturesView view={view({ stations, columns: 2, disruption_column: 5 })} />)
+    const columns = [...el.querySelectorAll('[data-station-column]')]
+    expect(columns[1].querySelector('[data-disruptions]')).not.toBeNull()
+  })
+
+  it('Störungsbild volle Breite, Text ungekürzt', () => {
+    const real = Element.prototype.getBoundingClientRect
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function rect() {
+      if (this.parentElement?.hasAttribute('data-disruptions')) return { width: 400, height: 500 }
+      return real.call(this)
+    })
+    const text = 'Wegen Bauarbeiten fahren die Busse der Linie 5 ab Possehlstraße eine Umleitung. '.repeat(6)
+    const disruptions = [{ id: 'a', kind: 'disruption', title: 'Umleitung', text, lines: ['5'], image: '/media/x.png' }]
+    const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', [])], disruptions })} />)
+    const article = [...el.querySelectorAll('[data-disruptions] article')].find((a) => !a.closest('[aria-hidden]'))
+    expect(article.querySelector('p').className).not.toContain('line-clamp')
+    const img = article.querySelector('[data-disruption-image]')
+    expect(img.className).toContain('w-full')
+    expect(img.className).toContain('h-auto')
+    expect(img.style.maxHeight).toBe('200px')
+  })
+
   it('Footer: Datum, Quellen-Ausfall vor Wetter und Stand', () => {
     const weather = { temperature: 12.4, description: 'Regen' }
     const status = { fetched_at: '2026-10-22T22:11:00', sources: { db: 'error', nahsh: 'ok' } }

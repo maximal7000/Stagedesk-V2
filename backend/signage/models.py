@@ -209,6 +209,7 @@ class DisplayView(models.Model):
     transit_auto_scroll = models.BooleanField(default=False, help_text="Auto-Scroll bei vielen Abfahrten")
     transit_show_disruptions = models.BooleanField(default=True)
     transit_strip_city = models.BooleanField(default=True, help_text="Ortsnamen vor dem Haltestellennamen weglassen")
+    transit_disruption_column = models.IntegerField(null=True, blank=True, help_text="Störungen in Abfahrten-Spalte 1-5, leer: eigene Spalte rechts")
     TRANSIT_FONT_SIZE_CHOICES = [
         ('normal', 'Normal'),
         ('large', 'Groß (HD)'),

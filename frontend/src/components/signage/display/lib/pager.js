@@ -25,7 +25,7 @@ export function usePager(pages, seconds) {
   return { index: count ? raw % count : 0, count }
 }
 
-// Heights of the children of ref (a hidden measuring layer), re-measured after the fonts load too.
+// Heights of the children of ref (a hidden measuring layer), re-measured after the fonts and images load too.
 export function useChildHeights(ref, deps) {
   const [heights, setHeights] = useState([])
   useLayoutEffect(() => {
@@ -38,7 +38,13 @@ export function useChildHeights(ref, deps) {
     }
     measure()
     document.fonts?.ready?.then(measure)
-    return () => { alive = false }
+    const el = ref.current
+    // load does not bubble, so listen in the capture phase
+    el?.addEventListener('load', measure, true)
+    return () => {
+      alive = false
+      el?.removeEventListener('load', measure, true)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
   return heights

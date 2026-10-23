@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import mock
 
 from django.core.cache import cache
@@ -9,6 +9,7 @@ from core.auth import KeycloakAuth
 from users.models import Permission, UserProfile
 
 from . import display
+from .transit.common import TIMEZONE
 from .models import (
     DisplayView, Exam, MediaFile, MediaPage, MonitorSettings, Screen,
 )
@@ -18,7 +19,7 @@ SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power', 'sch
 VIEW_KEYS = {'id', 'kind', 'layout', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
 DATA_KEYS = {
     'departures': {'stations', 'disruptions', 'columns', 'time_format', 'show_disruptions', 'strip_city',
-                   'status'},
+                   'disruption_column', 'status'},
     'substitutions': {'source', 'fallback', 'group_by', 'columns', 'days', 'news', 'updated_at',
                       'fetched_at', 'embed_url', 'mode'},
     'split': {'left', 'right', 'left_percent'},
@@ -52,10 +53,17 @@ def configure_webuntis():
     settings.webuntis_server, settings.webuntis_school = 'untis.example', 'schule'
     settings.save()
 
+def _departures_from(start, count):
+    return [{'line': 'RE8', 'direction': 'Hamburg', 'departure': (start + timedelta(minutes=i)).strftime('%H:%M')}
+            for i in range(count)]
+
+
+# Ahead of the real clock: the payload hides departed trips
 STATION = {
     'station_name': 'Lübeck Hbf', 'station_id': '8000237',
-    'departures': [{'line': 'RE8', 'direction': 'Hamburg', 'departure': f'10:{i:02d}'} for i in range(12)],
+    'departures': _departures_from(datetime.now(TIMEZONE) + timedelta(minutes=10), 12),
 }
+AT_0958 = datetime(2026, 10, 22, 9, 58, tzinfo=TIMEZONE)
 
 
 def _mock_sources():
@@ -113,15 +121,13 @@ class DeparturesPayloadTest(DisplayTestBase):
                                 'departures': buses + trains}], 'sources': {}}
         view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf', 'max_departures': 3}])
         with mock.patch('signage.display.transit.fetch_departures', return_value=result):
-            [station] = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']['stations']
+            [station] = display.build_payload(None, view, key_ok=True, now=AT_0958)['view']['data']['stations']
         self.assertEqual([d['departure'] for d in station['departures']],
                          ['10:00', '10:01', '10:02', '10:10', '10:11', '10:12'])
 
-        result['stations'][0]['split_modes'] = False
-        view.transit_cache_at = None
-        view.save()
+        view.transit_stops = [{'id': '8000237', 'name': 'Hbf', 'max_departures': 3, 'split_modes': False}]
         with mock.patch('signage.display.transit.fetch_departures', return_value=result):
-            [station] = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']['stations']
+            [station] = display.build_payload(None, view, key_ok=True, now=AT_0958)['view']['data']['stations']
         self.assertEqual([d['departure'] for d in station['departures']], ['10:00', '10:01', '10:02'])
 
 
@@ -325,6 +331,27 @@ class ContractTest(DisplayTestBase):
                          ['screen']['slug'], 'glocke')
 
 
+class WalkFilterTest(DisplayTestBase):
+    def payload_times(self, view, now):
+        [station] = display.build_payload(None, view, key_ok=True, now=now)['view']['data']['stations']
+        return [d['departure'] for d in station['departures']]
+
+    def test_walk_filter_runs_per_request_on_cached_data(self):
+        now = datetime(2026, 10, 22, 10, 2, 30, tzinfo=TIMEZONE)
+        view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf', 'walk_minutes': 5}])
+        station = {**STATION, 'departures': _departures_from(AT_0958 + timedelta(minutes=2), 12)}
+        with mock.patch('signage.display.transit.fetch_departures',
+                        return_value={'stations': [station], 'sources': {}}) as fetch:
+            self.assertEqual(self.payload_times(view, now)[0], '10:07')
+            view.transit_stops = [{'id': '8000237', 'name': 'Hbf', 'walk_minutes': 0, 'column': 2}]
+            [station] = display.build_payload(None, view, key_ok=True, now=now)['view']['data']['stations']
+        self.assertEqual(station['departures'][0]['departure'], '10:01')
+        self.assertEqual(station['column'], 2)
+        self.assertNotIn('walk_minutes', station)
+        fetch.assert_called_once()
+        self.assertNotIn('walk_minutes', fetch.call_args.kwargs['stops'][0])
+
+
 class PreviewTestBase(DisplayTestBase):
 
     def setUp(self):
@@ -405,6 +432,53 @@ class PreviewTest(PreviewTestBase):
 
 
 @override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
+class PreviewTransitCacheTest(PreviewTestBase):
+    def preview_data(self, view):
+        self.grant_setup()
+        token = self.post_preview({'view': view}).json()['token']
+        return self.client.get('/api/monitor/display', {'preview': token}).json()['view']['data']
+
+    def test_display_only_changes_reuse_the_fetch(self):
+        stop = {'id': '8000237', 'name': 'Hbf'}
+        base = {'kind': 'departures', 'transit_disruption_rail': True, 'transit_disruption_bus': False}
+        with mock.patch('signage.display.transit.fetch_departures',
+                        return_value={'stations': [dict(STATION)], 'sources': {}}) as fetch, \
+             mock.patch('signage.display.transit.fetch_disruptions_nahsh', return_value=[]) as rail:
+            self.preview_data({**base, 'transit_stops': [{**stop, 'walk_minutes': 3}]})
+            self.preview_data({**base, 'transit_stops': [{**stop, 'walk_minutes': 4, 'column': 2,
+                                                           'split_modes': False, 'max_departures': 5}],
+                               'transit_columns': 3, 'transit_disruption_hidden': ['x']})
+            self.assertEqual((fetch.call_count, rail.call_count), (1, 1))
+            self.preview_data({**base, 'transit_stops': [{**stop, 'filter_lines': ['RE8']}],
+                               'transit_disruption_rail_lines': ['RE8']})
+        self.assertEqual((fetch.call_count, rail.call_count), (2, 2))
+
+    def test_unchanged_saved_view_uses_its_cache(self):
+        saved = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf'}],
+                          transit_cache={'stations': [dict(STATION)], 'sources': {}},
+                          transit_cache_at=timezone.now())
+        with mock.patch('signage.display.transit.fetch_departures') as fetch:
+            data = self.preview_data({'id': saved.id, 'transit_stops': [{'id': '8000237', 'name': 'Hbf',
+                                                                         'walk_minutes': 2}]})
+        fetch.assert_not_called()
+        self.assertEqual(len(data['stations']), 1)
+
+
+class DisruptionListTest(PreviewTestBase):
+    def test_admin_list_has_full_text_and_image(self):
+        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Monitor ansehen'})
+        self.profile.permissions.add(perm)
+        text = 'Zwischen Lübeck und Bad Oldesloe fallen alle Züge aus. ' * 5
+        view = self.view('departures', transit_disruption_rail=True, transit_disruption_bus=False)
+        message = {'id': 'm1', 'source': 'nahsh', 'kind': 'disruption', 'title': 'RE8', 'text': text,
+                   'lines': ['RE8'], 'image': 'https://example.org/karte.png'}
+        with mock.patch('signage.display.transit.fetch_disruptions_nahsh', return_value=[message]):
+            [item] = self.client.get('/api/monitor/disruptions', {'view_id': view.id},
+                                     HTTP_AUTHORIZATION='Bearer x').json()
+        self.assertEqual((item['text'], item['image']), (text, 'https://example.org/karte.png'))
+
+
+@override_settings(CHANNEL_LAYERS={'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}})
 class PreviewValidationTest(PreviewTestBase):
     def setUp(self):
         super().setUp()
@@ -440,6 +514,17 @@ class PreviewValidationTest(PreviewTestBase):
         for value in (1, 5):
             r = self.post_preview({'view': {'id': self.saved.id, 'transit_columns': value}})
             self.assertEqual(r.status_code, 200, r.content)
+
+    def test_disruption_column(self):
+        for value in (0, 6, -1):
+            with self.subTest(value=value):
+                self.assert_rejected({'view': {'id': self.saved.id, 'transit_disruption_column': value}},
+                                     'Spalte der Störungen ungültig (1 bis 5).')
+        for value in (None, 3):
+            r = self.post_preview({'view': {'kind': 'departures', 'transit_disruption_column': value}})
+            self.assertEqual(r.status_code, 200, r.content)
+            data = self.client.get('/api/monitor/display', {'preview': r.json()['token']}).json()['view']['data']
+            self.assertEqual(data['disruption_column'], value)
 
     def test_invalid_choices_rejected(self):
         self.assert_rejected({'view': {'kind': 'tabelle'}}, 'Typ')

@@ -62,7 +62,7 @@ export const EDITABLE_FIELDS = [
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
-  'transit_duration', 'transit_columns', 'transit_time_format', 'transit_show_disruptions', 'transit_strip_city', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
+  'transit_duration', 'transit_columns', 'transit_time_format', 'transit_show_disruptions', 'transit_disruption_column', 'transit_strip_city', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
   'transit_strike_active', 'transit_strike_text', 'transit_strike_lines', 'transit_strike_types',
   'substitutions_source', 'substitutions_format', 'substitutions_custom_format', 'substitutions_show_absences',
   'substitutions_show_exams', 'substitutions_next_day_from', 'webuntis_url', 'webuntis_url_next_day', 'webuntis_link_id', 'webuntis_link_next_day_id',
@@ -127,6 +127,7 @@ function normalizeField(key, value) {
   if (LIST_FIELDS.has(key)) return trimList(value)
   if (LINK_FIELDS.has(key)) return value ? Number(value) : null
   if (key === 'custom_countdown_date') return value || null
+  if (key === 'transit_disruption_column') return value ? Number(value) : null
   if (key === 'transit_stops') return (value ?? []).map(normalizeStop)
   if (key === 'rotation_items') {
     return (value ?? [])
