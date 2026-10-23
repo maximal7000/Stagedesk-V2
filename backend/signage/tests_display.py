@@ -331,6 +331,17 @@ class ContractTest(DisplayTestBase):
                          ['screen']['slug'], 'glocke')
 
 
+class TransitFetchLockTest(DisplayTestBase):
+    def test_concurrent_request_serves_the_cache_instead_of_fetching_again(self):
+        cached = {'stations': [dict(STATION)], 'sources': {}}
+        view = self.view('departures', transit_stops=[{'id': '8000237', 'name': 'Hbf'}], transit_cache=cached)
+        cache.add(display.transit_lock_key(view), 1, 30)
+        with mock.patch('signage.display.transit.fetch_departures') as fetch:
+            data = display.build_payload(None, view, key_ok=True, now=self.now)['view']['data']
+        fetch.assert_not_called()
+        self.assertEqual(len(data['stations']), 1)
+
+
 class WalkFilterTest(DisplayTestBase):
     def payload_times(self, view, now):
         [station] = display.build_payload(None, view, key_ok=True, now=now)['view']['data']['stations']

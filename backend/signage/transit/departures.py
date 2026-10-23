@@ -20,6 +20,12 @@ def _is_eva(station_id):
     return bool(_EVA_RE.match(str(station_id or "").strip()))
 
 
+def _filter_kind(dep):
+    """A rail replacement bus (SEV) stands in for a train, so it follows the train filter."""
+    kind = dep.get("kind", "")
+    return "regional" if kind == "bus" and dep.get("rail_replacement") else kind
+
+
 def _minutes_ahead(hhmm, now):
     try:
         h, m = map(int, str(hhmm).split(":")[:2])
@@ -200,7 +206,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
                     z_ferry = station.get("extra_show_ferry", True)
                     filtered_extra = []
                     for dep in extra_deps:
-                        kind = dep.get("kind", "")
+                        kind = _filter_kind(dep)
                         if kind in ("bus",) and not z_bus:
                             continue
                         if kind in ("regional", "regionalExpress") and not z_rail:
@@ -228,7 +234,7 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
 
         departures = []
         for dep in raw_departures:
-            kind = dep.get("kind", "")
+            kind = _filter_kind(dep)
             if kind in ("bus",) and not st_bus:
                 continue
             if kind in ("regional", "regionalExpress") and not st_rail:

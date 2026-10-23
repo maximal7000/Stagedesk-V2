@@ -118,6 +118,20 @@ class FetchDeparturesTest(SimpleTestCase):
         self.run_fetch([{'id': '708049', 'name': 'Wahmstraße', 'source': 'db'}], db_deps={'new': db_mock})
         db_mock.assert_called_once()
 
+    def test_rail_replacement_bus_follows_the_rail_filter(self):
+        """SEV buses replace a train: a station showing only trains keeps them."""
+        sev = {**_dep('23:50', '23:50'), 'line': 'Bus SEV', 'kind': 'bus', 'kind_icon': 'bus', 'rail_replacement': True}
+        bus = {**_dep('23:51', '23:51'), 'line': 'Bus 5', 'kind': 'bus', 'kind_icon': 'bus'}
+        with mock.patch('signage.transit.departures.datetime') as dt:
+            dt.now.return_value = _at('22:30')
+            dt.strptime = datetime.strptime
+            trains_only = self.run_fetch([{'id': '8000237', 'name': 'Hbf', 'source': 'db', 'show_bus': False}],
+                                         db_deps={'return_value': [sev, bus]})
+            no_rail = self.run_fetch([{'id': '8000237', 'name': 'Hbf', 'source': 'db', 'show_rail': False}],
+                                     db_deps={'return_value': [sev, bus]})
+        self.assertEqual([d['line'] for d in trains_only['stations'][0]['departures']], ['Bus SEV'])
+        self.assertEqual([d['line'] for d in no_rail['stations'][0]['departures']], ['Bus 5'])
+
     def test_filter_applied_in_fetch(self):
         deps = [_dep('22:00', '22:00', realtime=True), _dep('23:50', '23:50')]
         with mock.patch('signage.transit.departures.datetime') as dt:

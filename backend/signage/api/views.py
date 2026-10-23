@@ -9,7 +9,7 @@ from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
 from .. import push, transit
-from ..display import _fetch_disruptions
+from ..display import _fetch_disruptions, disruption_cache_args, transit_fetch_args
 from ..models import DisplayView
 from ..permissions import _require_perm
 from ..schemas import (
@@ -144,11 +144,15 @@ def update_view(request, payload: DisplayViewUpdateSchema, view_id: int = None):
             val = data.pop(fk_key)
             setattr(view, fk_key, val if val else None)
 
+    transit_before, disruptions_before = transit_fetch_args(view), disruption_cache_args(view)
     for key, value in data.items():
         setattr(view, key, value)
-    # Drop the transit/disruption cache so changes apply immediately
-    view.transit_cache_at = None
-    view.transit_disruption_cache_at = None
+    # Refetch only when stops, filters or sources changed; display settings (walk, columns,
+    # number of rows) apply to the cached data, so quick edits do not hammer the APIs.
+    if transit_fetch_args(view) != transit_before:
+        view.transit_cache_at = None
+    if disruption_cache_args(view) != disruptions_before:
+        view.transit_disruption_cache_at = None
     view.save()
     push.notify_changed_on_commit()
     return view

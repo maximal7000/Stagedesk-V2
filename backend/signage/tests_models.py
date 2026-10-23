@@ -58,6 +58,22 @@ class UpdateViewApiTest(TestCase):
                 mock.patch('signage.api.views._require_perm'):
             return self.client.put(f'/api/monitor/config?view_id={view.id}', body, content_type='application/json')
 
+    def test_save_keeps_transit_cache_for_display_only_changes(self):
+        stamp = timezone.now()
+        stop = {'id': '8000237', 'name': 'Hbf'}
+        view = DisplayView.objects.create(name='A', slug='a', kind='departures', transit_stops=[stop],
+                                          transit_cache={'stations': []}, transit_cache_at=stamp,
+                                          transit_disruption_cache=[], transit_disruption_cache_at=stamp)
+        r = self._put(view, {'transit_stops': [{**stop, 'max_departures': 5, 'walk_minutes': 3, 'column': 2}],
+                             'transit_columns': 3, 'transit_disruption_hidden': ['x']})
+        self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual((view.transit_cache_at, view.transit_disruption_cache_at), (stamp, stamp))
+        r = self._put(view, {'transit_stops': [{**stop, 'filter_lines': ['RE8']}], 'transit_disruption_bus': False})
+        self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual((view.transit_cache_at, view.transit_disruption_cache_at), (None, None))
+
     def test_update_view_rejects_invalid_choices(self):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')
         for body, fragment in [({'kind': 'tabelle'}, 'Typ'), ({'layout': 'bunt'}, 'Aufteilung'),

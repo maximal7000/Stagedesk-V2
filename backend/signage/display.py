@@ -23,6 +23,7 @@ PREVIEW_CACHE_PREFIX = 'signage:preview:'
 PREVIEW_SECONDS = 600
 PREVIEW_TRANSIT_SECONDS = 60
 PREVIEW_DISRUPTION_SECONDS = 300
+TRANSIT_LOCK_SECONDS = 30
 _PREVIEW_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{32}$')
 _NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date',
                           'substitutions_show_exams', 'transit_disruption_column'}
@@ -87,7 +88,7 @@ def _fetch_weather(view):
 _STOP_DISPLAY_KEYS = {'walk_minutes', 'column', 'split_modes', 'max_departures'}
 
 
-def _transit_args(view):
+def transit_fetch_args(view):
     return {
         'stops': [{k: v for k, v in s.items() if k not in _STOP_DISPLAY_KEYS}
                   for s in (view.transit_stops or []) if isinstance(s, dict)],
@@ -111,9 +112,13 @@ def _remote_disruption_args(view):
     }
 
 
-def _disruption_cache_args(view):
+def disruption_cache_args(view):
     """The saved cache holds the manual messages too."""
     return {**_remote_disruption_args(view), 'manual': view.transit_disruption_manual or []}
+
+
+def transit_lock_key(view):
+    return f'signage:transit-fetch:{view.pk}'
 
 
 def _preview_key(kind, args):
@@ -142,7 +147,7 @@ def _fetch_transit(view):
         if age < 60:
             return _as_transit(view.transit_cache)
 
-    args = _transit_args(view)
+    args = transit_fetch_args(view)
     if getattr(view, '_preview', False):
         key = _preview_key('transit', args)
         result = cache.get(key)
@@ -155,6 +160,11 @@ def _fetch_transit(view):
             cache.set(key, result, PREVIEW_TRANSIT_SECONDS)
         return _as_transit(result)
 
+    # One fetch per view at a time: after a save every screen and the preview ask at once, and the
+    # DB API answers a burst with rate-limit errors. The others get the previous data meanwhile.
+    lock = transit_lock_key(view)
+    if not cache.add(lock, 1, TRANSIT_LOCK_SECONDS):
+        return _as_transit(view.transit_cache) if view.transit_cache else None
     try:
         result = transit.fetch_departures(**args)
         view.transit_cache = result
@@ -167,6 +177,8 @@ def _fetch_transit(view):
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache_at'])
         return _as_transit(view.transit_cache) if view.transit_cache else None
+    finally:
+        cache.delete(lock)
 
 
 def _remote_disruptions(view):
@@ -534,15 +546,15 @@ def draft_view(draft: dict) -> DisplayView:
         view = DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).first()
     if view is None:
         view = DisplayView(name='Vorschau')
-    transit_before, disruptions_before = _transit_args(view), _disruption_cache_args(view)
+    transit_before, disruptions_before = transit_fetch_args(view), disruption_cache_args(view)
     for key, value in draft.items():
         if value is None and key not in _NULLABLE_DRAFT_FIELDS:
             continue
         setattr(view, key, value)
     # Changed stops or filters: the saved view's cache does not fit the draft
-    if _transit_args(view) != transit_before:
+    if transit_fetch_args(view) != transit_before:
         view.transit_cache_at = None
-    if _disruption_cache_args(view) != disruptions_before:
+    if disruption_cache_args(view) != disruptions_before:
         view.transit_disruption_cache_at = None
     view._preview = True
     return view
