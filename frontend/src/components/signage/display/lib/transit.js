@@ -36,13 +36,16 @@ function wrapDay(diff) {
   return diff
 }
 
-export function formatDepartureTime(dep, now, format = 'minutes') {
+// Minutes count down to the actual departure, so the delay is already in them and gets no "+N";
+// a clock time stays the planned one with the delay next to it. A cancelled trip counts from the plan.
+export function departureTime(dep, now, format = 'minutes') {
   const planned = clockMinutes(dep?.departure)
-  if (planned == null) return ''
-  if (format === 'clock') return dep.departure
-  const diff = wrapDay(planned - (now.getHours() * 60 + now.getMinutes()))
-  if (format === 'mixed' && diff > MIXED_LIMIT_MIN) return dep.departure
-  return diff < 1 ? 'jetzt' : `${diff} min`
+  if (planned == null) return { text: '', delay: null }
+  const clock = { text: dep.departure, delay: dep.cancelled ? null : delayLabel(dep) }
+  if (format === 'clock') return clock
+  const diff = dep.cancelled ? wrapDay(planned - (now.getHours() * 60 + now.getMinutes())) : minutesUntil(dep, now)
+  if (format === 'mixed' && diff > MIXED_LIMIT_MIN) return clock
+  return { text: diff < 1 ? 'jetzt' : `${diff} min`, delay: null }
 }
 
 export function delayLabel(dep) {

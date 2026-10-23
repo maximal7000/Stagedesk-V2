@@ -87,13 +87,16 @@ describe('DeparturesView', () => {
     expect(rows(el).map((r) => r.querySelector('[data-chip]').textContent)).toEqual(['RE 8', '11', 'RB 84'])
   })
 
-  it('eine Zeitangabe vorn mit Verspätung, keine Minutenspalte rechts', () => {
-    const deps = [bus('22:14', '5', 'Eichholz', { departure_actual: '22:20', delay: 6 }), bus('22:40', '8710', 'Mölln')]
+  it('eine Zeitangabe vorn: Minuten mit eingerechneter Verspätung, Uhrzeit mit +N', () => {
+    const deps = [bus('22:14', '5', 'Eichholz', { departure_actual: '22:20', delay: 6 }), bus('22:40', '8710', 'Mölln'),
+      bus('22:35', '11', 'Schlutup', { departure_actual: '22:38', delay: 3 })]
     const el = render(<DeparturesView view={view({ stations: [station(0, 'Katharineum', deps)], time_format: 'mixed' })} />)
-    const [first, second] = rows(el)
+    const [first, second, third] = rows(el)
     expect(first.children).toHaveLength(3)
-    expect(first.firstChild.textContent).toBe('3 min+6')
-    expect(first.querySelector('[data-delay]').className).toContain('text-(--d-warn)')
+    expect(first.firstChild.textContent).toBe('9 min')
+    expect(first.querySelector('[data-delay]')).toBeNull()
+    expect(third.firstChild.textContent).toBe('22:35+3')
+    expect(third.querySelector('[data-delay]').className).toContain('text-(--d-warn)')
     expect(second.firstChild.textContent).toBe('22:40')
     expect(second.lastChild.textContent).toBe('Mölln')
     expect(second.querySelector('[data-chip]').style.background).toBe('rgb(149, 39, 110)')

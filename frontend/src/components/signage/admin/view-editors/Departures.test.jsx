@@ -160,7 +160,7 @@ describe('DeparturesEditor Störungen', () => {
 describe('DeparturesEditor Darstellung', () => {
   it('schreibt die Zeitangabe und erklärt Gemischt', async () => {
     const calls = await mount()
-    expect(text()).toContain('Gemischt: bis 20 Minuten als Minuten, danach als Uhrzeit.')
+    expect(text()).toContain('Minuten enthalten die Verspätung, bei der Uhrzeit steht sie daneben. Gemischt: bis 20 Minuten als Minuten, danach als Uhrzeit.')
     expect(radio('Zeitangabe', 'Minuten').getAttribute('aria-checked')).toBe('true')
     await click(radio('Zeitangabe', 'Uhrzeit'))
     await click(radio('Zeitangabe', 'Gemischt'))

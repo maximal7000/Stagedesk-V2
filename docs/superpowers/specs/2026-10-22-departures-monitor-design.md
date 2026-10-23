@@ -34,7 +34,7 @@ Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22
 
 - Nur **eine** Zeitangabe, **vorn**, direkt dahinter die Verspätung („+6“, Warnfarbe). Die Minutenspalte rechts entfällt.
 - Einstellung pro Ansicht „Zeitangabe“: **Minuten** („3 min +6“, unter 1 min „jetzt“), **Uhrzeit** („22:08 +6“), **Gemischt** (bis 20 min Minuten, danach Uhrzeit). Standard: Minuten.
-- Gerechnet ab der **geplanten** Abfahrt; die Verspätung steht als Zahl dahinter.
+- Gerechnet ab der **geplanten** Abfahrt; die Verspätung steht als Zahl dahinter. (Nachtrag: Minuten zählen bis zur tatsächlichen Abfahrt, die Verspätung ist eingerechnet und steht nicht daneben; nur bei der Uhrzeit bleibt „+N“.)
 - Ausfall: Zeit durchgestrichen, dahinter „fällt aus“ in Rot (wie bisher).
 
 ### 2.2 Welche Abfahrten erscheinen

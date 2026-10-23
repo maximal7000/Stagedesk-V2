@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  BUS_FALLBACK_COLOR, assignColumns, delayLabel, disruptionLabel, formatDepartureTime, isBus, lineColor, lineLabel,
+  BUS_FALLBACK_COLOR, assignColumns, delayLabel, departureTime, disruptionLabel, isBus, lineColor, lineLabel,
   isDeparted, minutesUntil, stripCommonCity, visibleDisruptions,
 } from './transit'
 
@@ -52,19 +52,33 @@ describe('transit', () => {
       return new Date(2026, 9, 22, h, m, sec)
     }
 
+    const time = (d, now, format) => departureTime(d, at(now), format)
+
     it('Minuten, Uhrzeit und Gemischt mit Grenze 20 min', () => {
-      expect(formatDepartureTime(dep('22:11'), at('22:11:30'), 'minutes')).toBe('jetzt')
-      expect(formatDepartureTime(dep('22:14'), at('22:11'), 'minutes')).toBe('3 min')
-      expect(formatDepartureTime(dep('22:31'), at('22:11'), 'mixed')).toBe('20 min')
-      expect(formatDepartureTime(dep('22:32'), at('22:11'), 'mixed')).toBe('22:32')
-      expect(formatDepartureTime(dep('22:14'), at('22:11'), 'clock')).toBe('22:14')
+      expect(time(dep('22:11'), '22:11:30', 'minutes')).toEqual({ text: 'jetzt', delay: null })
+      expect(time(dep('22:14'), '22:11', 'minutes')).toEqual({ text: '3 min', delay: null })
+      expect(time(dep('22:31'), '22:11', 'mixed')).toEqual({ text: '20 min', delay: null })
+      expect(time(dep('22:32'), '22:11', 'mixed')).toEqual({ text: '22:32', delay: null })
+      expect(time(dep('22:14'), '22:11', 'clock')).toEqual({ text: '22:14', delay: null })
+      expect(time(dep('00:05'), '23:58', 'minutes').text).toBe('7 min')
+      expect(time(dep('22:14'), '22:11', undefined).text).toBe('3 min')
     })
 
-    it('rechnet ab der geplanten Abfahrt, auch über Mitternacht', () => {
-      expect(formatDepartureTime(dep('22:03', { departure_actual: '22:12', delay: 9 }), at('22:11'), 'minutes')).toBe('jetzt')
-      expect(formatDepartureTime(dep('22:14', { departure_actual: '22:20', delay: 6 }), at('22:11'), 'minutes')).toBe('3 min')
-      expect(formatDepartureTime(dep('00:05'), at('23:58'), 'minutes')).toBe('7 min')
-      expect(formatDepartureTime(dep('22:14'), at('22:11'), undefined)).toBe('3 min')
+    it('Minuten mit eingerechneter Verspätung, Uhrzeit geplant mit +N daneben', () => {
+      const late = dep('22:14', { departure_actual: '22:20', delay: 6 })
+      expect(time(late, '22:11', 'minutes')).toEqual({ text: '9 min', delay: null })
+      expect(time(late, '22:11', 'clock')).toEqual({ text: '22:14', delay: '+6' })
+      expect(time(dep('22:03', { departure_actual: '22:12', delay: 9 }), '22:11', 'minutes').text).toBe('1 min')
+      expect(time(dep('22:14', { departure_actual: '', delay: 6 }), '22:11', 'minutes').text).toBe('9 min')
+      // Gemischt: Grenze nach der tatsächlichen Abfahrt
+      expect(time(dep('22:28', { departure_actual: '22:33', delay: 5 }), '22:11', 'mixed')).toEqual({ text: '22:28', delay: '+5' })
+      expect(time(dep('22:28', { departure_actual: '22:30', delay: 2 }), '22:11', 'mixed')).toEqual({ text: '19 min', delay: null })
+    })
+
+    it('Ausfall zählt ab der geplanten Abfahrt, ohne +N', () => {
+      const cancelled = dep('22:14', { departure_actual: '22:20', delay: 6, cancelled: true })
+      expect(time(cancelled, '22:11', 'minutes')).toEqual({ text: '3 min', delay: null })
+      expect(time(cancelled, '22:11', 'clock')).toEqual({ text: '22:14', delay: null })
     })
 
     it('abgefahren erst mehr als 1 min nach der tatsächlichen Abfahrt', () => {

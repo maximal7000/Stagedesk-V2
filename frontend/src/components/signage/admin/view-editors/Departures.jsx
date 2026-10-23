@@ -176,7 +176,7 @@ function DisplaySection({ draft, set }) {
           <Segmented label="Spalten" value={columnCount(draft)} onChange={(v) => set('transit_columns', v)}
             options={Array.from({ length: MAX_COLUMNS }, (_, n) => ({ value: n + 1, label: String(n + 1) }))} />
         </Field>
-        <Field label="Zeitangabe" help="Gemischt: bis 20 Minuten als Minuten, danach als Uhrzeit.">
+        <Field label="Zeitangabe" help="Minuten enthalten die Verspätung, bei der Uhrzeit steht sie daneben. Gemischt: bis 20 Minuten als Minuten, danach als Uhrzeit.">
           <Segmented label="Zeitangabe" value={draft.transit_time_format ?? 'minutes'} onChange={(v) => set('transit_time_format', v)} options={TIME_FORMATS} />
         </Field>
       </div>

@@ -4,7 +4,7 @@ import { formatTemperature, formatTime, formatWeekday } from '../lib/format'
 import { chipTextColor } from '../lib/lines'
 import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
 import {
-  assignColumns, delayLabel, disruptionLabel, formatDepartureTime, isBus, isDeparted, lineColor, lineLabel,
+  assignColumns, departureTime, disruptionLabel, isBus, isDeparted, lineColor, lineLabel,
   stripCommonCity, visibleDisruptions,
 } from '../lib/transit'
 import { useClockMinute } from '../lib/useClock'
@@ -236,10 +236,10 @@ const PlatformPrefix = () => <span data-platform-prefix className="@max-[16rem]:
 // Own leaf component: re-renders only when the minute changes
 function DepartureTime({ dep, format, cancelled }) {
   const now = useClockMinute()
-  const delay = cancelled ? null : delayLabel(dep)
+  const { text, delay } = departureTime(dep, now, format)
   return (
     <span className={`d-oswald whitespace-nowrap text-[1.12em] ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>
-      {formatDepartureTime(dep, now, format)}
+      {text}
       {delay && <span data-delay className="pl-[0.25em] text-[0.7em] text-(--d-warn)">{delay}</span>}
     </span>
   )
