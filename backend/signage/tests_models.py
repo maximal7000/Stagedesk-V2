@@ -58,6 +58,22 @@ class UpdateViewApiTest(TestCase):
                 mock.patch('signage.api.views._require_perm'):
             return self.client.put(f'/api/monitor/config?view_id={view.id}', body, content_type='application/json')
 
+    def test_save_keeps_transit_cache_for_display_only_changes(self):
+        stamp = timezone.now()
+        stop = {'id': '8000237', 'name': 'Hbf'}
+        view = DisplayView.objects.create(name='A', slug='a', kind='departures', transit_stops=[stop],
+                                          transit_cache={'stations': []}, transit_cache_at=stamp,
+                                          transit_disruption_cache=[], transit_disruption_cache_at=stamp)
+        r = self._put(view, {'transit_stops': [{**stop, 'max_departures': 5, 'walk_minutes': 3, 'column': 2}],
+                             'transit_columns': 3, 'transit_disruption_hidden': ['x']})
+        self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual((view.transit_cache_at, view.transit_disruption_cache_at), (stamp, stamp))
+        r = self._put(view, {'transit_stops': [{**stop, 'filter_lines': ['RE8']}], 'transit_disruption_bus': False})
+        self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual((view.transit_cache_at, view.transit_disruption_cache_at), (None, None))
+
     def test_update_view_rejects_invalid_choices(self):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')
         for body, fragment in [({'kind': 'tabelle'}, 'Typ'), ({'layout': 'bunt'}, 'Aufteilung'),
@@ -102,6 +118,12 @@ class UpdateViewApiTest(TestCase):
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': -1}]}, 'Max. Zeilen'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 'viele'}]}, 'Max. Zeilen'),
             ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': True}]}, 'Max. Zeilen'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': 0}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': 6}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': True}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'column': '2'}]}, 'Spalte der Haltestelle'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'split_modes': 'ja'}]}, 'Busse und Züge getrennt'),
+            ({'transit_stops': [{'id': '1', 'name': 'Kohlmarkt', 'split_modes': None}]}, 'Busse und Züge getrennt'),
         ]
         for body, fragment in cases:
             r = self._put(view, body)
@@ -111,9 +133,13 @@ class UpdateViewApiTest(TestCase):
             self.assertIn(fragment, detail)
         view.refresh_from_db()
         self.assertEqual((view.page_seconds, view.media_seconds, view.transit_stops), (15, 10, []))
-        stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30}]
+        stops = [{'id': '1', 'name': 'Kohlmarkt', 'walk_minutes': 60, 'max_departures': 30, 'column': 5,
+                  'split_modes': False, 'source': 'nahsh'},
+                 {'id': '2', 'name': 'Sandstraße', 'column': None, 'split_modes': True, 'source': 'db+nahsh'}]
         r = self._put(view, {'page_seconds': 120, 'media_seconds': 3, 'pdf_per_screen': 3, 'transit_stops': stops})
         self.assertEqual(r.status_code, 200, r.content)
+        view.refresh_from_db()
+        self.assertEqual([s['source'] for s in view.transit_stops], ['nahsh', ''])
         legacy = [{'id': '1', 'name': 'Kohlmarkt', 'max_departures': 0},
                   {'id': '2', 'name': 'Sandstraße', 'max_departures': 50}]
         r = self._put(view, {'transit_stops': legacy})

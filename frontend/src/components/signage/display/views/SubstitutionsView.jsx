@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useBoxSize } from '../lib/fit'
 import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../lib/format'
-import { paginateByHeight, usePager } from '../lib/pager'
+import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
 import { Heading, PageCount } from './parts'
 
 const ROW_MIN_REM = 2.1875
@@ -151,7 +151,7 @@ function DayCard({ day, news, columns, seconds, onDone }) {
   const measureRef = useRef(null)
   const { width, height, remPx } = useBoxSize(bodyRef)
   const rows = useMemo(() => day.rows ?? [], [day.rows])
-  const heights = useRowHeights(measureRef, [rows, columns, width, remPx])
+  const heights = useChildHeights(measureRef, [rows, columns, width, remPx])
   const pages = useMemo(() => {
     if (!rows.length) return []
     if (heights.length !== rows.length) return [rows.map((_, i) => i)]
@@ -197,25 +197,6 @@ function DayCard({ day, news, columns, seconds, onDone }) {
       </div>
     </section>
   )
-}
-
-// Re-measured after the fonts load too.
-function useRowHeights(ref, deps) {
-  const [heights, setHeights] = useState([])
-  useLayoutEffect(() => {
-    let alive = true
-    const measure = () => {
-      const el = ref.current
-      if (!alive || !el) return
-      const next = [...el.children].map((child) => child.getBoundingClientRect().height)
-      setHeights((prev) => (prev.length === next.length && prev.every((h, i) => h === next[i]) ? prev : next))
-    }
-    measure()
-    document.fonts?.ready?.then(measure)
-    return () => { alive = false }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps)
-  return heights
 }
 
 function SubstitutionRow({ row, columns, showLead }) {

@@ -1,7 +1,7 @@
 import { act, createElement, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { fitRows, packByHeight, useBoxSize } from './fit'
+import { fitRows, packByHeight, useBoxSize, wrapColumns } from './fit'
 
 describe('fitRows', () => {
   const base = { remPx: 16, minRem: 0.95, prefRem: 1.375, lineFactor: 1.6 }
@@ -20,6 +20,26 @@ describe('fitRows', () => {
   it('liefert ohne Höhe oder Einträge keine Zeilen', () => {
     expect(fitRows({ ...base, height: 0, count: 5, max: 10 }).rows).toBe(0)
     expect(fitRows({ ...base, height: 500, count: 0, max: 10 }).rows).toBe(0)
+  })
+})
+
+describe('wrapColumns', () => {
+  // Departures at 4K: landscape 114.5rem wide, portrait 62rem; train columns 22rem, others 16rem
+  const mins = [16, 16, 16, 22, 16]
+
+  it('alle Spalten nebeneinander, wenn die Mindestbreiten passen', () => {
+    expect(wrapColumns(mins, 114.5, 1.25)).toBe(5)
+    expect(wrapColumns([16, 16, 22, 22, 22, 16], 114.5, 1.25)).toBe(4)
+  })
+
+  it('Hochformat: zwei Spalten, sobald eine Zugspalte dabei ist', () => {
+    expect(wrapColumns(mins, 62, 1.25)).toBe(2)
+    expect(wrapColumns([16, 16, 16, 16, 16], 62, 1.25)).toBe(3)
+  })
+
+  it('ohne gemessene Breite keine Umbrüche', () => {
+    expect(wrapColumns(mins, 0, 1.25)).toBe(5)
+    expect(wrapColumns([40], 10, 1.25)).toBe(1)
   })
 })
 

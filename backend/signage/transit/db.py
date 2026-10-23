@@ -121,8 +121,10 @@ def _fetch_sbahn_meta(eva, duration, max_results, stopovers=False):
     return out
 
 
-def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
-    """/plan (planned) plus /fchg (real-time changes)."""
+def _fetch_departures_db(station_id, duration, max_results, stopovers=False, failed=None):
+    """/plan (planned) plus /fchg (real-time changes). A failed /fchg or /plan hour
+    still yields the remaining data; it is appended to `failed` so the caller can
+    report the source as degraded. Raises when every /plan request failed."""
     if not DB_TT_CLIENT_ID:
         return []
     now = datetime.now(TIMEZONE)
@@ -163,17 +165,23 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                     replaced_by[orig_key] = repl_label
                     replacement_trips.append(s)
     except Exception:
-        pass
+        if failed is not None:
+            failed.append("fchg")
 
     hours = 1 + min(3, int(duration) // 60)
     # Also load the previous hour (i=-1): delayed trains with an early planned time
     # are in the plan of the PLANNED hour, not the current one.
     deps = []
+    plan_failures, last_plan_error = 0, None
     for i in range(-1, hours):
         t = now + timedelta(hours=i)
         try:
             plan = _db_tt_get(f"/plan/{station_id}/{t.strftime('%y%m%d')}/{t.strftime('%H')}")
-        except Exception:
+        except Exception as e:
+            plan_failures += 1
+            last_plan_error = e
+            if failed is not None:
+                failed.append("plan")
             continue
         for s in plan.findall("s"):
             dp = s.find("dp")
@@ -199,10 +207,12 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             cancelled = ch.get("cs") == "c"
             delay = 0
             dt_real = dt_plan
+            realtime = False
             if ct and len(ct) >= 10:
                 try:
                     dt_real = datetime.strptime(ct, "%y%m%d%H%M").replace(tzinfo=TIMEZONE)
                     delay = int((dt_real - dt_plan).total_seconds() // 60)
+                    realtime = True
                 except Exception:
                     pass
             min_until = (dt_real - now).total_seconds() / 60
@@ -250,6 +260,7 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                 "departure": dt_plan.strftime("%H:%M"),
                 "departure_actual": dt_real.strftime("%H:%M"),
                 "delay": delay,
+                "realtime": realtime,
                 "platform": str(platform_actual),
                 "kind": product,
                 "kind_icon": _product_icon(product),
@@ -281,6 +292,9 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
                 result["stopovers"] = ppth[:-1] if len(ppth) > 1 else []
             deps.append(result)
 
+    if plan_failures == hours + 1:
+        raise last_plan_error
+
     for s in replacement_trips:
         dp = s.find("dp"); tl = s.find("tl"); ref = s.find("ref")
         if dp is None or tl is None:
@@ -308,6 +322,7 @@ def _fetch_departures_db(station_id, duration, max_results, stopovers=False):
             "line": line, "direction": ppth[-1] if ppth else "",
             "departure": dt_plan.strftime("%H:%M"), "departure_actual": dt_real.strftime("%H:%M"),
             "delay": int((dt_real - dt_plan).total_seconds() // 60),
+            "realtime": bool(ct and len(ct) >= 10),
             "platform": str(dp.get("cp") or dp.get("pp") or ""),
             "kind": product, "kind_icon": _product_icon(product) if product != 'bus' else 'bus',
             "cancelled": False, "remarks": [], "rail_replacement": True,

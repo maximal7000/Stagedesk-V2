@@ -108,11 +108,13 @@ class DisplayViewSchema(Schema):
     transit_source_db: bool
     transit_source_nahsh: bool
     transit_show_via: bool
-    transit_show_relative: bool
+    transit_time_format: str
     transit_color_coding: bool
     transit_highlight_next: bool
     transit_auto_scroll: bool
-    transit_disruption_banner: bool
+    transit_show_disruptions: bool
+    transit_strip_city: bool
+    transit_disruption_column: Optional[int] = None
     transit_font_size: str
     transit_columns: int
     transit_strike_active: bool
@@ -125,7 +127,6 @@ class DisplayViewSchema(Schema):
     transit_disruption_bus_lines: list = []
     transit_disruption_manual: list = []
     transit_disruption_hidden: list = []
-    transit_disruption_position: str = 'bottom'
     on_air_split_side: str = 'right'
     kind: str = 'info'
     layout: str = 'auto'
@@ -194,11 +195,13 @@ class DisplayViewUpdateSchema(Schema):
     transit_source_db: Optional[bool] = None
     transit_source_nahsh: Optional[bool] = None
     transit_show_via: Optional[bool] = None
-    transit_show_relative: Optional[bool] = None
+    transit_time_format: Optional[str] = None
     transit_color_coding: Optional[bool] = None
     transit_highlight_next: Optional[bool] = None
     transit_auto_scroll: Optional[bool] = None
-    transit_disruption_banner: Optional[bool] = None
+    transit_show_disruptions: Optional[bool] = None
+    transit_strip_city: Optional[bool] = None
+    transit_disruption_column: Optional[int] = None
     transit_font_size: Optional[str] = None
     transit_columns: Optional[int] = None
     transit_strike_active: Optional[bool] = None
@@ -211,7 +214,6 @@ class DisplayViewUpdateSchema(Schema):
     transit_disruption_bus_lines: Optional[list] = None
     transit_disruption_manual: Optional[list] = None
     transit_disruption_hidden: Optional[list] = None
-    transit_disruption_position: Optional[str] = None
     on_air_split_side: Optional[str] = None
     kind: Optional[str] = None
     layout: Optional[str] = None

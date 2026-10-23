@@ -1,18 +1,25 @@
 import { useEffect, useId, useState } from 'react'
-import { ChevronRight, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, Plus, Trash2 } from 'lucide-react'
 import { Button, StatusBadge } from '../../../ui'
 import { errorText } from '../shared/errorText'
 import * as api from '../shared/api'
-import { Checkbox, Field, ListInput, Section, fieldClass } from '../shared/form'
+import { Checkbox, Field, ListInput, Section, Segmented, fieldClass } from '../shared/form'
 import StopSearch from '../shared/StopSearch'
 import StopFilterDialog from '../shared/StopFilterDialog'
 import DragHandle from '../shared/DragHandle'
 import { dragRowClass, useListDrag } from '../shared/useListDrag'
+import { assignColumns } from '../../display/lib/transit'
 import {
-  DEFAULT_MAX_DEPARTURES, MAX_DEPARTURES_LIMIT, NUMBER_RULES, WALK_MINUTES_LIMIT, moveItem, newStop, stopTransport,
+  DEFAULT_MAX_DEPARTURES, DEFAULT_COLUMNS, MAX_COLUMNS, MAX_DEPARTURES_LIMIT, NUMBER_RULES, WALK_MINUTES_LIMIT, moveItem, newStop, stopSource, stopTransport,
 } from '../pages/viewData'
 
 const numberClass = `${fieldClass} tabular-nums`
+
+const TIME_FORMATS = [
+  { value: 'minutes', label: 'Minuten' },
+  { value: 'clock', label: 'Uhrzeit' },
+  { value: 'mixed', label: 'Gemischt' },
+]
 
 const STRIKE_TYPES = [
   { value: 'bus', label: 'Bus' },
@@ -33,7 +40,18 @@ function filterSummary(stop) {
   return parts.join(' · ')
 }
 
-function StopRow({ stop, index, drag, onChange, onFilter }) {
+function columnCount(draft) {
+  const n = Number(draft.transit_columns)
+  return Number.isInteger(n) && n >= 1 && n <= MAX_COLUMNS ? n : DEFAULT_COLUMNS
+}
+
+// Like the display: a column above the column count means the last one; 0 means a column of its own
+function disruptionColumn(draft) {
+  const n = Number(draft.transit_disruption_column)
+  return Number.isInteger(n) && n >= 1 ? Math.min(n, columnCount(draft)) : 0
+}
+
+function StopRow({ stop, index, columns, column, source, drag, onChange, onFilter }) {
   return (
     <tr {...drag.rowProps(index)} data-stop-row={stop.id} className={`border-t border-line-subtle ${dragRowClass}`}>
       <td className="py-2 align-middle">
@@ -41,7 +59,17 @@ function StopRow({ stop, index, drag, onChange, onFilter }) {
       </td>
       <td className="py-2 pr-3 align-middle">
         <div className="text-sm text-fg break-words">{stop.name}</div>
-        {filterSummary(stop) && <div className="text-xs text-fg-subtle truncate">{filterSummary(stop)}</div>}
+        <div className="text-xs text-fg-subtle truncate">{[stopTransport(stop), `Quelle: ${source}`, filterSummary(stop)].filter(Boolean).join(' · ')}</div>
+        <label className="inline-flex items-center gap-2 mt-1 text-xs whitespace-nowrap text-fg-muted cursor-pointer">
+          <input type="checkbox" aria-label={`Busse und Züge getrennt ${stop.name}`} checked={stop.split_modes !== false}
+            onChange={(e) => onChange({ split_modes: e.target.checked })} className="w-3.5 h-3.5 accent-accent" />
+          Busse und Züge getrennt
+        </label>
+      </td>
+      <td className="py-2 pr-2 align-middle">
+        <select aria-label={`Spalte ${stop.name}`} value={column} onChange={(e) => onChange({ column: Number(e.target.value) })} className={fieldClass}>
+          {Array.from({ length: columns }, (_, n) => <option key={n + 1} value={n + 1}>{n + 1}</option>)}
+        </select>
       </td>
       <td className="py-2 pr-2 align-middle">
         <div className="relative">
@@ -54,7 +82,6 @@ function StopRow({ stop, index, drag, onChange, onFilter }) {
         <input type="number" min="1" max={MAX_DEPARTURES_LIMIT} aria-label={`Max. Zeilen ${stop.name}`} value={stop.max_departures ?? DEFAULT_MAX_DEPARTURES}
           onChange={(e) => onChange({ max_departures: e.target.value === '' ? '' : Number(e.target.value) })} className={numberClass} />
       </td>
-      <td className="py-2 pr-2 align-middle text-sm text-fg-muted">{stopTransport(stop)}</td>
       <td className="py-2 align-middle text-right">
         <button type="button" onClick={onFilter} aria-label={`Filter für ${stop.name}`} title={`Filter für ${stop.name}`}
           className="p-1.5 rounded-md text-fg-muted hover:text-fg hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
@@ -65,8 +92,22 @@ function StopRow({ stop, index, drag, onChange, onFilter }) {
   )
 }
 
+function ColumnOverview({ stops, columns, disruptions }) {
+  const groups = assignColumns(stops, columns).map((group, i) => [
+    ...group.map((s) => s.name), ...(disruptions === i + 1 ? ['Störungen'] : []),
+  ])
+  const parts = groups.map((names, i) => `Spalte ${i + 1}: ${names.length ? names.join(', ') : 'leer'}`)
+  if (disruptions === 0) parts.push('Störungen: eigene Spalte rechts')
+  return (
+    <p className="text-xs text-fg-muted mt-4" data-column-overview>{parts.join(' · ')}</p>
+  )
+}
+
 function StopsSection({ draft, set }) {
   const stops = draft.transit_stops ?? []
+  const columns = columnCount(draft)
+  const placed = assignColumns(stops, columns)
+  const columnOf = (stop) => placed.findIndex((group) => group.includes(stop)) + 1
   const [adding, setAdding] = useState(false)
   const [filterIndex, setFilterIndex] = useState(null)
   const setStops = (next) => set('transit_stops', next)
@@ -81,15 +122,15 @@ function StopsSection({ draft, set }) {
             <tr className="text-xs text-fg-subtle">
               <th className="w-7 font-normal pb-2"><span className="sr-only">Reihenfolge</span></th>
               <th className="font-normal pb-2">Haltestelle</th>
+              <th className="w-20 font-normal pb-2">Spalte</th>
               <th className="w-24 font-normal pb-2">Fußweg</th>
               <th className="w-24 font-normal pb-2">Max. Zeilen</th>
-              <th className="w-24 font-normal pb-2">Verkehrsmittel</th>
               <th className="w-9 font-normal pb-2"><span className="sr-only">Filter</span></th>
             </tr>
           </thead>
           <tbody>
             {stops.map((stop, i) => (
-              <StopRow key={stop.id} stop={stop} index={i} drag={drag}
+              <StopRow key={stop.id} stop={stop} index={i} columns={columns} column={columnOf(stop)} source={stopSource(stop, draft)} drag={drag}
                 onChange={(patch) => setStops(stops.map((s, j) => (j === i ? { ...s, ...patch } : s)))}
                 onFilter={() => setFilterIndex(i)} />
             ))}
@@ -97,6 +138,10 @@ function StopsSection({ draft, set }) {
         </table>
       ) : (
         <p className="text-sm text-fg-muted">Noch keine Haltestelle. Ohne Haltestelle bleibt die Ansicht leer.</p>
+      )}
+      {stops.length > 0 && (
+        <ColumnOverview stops={stops} columns={columns}
+          disruptions={draft.transit_show_disruptions !== false ? disruptionColumn(draft) : null} />
       )}
       <div className="mt-4">
         {adding ? (
@@ -111,7 +156,7 @@ function StopsSection({ draft, set }) {
           <Button icon={Plus} onClick={() => setAdding(true)}>Haltestelle hinzufügen</Button>
         )}
         <p className="text-xs text-fg-subtle mt-2">
-          Abfahrten, die innerhalb der Fußwegzeit liegen, werden ausgeblendet. Filter und Entfernen unter ›.
+          Abfahrten, die man zu Fuß nicht mehr schafft, werden ausgeblendet. Filter und Entfernen unter ›.
         </p>
       </div>
       {filterIndex !== null && stops[filterIndex] && (
@@ -119,6 +164,26 @@ function StopsSection({ draft, set }) {
           onRemove={() => { setStops(stops.filter((_, j) => j !== filterIndex)); setFilterIndex(null) }}
           onApply={(next) => { setStops(stops.map((s, j) => (j === filterIndex ? next : s))); setFilterIndex(null) }} />
       )}
+    </Section>
+  )
+}
+
+function DisplaySection({ draft, set }) {
+  return (
+    <Section title="Darstellung" data-editor-section="transit-display">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Spalten">
+          <Segmented label="Spalten" value={columnCount(draft)} onChange={(v) => set('transit_columns', v)}
+            options={Array.from({ length: MAX_COLUMNS }, (_, n) => ({ value: n + 1, label: String(n + 1) }))} />
+        </Field>
+        <Field label="Zeitangabe" help="Minuten enthalten die Verspätung, bei der Uhrzeit steht sie daneben. Gemischt: bis 20 Minuten als Minuten, danach als Uhrzeit.">
+          <Segmented label="Zeitangabe" value={draft.transit_time_format ?? 'minutes'} onChange={(v) => set('transit_time_format', v)} options={TIME_FORMATS} />
+        </Field>
+      </div>
+      <div className="mt-4">
+        <Checkbox label="Ortsnamen kürzen" help="Lässt einen Ortsnamen weg, der vor allen Haltestellen steht."
+          checked={draft.transit_strip_city !== false} onChange={(v) => set('transit_strip_city', v)} />
+      </div>
     </Section>
   )
 }
@@ -147,9 +212,27 @@ function ManualMessages({ value, onChange }) {
   )
 }
 
+const MESSAGE_FILTERS = [
+  { value: 'all', label: 'Alle' },
+  { value: 'disruption', label: 'Störungen' },
+  { value: 'construction', label: 'Baumaßnahmen' },
+  { value: 'hidden', label: 'Ausgeblendet' },
+]
+
+function matchesFilter(message, filter, hidden) {
+  if (filter === 'hidden') return hidden.includes(message.id)
+  if (filter === 'construction') return message.kind === 'construction'
+  if (filter === 'disruption') return message.kind !== 'construction'
+  return true
+}
+
 // Hiding changes transit_disruption_hidden in the draft
 function CurrentMessages({ viewId, hidden, onChange }) {
   const [state, setState] = useState({ viewId: null, list: null, error: null })
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [expanded, setExpanded] = useState(null)
   useEffect(() => {
     if (viewId == null) return undefined
     let alive = true
@@ -161,28 +244,74 @@ function CurrentMessages({ viewId, hidden, onChange }) {
   if (viewId == null || state.viewId !== viewId) return null
   if (state.error) return <p className="text-sm text-bad">Meldungen konnten nicht geladen werden. {errorText(state.error, '')}</p>
   if (!state.list.length) return <p className="text-sm text-fg-subtle">Aktuell keine Meldungen.</p>
+  const list = state.list
+  const hiddenCount = list.filter((d) => hidden.includes(d.id)).length
+  const summary = `${list.length} ${list.length === 1 ? 'aktuelle Meldung' : 'aktuelle Meldungen'}${hiddenCount ? `, ${hiddenCount} ausgeblendet` : ''}`
+  const q = query.trim().toLowerCase()
+  const shown = list
+    .filter((d) => matchesFilter(d, filter, hidden))
+    .filter((d) => !q || [d.title, d.text, ...(d.lines ?? [])].join(' ').toLowerCase().includes(q))
   const toggle = (id) => onChange(hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id])
   return (
-    <ul className="divide-y divide-line-subtle border-y border-line-subtle" data-disruptions>
-      {state.list.map((d) => {
-        const isHidden = hidden.includes(d.id)
-        return (
-          <li key={d.id} className="flex items-start gap-3 py-2.5" data-disruption-hidden={isHidden ? '' : undefined}>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <StatusBadge label={d.kind === 'construction' ? 'Baumaßnahme' : 'Störung'} tone={d.kind === 'construction' ? 'warning' : 'danger'} />
-                {d.lines?.length > 0 && <span className="text-xs text-fg-muted truncate">{d.lines.join(', ')}</span>}
-              </div>
-              <div className={`text-sm mt-1 ${isHidden ? 'text-fg-subtle line-through' : 'text-fg'}`}>{d.title}</div>
-            </div>
-            <Button size="sm" variant="ghost" icon={isHidden ? Eye : EyeOff} onClick={() => toggle(d.id)}
-              aria-label={`${d.title} ${isHidden ? 'einblenden' : 'ausblenden'}`}>
-              {isHidden ? 'Einblenden' : 'Ausblenden'}
-            </Button>
-          </li>
-        )
-      })}
-    </ul>
+    <div data-disruptions>
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm text-fg" data-disruption-summary>{summary}</span>
+        <Button size="sm" variant="ghost" icon={open ? ChevronUp : ChevronDown} aria-expanded={open} onClick={() => setOpen(!open)}>
+          {open ? 'Meldungen schließen' : 'Meldungen anzeigen'}
+        </Button>
+      </div>
+      {open && (
+        <div className="mt-3 space-y-3">
+          <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+            <input type="search" aria-label="Meldungen durchsuchen" placeholder="Suchen, zum Beispiel RE8 oder Umleitung"
+              value={query} onChange={(e) => setQuery(e.target.value)} className={fieldClass} />
+            <Segmented label="Meldungen filtern" value={filter} onChange={setFilter} options={MESSAGE_FILTERS} />
+          </div>
+          {shown.length ? (
+            <ul className="max-h-[28rem] overflow-y-auto divide-y divide-line-subtle border-y border-line-subtle" data-disruption-list>
+              {shown.map((d) => (
+                <MessageRow key={d.id} message={d} hidden={hidden.includes(d.id)} open={expanded === d.id}
+                  onOpen={() => setExpanded(expanded === d.id ? null : d.id)} onToggle={() => toggle(d.id)} />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-fg-subtle">Keine passenden Meldungen.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MessageRow({ message: d, hidden, open, onOpen, onToggle }) {
+  return (
+    <li data-disruption-hidden={hidden ? '' : undefined}>
+      <div className="flex items-start gap-3 py-2.5">
+        <button type="button" aria-expanded={open} onClick={onOpen}
+          className="flex flex-1 min-w-0 items-start gap-2 rounded-md text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-accent">
+          <ChevronRight className={`w-4 h-4 mt-0.5 shrink-0 text-fg-subtle transition-transform ${open ? 'rotate-90' : ''}`} />
+          <span className="flex-1 min-w-0">
+            <span className="flex items-center gap-2">
+              <StatusBadge label={d.kind === 'construction' ? 'Baumaßnahme' : 'Störung'} tone={d.kind === 'construction' ? 'warning' : 'danger'} />
+              {d.lines?.length > 0 && <span className="text-xs text-fg-muted truncate">{d.lines.join(', ')}</span>}
+            </span>
+            <span className={`block text-sm mt-1 ${hidden ? 'text-fg-subtle line-through' : 'text-fg'}`}>{d.title}</span>
+          </span>
+        </button>
+        <Button size="sm" variant="ghost" icon={hidden ? Eye : EyeOff} onClick={onToggle}
+          aria-label={`${d.title} ${hidden ? 'einblenden' : 'ausblenden'}`}>
+          {hidden ? 'Einblenden' : 'Ausblenden'}
+        </Button>
+      </div>
+      {open && (
+        <div className="pb-3 pl-6 space-y-2" data-disruption-detail>
+          {d.text
+            ? <p className="text-sm text-fg-muted whitespace-pre-line">{d.text}</p>
+            : <p className="text-sm text-fg-subtle">Kein weiterer Text.</p>}
+          {d.image && <img src={d.image} alt="" className="max-h-72 w-full rounded-md bg-raised object-contain" />}
+        </div>
+      )}
+    </li>
   )
 }
 
@@ -218,7 +347,9 @@ function AdvancedSection({ draft, set }) {
 function DisruptionsSection({ draft, set, viewId }) {
   return (
     <Section title="Störungsmeldungen" data-editor-section="disruptions">
-      <div className="space-y-4">
+      <Checkbox label="Störungen anzeigen" checked={draft.transit_show_disruptions !== false} onChange={(v) => set('transit_show_disruptions', v)} />
+      {draft.transit_show_disruptions !== false && (
+      <div className="space-y-4 mt-4">
         <div className="space-y-2">
           <Checkbox label="Zug-Störungen von NAH.SH" checked={draft.transit_disruption_rail !== false} onChange={(v) => set('transit_disruption_rail', v)} />
           {draft.transit_disruption_rail !== false && (
@@ -237,13 +368,21 @@ function DisruptionsSection({ draft, set, viewId }) {
             </div>
           )}
         </div>
-        <Field label="Eigene Meldungen" help="Erscheinen vor den Meldungen der Verkehrsbetriebe in der Leiste unten.">
+        <Field label="Störungen in Spalte" help="In einer Abfahrten-Spalte stehen die Meldungen unter deren Haltestellen.">
+          <select aria-label="Störungen in Spalte" value={disruptionColumn(draft)} className={`${fieldClass} max-w-64`}
+            onChange={(e) => set('transit_disruption_column', Number(e.target.value) || null)}>
+            <option value={0}>Eigene Spalte rechts</option>
+            {Array.from({ length: columnCount(draft) }, (_, n) => <option key={n + 1} value={n + 1}>Spalte {n + 1}</option>)}
+          </select>
+        </Field>
+        <Field label="Eigene Meldungen" help="Erscheinen vor den Meldungen der Verkehrsbetriebe in der Störungsspalte.">
           <ManualMessages value={draft.transit_disruption_manual} onChange={(v) => set('transit_disruption_manual', v)} />
         </Field>
         <Field label="Aktuelle Meldungen" help="Ausgeblendete Meldungen erscheinen nicht auf dem Bildschirm. Endet eine Meldung beim Anbieter, fällt sie aus der Liste.">
           <CurrentMessages viewId={viewId} hidden={draft.transit_disruption_hidden ?? []} onChange={(v) => set('transit_disruption_hidden', v)} />
         </Field>
       </div>
+      )}
     </Section>
   )
 }
@@ -285,6 +424,7 @@ export default function DeparturesEditor({ draft, set, viewId }) {
   return (
     <>
       <StopsSection draft={draft} set={set} />
+      <DisplaySection draft={draft} set={set} />
       <DisruptionsSection draft={draft} set={set} viewId={viewId} />
       <StrikeSection draft={draft} set={set} />
       <AdvancedSection draft={draft} set={set} />

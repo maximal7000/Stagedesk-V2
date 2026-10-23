@@ -26,7 +26,7 @@ Setzt auf der Umbenennung `monitor` → `signage` auf (Spec `2026-10-22-signage-
 
 ### 1.4 Kasten links neben der Uhr
 
-Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22. Oktober · 12 °C Regen · Stand 22:11“. Wetter nur, wenn in der Ansicht eingeschaltet und ein Wetter-Schlüssel eingerichtet ist. Liefert eine Quelle gerade nichts, steht hinter dem Stand „NAH.SH nicht erreichbar“ bzw. „DB nicht erreichbar“.
+Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22. Oktober · 12 °C Regen · Stand 22:11“. Wetter nur, wenn in der Ansicht eingeschaltet und ein Wetter-Schlüssel eingerichtet ist. (Nachtrag: Kein Hinweis auf ausgefallene Quellen in der Fußzeile; auf Wunsch entfernt.)
 
 ## 2. Abfahrtszeilen
 
@@ -34,7 +34,7 @@ Zeigt **Datum, Wetter und Stand der Daten** nebeneinander, z. B. „Mittwoch, 22
 
 - Nur **eine** Zeitangabe, **vorn**, direkt dahinter die Verspätung („+6“, Warnfarbe). Die Minutenspalte rechts entfällt.
 - Einstellung pro Ansicht „Zeitangabe“: **Minuten** („3 min +6“, unter 1 min „jetzt“), **Uhrzeit** („22:08 +6“), **Gemischt** (bis 20 min Minuten, danach Uhrzeit). Standard: Minuten.
-- Gerechnet ab der **geplanten** Abfahrt; die Verspätung steht als Zahl dahinter.
+- Gerechnet ab der **geplanten** Abfahrt; die Verspätung steht als Zahl dahinter. (Nachtrag: Minuten zählen bis zur tatsächlichen Abfahrt, die Verspätung ist eingerechnet und steht nicht daneben; nur bei der Uhrzeit bleibt „+N“.)
 - Ausfall: Zeit durchgestrichen, dahinter „fällt aus“ in Rot (wie bisher).
 
 ### 2.2 Welche Abfahrten erscheinen

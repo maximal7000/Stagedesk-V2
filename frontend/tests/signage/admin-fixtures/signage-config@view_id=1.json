@@ -37,11 +37,12 @@
   "transit_source_db": true,
   "transit_source_nahsh": true,
   "transit_show_via": false,
-  "transit_show_relative": true,
+  "transit_time_format": "minutes",
+  "transit_show_disruptions": true,
+  "transit_strip_city": true,
   "transit_color_coding": true,
   "transit_highlight_next": true,
   "transit_auto_scroll": false,
-  "transit_disruption_banner": true,
   "transit_font_size": "large",
   "transit_columns": 3,
   "transit_strike_active": false,
@@ -59,7 +60,6 @@
   "transit_disruption_hidden": [
     "b2"
   ],
-  "transit_disruption_position": "bottom",
   "on_air_split_side": "right",
   "style": "dense",
   "on_air_behavior": "fullscreen",
@@ -83,7 +83,9 @@
       "filter_via": "",
       "show_bus": true,
       "show_rail": false,
-      "show_long_distance": false
+      "show_long_distance": false,
+      "column": 1,
+      "split_modes": true
     },
     {
       "id": "707004",
@@ -98,7 +100,9 @@
       "filter_via": "",
       "show_bus": true,
       "show_rail": false,
-      "show_long_distance": false
+      "show_long_distance": false,
+      "column": 2,
+      "split_modes": true
     },
     {
       "id": "707120",
@@ -110,7 +114,9 @@
       "filter_via": "",
       "show_bus": true,
       "show_rail": false,
-      "show_long_distance": false
+      "show_long_distance": false,
+      "column": 2,
+      "split_modes": true
     },
     {
       "id": "707090",
@@ -122,7 +128,9 @@
       "filter_via": "",
       "show_bus": true,
       "show_rail": false,
-      "show_long_distance": false
+      "show_long_distance": false,
+      "column": 3,
+      "split_modes": true
     },
     {
       "id": "8000237",

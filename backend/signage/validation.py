@@ -19,7 +19,7 @@ CHOICE_FIELDS = {
     'split_right': 'Split rechts',
     'pdf_mode': 'Medien-Modus',
     'transit_font_size': 'Schriftgröße der Abfahrten',
-    'transit_disruption_position': 'Position der Störungen',
+    'transit_time_format': 'Zeitangabe',
     'substitutions_source': 'Datenquelle',
     'substitutions_format': 'Ausgabe',
 }
@@ -38,6 +38,8 @@ NUMBER_FIELDS = {
 BOOL_FIELDS = {
     'transit_source_db': 'Quelle Deutsche Bahn',
     'transit_source_nahsh': 'Quelle NAH.SH',
+    'transit_show_disruptions': 'Störungen anzeigen',
+    'transit_strip_city': 'Ortsnamen weglassen',
     'transit_show_via': 'Zwischenhalte anzeigen',
 }
 WALK_MINUTES = (0, 60)
@@ -64,9 +66,18 @@ def _check_numbers(data):
         hidden = data['transit_disruption_hidden']
         if not isinstance(hidden, list) or not all(isinstance(h, str) for h in hidden):
             raise HttpError(422, "Ausgeblendete Meldungen ungültig.")
+    if 'transit_columns' in data and not (_is_int(data['transit_columns']) and 1 <= data['transit_columns'] <= 5):
+        raise HttpError(422, "Spaltenzahl 1 bis 5.")
+    column = data.get('transit_disruption_column')
+    if column is not None and not (_is_int(column) and 1 <= column <= 5):
+        raise HttpError(422, "Spalte der Störungen ungültig (1 bis 5).")
     # Left width: clamped into the range as before, but never empty
     if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
         raise HttpError(422, number_message('Breite links', 20, 80))
+
+
+# '' = automatic: DB for railway stations, NAH.SH for everything else
+STOP_SOURCES = ('', 'db', 'nahsh', 'both')
 
 
 def _check_stops(stops):
@@ -82,6 +93,13 @@ def _check_stops(stops):
                                      ('max_departures', 'Max. Zeilen', MAX_DEPARTURES)):
             if key in stop and not (_is_int(stop[key]) and lo <= stop[key] <= hi):
                 raise HttpError(422, f"Haltestelle „{name}“: {number_message(label, lo, hi)}")
+        column = stop.get('column')
+        if column is not None and not (_is_int(column) and 1 <= column <= 5):
+            raise HttpError(422, "Spalte der Haltestelle ungültig (1 bis 5).")
+        if 'split_modes' in stop and not isinstance(stop['split_modes'], bool):
+            raise HttpError(422, "„Busse und Züge getrennt“ ungültig.")
+        if 'source' in stop and stop['source'] not in STOP_SOURCES:
+            stop['source'] = ''  # unknown or legacy value: automatic
 
 
 def _check_next_day_from(data):

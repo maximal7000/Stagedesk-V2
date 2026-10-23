@@ -791,3 +791,51 @@ class LayoutColorSchemeMigrationTest(MigrationTestCase):
         self.assertNotIn('color_scheme', {f.name for f in apps.get_model('signage', 'Screen')._meta.get_fields()})
         version = apps.get_model('signage', 'DisplayViewVersion').objects.get()
         self.assertEqual(version.data, {'kind': 'info', 'style': 'ci'})
+
+
+class DeparturesLayoutMigrationTest(MigrationTestCase):
+    migrate_from = ('signage', '0046_layout_color_scheme')
+    migrate_to = ('signage', '0047_departures_layout')
+
+    def setUpBeforeMigration(self, apps):
+        View = apps.get_model('signage', 'DisplayView')
+        Version = apps.get_model('signage', 'DisplayViewVersion')
+        _make_view(View, 'rel', transit_show_relative=True, transit_disruption_banner=True, transit_columns=2)
+        old = _make_view(View, 'abs', transit_show_relative=False, transit_disruption_banner=False,
+                         transit_disruption_position='column')
+        Version.objects.create(view=old, data={'kind': 'departures', 'transit_show_relative': False,
+                                               'transit_disruption_banner': False,
+                                               'transit_disruption_position': 'column', 'transit_columns': 2})
+
+    def test_0047_forward(self):
+        View = self.apps.get_model('signage', 'DisplayView')
+        rows = {v.slug: (v.transit_time_format, v.transit_show_disruptions, v.transit_strip_city, v.transit_columns)
+                for v in View.objects.all()}
+        self.assertEqual(rows, {'rel': ('minutes', True, True, 4), 'abs': ('clock', False, True, 4)})
+        names = {f.name for f in View._meta.get_fields()}
+        self.assertFalse({'transit_show_relative', 'transit_disruption_banner',
+                          'transit_disruption_position'} & names)
+        version = self.apps.get_model('signage', 'DisplayViewVersion').objects.get()
+        self.assertEqual(version.data, {'kind': 'departures', 'transit_time_format': 'clock',
+                                        'transit_show_disruptions': False})
+
+    def test_0047_backward(self):
+        View = self.apps.get_model('signage', 'DisplayView')
+        mixed = View.objects.get(slug='rel')
+        mixed.transit_time_format, mixed.transit_columns = 'mixed', 5
+        mixed.transit_cache = {'stations': [], 'sources': {'db': 'ok'}}
+        mixed.transit_cache_at = '2026-10-22T08:00Z'
+        mixed.save()
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        rows = {v.slug: (v.transit_show_relative, v.transit_disruption_banner, v.transit_disruption_position,
+                         v.transit_columns) for v in apps.get_model('signage', 'DisplayView').objects.all()}
+        self.assertEqual(rows, {'rel': (True, True, 'bottom', 5), 'abs': (False, False, 'bottom', 4)})
+        caches = [(v.transit_cache, v.transit_cache_at) for v in apps.get_model('signage', 'DisplayView').objects.all()]
+        self.assertEqual(caches, [(None, None), (None, None)])
+        version = apps.get_model('signage', 'DisplayViewVersion').objects.get()
+        self.assertEqual(version.data, {'kind': 'departures', 'transit_show_relative': False,
+                                        'transit_disruption_banner': False,
+                                        'transit_disruption_position': 'bottom'})

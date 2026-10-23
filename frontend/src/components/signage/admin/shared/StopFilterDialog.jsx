@@ -5,10 +5,11 @@ import { Trash2 } from 'lucide-react'
 import { Button } from '../../../ui'
 import { Checkbox, Field, ListInput, fieldClass } from './form'
 import StopSearch from './StopSearch'
+import { STOP_SOURCES } from '../pages/viewData'
 
 export default function StopFilterDialog({ stop, onApply, onCancel, onRemove }) {
   const titleId = useId()
-  const ids = { lines: useId(), direction: useId(), via: useId() }
+  const ids = { lines: useId(), direction: useId(), via: useId(), source: useId() }
   const [draft, setDraft] = useState(() => ({ ...stop }))
   const set = (key, value) => setDraft((d) => ({ ...d, [key]: value }))
   const onCancelRef = useRef(onCancel)
@@ -53,6 +54,12 @@ export default function StopFilterDialog({ stop, onApply, onCancel, onRemove }) 
               <Checkbox label="Zug (Regionalverkehr, S-Bahn)" checked={draft.show_rail !== false} onChange={(v) => set('show_rail', v)} />
               <Checkbox label="Fernzug (ICE, IC)" checked={draft.show_long_distance !== false} onChange={(v) => set('show_long_distance', v)} />
             </div>
+          </Field>
+          <Field label="Quelle" htmlFor={ids.source}
+            help="Automatisch: Bahnhöfe zuerst von der Deutschen Bahn (mit Gleisen), sonst NAH.SH. Beide: Abfahrten aus beiden Quellen zusammengeführt.">
+            <select id={ids.source} value={draft.source ?? ''} onChange={(e) => set('source', e.target.value)} className={`${fieldClass} max-w-64`}>
+              {STOP_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
           </Field>
           <Field label="Zusatz-Haltestelle" help="Ihre Abfahrten erscheinen in derselben Liste, zum Beispiel von der anderen Straßenseite.">
             {draft.extra_id ? (

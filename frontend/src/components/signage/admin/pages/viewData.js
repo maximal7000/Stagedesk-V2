@@ -46,7 +46,10 @@ export const NUMBER_RULES = {
   pdf_static_page: { label: 'Feste Seite', min: 1, max: 999 },
   split_left_percent: { label: 'Breite links', min: 20, max: 80 },
   transit_duration: { label: 'Vorausschau', min: 10, max: 240 },
+  transit_columns: { label: 'Spalten', min: 1, max: 5 },
 }
+export const DEFAULT_COLUMNS = 4
+export const MAX_COLUMNS = 5
 export const WALK_MINUTES_LIMIT = 60
 export const MAX_DEPARTURES_LIMIT = 50
 
@@ -59,7 +62,7 @@ export const EDITABLE_FIELDS = [
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
-  'transit_duration', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
+  'transit_duration', 'transit_columns', 'transit_time_format', 'transit_show_disruptions', 'transit_disruption_column', 'transit_strip_city', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',
   'transit_strike_active', 'transit_strike_text', 'transit_strike_lines', 'transit_strike_types',
   'substitutions_source', 'substitutions_format', 'substitutions_custom_format', 'substitutions_show_absences',
   'substitutions_show_exams', 'substitutions_next_day_from', 'webuntis_url', 'webuntis_url_next_day', 'webuntis_link_id', 'webuntis_link_next_day_id',
@@ -70,7 +73,7 @@ export const EDITABLE_FIELDS = [
   'rotation_items',
 ]
 
-const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'transit_duration'])
+const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'transit_duration', 'transit_columns'])
 const TEXT_FIELDS = new Set(['name', 'substitutions_custom_format', 'weather_city', 'qr_code_url', 'qr_code_label', 'transit_strike_text',
   'webuntis_url', 'webuntis_url_next_day', 'pdf_pages', 'custom_countdown_name'])
 const LINK_FIELDS = new Set(['webuntis_link_id', 'webuntis_link_next_day_id'])
@@ -124,6 +127,7 @@ function normalizeField(key, value) {
   if (LIST_FIELDS.has(key)) return trimList(value)
   if (LINK_FIELDS.has(key)) return value ? Number(value) : null
   if (key === 'custom_countdown_date') return value || null
+  if (key === 'transit_disruption_column') return value ? Number(value) : null
   if (key === 'transit_stops') return (value ?? []).map(normalizeStop)
   if (key === 'rotation_items') {
     return (value ?? [])
@@ -221,11 +225,36 @@ export function usedOn(viewId, screens, now = new Date()) {
   return out
 }
 
+// A station found only at NAH.SH stays there; railway stations keep "automatic" (DB with NAH.SH as fallback).
 export function newStop(result) {
   return {
     id: result.id, name: result.name, walk_minutes: 0, max_departures: DEFAULT_MAX_DEPARTURES, filter_lines: [],
-    filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true,
+    filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
+    source: result.source === 'nahsh' ? 'nahsh' : '',
   }
+}
+
+export const STOP_SOURCES = [
+  { value: '', label: 'Automatisch' },
+  { value: 'db', label: 'Deutsche Bahn' },
+  { value: 'nahsh', label: 'NAH.SH' },
+  { value: 'both', label: 'Beide (zusammengeführt)' },
+]
+
+// Same rule as the backend (transit/departures.py): DB Timetables knows only railway stations (EVA 80xxxxx).
+export const isRailwayStation = (id) => /^80\d{5}$/.test(String(id ?? '').trim())
+
+// Which source the backend actually asks for this stop; the view-wide switches apply only to "automatic".
+export function stopSource(stop, draft) {
+  if (stop.source === 'db') return 'DB'
+  if (stop.source === 'nahsh') return 'NAH.SH'
+  if (stop.source === 'both') return 'DB und NAH.SH'
+  const db = draft.transit_source_db !== false && isRailwayStation(stop.id)
+  const nahsh = draft.transit_source_nahsh !== false
+  if (db && nahsh) return 'DB, Ersatz NAH.SH'
+  if (db) return 'DB'
+  if (nahsh) return 'NAH.SH'
+  return 'keine'
 }
 
 export function stopTransport(stop) {

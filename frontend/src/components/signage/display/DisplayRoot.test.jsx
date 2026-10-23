@@ -55,6 +55,35 @@ describe('DisplayRoot', () => {
     expect(el.textContent).toContain('Stand')
   })
 
+  it('Abfahrten: Wetter im Footer-Kasten, die Uhr wiederholt es nicht', () => {
+    const departures = {
+      id: 2, kind: 'departures', layout: 'wide', page_seconds: 15, show_weather: true,
+      weather: { temperature: 12, description: 'Regen' }, qr: null,
+      data: { stations: [], disruptions: [], columns: 4, time_format: 'minutes', show_disruptions: true, strip_city: true,
+        status: { fetched_at: null, sources: {} } },
+    }
+    const el = render({ payload: { screen, view: departures, mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-clock="box"]').textContent).not.toContain('Regen')
+    expect([...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)).toContain('12 °C Regen')
+  })
+
+  it('geteilt: zeigt eine Seite Abfahrten, steht das Wetter nur im Footer-Kasten', () => {
+    const departures = { stations: [], disruptions: [], columns: 4, time_format: 'minutes', show_disruptions: true,
+      strip_city: true, status: { fetched_at: null, sources: {} } }
+    const split = (right) => ({
+      id: 3, kind: 'split', layout: 'wide', page_seconds: 15, show_weather: true,
+      weather: { temperature: 12, description: 'Regen' }, qr: null,
+      data: { left: { kind: 'exam', data: null }, right, left_percent: 50 },
+    })
+    let el = render({ payload: { screen, view: split({ kind: 'departures', data: departures }), mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-clock="box"]').textContent).not.toContain('Regen')
+    expect([...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)).toContain('12 °C Regen')
+    act(() => root.unmount())
+
+    el = render({ payload: { screen, view: split({ kind: 'exam', data: null }), mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-clock="box"]').textContent).toContain('Regen')
+  })
+
   it('wechselt das Schema ohne Neuladen', () => {
     const el = render({ payload: { screen, view, mode: null, scheme: 'light' }, state: 'ok', lastOkAt })
     const before = el.querySelector('.d-root')

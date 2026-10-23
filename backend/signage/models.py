@@ -198,18 +198,25 @@ class DisplayView(models.Model):
     transit_source_db = models.BooleanField(default=True)
     transit_source_nahsh = models.BooleanField(default=True)
     transit_show_via = models.BooleanField(default=False, help_text="Zwischenhalte anzeigen")
-    transit_show_relative = models.BooleanField(default=True, help_text="Relative Zeit (in X min) anzeigen")
+    TRANSIT_TIME_FORMAT_CHOICES = [
+        ('minutes', 'Minuten'),
+        ('clock', 'Uhrzeit'),
+        ('mixed', 'Gemischt'),
+    ]
+    transit_time_format = models.CharField(max_length=10, choices=TRANSIT_TIME_FORMAT_CHOICES, default='minutes')
     transit_color_coding = models.BooleanField(default=True, help_text="Farbcodierte Zeitanzeige")
     transit_highlight_next = models.BooleanField(default=True, help_text="Nächste Abfahrt hervorheben")
     transit_auto_scroll = models.BooleanField(default=False, help_text="Auto-Scroll bei vielen Abfahrten")
-    transit_disruption_banner = models.BooleanField(default=True, help_text="Störungsbanner anzeigen")
+    transit_show_disruptions = models.BooleanField(default=True)
+    transit_strip_city = models.BooleanField(default=True, help_text="Ortsnamen vor dem Haltestellennamen weglassen")
+    transit_disruption_column = models.IntegerField(null=True, blank=True, help_text="Störungen in Abfahrten-Spalte 1-5, leer: eigene Spalte rechts")
     TRANSIT_FONT_SIZE_CHOICES = [
         ('normal', 'Normal'),
         ('large', 'Groß (HD)'),
         ('4k', 'Sehr groß (4K)'),
     ]
     transit_font_size = models.CharField(max_length=10, choices=TRANSIT_FONT_SIZE_CHOICES, default='large', help_text="Schriftgröße für Abfahrtsanzeige")
-    transit_columns = models.IntegerField(default=3, help_text="Anzahl Spalten im Layout (1-4)")
+    transit_columns = models.IntegerField(default=4, help_text="Anzahl Spalten im Layout (1-5)")
 
     transit_strike_active = models.BooleanField(default=False, help_text="Streik-Modus aktivieren")
     transit_strike_text = models.CharField(max_length=300, default='', blank=True, help_text="Streik-Banner Text")
@@ -231,12 +238,6 @@ class DisplayView(models.Model):
     transit_disruption_cache_at = models.DateTimeField(null=True, blank=True)
     transit_disruption_hidden = models.JSONField(default=list, blank=True,
         help_text="IDs manuell ausgeblendeter Störungen (auto-bereinigt wenn Meldung verschwindet)")
-    TRANSIT_DISRUPTION_POSITION_CHOICES = [
-        ('bottom', 'Unten (Streifen)'),
-        ('column', 'Eigene Spalte'),
-    ]
-    transit_disruption_position = models.CharField(max_length=10, choices=TRANSIT_DISRUPTION_POSITION_CHOICES,
-        default='bottom', help_text="Störungs-Anzeige: 'bottom' (Streifen) oder 'column' (eigene Spalte)")
 
     # On air: behaviour per view; status and text are global in MonitorSettings
     SIDE_CHOICES = [('left', 'Links'), ('right', 'Rechts')]

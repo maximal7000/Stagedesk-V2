@@ -145,7 +145,7 @@ function GeneralSection({ draft, set, kindProblem }) {
           </div>
         </Field>
         <div className="sm:col-span-2 space-y-3">
-          <Checkbox label="Wetter in der Uhr-Box" checked={draft.show_weather} onChange={(v) => set('show_weather', v)} />
+          <Checkbox label="Wetter anzeigen" help={weatherHelp(draft)} checked={draft.show_weather} onChange={(v) => set('show_weather', v)} />
           {draft.show_weather && (
             <div className="ml-6.5 max-w-sm">
               <label htmlFor={ids.city} className="sr-only">Ort für das Wetter</label>
@@ -375,6 +375,12 @@ function EditView({ viewId }) {
       )}
     </div>
   )
+}
+
+function weatherHelp(draft) {
+  const departures = draft.kind === 'departures'
+    || (draft.kind === 'split' && [draft.split_left, draft.split_right].includes('departures'))
+  return departures ? 'Erscheint unten neben dem Datum.' : 'Erscheint in der Uhr-Box.'
 }
 
 export default function ViewEdit() {

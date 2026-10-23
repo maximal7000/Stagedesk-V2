@@ -1,5 +1,7 @@
 """build_payload() is the only place that defines the response shape. The data sources (weather,
-transit, disruptions) cache on the view; a preview (draft) view never writes to the database."""
+transit, disruptions) cache on the view; a preview (draft) view never writes to the database and
+caches its fetches by their inputs instead, so editing display-only settings does not refetch."""
+import hashlib
 import json
 import logging
 import re
@@ -19,9 +21,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_MAX_DEPARTURES = 10
 PREVIEW_CACHE_PREFIX = 'signage:preview:'
 PREVIEW_SECONDS = 600
+PREVIEW_TRANSIT_SECONDS = 60
+PREVIEW_DISRUPTION_SECONDS = 300
+TRANSIT_LOCK_SECONDS = 30
+# Fetched per stop regardless of the rows shown: the walk filter runs later and drops the first ones
+FETCH_PER_STOP = 50
+# A stop whose source failed keeps its previous departures for this long
+KEEP_FAILED_SECONDS = 600
 _PREVIEW_TOKEN_RE = re.compile(r'^[A-Za-z0-9_-]{32}$')
 _NULLABLE_DRAFT_FIELDS = {'webuntis_link_id', 'webuntis_link_next_day_id', 'custom_countdown_date',
-                          'substitutions_show_exams'}
+                          'substitutions_show_exams', 'transit_disruption_column'}
 
 
 def _iso(value):
@@ -79,6 +88,73 @@ def _fetch_weather(view):
         return view.weather_cache or None
 
 
+# Applied per request in _departures_data, so changing them needs no new fetch
+_STOP_DISPLAY_KEYS = {'walk_minutes', 'column', 'split_modes', 'max_departures'}
+
+
+def transit_fetch_args(view):
+    return {
+        'stops': [{k: v for k, v in s.items() if k not in _STOP_DISPLAY_KEYS}
+                  for s in (view.transit_stops or []) if isinstance(s, dict)],
+        'duration': view.transit_duration,
+        'max_per_stop': max(view.transit_max_departures or 0, FETCH_PER_STOP),
+        'show_bus': view.transit_show_bus,
+        'show_rail': view.transit_show_rail,
+        'show_long_distance': view.transit_show_long_distance,
+        'use_db': view.transit_source_db,
+        'use_nahsh': view.transit_source_nahsh,
+        'show_via': view.transit_show_via,
+        'strike_lines': view.transit_strike_lines if view.transit_strike_active else None,
+        'strike_types': view.transit_strike_types if view.transit_strike_active else None,
+    }
+
+
+def _remote_disruption_args(view):
+    return {
+        'rail': bool(view.transit_disruption_rail), 'rail_lines': view.transit_disruption_rail_lines or None,
+        'bus': bool(view.transit_disruption_bus), 'bus_lines': view.transit_disruption_bus_lines or None,
+    }
+
+
+def disruption_cache_args(view):
+    """The saved cache holds the manual messages too."""
+    return {**_remote_disruption_args(view), 'manual': view.transit_disruption_manual or []}
+
+
+def transit_lock_key(view):
+    return f'signage:transit-fetch:{view.pk}'
+
+
+def _preview_key(kind, args):
+    digest = hashlib.sha256(json.dumps(args, sort_keys=True, default=str).encode()).hexdigest()
+    return f'signage:preview-{kind}:{digest}'
+
+
+def _keep_failed_stations(result, previous, previous_at):
+    """A stop whose source failed this time (timeouts happen) keeps its recent departures."""
+    if not previous or not previous_at or (timezone.now() - previous_at).total_seconds() > KEEP_FAILED_SECONDS:
+        return result
+    before = {s.get('station_id'): s for s in (_as_transit(previous) or {}).get('stations', [])
+              if s.get('departures') and not s.get('error')}
+    stations = []
+    for station in result.get('stations') or []:
+        old = before.get(station.get('station_id'))
+        if station.get('error') and not station.get('departures') and old:
+            station = {**station, 'departures': old['departures']}
+            station.pop('error')
+        stations.append(station)
+    return {**result, 'stations': stations}
+
+
+def _as_transit(cache):
+    """A cache saved before the sources field existed is a plain list of stations."""
+    if isinstance(cache, list):
+        return {'stations': cache, 'sources': {}}
+    if isinstance(cache, dict):
+        return {'stations': cache.get('stations') or [], 'sources': cache.get('sources') or {}}
+    return None
+
+
 def _fetch_transit(view):
     if not _wants_transit(view):
         return None
@@ -89,43 +165,45 @@ def _fetch_transit(view):
         age = (timezone.now() - view.transit_cache_at).total_seconds()
         # Even with an empty cache wait at least 60 s (no API spam on errors)
         if age < 60:
-            return view.transit_cache
+            return _as_transit(view.transit_cache)
 
+    args = transit_fetch_args(view)
+    if getattr(view, '_preview', False):
+        key = _preview_key('transit', args)
+        result = cache.get(key)
+        if result is None:
+            try:
+                result = _keep_failed_stations(transit.fetch_departures(**args), view.transit_cache,
+                                               view.transit_cache_at)
+            except Exception as e:
+                logger.warning(f"ÖPNV-Fehler: {e}")
+                result = {'stations': [], 'sources': {}}
+            cache.set(key, result, PREVIEW_TRANSIT_SECONDS)
+        return _as_transit(result)
+
+    # One fetch per view at a time: after a save every screen and the preview ask at once, and the
+    # DB API answers a burst with rate-limit errors. The others get the previous data meanwhile.
+    lock = transit_lock_key(view)
+    if not cache.add(lock, 1, TRANSIT_LOCK_SECONDS):
+        return _as_transit(view.transit_cache) if view.transit_cache else None
     try:
-        result = transit.fetch_departures(
-            stops=view.transit_stops,
-            duration=view.transit_duration,
-            max_per_stop=view.transit_max_departures,
-            show_bus=view.transit_show_bus,
-            show_rail=view.transit_show_rail,
-            show_long_distance=view.transit_show_long_distance,
-            use_db=view.transit_source_db,
-            use_nahsh=view.transit_source_nahsh,
-            show_via=view.transit_show_via,
-            strike_lines=view.transit_strike_lines if view.transit_strike_active else None,
-            strike_types=view.transit_strike_types if view.transit_strike_active else None,
-        )
+        result = _keep_failed_stations(transit.fetch_departures(**args), view.transit_cache, view.transit_cache_at)
         view.transit_cache = result
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache', 'transit_cache_at'])
-        return result
+        return _as_transit(result)
     except Exception as e:
         logger.warning(f"ÖPNV-Fehler: {e}")
         # Set the timestamp on errors too: next retry in 60 s at the earliest
         view.transit_cache_at = timezone.now()
         _store_cache(view, ['transit_cache_at'])
-        return view.transit_cache or None
+        return _as_transit(view.transit_cache) if view.transit_cache else None
+    finally:
+        cache.delete(lock)
 
 
-def _fetch_disruptions(view):
-    if not _wants_transit(view):
-        return []
-    if not (view.transit_disruption_rail or view.transit_disruption_bus or (view.transit_disruption_manual or [])):
-        return []
-    if view.transit_disruption_cache_at:
-        age = (timezone.now() - view.transit_disruption_cache_at).total_seconds()
-        if age < 300:
-            return view.transit_disruption_cache or []
+def _remote_disruptions(view):
+    """(messages, whether every active source delivered)."""
     result = []
     all_sources_ok = True
     try:
@@ -140,6 +218,27 @@ def _fetch_disruptions(view):
     except Exception as e:
         all_sources_ok = False
         logger.warning(f"Störungs-Fehler: {e}")
+    return result, all_sources_ok
+
+
+def _fetch_disruptions(view):
+    if not _wants_transit(view):
+        return []
+    if not (view.transit_disruption_rail or view.transit_disruption_bus or (view.transit_disruption_manual or [])):
+        return []
+    if view.transit_disruption_cache_at:
+        age = (timezone.now() - view.transit_disruption_cache_at).total_seconds()
+        if age < 300:
+            return view.transit_disruption_cache or []
+    if getattr(view, '_preview', False):
+        key = _preview_key('disruptions', _remote_disruption_args(view))
+        remote = cache.get(key)
+        if remote is None:
+            remote = _remote_disruptions(view)
+            cache.set(key, remote, PREVIEW_DISRUPTION_SECONDS)
+    else:
+        remote = _remote_disruptions(view)
+    result, all_sources_ok = list(remote[0]), remote[1]
     for m in (view.transit_disruption_manual or []):
         if isinstance(m, dict) and (m.get('title') or m.get('text')):
             result.insert(0, {
@@ -176,19 +275,67 @@ def _max_departures(stop):
     return value
 
 
-def _departures_data(view):
+BUS_KINDS = ('bus', 'faehre', 'taxi')
+
+
+def _limit_departures(station, limit):
+    """With buses and trains shown separately each half gets its own limit, so buses do not crowd out
+    the trains."""
+    departures = [d for d in station.get('departures') or [] if isinstance(d, dict)]
+    if station.get('split_modes') is False:
+        return departures[:limit]
+    counts = {True: 0, False: 0}
+    kept = []
+    for dep in departures:
+        bus = dep.get('kind_icon') in BUS_KINDS
+        if counts[bus] < limit:
+            counts[bus] += 1
+            kept.append(dep)
+    return kept
+
+
+def _int_or(value, default):
+    return value if isinstance(value, int) and not isinstance(value, bool) else default
+
+
+def _departures_data(view, now):
     stops = {s.get('id'): s for s in (view.transit_stops or []) if isinstance(s, dict)}
+    fetched = _fetch_transit(view) or {}
+    local_now = timezone.localtime(now, transit.TIMEZONE)
     stations = []
-    for station in _fetch_transit(view) or []:
-        limit = _max_departures(stops.get(station.get('station_id'), {}))
+    for station in fetched.get('stations', []):
+        stop = stops.get(station.get('station_id'), {})
+        limit = _max_departures(stop)
+        walk = max(0, _int_or(stop.get('walk_minutes'), 0))
         # Copy: the cache on the view stays unchanged
-        entry = dict(station)
-        entry['departures'] = list(station.get('departures') or [])[:limit]
+        entry = {k: v for k, v in station.items() if k != 'walk_minutes'}
+        entry['column'] = _int_or(stop.get('column'), None)
+        entry['split_modes'] = stop.get('split_modes') is not False
+        entry['departures'] = [d for d in station.get('departures') or []
+                               if isinstance(d, dict) and transit.departure_visible(d, local_now, walk)]
+        if view.transit_time_format != 'clock':
+            # Minutes count to the actual departure, so a late trip moves down the list
+            entry['departures'].sort(key=lambda d: transit.minutes_until(d, local_now) or 0)
+        entry['departures'] = _limit_departures(entry, limit)
         entry['max_departures'] = limit
+        if walk:
+            entry['walk_minutes'] = walk
         stations.append(entry)
-    hidden = set(view.transit_disruption_hidden or [])
-    disruptions = [s for s in _fetch_disruptions(view) if s.get('id') not in hidden]
-    return {'stations': stations, 'disruptions': disruptions}
+    disruptions = []
+    if view.transit_show_disruptions:
+        hidden = set(view.transit_disruption_hidden or [])
+        disruptions = [s for s in _fetch_disruptions(view) if s.get('id') not in hidden]
+    fetched_at = view.transit_cache_at.isoformat() if view.transit_cache_at else None
+    return {
+        'stations': stations,
+        'disruptions': disruptions,
+        'columns': view.transit_columns,
+        'time_format': view.transit_time_format,
+        'show_disruptions': view.transit_show_disruptions,
+        'strip_city': view.transit_strip_city,
+        'disruption_column': view.transit_disruption_column,
+        'status': {'fetched_at': fetched_at, 'sources': fetched.get('sources') or {}},
+    }
 
 
 def _substitutions_data(view, key_ok, now, compact=False, single_day=False):
@@ -205,7 +352,7 @@ def _split_side(view, content, key_ok, now):
         return {'kind': 'substitutions',
                 'data': _substitutions_data(view, key_ok, now, compact=True, single_day=True)}
     if content == 'departures':
-        return {'kind': 'departures', 'data': _departures_data(view)}
+        return {'kind': 'departures', 'data': _departures_data(view, now)}
     return {'kind': content, 'data': None}
 
 
@@ -324,7 +471,7 @@ def _rotation_data(view, key_ok, now, single_day):
 
 def _view_data(view, key_ok, now, single_day):
     if view.kind == 'departures':
-        return _departures_data(view)
+        return _departures_data(view, now)
     if view.kind == 'substitutions':
         return _substitutions_data(view, key_ok, now, single_day=single_day)
     if view.kind == 'split':
@@ -423,13 +570,15 @@ def draft_view(draft: dict) -> DisplayView:
         view = DisplayView.objects.filter(id=view_id, deleted_at__isnull=True).first()
     if view is None:
         view = DisplayView(name='Vorschau')
+    transit_before, disruptions_before = transit_fetch_args(view), disruption_cache_args(view)
     for key, value in draft.items():
         if value is None and key not in _NULLABLE_DRAFT_FIELDS:
             continue
         setattr(view, key, value)
-    if any(key.startswith('transit_') for key in draft):
-        # changed stops or filters: do not show the saved view's cache
+    # Changed stops or filters: the saved view's cache does not fit the draft
+    if transit_fetch_args(view) != transit_before:
         view.transit_cache_at = None
+    if disruption_cache_args(view) != disruptions_before:
         view.transit_disruption_cache_at = None
     view._preview = True
     return view
