@@ -15,6 +15,7 @@ vi.mock('../shared/api', () => ({
   getDevices: vi.fn(),
   getScreens: vi.fn(),
   getEmergencyTemplates: vi.fn(),
+  getView: vi.fn(),
   updateEmergencyTemplate: vi.fn(),
   createEmergencyTemplate: vi.fn(),
   deleteEmergencyTemplate: vi.fn(),
@@ -52,6 +53,7 @@ beforeEach(() => {
   perms.clear()
   vi.clearAllMocks()
   api.getSettings.mockResolvedValue(settings())
+  api.getView.mockResolvedValue({ id: 1, api_token: 'abc123token' })
   api.getDevices.mockResolvedValue([{ id: null, screen_id: 4, legacy: true }])
   api.getScreens.mockResolvedValue([{ id: 4, name: 'Mensa' }, { id: 5, name: 'Aula' }])
   api.getEmergencyTemplates.mockResolvedValue([
@@ -65,6 +67,26 @@ afterEach(() => {
 })
 
 describe('Settings', () => {
+  it('Externe Steuerung: nur mit signage.setup, Token verdeckt bis Anzeigen', async () => {
+    perms.add('signage.setup')
+    await mount()
+    const section = container.querySelector('[data-section="external-control"]')
+    expect(section.querySelector('h2, h3')?.textContent ?? section.textContent).toContain('Externe Steuerung')
+    expect(section.textContent).toContain(`${window.location.origin}/api/signage/on-air`)
+    expect(section.textContent).toContain(`${window.location.origin}/api/signage/emergency`)
+    expect(section.textContent).not.toContain('abc123token')
+    await click(button('Anzeigen'))
+    expect(section.textContent).toContain('abc123token')
+    act(() => root.unmount())
+    container.remove()
+    perms.clear()
+    perms.add('signage.onair')
+    api.getView.mockClear()
+    await mount()
+    expect(container.querySelector('[data-section="external-control"]')).toBeNull()
+    expect(api.getView).not.toHaveBeenCalled()
+  })
+
   it('Passwort: gespeichert als Platzhalter, leer bleibt unverändert, nur geänderte Felder gehen raus', async () => {
     perms.add('signage.setup')
     api.updateSettings.mockResolvedValue({ ...settings(), webuntis_school: 'neu' })
@@ -184,8 +206,11 @@ describe('Settings', () => {
     await mount()
     const cmd = `curl -fsSL ${window.location.origin}/api/signage/agent/install.sh | sudo bash`
     expect(container.querySelector('[data-install-command]').textContent).toBe(cmd)
-    await click(button('Kopieren'))
+    await click([...container.querySelectorAll('[data-section="devices"] button')].find((b) => b.textContent.trim() === 'Kopieren'))
     expect(writeText).toHaveBeenCalledWith(cmd)
+    // the hidden token is copied in full
+    await click(container.querySelector('button[aria-label="Token kopieren"]'))
+    expect(writeText).toHaveBeenLastCalledWith('abc123token')
   })
 
   it('Farbschema: Zeitfelder nur bei Zeitplan, Tageslicht-Text mit Werten, nur Geändertes gesendet', async () => {
