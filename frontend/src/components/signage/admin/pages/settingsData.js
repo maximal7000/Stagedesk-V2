@@ -141,3 +141,11 @@ export function legacyScreenNames(devices, screens) {
 }
 
 export const installCommand = (origin) => `curl -fsSL ${origin}/api/signage/agent/install.sh | sudo bash`
+
+// External on-air and emergency switching (POST with the X-Monitor-Token header)
+export const externalUrls = (origin) => ({
+  onAir: `${origin}/api/signage/on-air`,
+  emergency: `${origin}/api/signage/emergency`,
+})
+export const onAirExample = (origin, token) =>
+  `curl -X POST ${externalUrls(origin).onAir} -H "X-Monitor-Token: ${token}" -H "Content-Type: application/json" -d '{"on_air": true}'`

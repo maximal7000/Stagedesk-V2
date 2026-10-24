@@ -2,7 +2,7 @@
 // weather need signage.setup, on-air signage.onair, emergency templates signage.emergency.
 // Credentials are write-only: an empty field keeps the stored value.
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
-import { Copy, Plug, Plus, Trash2 } from 'lucide-react'
+import { Copy, Eye, EyeOff, Plug, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, Button } from '../../../ui'
 import { useUser } from '../../../../contexts/UserContext'
@@ -19,6 +19,7 @@ import { moveItem } from './viewData'
 import {
   COLOR_SCHEME_OPTIONS, ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SCHEME_FIELDS, SETUP_FIELDS,
   DEVICE_NUMBER_FIELDS, changedIn, checkSentence, deviceProblems, installCommand, legacyScreenNames, settingsPayload, sourceSentence, templateChangeCount, templateChanges, templateProblems,
+  externalUrls, onAirExample,
 } from './settingsData'
 import * as api from '../shared/api'
 
@@ -191,6 +192,70 @@ function OnAirSection({ draft, set, disabled, readOnly }) {
         <Checkbox label="Uhr anzeigen" help="Zeigt die aktuelle Uhrzeit unter dem Schild." checked={draft.on_air_show_clock} disabled={disabled}
           onChange={(v) => set('on_air_show_clock', v)} />
       </div>
+    </Section>
+  )
+}
+
+async function copyText(text, done) {
+  try {
+    await navigator.clipboard.writeText(text)
+    toast.success(done)
+  } catch {
+    toast.error('Kopieren nicht möglich.')
+  }
+}
+
+function CopyRow({ label, value, shown, copyValue = value, done, children }) {
+  return (
+    <div>
+      <div className="text-sm font-medium text-fg mb-1.5">{label}</div>
+      <div className="flex flex-wrap items-center gap-2">
+        <code className="flex-1 min-w-0 break-all bg-raised border border-line rounded-md px-3 py-2 text-xs font-mono text-fg">{shown ?? value}</code>
+        {children}
+        <Button icon={Copy} onClick={() => copyText(copyValue, done)} aria-label={`${label} kopieren`}>Kopieren</Button>
+      </div>
+    </div>
+  )
+}
+
+// Only with signage.setup: the token switches on-air and emergency without a login
+function ExternalControlSection() {
+  const [state, setState] = useState({ token: null, error: null })
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    let alive = true
+    api.getView()
+      .then((view) => { if (alive) setState({ token: view.api_token || '', error: null }) })
+      .catch((error) => { if (alive) setState({ token: null, error }) })
+    return () => { alive = false }
+  }, [])
+  const origin = window.location.origin
+  const urls = externalUrls(origin)
+  const { token, error } = state
+  return (
+    <Section title="Externe Steuerung" data-section="external-control">
+      <p className="text-sm text-fg-muted mb-4">
+        Ein Programm wie Bitfocus Companion schaltet On-Air und den Notfall per POST-Anfrage an diese Adressen,
+        mit dem Token im Header <code className="font-mono text-xs">X-Monitor-Token</code>.
+      </p>
+      {error ? (
+        <p className="text-sm text-bad">Token konnte nicht geladen werden. {errorText(error, '')}</p>
+      ) : token == null ? null : (
+        <div className="space-y-4" data-external-control>
+          <CopyRow label="On-Air" value={urls.onAir} done="Adresse kopiert">
+            <span className="text-xs text-fg-subtle">{'{"on_air": true}'} oder false</span>
+          </CopyRow>
+          <CopyRow label="Notfall" value={urls.emergency} done="Adresse kopiert">
+            <span className="text-xs text-fg-subtle">{'{"active": true, "text": "…"}'}</span>
+          </CopyRow>
+          <CopyRow label="Token" value={token} shown={visible ? token : '•'.repeat(Math.min(token.length, 32))} done="Token kopiert">
+            <Button variant="ghost" icon={visible ? EyeOff : Eye} onClick={() => setVisible(!visible)}>{visible ? 'Verbergen' : 'Anzeigen'}</Button>
+          </CopyRow>
+          <CopyRow label="Beispiel" value={onAirExample(origin, visible ? token : '<Token>')} copyValue={onAirExample(origin, token)}
+            done="Beispiel kopiert" />
+          <p className="text-xs text-fg-subtle">Wer den Token kennt, kann On-Air und den Notfall auf allen Bildschirmen schalten. Nicht weitergeben.</p>
+        </div>
+      )}
     </Section>
   )
 }
@@ -400,6 +465,7 @@ export default function Settings() {
           {canEmergency && templates && <TemplatesSection list={templateList} setList={setTemplateList} />}
           <ColorSchemeSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup} />
           <OnAirSection draft={values.draft} set={values.set} disabled={onAirDisabled} readOnly={!canOnAir} />
+          {canSetup && <ExternalControlSection />}
           <WeatherSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             onClear={() => setClearing('weather_api_key')} />
           <DevicesSection draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup} legacyNames={legacyNames} />

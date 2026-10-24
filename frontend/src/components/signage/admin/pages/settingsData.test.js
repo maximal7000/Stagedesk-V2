@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   checkSentence, credentialsComplete, settingsPayload, sourceSentence, SETUP_FIELDS, ON_AIR_FIELDS, SCHEME_FIELDS,
-  templateChanges, templateProblems, DEVICE_FIELDS, deviceProblems, legacyScreenNames, installCommand,
+  templateChanges, templateProblems, DEVICE_FIELDS, deviceProblems, legacyScreenNames, installCommand, externalUrls, onAirExample,
 } from './settingsData'
 
 const saved = {
@@ -136,6 +136,11 @@ describe('Geräte-Einstellungen', () => {
   })
 
   it('Installationsbefehl aus der aktuellen Adresse', () => {
+    expect(externalUrls('https://stagedesk.t410.de')).toEqual({
+      onAir: 'https://stagedesk.t410.de/api/signage/on-air', emergency: 'https://stagedesk.t410.de/api/signage/emergency',
+    })
+    expect(onAirExample('https://x.de', 'T')).toBe(
+      `curl -X POST https://x.de/api/signage/on-air -H "X-Monitor-Token: T" -H "Content-Type: application/json" -d '{"on_air": true}'`)
     expect(installCommand('https://stagedesk.t410.de'))
       .toBe('curl -fsSL https://stagedesk.t410.de/api/signage/agent/install.sh | sudo bash')
   })
