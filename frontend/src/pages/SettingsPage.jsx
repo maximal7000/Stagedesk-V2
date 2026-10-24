@@ -228,7 +228,7 @@ export default function SettingsPage() {
                 >
                   <div className="flex flex-col items-center gap-3">
                     <Monitor className="w-6 h-6 text-fg-subtle" />
-                    <span className="text-sm font-medium text-fg">Wie System</span>
+                    <span className="text-sm font-medium text-fg">System</span>
                   </div>
                   {effectiveTheme === 'system' && (
                     <CheckCircle data-check className="absolute top-2.5 right-2.5 w-4 h-4 text-accent-fg" />
