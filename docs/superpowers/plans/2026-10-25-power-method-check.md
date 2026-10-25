@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Commit messages and the PR in English; trailer `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>` (CLAUDE.md).
-- Code identifiers English; `python3 -I scripts/check-signage-identifiers.py` must exit 0. UI copy German.
+- Code in English: file names, identifiers, and comments. Comments only where needed (a non-obvious reason or constraint); no generic or restating comments ("This function does X", "Handle edge cases", section banners). `python3 -I scripts/check-signage-identifiers.py` must exit 0. Only UI copy and user-facing result texts are German.
 - Design manifest (CLAUDE.md): no purple gradients, no pill buttons (rounded-lg), no emoji (lucide-react), no em-dashes in visible text, no filler copy, no fake metrics. Accent red sparingly. `npm run check:tokens` must report "Sauber".
 - UI tasks (Task 5) must load and follow the `impeccable` and `ui-ux-pro-max` skills before writing markup.
 - The system is not live: no data migration of existing screens beyond the schema change, no old-agent gating.
