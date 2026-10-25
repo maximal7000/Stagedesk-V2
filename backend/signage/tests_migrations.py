@@ -321,7 +321,8 @@ class EmergencyPermissionMigrationTest(MigrationTestCase):
 
     def setUpBeforeMigration(self, apps):
         Permission = apps.get_model('users', 'Permission')
-        perm = Permission.objects.create(code='monitor.notfall', name='Notfall', category='monitor')
+        perm, _ = Permission.objects.get_or_create(
+            code='monitor.notfall', defaults={'name': 'Notfall', 'category': 'monitor'})
         group = apps.get_model('users', 'PermissionGroup').objects.create(name='Leitung')
         group.permissions.add(perm)
         self.perm_pk = perm.pk

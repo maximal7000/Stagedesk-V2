@@ -20,9 +20,9 @@ from unittest import mock
 from django.test import TransactionTestCase, override_settings
 
 from core.auth import KeycloakAuth
-from .token_roles import grant_roles
 from users.models import UserProfile
 
+from .testing import grant_roles
 from .models import Screen
 
 AGENT_DIR = Path(__file__).resolve().parent.parent.parent / 'agent'

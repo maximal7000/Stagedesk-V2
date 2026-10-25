@@ -134,6 +134,51 @@ post_logout_redirect_uri: window.location.origin,
 
 ---
 
+## Signage-Rechte
+
+Die Rechte für Signage (Bildschirme, Geräte) verwaltet Keycloak, nicht Stagedesk. Sie stehen als Rollen des Clients `signage` im Token (`resource_access.signage.roles`). Das Einrichten geschieht im Realm `technik-ag` auf `auth.t410.de`.
+
+### 1. Client `signage` anlegen
+
+1. **Clients** → **Create client**
+2. Client type: **OpenID Connect**, Client ID: `signage`
+3. Client authentication: **Off**, alle Authentication flows **aus** (der Client dient nur als Träger der Rollen, niemand meldet sich darüber an)
+4. Speichern
+
+### 2. Rollen anlegen
+
+Im Client `signage` unter **Roles** → **Create role** diese neun Rollen anlegen:
+
+| Rolle | Erlaubt |
+|---|---|
+| `view` | Übersicht ansehen (Voraussetzung für alle Admin-Seiten) |
+| `setup` | Ansichten, Bildschirme, Einstellungen, Vorschau, Neu laden |
+| `exams` | Klausuren, Klausur-Vorlagen, Termine, Ankündigungen |
+| `media` | Medien hochladen und löschen |
+| `power` | An/aus, Ferien, Zeitpläne |
+| `onair` | ON AIR |
+| `emergency` | Notfall und Notfall-Vorlagen |
+| `devices` | Geräte koppeln und steuern, Warnschwellen |
+| `admin` | Alles oben (Composite) |
+
+`admin` als Composite anlegen: Rolle `admin` öffnen → **Action** → **Add associated roles** → die acht anderen Rollen des Clients `signage` auswählen.
+
+### 3. Gruppen zuordnen
+
+**Groups** → Gruppe wählen → **Role mapping** → **Assign role** → **Filter by clients** → `signage admin` (oder einzelne Rollen wie `signage view` und `signage power`) auswählen → **Assign**.
+
+### 4. Token prüfen
+
+**Clients** → `stagedesk` → **Client scopes** → **Evaluate** → Benutzer wählen → **Generated access token**: Es muss `resource_access.signage.roles` mit den vergebenen Rollen enthalten.
+
+Fehlt `resource_access.signage`, den Client Scope `roles` dem Client `stagedesk` als **Default** zuweisen (**Client scopes** → **Add client scope** → `roles` → **Default**).
+
+### 5. Nach dem Deploy
+
+Alle, die das Signage-Admin nutzen, melden sich einmal ab und wieder an, damit das Token die Rollen enthält. Der Keycloak-Admin (Realm-Rolle `admin`) hat weiterhin vollen Zugriff.
+
+---
+
 ## ✅ Checkliste
 
 - [ ] Client "stagedesk" erstellt

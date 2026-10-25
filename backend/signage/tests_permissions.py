@@ -4,6 +4,7 @@ from unittest import mock
 
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
+from django.db.migrations.loader import MigrationLoader
 from django.test import SimpleTestCase, TestCase
 
 from ninja.errors import HttpError
@@ -11,7 +12,8 @@ from ninja.errors import HttpError
 from core.auth import KeycloakAuth
 from signage import api as api_package, devices, permissions
 from signage.roles import SIGNAGE_ROLES, signage_permission_codes, signage_roles
-from users.models import Permission, UserProfile
+from users import api as users_api
+from users.models import Permission, PermissionGroup, UserProfile
 from signage.schemas import ScreenUpdateSchema
 from .tests_migrations import MigrationTestCase
 
@@ -162,6 +164,38 @@ class RenameToSignagePermissionsMigrationTest(MigrationTestCase):
         self.assertEqual(list(profile.permissions.values_list('code', flat=True)), ['monitor.setup'])
 
 
+def _migration_name(prefix):
+    return MigrationLoader(None, ignore_no_migrations=True).get_migration_by_prefix('users', prefix).name
+
+
+class RemoveSignagePermissionsMigrationTest(MigrationTestCase):
+    migrate_from = ('users', _migration_name('0018'))
+    migrate_to = ('users', _migration_name('0019'))
+
+    def setUpBeforeMigration(self, apps):
+        Permission = apps.get_model('users', 'Permission')
+        signage, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Monitor anzeigen'})
+        other, _ = Permission.objects.get_or_create(code='kalender.view', defaults={'name': 'Kalender anzeigen'})
+        group = apps.get_model('users', 'PermissionGroup').objects.create(name='Technik')
+        group.permissions.add(signage, other)
+
+    def test_forward_deletes_only_signage_codes(self):
+        Permission = self.apps.get_model('users', 'Permission')
+        self.assertFalse(Permission.objects.filter(code__startswith='signage.').exists())
+        group = self.apps.get_model('users', 'PermissionGroup').objects.get(name='Technik')
+        self.assertEqual(list(group.permissions.values_list('code', flat=True)), ['kalender.view'])
+
+    def test_backward_recreates_codes_without_assignments(self):
+        executor = MigrationExecutor(connection)
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        Permission = apps.get_model('users', 'Permission')
+        codes = set(Permission.objects.filter(code__startswith='signage.').values_list('code', flat=True))
+        self.assertEqual(codes, {f'signage.{role}' for role in SIGNAGE_ROLES})
+        self.assertFalse(Permission.objects.get(code='signage.view').groups.exists())
+        self.assertTrue(Permission.objects.filter(code='kalender.view').exists())
+
+
 class SignageRolesTest(SimpleTestCase):
     @staticmethod
     def token(*roles):
@@ -240,3 +274,38 @@ class SignageProfileTest(TestCase):
         self.get({'sub': 'kc-dev'})
         self.assertEqual(UserProfile.objects.get(keycloak_id='kc-dev').signage_roles_cached, [])
         self.assertEqual(devices.notification_recipients(), [])
+
+
+class SignageCatalogTest(TestCase):
+    def test_catalog_has_no_signage_codes(self):
+        self.assertFalse(any(c.startswith('signage.') for c in users_api.KNOWN_PERMISSION_CODES))
+
+    def test_setup_system_creates_no_signage_permissions(self):
+        token = {'sub': 'kc-admin', 'realm_access': {'roles': ['admin']}}
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=token):
+            r = self.client.post('/api/users/setup/init', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertTrue(Permission.objects.filter(code='kalender.view').exists())
+        self.assertEqual(Permission.objects.filter(code__startswith='signage.').count(), 0)
+
+
+class SignagePermissionListsTest(TestCase):
+    def test_my_permissions_include_token_roles(self):
+        profile = UserProfile.objects.create(keycloak_id='kc-list')
+        group = PermissionGroup.objects.create(name='Kalender')
+        group.permissions.add(Permission.objects.create(code='kalender.view', name='Kalender'))
+        group.users.add(profile)
+        token = {'sub': 'kc-list', 'resource_access': {'signage': {'roles': ['power', 'view']}}}
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=token):
+            r = self.client.get('/api/users/me/permissions', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json(), ['kalender.view', 'signage.power', 'signage.view'])
+
+    def test_effective_permissions_include_cached_roles(self):
+        profile = UserProfile.objects.create(keycloak_id='kc-target', signage_roles_cached=['media'])
+        token = {'sub': 'kc-admin', 'realm_access': {'roles': ['admin']}}
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=token):
+            r = self.client.get(f'/api/users/users/{profile.id}/effective-permissions',
+                                HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['permissions'], ['signage.media'])

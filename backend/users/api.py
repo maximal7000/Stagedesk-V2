@@ -189,13 +189,15 @@ def delete_avatar(request):
 @users_router.get("/me/permissions", response=List[str], auth=keycloak_auth)
 def get_my_permissions(request):
     """Eigene Permissions abrufen (Keycloak-Rollen + lokale Permissions)"""
+    from signage.roles import signage_permission_codes
     profile = get_or_create_profile(request)
 
     # Admin hat alle Permissions
     if profile._is_admin:
         return list(Permission.objects.values_list('code', flat=True))
 
-    return profile.get_all_permissions()
+    return sorted(set(profile.get_all_permissions())
+                  | set(signage_permission_codes(profile._signage_roles)))
 
 
 # ========== Dashboard-Widgets ==========
@@ -548,9 +550,10 @@ def get_user(request, user_id: int):
 @users_router.get("/users/{user_id}/effective-permissions", auth=keycloak_auth)
 def get_user_effective_permissions(request, user_id: int):
     """Effektive Permission-Codes (direkt + Gruppen) eines Users — für Admin-Impersonate.
-    Achtung: keine Keycloak-Admin-Rollen, nur lokale Permissions."""
+    Achtung: keine Keycloak-Admin-Rollen; Signage-Rechte aus den beim Login gemerkten Rollen."""
     if not is_admin(request):
         return {"error": "Keine Berechtigung"}, 403
+    from signage.roles import signage_permission_codes
     user = get_object_or_404(UserProfile, id=user_id)
     return {
         "keycloak_id": user.keycloak_id,
@@ -558,7 +561,8 @@ def get_user_effective_permissions(request, user_id: int):
         "last_name": user.last_name,
         "username": user.username,
         "is_admin": user.is_admin_cached,
-        "permissions": user.get_all_permissions(),
+        "permissions": sorted(set(user.get_all_permissions())
+                              | set(signage_permission_codes(user.signage_roles_cached))),
     }
 
 
@@ -791,23 +795,6 @@ def initialize_system(request):
          'description': 'Erlaubt das Zuweisen von Personen zu Veranstaltungen', 'category': 'veranstaltung'},
         {'code': 'veranstaltung.discord', 'name': 'Discord verwalten',
          'description': 'Erlaubt das Synchronisieren mit Discord', 'category': 'veranstaltung'},
-        # Monitor
-        {'code': 'signage.view', 'name': 'Monitor anzeigen',
-         'description': 'Erlaubt den Zugriff auf die Monitor-Konfiguration', 'category': 'monitor'},
-        {'code': 'signage.setup', 'name': 'Monitor einrichten',
-         'description': 'Erlaubt das Einrichten von Ansichten, Bildschirmen und Einstellungen', 'category': 'monitor'},
-        {'code': 'signage.exams', 'name': 'Klausuren und Termine verwalten',
-         'description': 'Erlaubt das Verwalten von Klausuren, Vorlagen, Terminen und Ankündigungen', 'category': 'monitor'},
-        {'code': 'signage.media', 'name': 'Medien verwalten',
-         'description': 'Erlaubt das Hochladen und Löschen von Medien', 'category': 'monitor'},
-        {'code': 'signage.power', 'name': 'Bildschirme ein- und ausschalten',
-         'description': 'Erlaubt das Ein- und Ausschalten von Bildschirmen', 'category': 'monitor'},
-        {'code': 'signage.devices', 'name': 'Geräte verwalten',
-         'description': 'Erlaubt das Verwalten der Geräte hinter den Bildschirmen', 'category': 'monitor'},
-        {'code': 'signage.onair', 'name': 'ON AIR steuern',
-         'description': 'Erlaubt das Aktivieren/Deaktivieren von ON AIR', 'category': 'monitor'},
-        {'code': 'signage.emergency', 'name': 'Notfall-Meldung verwalten',
-         'description': 'Erlaubt das Aktivieren/Deaktivieren der Notfall-Meldung', 'category': 'monitor'},
         # Anwesenheit
         {'code': 'anwesenheit.view', 'name': 'Anwesenheit anzeigen',
          'description': 'Erlaubt das Anzeigen von Anwesenheitslisten', 'category': 'anwesenheit'},
@@ -913,8 +900,6 @@ KNOWN_PERMISSION_CODES = {
     'inventar.view', 'inventar.create', 'inventar.edit', 'inventar.delete', 'inventar.ausleihe',
     'veranstaltung.view', 'veranstaltung.create', 'veranstaltung.edit', 'veranstaltung.delete',
     'veranstaltung.zuweisungen', 'veranstaltung.discord',
-    'signage.view', 'signage.setup', 'signage.exams', 'signage.media',
-    'signage.power', 'signage.devices', 'signage.onair', 'signage.emergency',
     'anwesenheit.view', 'anwesenheit.create', 'anwesenheit.edit', 'anwesenheit.delete',
     'anwesenheit.statistik', 'anwesenheit.export', 'anwesenheit.view_all',
     'kompetenzen.view', 'kompetenzen.view_all', 'kompetenzen.manage', 'kompetenzen.edit_catalog',

@@ -146,6 +146,22 @@ Alle in `/opt/stagedesk/backend/.env` (Werte nie committen).
 
 ---
 
+## Signage-Rechte aus Keycloak
+
+Die Rechte `signage.*` kommen nicht mehr aus der Stagedesk-Rechteverwaltung, sondern aus den Rollen des Keycloak-Clients `signage` (Token-Pfad `resource_access.signage.roles`). Migrationen `users` 0018 (Spalte `signage_roles_cached`) und 0019 (löscht die Datensätze `signage.*` samt Zuweisungen). Der Keycloak-Admin behält vollen Zugriff.
+
+### Ablauf
+
+1. **Keycloak:** Client `signage`, die Rollen und die Gruppenzuordnung anlegen, Token prüfen (`KEYCLOAK_SETUP.md`, Abschnitt "Signage-Rechte"). Vorher notieren, wer bisher welche `signage.*`-Rechte hatte: Migration 0019 löscht diese Zuweisungen.
+2. **Deploy:** `ssh -o BatchMode=yes root@t410.de "bash /opt/stagedesk/scripts/deploy.sh"`.
+3. **Neu anmelden:** Alle, die das Signage-Admin nutzen, melden sich einmal ab und an, damit das Token die Rollen enthält. Bis dahin sieht nur der Keycloak-Admin das Signage-Admin.
+
+Die Rollen werden bei jedem Login zwischengespeichert (`signage_roles_cached`). Wer in Keycloak eine Rolle verliert, bekommt Geräte-Benachrichtigungen bis zum nächsten Login weiter.
+
+### Rückweg
+
+`python manage.py migrate users 0017` (im venv). Die acht Datensätze `signage.*` entstehen wieder, aber ohne Zuweisungen: Gruppen und Nutzer müssen die Rechte neu bekommen. Danach Code auf den vorigen Stand zurücksetzen und `tag-backend.service` neu starten.
+
 ## Monitore wiederherstellen
 
 Nach dem ersten Deploy mit frischer DB:

@@ -6,9 +6,9 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from core.auth import KeycloakAuth
-from .token_roles import grant_roles
 from users.models import UserProfile
 
+from .testing import grant_roles
 from . import display
 from .transit.common import TIMEZONE
 from .models import (

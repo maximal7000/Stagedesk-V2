@@ -7,9 +7,9 @@ from django.utils import timezone
 from ninja.errors import HttpError
 
 from core.auth import KeycloakAuth
-from .token_roles import grant_roles
 from users.models import UserProfile
 
+from .testing import grant_roles
 from . import power
 from .models import DisplayEvent, DisplayEventScreen, DisplayView, Screen
 from .screen_schedule import active_row, is_on, merge_legacy, row_matches, split_legacy
