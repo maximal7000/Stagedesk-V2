@@ -67,7 +67,7 @@ describe('PairDialog', () => {
     expect(inputs[5].getAttribute('aria-label')).toBe('Ziffer 6 von 6')
     expect(inputs[0].getAttribute('inputmode')).toBe('numeric')
     expect(inputs[0].getAttribute('autocomplete')).toBe('one-time-code')
-    expect(inputs[3].className).toContain('ml-4')
+    expect(inputs[3].previousElementSibling?.getAttribute('aria-hidden')).toBe('true')
   })
 
   it('akzeptiert nur Ziffern und springt nach der Eingabe ins nächste Feld', () => {
