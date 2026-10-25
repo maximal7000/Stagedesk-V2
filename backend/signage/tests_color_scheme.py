@@ -7,8 +7,8 @@ from django.test import TestCase
 from core.auth import KeycloakAuth
 from users.models import UserProfile
 
-from .testing import grant_roles
 from . import display
+from .fake_tokens import grant_roles
 from .color_scheme import resolve
 from .models import DisplayView, MonitorSettings, Screen
 from .sun import sun_times

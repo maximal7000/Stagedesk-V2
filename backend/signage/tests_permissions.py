@@ -309,3 +309,19 @@ class SignagePermissionListsTest(TestCase):
                                 HTTP_AUTHORIZATION='Bearer x')
         self.assertEqual(r.status_code, 200, r.content)
         self.assertEqual(r.json()['permissions'], ['signage.media'])
+
+    def test_stored_signage_rows_never_listed(self):
+        profile = UserProfile.objects.create(keycloak_id='kc-stale', signage_roles_cached=[])
+        perm = Permission.objects.create(code='signage.view', name='Ansehen')
+        profile.permissions.add(perm)
+        token = {'sub': 'kc-stale'}
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=token):
+            mine = self.client.get('/api/users/me/permissions', HTTP_AUTHORIZATION='Bearer x')
+            me = self.client.get('/api/users/me', HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(mine.json(), [])
+        self.assertEqual(me.json()['permissions'], [])
+        admin = {'sub': 'kc-admin', 'realm_access': {'roles': ['admin']}}
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=admin):
+            r = self.client.get(f'/api/users/users/{profile.id}/effective-permissions',
+                                HTTP_AUTHORIZATION='Bearer x')
+        self.assertEqual(r.json()['permissions'], [])

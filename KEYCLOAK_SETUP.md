@@ -167,11 +167,15 @@ Im Client `signage` unter **Roles** → **Create role** diese neun Rollen anlege
 
 **Groups** → Gruppe wählen → **Role mapping** → **Assign role** → **Filter by clients** → `signage admin` (oder einzelne Rollen wie `signage view` und `signage power`) auswählen → **Assign**.
 
+Gruppen können aus LDAP (GOsa) kommen (**User Federation**); sie bekommen das Role mapping wie jede andere Gruppe.
+
 ### 4. Token prüfen
 
 **Clients** → `stagedesk` → **Client scopes** → **Evaluate** → Benutzer wählen → **Generated access token**: Es muss `resource_access.signage.roles` mit den vergebenen Rollen enthalten.
 
 Fehlt `resource_access.signage`, den Client Scope `roles` dem Client `stagedesk` als **Default** zuweisen (**Client scopes** → **Add client scope** → `roles` → **Default**).
+
+Fehlt es danach noch: **Clients** → `stagedesk` → **Client scopes** → `stagedesk-dedicated` → **Scope** → "Full scope allowed" einschalten oder dort die Rollen des Clients `signage` zuweisen.
 
 ### 5. Nach dem Deploy
 
@@ -190,6 +194,7 @@ Alle, die das Signage-Admin nutzen, melden sich einmal ab und wieder an, damit d
 - [ ] Realm Login Settings: "Login with email" aktiviert
 - [ ] Client Scopes: email, profile, roles als Default
 - [ ] Test-Benutzer erstellt mit Passwort
+- [ ] Client `signage` mit den neun Rollen angelegt, `admin` als Composite, Gruppen per Role mapping zugeordnet, `resource_access.signage` im Token geprüft
 - [ ] E-Mail als verifiziert markiert
 
 ---

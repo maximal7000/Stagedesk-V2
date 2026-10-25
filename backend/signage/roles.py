@@ -18,3 +18,8 @@ def signage_roles(token) -> set:
 
 def signage_permission_codes(roles) -> list:
     return sorted(f'signage.{r}' for r in roles)
+
+
+def without_signage_codes(codes) -> set:
+    """Drops stored `signage.*` codes: those rights come from the token only."""
+    return {c for c in codes if not c.startswith('signage.')}

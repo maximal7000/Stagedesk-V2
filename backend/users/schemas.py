@@ -107,8 +107,8 @@ class UserProfileSchema(Schema):
         if getattr(obj, '_is_admin', False):
             from .models import Permission
             return list(Permission.objects.values_list('code', flat=True))
-        from signage.roles import signage_permission_codes
-        codes = set(obj.get_all_permissions())
+        from signage.roles import signage_permission_codes, without_signage_codes
+        codes = without_signage_codes(obj.get_all_permissions())
         codes.update(signage_permission_codes(getattr(obj, '_signage_roles', ())))
         return sorted(codes)
 

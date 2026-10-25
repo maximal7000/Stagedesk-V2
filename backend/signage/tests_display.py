@@ -8,8 +8,8 @@ from django.utils import timezone
 from core.auth import KeycloakAuth
 from users.models import UserProfile
 
-from .testing import grant_roles
 from . import display
+from .fake_tokens import grant_roles
 from .transit.common import TIMEZONE
 from .models import (
     DisplayView, Exam, MediaFile, MediaPage, MonitorSettings, Screen,

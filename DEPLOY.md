@@ -160,7 +160,7 @@ Die Rollen werden bei jedem Login zwischengespeichert (`signage_roles_cached`). 
 
 ### Rückweg
 
-`python manage.py migrate users 0017` (im venv). Die acht Datensätze `signage.*` entstehen wieder, aber ohne Zuweisungen: Gruppen und Nutzer müssen die Rechte neu bekommen. Danach Code auf den vorigen Stand zurücksetzen und `tag-backend.service` neu starten.
+Zuerst `systemctl stop tag-backend.service`. Dann im venv (noch mit dem neuen Code) `python manage.py migrate users 0017`; die acht Datensätze `signage.*` entstehen wieder, aber ohne Zuweisungen: Gruppen und Nutzer müssen die Rechte neu bekommen. Danach den vorherigen Stand auschecken (`git checkout <sha>`) und `tag-backend.service` starten. Nicht `deploy.sh` benutzen, denn es migriert wieder vorwärts. Ein Frontend-Neubau ist nicht nötig.
 
 ## Monitore wiederherstellen
 

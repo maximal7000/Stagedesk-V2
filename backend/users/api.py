@@ -189,14 +189,14 @@ def delete_avatar(request):
 @users_router.get("/me/permissions", response=List[str], auth=keycloak_auth)
 def get_my_permissions(request):
     """Eigene Permissions abrufen (Keycloak-Rollen + lokale Permissions)"""
-    from signage.roles import signage_permission_codes
+    from signage.roles import signage_permission_codes, without_signage_codes
     profile = get_or_create_profile(request)
 
     # Admin hat alle Permissions
     if profile._is_admin:
         return list(Permission.objects.values_list('code', flat=True))
 
-    return sorted(set(profile.get_all_permissions())
+    return sorted(without_signage_codes(profile.get_all_permissions())
                   | set(signage_permission_codes(profile._signage_roles)))
 
 
@@ -553,7 +553,7 @@ def get_user_effective_permissions(request, user_id: int):
     Achtung: keine Keycloak-Admin-Rollen; Signage-Rechte aus den beim Login gemerkten Rollen."""
     if not is_admin(request):
         return {"error": "Keine Berechtigung"}, 403
-    from signage.roles import signage_permission_codes
+    from signage.roles import signage_permission_codes, without_signage_codes
     user = get_object_or_404(UserProfile, id=user_id)
     return {
         "keycloak_id": user.keycloak_id,
@@ -561,7 +561,7 @@ def get_user_effective_permissions(request, user_id: int):
         "last_name": user.last_name,
         "username": user.username,
         "is_admin": user.is_admin_cached,
-        "permissions": sorted(set(user.get_all_permissions())
+        "permissions": sorted(without_signage_codes(user.get_all_permissions())
                               | set(signage_permission_codes(user.signage_roles_cached))),
     }
 

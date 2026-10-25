@@ -22,7 +22,7 @@ from django.test import TransactionTestCase, override_settings
 from core.auth import KeycloakAuth
 from users.models import UserProfile
 
-from .testing import grant_roles
+from .fake_tokens import grant_roles
 from .models import Screen
 
 AGENT_DIR = Path(__file__).resolve().parent.parent.parent / 'agent'

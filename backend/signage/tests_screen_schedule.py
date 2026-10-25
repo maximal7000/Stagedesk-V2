@@ -9,8 +9,8 @@ from ninja.errors import HttpError
 from core.auth import KeycloakAuth
 from users.models import UserProfile
 
-from .testing import grant_roles
 from . import power
+from .fake_tokens import grant_roles
 from .models import DisplayEvent, DisplayEventScreen, DisplayView, Screen
 from .screen_schedule import active_row, is_on, merge_legacy, row_matches, split_legacy
 from .validation import validate_screen_schedule

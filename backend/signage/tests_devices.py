@@ -11,8 +11,8 @@ from django.utils import timezone
 from core.auth import KeycloakAuth
 from users.models import UserProfile
 
-from .testing import grant_roles
 from . import push
+from .fake_tokens import grant_roles
 from .models import Device, DeviceEvent, MonitorSettings, PairingRequest, Screen
 
 IN_MEMORY = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}

@@ -5,7 +5,7 @@ from django.test import TestCase, override_settings
 from core.auth import KeycloakAuth
 from users.models import UserProfile
 
-from .testing import grant_roles
+from .fake_tokens import grant_roles
 from .models import DisplayView, MonitorSettings, Screen
 from .tests_display import configure_webuntis, fake_load_days
 
