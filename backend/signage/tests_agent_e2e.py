@@ -20,7 +20,8 @@ from unittest import mock
 from django.test import TransactionTestCase, override_settings
 
 from core.auth import KeycloakAuth
-from users.models import Permission, UserProfile
+from .token_roles import grant_roles
+from users.models import UserProfile
 
 from .models import Screen
 
@@ -101,11 +102,10 @@ class AgentEndToEndTest(TransactionTestCase):
         self.addCleanup(sys.path.remove, str(AGENT_DIR))
         self.port = live_server_port()
         self.base = f'http://127.0.0.1:{self.port}'
-        profile = UserProfile.objects.create(keycloak_id='tester')
-        for code in ('signage.view', 'signage.devices', 'signage.power'):
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            profile.permissions.add(perm)
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester', 'name': 'Tester'})
+        UserProfile.objects.create(keycloak_id='tester')
+        token = {'sub': 'tester', 'name': 'Tester'}
+        grant_roles(token, 'signage.view', 'signage.devices', 'signage.power')
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=token)
         auth.start()
         self.addCleanup(auth.stop)
         self.screen = Screen.objects.create(name='Glocke', slug='glocke')

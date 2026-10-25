@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 from django.test import TestCase
 
 from core.auth import KeycloakAuth
-from users.models import Permission, UserProfile
+from .token_roles import grant_roles
+from users.models import UserProfile
 
 from . import display
 from .color_scheme import resolve
@@ -121,14 +122,13 @@ class PayloadTest(TestCase):
 class ColorSchemeApiTest(TestCase):
     def setUp(self):
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
 
     def grant(self, *codes):
-        for code in codes:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            self.profile.permissions.add(perm)
+        grant_roles(self.token, *codes)
 
     def put(self, path, body):
         return self.client.put(f'/api/monitor{path}', body, content_type='application/json',

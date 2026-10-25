@@ -72,6 +72,9 @@ def get_or_create_profile(request) -> UserProfile:
             profile.permission_groups.set(default_groups)
 
     admin_flag = is_admin(request)
+    from signage.roles import signage_roles
+    signage = signage_roles(request.auth)
+    signage_cached = sorted(signage)
 
     # Update profile wenn sich was geändert hat
     if not created:
@@ -91,15 +94,20 @@ def get_or_create_profile(request) -> UserProfile:
         if profile.is_admin_cached != admin_flag:
             profile.is_admin_cached = admin_flag
             updated = True
+        if profile.signage_roles_cached != signage_cached:
+            profile.signage_roles_cached = signage_cached
+            updated = True
         if updated:
             profile.save()
     else:
         profile.is_admin_cached = admin_flag
+        profile.signage_roles_cached = signage_cached
         profile.save()
 
     # Keycloak-Rollen an das Objekt anhängen (nicht in DB, nur für Response)
     profile._keycloak_roles = keycloak_roles
     profile._is_admin = admin_flag
+    profile._signage_roles = signage
 
     return profile
 

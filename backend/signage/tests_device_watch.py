@@ -4,7 +4,7 @@ from unittest import mock
 from django.test import TestCase
 from django.utils import timezone
 
-from users.models import Permission, PermissionGroup, UserProfile
+from users.models import Permission, UserProfile
 
 from . import devices
 from .models import Device, DeviceEvent, MonitorSettings, Screen
@@ -254,17 +254,13 @@ class WatchTest(WatchBase):
 
 
 class RecipientsTest(TestCase):
-    def test_recipients_only_with_devices_permission(self):
-        perm, _ = Permission.objects.get_or_create(code='signage.devices', defaults={'name': 'Geräte'})
-        other, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Ansehen'})
-        direct = UserProfile.objects.create(keycloak_id='direct', username='direct')
-        direct.permissions.add(perm)
-        grouped = UserProfile.objects.create(keycloak_id='grouped', username='grouped')
-        group = PermissionGroup.objects.create(name='Geräte')
-        group.permissions.add(perm)
-        grouped.permission_groups.add(group)
-        admin = UserProfile.objects.create(keycloak_id='admin', username='admin', is_admin_cached=True)
-        plain = UserProfile.objects.create(keycloak_id='plain', username='plain')
-        plain.permissions.add(other)
+    def test_recipients_only_with_devices_role_or_admin(self):
+        UserProfile.objects.create(keycloak_id='devices', username='devices',
+                                   signage_roles_cached=['devices', 'view'])
+        UserProfile.objects.create(keycloak_id='admin', username='admin', is_admin_cached=True)
+        UserProfile.objects.create(keycloak_id='viewer', username='viewer', signage_roles_cached=['view'])
         UserProfile.objects.create(keycloak_id='nobody', username='nobody')
-        self.assertEqual(sorted(devices.notification_recipients()), ['admin', 'direct', 'grouped'])
+        plain = UserProfile.objects.create(keycloak_id='dbperm', username='dbperm')
+        perm, _ = Permission.objects.get_or_create(code='signage.devices', defaults={'name': 'Geräte'})
+        plain.permissions.add(perm)
+        self.assertEqual(sorted(devices.notification_recipients()), ['admin', 'devices'])

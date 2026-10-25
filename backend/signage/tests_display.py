@@ -6,7 +6,8 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from core.auth import KeycloakAuth
-from users.models import Permission, UserProfile
+from .token_roles import grant_roles
+from users.models import UserProfile
 
 from . import display
 from .transit.common import TIMEZONE
@@ -265,9 +266,10 @@ class ContractTest(DisplayTestBase):
     def test_substitutions_with_bearer_and_monitor_view(self):
         view = self.view('substitutions')
         Screen.objects.create(name='Halle', slug='halle', default_view=view)
-        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Monitor ansehen'})
-        UserProfile.objects.create(keycloak_id='tester').permissions.add(perm)
-        with mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'}):
+        UserProfile.objects.create(keycloak_id='tester')
+        token = {'sub': 'tester'}
+        grant_roles(token, 'signage.view')
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=token):
             data = self.client.get('/api/monitor/display', {'screen': 'halle'},
                                    HTTP_AUTHORIZATION='Bearer x').json()
         self.assertEqual(len(data['view']['data']['days']), 2)
@@ -417,13 +419,13 @@ class PreviewTestBase(DisplayTestBase):
         super().setUp()
         self.saved = self.view('info', name='Gespeichert')
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
 
     def grant_setup(self):
-        perm, _ = Permission.objects.get_or_create(code='signage.setup', defaults={'name': 'Monitor einrichten'})
-        self.profile.permissions.add(perm)
+        grant_roles(self.token, 'signage.setup')
 
     def post_preview(self, body):
         return self.client.post('/api/monitor/views/preview', body, content_type='application/json',
@@ -525,8 +527,7 @@ class PreviewTransitCacheTest(PreviewTestBase):
 
 class DisruptionListTest(PreviewTestBase):
     def test_admin_list_has_full_text_and_image(self):
-        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Monitor ansehen'})
-        self.profile.permissions.add(perm)
+        grant_roles(self.token, 'signage.view')
         text = 'Zwischen Lübeck und Bad Oldesloe fallen alle Züge aus. ' * 5
         view = self.view('departures', transit_disruption_rail=True, transit_disruption_bus=False)
         message = {'id': 'm1', 'source': 'nahsh', 'kind': 'disruption', 'title': 'RE8', 'text': text,

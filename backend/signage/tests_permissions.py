@@ -4,9 +4,14 @@ from unittest import mock
 
 from django.db import connection
 from django.db.migrations.executor import MigrationExecutor
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
-from signage import api as api_package
+from ninja.errors import HttpError
+
+from core.auth import KeycloakAuth
+from signage import api as api_package, devices, permissions
+from signage.roles import SIGNAGE_ROLES, signage_permission_codes, signage_roles
+from users.models import Permission, UserProfile
 from signage.schemas import ScreenUpdateSchema
 from .tests_migrations import MigrationTestCase
 
@@ -157,16 +162,81 @@ class RenameToSignagePermissionsMigrationTest(MigrationTestCase):
         self.assertEqual(list(profile.permissions.values_list('code', flat=True)), ['monitor.setup'])
 
 
-class SignageCodeEndpointTest(SimpleTestCase):
-    def test_setup_endpoint_accepts_signage_setup_and_denies_without(self):
-        from ninja.errors import HttpError
-        from signage import permissions
-        profile = mock.Mock()
-        profile.has_permission.side_effect = lambda code, default=False: code == 'signage.setup'
-        request = mock.Mock(auth={'sub': 'kc-1'})
-        with mock.patch.object(permissions, 'is_admin', return_value=False), \
-                mock.patch.object(permissions.UserProfile.objects, 'get', return_value=profile):
-            permissions._require_perm(request, 'signage.setup')
-            with self.assertRaises(HttpError) as ctx:
-                permissions._require_perm(request, 'signage.power')
+class SignageRolesTest(SimpleTestCase):
+    @staticmethod
+    def token(*roles):
+        return {'resource_access': {'signage': {'roles': list(roles)}}}
+
+    def test_roles_from_token(self):
+        self.assertEqual(signage_roles(self.token('view', 'power')), {'view', 'power'})
+
+    def test_admin_role_expands(self):
+        self.assertEqual(signage_roles(self.token('admin')), set(SIGNAGE_ROLES))
+
+    def test_roles_from_malformed_token(self):
+        for token in (None, {}, {'resource_access': []}, {'resource_access': {'signage': []}},
+                      {'resource_access': {'signage': {'roles': 'view'}}},
+                      self.token('superuser', 'signage.view')):
+            self.assertEqual(signage_roles(token), set(), token)
+
+    def test_permission_codes_sorted(self):
+        self.assertEqual(signage_permission_codes({'power', 'view'}), ['signage.power', 'signage.view'])
+
+
+class RequirePermTest(SimpleTestCase):
+    def check(self, token, code):
+        request = mock.Mock(auth=token)
+        permissions._require_perm(request, code)
+
+    def test_require_perm_uses_token_roles(self):
+        token = {'sub': 'kc-1', 'resource_access': {'signage': {'roles': ['media']}}}
+        self.check(token, 'signage.media')
+        with self.assertRaises(HttpError) as ctx:
+            self.check(token, 'signage.setup')
         self.assertEqual(ctx.exception.status_code, 403)
+
+    def test_composite_admin_role_passes_all(self):
+        token = {'resource_access': {'signage': {'roles': ['admin']}}}
+        for role in SIGNAGE_ROLES:
+            self.check(token, f'signage.{role}')
+
+    def test_keycloak_admin_passes_without_signage_roles(self):
+        token = {'sub': 'kc-1', 'realm_access': {'roles': ['admin']}}
+        for role in SIGNAGE_ROLES:
+            self.check(token, f'signage.{role}')
+
+
+class SignageProfileTest(TestCase):
+    def get(self, token, path='/api/users/me'):
+        with mock.patch.object(KeycloakAuth, '__call__', return_value=token):
+            return self.client.get(path, HTTP_AUTHORIZATION='Bearer x')
+
+    def test_admin_passes_without_signage_roles(self):
+        token = {'sub': 'kc-admin', 'realm_access': {'roles': ['admin']}}
+        r = self.get(token)
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertIn('kc-admin', devices.notification_recipients())
+        permissions._require_perm(mock.Mock(auth=token), 'signage.devices')
+
+    def test_db_permission_alone_is_not_enough(self):
+        profile = UserProfile.objects.create(keycloak_id='kc-db')
+        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'Ansehen'})
+        profile.permissions.add(perm)
+        with self.assertRaises(HttpError) as ctx:
+            permissions._require_perm(mock.Mock(auth={'sub': 'kc-db'}), 'signage.view')
+        self.assertEqual(ctx.exception.status_code, 403)
+
+    def test_me_lists_signage_permissions_from_token(self):
+        token = {'sub': 'kc-exams', 'resource_access': {'signage': {'roles': ['exams']}}}
+        r = self.get(token)
+        self.assertEqual(r.status_code, 200, r.content)
+        codes = [c for c in r.json()['permissions'] if c.startswith('signage.')]
+        self.assertEqual(codes, ['signage.exams'])
+
+    def test_cache_replaced_on_next_login(self):
+        self.get({'sub': 'kc-dev', 'resource_access': {'signage': {'roles': ['devices']}}})
+        self.assertEqual(UserProfile.objects.get(keycloak_id='kc-dev').signage_roles_cached, ['devices'])
+        self.assertEqual(devices.notification_recipients(), ['kc-dev'])
+        self.get({'sub': 'kc-dev'})
+        self.assertEqual(UserProfile.objects.get(keycloak_id='kc-dev').signage_roles_cached, [])
+        self.assertEqual(devices.notification_recipients(), [])
