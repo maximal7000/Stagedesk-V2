@@ -252,15 +252,12 @@ function stamp(data) {
 function SourceNote({ view }) {
   const data = view.data ?? {}
   const when = isLive(data) ? stamp(data) : ''
-  if (!when && !data.fallback) return null
+  if (!when) return null
   return (
     <div className="d-card d-footer-item flex h-full items-center gap-[1.5rem] px-[1.375rem] text-[1.375rem]">
-      {when && (
-        <span className="d-lato min-w-0 truncate">
-          <span className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">Stand</span> {when}
-        </span>
-      )}
-      {data.fallback && <span className="d-oswald shrink-0 uppercase tracking-[0.06em] text-(--d-warn)">Ersatzquelle</span>}
+      <span className="d-lato min-w-0 truncate">
+        <span className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">Stand</span> {when}
+      </span>
     </div>
   )
 }
