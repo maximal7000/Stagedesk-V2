@@ -139,11 +139,11 @@ describe('SubstitutionsView', () => {
     expect(visible(el).querySelector('[data-column="room"]')).toBeNull()
   })
 
-  it('Fußzeile mit Stand WebUntis und Ersatzquelle', () => {
+  it('Fußzeile mit Stand WebUntis, ohne Hinweis auf die Ersatzquelle', () => {
     const Footer = SubstitutionsView.Footer
     let el = render(<Footer view={view({ fallback: true })} />)
     expect(el.textContent).toContain('Stand WebUntis · 21.10. 07:42')
-    expect(el.textContent).toContain('Ersatzquelle')
+    expect(el.textContent).not.toContain('Ersatzquelle')
     act(() => root.unmount())
     el = render(<Footer view={view({ source: 'substitutions', updated_at: null })} />)
     expect(el.textContent).toContain('Stand 07:45')
