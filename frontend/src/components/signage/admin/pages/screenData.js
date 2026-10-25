@@ -10,6 +10,7 @@ export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'p
 export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot']
 
 export const POWER_METHOD_OPTIONS = [
+  { value: 'none', label: 'Keine Steuerung' },
   { value: 'cec', label: 'CEC' },
   { value: 'hdmi', label: 'HDMI-Ausgang' },
   { value: 'hybrid', label: 'Hybrid (SICP aus, CEC an)' },
@@ -18,6 +19,7 @@ export const POWER_METHOD_OPTIONS = [
 
 // power_config defaults per method; the agent uses the same
 export const POWER_CONFIG_DEFAULTS = {
+  none: {},
   cec: { cec_device: '0' },
   hdmi: { output: 'HDMI-A-1' },
   hybrid: { display_ip: '', display_port: 5000, monitor_id: 0, cec_device: '0' },
@@ -41,7 +43,7 @@ export function configFor(method, config) {
 }
 
 export function deviceDefaults(draft) {
-  const method = draft?.power_method ?? 'cec'
+  const method = draft?.power_method ?? 'none'
   return {
     power_method: method,
     power_config: configFor(method, draft?.power_config),
@@ -97,7 +99,7 @@ export function devicePayload(draft, original) {
     if (draft[key] !== undefined && !sameValue(draft[key], original?.[key])) out[key] = draft[key]
   }
   if (!sameValue(draft.power_method, original?.power_method) || !sameValue(draft.power_config, original?.power_config)) {
-    const method = draft.power_method ?? 'cec'
+    const method = draft.power_method ?? 'none'
     out.power_method = method
     out.power_config = normalizedConfig(method, draft.power_config)
   }
@@ -114,7 +116,7 @@ export function deviceProblems(draft, original) {
     else if (w.from >= w.until) problems.window = '„Von“ muss vor „Bis“ liegen.'
   }
   if (draft && (!sameValue(draft.power_method, original?.power_method) || !sameValue(draft.power_config, original?.power_config))) {
-    const method = draft.power_method ?? 'cec'
+    const method = draft.power_method ?? 'none'
     const config = configFor(method, draft.power_config)
     for (const [key, value] of Object.entries(config)) {
       const label = configLabel(key)

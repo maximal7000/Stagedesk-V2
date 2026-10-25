@@ -17,6 +17,11 @@ describe('commandsFor', () => {
       ['reload', 'restart_browser', 'reboot', 'power_on', 'power_off', 'update_now', 'screenshot', 'test_pattern'])
   })
 
+  it('ohne Steuerung (none) entfallen die Power-Knöpfe', () => {
+    expect(kinds(commandsFor(device, can('signage.devices', 'signage.power'), 'none'))).toEqual(
+      ['reload', 'restart_browser', 'reboot', 'update_now', 'screenshot', 'test_pattern'])
+  })
+
   it('Beschriftung und Nachfrage stehen wörtlich fest', () => {
     const items = commandsFor(device, can('signage.devices', 'signage.power')).items
     expect(items.map((i) => i.label)).toEqual([

@@ -59,7 +59,7 @@ export default function DeviceBox({ device, screen, can, onChanged, onReload }) 
     }
   }, [])
 
-  const { items, hint } = commandsFor(device, can)
+  const { items, hint } = commandsFor(device, can, screen?.power_method)
   const groups = telemetryGroups(device)
   const stand = reportTime(device)
   const canManage = can('signage.devices')

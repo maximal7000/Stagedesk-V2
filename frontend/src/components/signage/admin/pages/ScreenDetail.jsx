@@ -77,12 +77,14 @@ function DisplaySection({ draft, set, views, disabled, readOnly }) {
 }
 
 const METHOD_HELP = {
+  none: 'Das Display bleibt an und zeigt außerhalb des Zeitplans einen dunklen Bildschirm mit Uhr.',
   cec: 'Schaltet den Bildschirm über CEC.',
   hdmi: 'Schaltet den HDMI-Ausgang des Pi ab, der Bildschirm geht von selbst in Standby.',
   hybrid: 'Aus über das Netzwerk (SICP), an über CEC.',
   ddc: 'Schaltet den Bildschirm über DDC/CI am HDMI-Kabel.',
 }
 const CONFIG_FIELDS = {
+  none: [],
   cec: [{ key: 'cec_device', label: 'CEC-Gerät', help: 'Nummer am CEC-Bus, meist 0.' }],
   hdmi: [{ key: 'output', label: 'HDMI-Ausgang', help: 'Name des Ausgangs, zum Beispiel HDMI-A-1.' }],
   hybrid: [
@@ -104,7 +106,7 @@ function PowerMethodBlock({ device, original, canDevices, problems }) {
   const method = values.power_method
   const disabled = !canDevices || device.saving
   const changeMethod = (next) => {
-    const base = original.power_method ?? 'cec'
+    const base = original.power_method ?? 'none'
     device.set('power_method', next)
     device.set('power_config', next === base && original.power_config ? original.power_config : configFor(next, device.draft.power_config))
   }

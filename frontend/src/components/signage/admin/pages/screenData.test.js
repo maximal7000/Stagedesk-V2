@@ -121,6 +121,11 @@ describe('Geräte-Felder', () => {
   }
   const screen = { ...glocke, ...orig }
 
+  it('neue Bildschirme starten ohne Steuerung', () => {
+    expect(deviceDefaults({}).power_method).toBe('none')
+    expect(deviceDefaults({}).power_config).toEqual({})
+  })
+
   it('DEVICE_FIELDS und pickFields', () => {
     expect(DEVICE_FIELDS).toEqual(['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'])
     expect(pickFields(screen, DEVICE_FIELDS)).toEqual(orig)
@@ -128,6 +133,7 @@ describe('Geräte-Felder', () => {
 
   it('Standardwerte je Methode (Ruling R4)', () => {
     expect(POWER_CONFIG_DEFAULTS).toEqual({
+      none: {},
       cec: { cec_device: '0' },
       hdmi: { output: 'HDMI-A-1' },
       hybrid: { display_ip: '', display_port: 5000, monitor_id: 0, cec_device: '0' },
