@@ -28,9 +28,9 @@ export const isPaired = (device) => !!device && device.id != null && !device.leg
 
 // Without signage.devices or a paired device there are no commands. Offline they stay possible
 // (the server keeps them 5 minutes), with the hint.
-export function commandsFor(device, can) {
+export function commandsFor(device, can, powerMethod) {
   if (!isPaired(device) || !can('signage.devices')) return { items: [], hint: '' }
-  const items = COMMANDS.filter((c) => !c.power || can('signage.power')).map((c) => ({ kind: c.kind, label: c.label, confirm: c.confirm }))
+  const items = COMMANDS.filter((c) => !c.power || (powerMethod !== 'none' && can('signage.power'))).map((c) => ({ kind: c.kind, label: c.label, confirm: c.confirm }))
   return { items, hint: device.status === 'offline' ? OFFLINE_HINT : '' }
 }
 

@@ -18,6 +18,7 @@ from .local_pages import LocalPages
 from .pairing import PairingClient
 from .paths import Paths
 from .power import make_power
+from .power_test import PowerTest
 from .runner import Runner
 from .telemetry import read_cpu_serial, read_model
 
@@ -75,6 +76,9 @@ class Agent:
         self._power_error = None
         self._power_target = None
         self._power_lock = threading.Lock()
+        self._wanted_power = None
+        self.power_test = PowerTest(self.power_factory, self.runner, self._defer, self._after_power_test,
+                                    power_lock=self._power_lock)
 
     @property
     def _stopped(self):
@@ -206,7 +210,7 @@ class Agent:
         return CommandContext(
             config=self.config, kiosk=self.kiosk, pages=self.pages, runner=self.runner, updater=self.updater,
             apply_power=self._apply_power, last_telemetry=lambda: self.last_telemetry,
-            set_kiosk=self._set_kiosk, defer=self._defer)
+            set_kiosk=self._set_kiosk, defer=self._defer, power_lock=self._power_lock, power_test=self.power_test)
 
     def _run_command(self, message):
         self._after_ack = []
@@ -278,14 +282,17 @@ class Agent:
             controller = self._power_controller()
             return controller.status() if controller else self._power_error
 
-    def _apply_power(self, on):
+    def _apply_power(self, on, force=False):
+        """`force` skips the status check: after a power test the saved controller may still report the
+        state it set itself (ddc and hdmi only remember it), although the test switched the display."""
         with self._power_lock:
             controller = self._power_controller()
             if controller is None:
                 return self._power_error
-            current = controller.status()
-            if (on and current == "an") or (not on and current in ("standby", "aus")):
-                return current
+            if not force:
+                current = controller.status()
+                if (on and current == "an") or (not on and current in ("standby", "aus")):
+                    return current
             return controller.set(on)
 
     def _enqueue_power(self, job):
@@ -312,8 +319,18 @@ class Agent:
             self._power_controller(target)
 
     def _on_power_command(self, message):
-        status = self._apply_power(bool(message.get("power", True)))
+        self._wanted_power = bool(message.get("power", True))
+        if self.power_test.active:
+            return  # applied by _after_power_test
+        status = self._apply_power(self._wanted_power)
         self.send({"type": "power_status", "status": status})
+
+    def _after_power_test(self):
+        # Runs on a timer thread; the power worker keeps the order with queued power commands.
+        def restore():
+            if self._wanted_power is not None:
+                self.send({"type": "power_status", "status": self._apply_power(self._wanted_power, force=True)})
+        self._enqueue_power(restore)
 
     def _send_telemetry(self):
         status = self._power_status()

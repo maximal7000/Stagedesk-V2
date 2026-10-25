@@ -19,10 +19,11 @@ import { formatDayTime } from '../shared/explain'
 import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
 import DeviceBox from '../shared/DeviceBox'
 import DeviceLog from '../shared/DeviceLog'
+import PowerCheck from '../shared/PowerCheck'
 import { isPaired } from '../shared/deviceCommands'
 import {
   COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS,
-  SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, deviceProblems, kioskUrl, lastReport,
+  SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, devicePayload, deviceProblems, kioskUrl, lastReport,
   overridePayload, overrideProblem, pickFields, sectionPayload,
 } from './screenData'
 import * as api from '../shared/api'
@@ -77,12 +78,14 @@ function DisplaySection({ draft, set, views, disabled, readOnly }) {
 }
 
 const METHOD_HELP = {
+  none: 'Das Display bleibt an und zeigt außerhalb des Zeitplans einen dunklen Bildschirm mit Uhr.',
   cec: 'Schaltet den Bildschirm über CEC.',
   hdmi: 'Schaltet den HDMI-Ausgang des Pi ab, der Bildschirm geht von selbst in Standby.',
   hybrid: 'Aus über das Netzwerk (SICP), an über CEC.',
   ddc: 'Schaltet den Bildschirm über DDC/CI am HDMI-Kabel.',
 }
 const CONFIG_FIELDS = {
+  none: [],
   cec: [{ key: 'cec_device', label: 'CEC-Gerät', help: 'Nummer am CEC-Bus, meist 0.' }],
   hdmi: [{ key: 'output', label: 'HDMI-Ausgang', help: 'Name des Ausgangs, zum Beispiel HDMI-A-1.' }],
   hybrid: [
@@ -97,24 +100,36 @@ const CONFIG_FIELDS = {
   ],
 }
 
-function PowerMethodBlock({ device, original, canDevices, problems }) {
+function PowerMethodBlock({ device, original, canDevices, problems, deviceRow, screen, canTest }) {
   const methodId = useId()
   const idBase = useId()
+  const [recommended, setRecommended] = useState(null)
   const values = deviceDefaults(device.draft)
   const method = values.power_method
   const disabled = !canDevices || device.saving
   const changeMethod = (next) => {
-    const base = original.power_method ?? 'cec'
+    const base = original.power_method ?? 'none'
     device.set('power_method', next)
     device.set('power_config', next === base && original.power_config ? original.power_config : configFor(next, device.draft.power_config))
   }
+  const adopt = (next, config) => {
+    device.set('power_method', next)
+    device.set('power_config', config)
+  }
   return (
-    <div className="pt-5 border-t border-line-subtle" data-power-method>
+    <div className="pt-5 border-t border-line-subtle space-y-5" data-power-method>
+      {canDevices && deviceRow && (
+        <PowerCheck key={deviceRow.id ?? 'legacy'} device={deviceRow} screen={screen} config={{ ...original.power_config, ...device.draft?.power_config }}
+          canTest={canTest} unsaved={'power_method' in devicePayload(device.draft ?? {}, original)}
+          onAdopt={adopt} onRecommended={setRecommended} />
+      )}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Steuerung des Bildschirms" htmlFor={methodId} className="sm:col-span-2"
           help={canDevices ? METHOD_HELP[method] : `${METHOD_HELP[method]} Zum Ändern fehlt das Recht für Geräte.`}>
           <select id={methodId} value={method} disabled={disabled} onChange={(e) => changeMethod(e.target.value)} className={fieldClass}>
-            {POWER_METHOD_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            {POWER_METHOD_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}{o.value === recommended ? ' (empfohlen)' : ''}</option>
+            ))}
           </select>
         </Field>
         {CONFIG_FIELDS[method].map((f) => (
@@ -561,7 +576,8 @@ export default function ScreenDetail() {
               <ScreenScheduleEditor value={power.draft.schedule} onChange={(v) => power.set('schedule', v)} views={views}
                 problems={problems.schedule} readOnly={!canPower} disabled={!canPower || power.saving} />
               <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems}
-                methodBlock={<PowerMethodBlock device={deviceDraft} original={originals.device} canDevices={canDevices} problems={deviceIssues} />} />
+                methodBlock={<PowerMethodBlock device={deviceDraft} original={originals.device} canDevices={canDevices} problems={deviceIssues}
+                  deviceRow={device} screen={screen} canTest={canDevices && canPower} />} />
               {(canDevices || isPaired(device)) && <UpdatesSection device={deviceDraft} canDevices={canDevices} problem={deviceIssues.window} />}
               {canSetup && <KioskSection screen={screen} onRegenerate={() => setConfirmKey(true)} />}
               {canDevices && <DeviceLog screenId={screenId} reloadKey={logKey} />}

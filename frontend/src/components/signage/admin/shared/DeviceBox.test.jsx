@@ -55,6 +55,13 @@ afterEach(() => {
 })
 
 describe('DeviceBox', () => {
+  it('ohne Steuerung gibt es keine Power-Knöpfe', async () => {
+    await mount({ screen: { id: 1, name: 'Glocke', power_method: 'none' } })
+    expect(button('Bildschirm an')).toBeUndefined()
+    expect(button('Bildschirm aus')).toBeUndefined()
+    expect(button('Neu laden')).toBeTruthy()
+  })
+
   it('zeigt Telemetrie in Gruppen mit Stand', async () => {
     await mount()
     const text = container.textContent

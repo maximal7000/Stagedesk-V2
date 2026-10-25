@@ -1,0 +1,7 @@
+Found devices: 1
+
+device:              1
+com port:            Linux
+vendor id:           2708
+product id:          1001
+type:                Raspberry Pi

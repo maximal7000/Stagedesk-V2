@@ -206,13 +206,14 @@ def validate_view_data(data: dict, own_id=None, current_kind=None) -> dict:
 
 # Key names as in the agent
 POWER_CONFIG_KEYS = {
+    'none': set(),
     'cec': {'cec_device'},
     'hdmi': {'output'},
     'hybrid': {'display_ip', 'display_port', 'monitor_id', 'cec_device'},
     'ddc': {'vcp_on', 'vcp_off'},
 }
 POWER_CONFIG_INTS = {'display_port': (1, 65535), 'monitor_id': (0, 255)}
-POWER_METHOD_LABELS = {'cec': 'CEC', 'hdmi': 'HDMI-Ausgang', 'hybrid': 'Hybrid', 'ddc': 'DDC/CI'}
+POWER_METHOD_LABELS = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hdmi': 'HDMI-Signal', 'hybrid': 'Netzwerk (SICP)', 'ddc': 'DDC'}
 _HHMM = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 
 
@@ -243,6 +244,25 @@ def validate_power_config(method, config):
                 raise HttpError(422, number_message(key, lo, hi))
         elif not isinstance(value, str) or len(value) > 64:
             raise HttpError(422, f"{key}: höchstens 64 Zeichen.")
+
+
+def validate_power_test_params(params):
+    """Returns the normalised params (seconds filled in) or None if invalid."""
+    if not isinstance(params, dict):
+        return None
+    method, config = params.get('method'), params.get('config', {})
+    seconds = params.get('seconds', 15)
+    if method not in ('cec', 'hdmi', 'hybrid', 'ddc') or not isinstance(config, dict):
+        return None
+    if not _is_int(seconds) or not 5 <= seconds <= 60:
+        return None
+    if method == 'hybrid' and not config.get('display_ip'):
+        return None
+    try:
+        validate_power_config(method, config)
+    except HttpError:
+        return None
+    return {'method': method, 'config': config, 'seconds': seconds}
 
 
 def validate_screen_device_data(data: dict, current_method: str, current_config: dict) -> None:

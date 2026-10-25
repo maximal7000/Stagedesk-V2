@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import threading
 import unittest
@@ -68,6 +69,14 @@ class Base(unittest.TestCase):
 
 
 class ExecuteTests(Base):
+    def test_power_probe_returns_json_under_2000_chars(self):
+        ok, text = execute({"id": 1, "kind": "power_probe"}, self.ctx)
+        self.assertTrue(ok)
+        data = json.loads(text)
+        self.assertIn("checked_at", data)
+        self.assertEqual([row["method"] for row in data["methods"]], ["cec", "sicp", "ddc", "hdmi"])
+        self.assertLess(len(text), 2000)
+
     def test_unknown_command_fails(self):
         self.assertEqual(execute({"id": 1, "kind": "dance"}, self.ctx), (False, "Unbekannter Befehl"))
 
@@ -420,3 +429,61 @@ class TimerTests(unittest.TestCase):
         with self.assertLogs("stagedesk_agent", level="WARNING") as logs:
             self.agent._run_command({"id": 5, "kind": "bogus"})
         self.assertIn("5", logs.output[0])
+
+
+class RecordingPowerTest:
+    def __init__(self):
+        self.starts = []
+        self.ends = 0
+
+    def start(self, method, config, seconds):
+        self.starts.append((method, config, seconds))
+        return True, json.dumps({"off_at": "2026-10-25T10:00:00+01:00", "seconds": seconds})
+
+    def end(self):
+        self.ends += 1
+        return True, "Bildschirm wird eingeschaltet"
+
+
+class PowerTestCommandTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.power_test = RecordingPowerTest()
+        self.ctx.power_test = self.power_test
+
+    def test_power_test_command_passes_params(self):
+        ok, text = execute({"kind": "power_test", "params": {"method": "hdmi", "config": {"output": "X"},
+                                                               "seconds": 20}}, self.ctx)
+        self.assertTrue(ok)
+        self.assertEqual(json.loads(text)["seconds"], 20)
+        self.assertEqual(self.power_test.starts, [("hdmi", {"output": "X"}, 20)])
+
+    def test_power_test_defaults(self):
+        self.assertTrue(execute({"kind": "power_test", "params": {"method": "none"}}, self.ctx)[0])
+        self.assertTrue(execute({"kind": "power_test", "params": {"method": "cec", "config": None}}, self.ctx)[0])
+        self.assertEqual(self.power_test.starts, [("none", {}, 15), ("cec", {}, 15)])
+
+    def test_power_test_command_validates_params(self):
+        for params in ({"method": "laser"}, {}, {"method": "cec", "seconds": 4}, {"method": "cec", "seconds": 61},
+                       {"method": "cec", "seconds": "15"}, {"method": "cec", "seconds": True},
+                       {"method": "cec", "config": "x"}):
+            self.assertEqual(execute({"kind": "power_test", "params": params}, self.ctx),
+                             (False, "Ungültige Testparameter"), params)
+        self.assertEqual(execute({"kind": "power_test"}, self.ctx), (False, "Ungültige Testparameter"))
+        self.assertEqual(self.power_test.starts, [])
+
+    def test_power_test_end_command(self):
+        self.assertEqual(execute({"kind": "power_test_end", "params": {}}, self.ctx),
+                         (True, "Bildschirm wird eingeschaltet"))
+        self.assertEqual(self.power_test.ends, 1)
+
+    def test_power_probe_holds_the_power_lock(self):
+        lock = threading.Lock()
+        seen = []
+        self.ctx.power_lock = lock
+        real_run = self.runner.run
+        self.runner.run = lambda *a, **k: seen.append(lock.locked()) or real_run(*a, **k)
+        execute({"kind": "power_probe"}, self.ctx)
+        self.assertTrue(seen)
+        self.assertTrue(all(seen))
+        self.assertFalse(lock.locked())

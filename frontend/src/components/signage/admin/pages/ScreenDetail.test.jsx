@@ -401,6 +401,33 @@ describe('ScreenDetail', () => {
       expect(api.updateScreen).toHaveBeenCalledWith(1, { auto_updates: false, update_window: { weekday: 6, from: '02:00', until: '05:00' } })
     })
 
+    it('Prüfung: Empfehlung in der Auswahl, „Ja“ setzt Methode und Konfiguration in den Entwurf', async () => {
+      perms.add('signage.devices').add('signage.power')
+      api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice()]))
+      api.sendDeviceCommand.mockImplementation((id, kind) => Promise.resolve(kind === 'power_probe'
+        ? {
+          id: 7, kind, status: 'ok',
+          result: JSON.stringify({ methods: [{ method: 'ddc', state: 'ok', text: 'Display gefunden (LH4341), Energiemodus lesbar.' }], recommended: 'ddc' }),
+        }
+        : { id: 8, kind, status: 'ok', result: JSON.stringify({ off_at: new Date().toISOString(), seconds: 15 }) }))
+      vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] })
+      try {
+        await mount()
+        const box = container.querySelector('[data-power-method]')
+        expect(api.sendDeviceCommand).toHaveBeenCalledWith(5, 'power_probe')
+        expect(byLabel('Steuerung des Bildschirms').querySelector('option[value="ddc"]').textContent).toBe('DDC (empfohlen)')
+        await click(button('Testen', box))
+        expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'ddc', config: { vcp_on: '01', vcp_off: '04' }, seconds: 15 })
+        await act(async () => { await vi.advanceTimersByTimeAsync(15000) })
+        await click(button('Ja, DDC übernehmen'))
+        expect(byLabel('Steuerung des Bildschirms').value).toBe('ddc')
+        expect(container.textContent).toContain('2 ungespeicherte Änderungen')
+        expect(api.updateScreen).not.toHaveBeenCalled()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('ohne signage.devices sind die Geräte-Felder nur lesend', async () => {
       perms.add('signage.power')
       await mount()

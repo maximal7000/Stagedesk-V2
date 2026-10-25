@@ -54,7 +54,7 @@ class DeviceTokenTest(TestCase):
 class DefaultsTest(TestCase):
     def test_screen_defaults(self):
         screen = Screen.objects.create(name='A', slug='a')
-        self.assertEqual(screen.power_method, 'cec')
+        self.assertEqual(screen.power_method, 'none')
         self.assertEqual(screen.update_window, {"weekday": 6, "from": "03:00", "until": "05:00"})
         self.assertIs(screen.daily_reboot, True)
         self.assertIs(screen.auto_updates, True)
@@ -77,9 +77,10 @@ class PairingTestBase(TestCase):
         auth.start()
         self.addCleanup(auth.stop)
 
-    def grant(self, code):
-        perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-        self.profile.permissions.add(perm)
+    def grant(self, *codes):
+        for code in codes:
+            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
+            self.profile.permissions.add(perm)
 
     def post(self, path, data):
         return self.client.post(f'/api/monitor{path}', data, content_type='application/json',
@@ -451,6 +452,7 @@ class DeviceCommandApiTest(DeviceApiBase):
         return self.post(f'/devices/{(device or self.device).id}/commands', {'kind': kind})
 
     def test_command_needs_power_for_power_off(self):
+        Screen.objects.filter(pk=self.screen.pk).update(power_method='cec')
         self.grant('signage.devices')
         self.assertEqual(self.cmd('power_off').status_code, 403)
         self.assertEqual(self.cmd('power_on').status_code, 403)
@@ -515,6 +517,78 @@ class DeviceCommandApiTest(DeviceApiBase):
         cid = self.cmd('restart_browser').json()['id']
         devices.finish_command(self.device, cid, True, 'Browser neu gestartet')
         self.assertIn('Browser neu gestartet', DeviceEvent.objects.get(kind='command').text)
+
+
+class PowerMethodNoneTest(DeviceApiBase):
+    def cmd(self, kind, params=None):
+        body = {'kind': kind}
+        if params is not None:
+            body['params'] = params
+        return self.post(f'/devices/{self.device.id}/commands', body)
+
+    def test_new_screen_defaults_to_none(self):
+        self.assertEqual(Screen.objects.create(name='Neu', slug='neu').power_method, 'none')
+
+    def test_power_on_refused_for_none(self):
+        self.grant('signage.devices', 'signage.power')
+        self.assertEqual(self.screen.power_method, 'none')
+        for kind in ('power_on', 'power_off'):
+            r = self.cmd(kind)
+            self.assertEqual(r.status_code, 422)
+            self.assertEqual(r.json()['detail'], "Für diesen Bildschirm ist keine Power-Steuerung eingerichtet.")
+        self.assertEqual(DeviceCommand.objects.count(), 0)
+        Screen.objects.filter(pk=self.screen.pk).update(power_method='cec')
+        self.assertEqual(self.cmd('power_on').status_code, 200)
+
+    def test_power_test_needs_power_permission(self):
+        self.grant('signage.devices')
+        r = self.cmd('power_test', {'method': 'cec', 'config': {}})
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(self.cmd('power_test_end').status_code, 403)
+        self.assertEqual(DeviceCommand.objects.count(), 0)
+
+    def test_power_test_params_validated(self):
+        self.grant('signage.devices', 'signage.power')
+        bad = [
+            {'method': 'foo', 'config': {}},
+            {'method': 'cec', 'config': {}, 'seconds': 3},
+            {'method': 'cec', 'config': {}, 'seconds': 61},
+            {'method': 'cec', 'config': {}, 'seconds': True},
+            {'method': 'cec', 'config': []},
+            {'method': 'hybrid', 'config': {}},
+            {'method': 'none', 'config': {}},
+            {},
+        ]
+        for params in bad:
+            r = self.cmd('power_test', params)
+            self.assertEqual((r.status_code, r.json().get('detail')), (422, "Ungültige Testparameter."), params)
+        self.assertEqual(DeviceCommand.objects.count(), 0)
+        params = {'method': 'hybrid', 'config': {'display_ip': '10.0.0.9'}, 'seconds': 30}
+        r = self.cmd('power_test', params)
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(DeviceCommand.objects.get(pk=r.json()['id']).params, params)
+
+    def test_power_test_seconds_optional(self):
+        self.grant('signage.devices', 'signage.power')
+        self.assertEqual(self.cmd('power_test', {'method': 'ddc', 'config': {}}).status_code, 200)
+
+    def test_power_probe_allowed_with_devices_permission(self):
+        self.grant('signage.devices')
+        r = self.cmd('power_probe')
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['kind'], 'power_probe')
+
+    def test_power_test_end_with_power_permission(self):
+        self.grant('signage.devices', 'signage.power')
+        self.assertEqual(self.cmd('power_test_end').status_code, 200)
+
+    def test_command_message_carries_params(self):
+        params = {'method': 'cec', 'config': {}, 'seconds': 15}
+        command = devices.create_command(self.device, 'power_test', params=params)
+        self.assertEqual(devices.command_message(command)['params'], params)
+        self.assertEqual(DeviceEvent.objects.get(kind='command').text, 'Steuerung testen angefordert')
+        plain = devices.create_command(self.device, 'reload')
+        self.assertEqual(devices.command_message(plain)['params'], {})
 
 
 class DeviceEventsApiTest(DeviceApiBase):
@@ -648,8 +722,16 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
                                         'power_config': {'display_ip': '10.0.0.2', 'display_port': 5000,
                                                          'monitor_id': 0, 'cec_device': '0'}}).status_code, 200)
         self.assertEqual(self.put(url, {'power_config': {'display_port': 70000}}).status_code, 422)
+        r = self.put(url, {'power_config': {'output': 'HDMI-A-1'}})
+        self.assertEqual(r.json()['detail'], "Netzwerk (SICP): unbekanntes Feld „output“.")
         self.assertEqual(self.put(url, {'power_config': {'display_ip': ['x']}}).status_code, 422)
         self.assertEqual(self.put(url, {'power_method': 'cec'}).status_code, 422)
+
+    def test_power_method_labels_match_the_admin(self):
+        from .validation import POWER_METHOD_LABELS
+        expected = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hybrid': 'Netzwerk (SICP)', 'ddc': 'DDC', 'hdmi': 'HDMI-Signal'}
+        self.assertEqual(POWER_METHOD_LABELS, expected)
+        self.assertEqual(dict(Screen.POWER_METHOD_CHOICES), expected)
 
     def test_explicit_null_device_fields_are_ignored(self):
         self.grant('signage.devices')
@@ -661,7 +743,7 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
         self.assertEqual(r.status_code, 200, r.content)
         self.screen.refresh_from_db()
         self.assertEqual((self.screen.power_method, self.screen.auto_updates, self.screen.daily_reboot),
-                         ('cec', True, False))
+                         ('none', True, False))
 
     def test_screen_response_still_hides_key_without_setup(self):
         self.grant('signage.devices')

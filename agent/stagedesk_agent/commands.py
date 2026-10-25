@@ -1,14 +1,18 @@
+import datetime
+import json
 import logging
 import os
 import stat
+import threading
 import urllib.error
 import urllib.request
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
 
-from .power import KIOSK_USER, wayland_command
+from .power import KIOSK_USER, METHODS, wayland_command
+from .power_probe import probe
 
 log = logging.getLogger("stagedesk_agent.commands")
 MAX_SCREENSHOT = 15 * 1024 * 1024
@@ -18,6 +22,8 @@ LOCAL_URL = "http://127.0.0.1:8765/"
 DEFAULT_OUTPUT = "HDMI-A-1"
 REBOOT_DELAY = 3
 PATTERN_SECONDS = 60
+POWER_TEST_SECONDS = 15
+POWER_TEST_RANGE = range(5, 61)
 UPLOAD_TIMEOUT = 60
 
 
@@ -61,6 +67,9 @@ class CommandContext:
     defer: Callable[..., Any]  # defer(delay, fn, key=None): run fn after the result was sent; same key replaces
     upload: Callable = upload_screenshot
     screenshot_path: Any = None  # default: <runtime dir of pi>/sd-shot.png
+    power_lock: Any = field(default_factory=threading.Lock)  # the agent's lock around all display access
+    power_test: Any = None
+    params: dict = field(default_factory=dict)
 
 
 def _reload(ctx):
@@ -159,6 +168,29 @@ def _test_pattern(ctx):
     return True, f"Testbild für {PATTERN_SECONDS} Sekunden"
 
 
+def _power_probe(ctx):
+    power_config = ctx.config.power_config if isinstance(ctx.config.power_config, dict) else {}
+    with ctx.power_lock:
+        result = probe(ctx.runner, power_config, root=ctx.config.paths.root)
+    result["checked_at"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+    return True, json.dumps(result, ensure_ascii=False)
+
+
+def _power_test(ctx):
+    method = ctx.params.get("method")
+    config = ctx.params.get("config")
+    config = {} if config is None else config
+    seconds = ctx.params.get("seconds", POWER_TEST_SECONDS)
+    if (method not in METHODS or not isinstance(config, dict) or type(seconds) is not int
+            or seconds not in POWER_TEST_RANGE):
+        return False, "Ungültige Testparameter"
+    return ctx.power_test.start(method, config, seconds)
+
+
+def _power_test_end(ctx):
+    return ctx.power_test.end()
+
+
 HANDLERS = {
     "reload": _reload,
     "restart_browser": _restart_browser,
@@ -168,6 +200,9 @@ HANDLERS = {
     "update_now": _update_now,
     "screenshot": _screenshot,
     "test_pattern": _test_pattern,
+    "power_probe": _power_probe,
+    "power_test": _power_test,
+    "power_test_end": _power_test_end,
 }
 
 
@@ -176,7 +211,8 @@ def execute(cmd, ctx):
     if handler is None:
         return False, "Unbekannter Befehl"
     try:
-        return handler(ctx)
+        params = cmd.get("params")
+        return handler(replace(ctx, params=params if isinstance(params, dict) else {}))
     except Exception as exc:
         log.exception("command %s failed", cmd.get("kind"))
         return False, f"Fehler: {exc}"

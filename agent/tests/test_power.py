@@ -238,3 +238,13 @@ class ErrorTests(unittest.TestCase):
         runner = FakeRunner()
         make_power("cec", None, runner).set(True)
         self.assertEqual(runner.inputs, ["on 0\n"])
+
+
+class NonePowerTests(unittest.TestCase):
+    def test_none_method_never_switches(self):
+        runner = FakeRunner()
+        power = make_power("none", {}, runner)
+        self.assertEqual(power.set(False), "keine Steuerung")
+        self.assertEqual(power.set(True), "keine Steuerung")
+        self.assertEqual(power.status(), "keine Steuerung")
+        self.assertEqual(runner.calls, [])

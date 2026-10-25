@@ -297,7 +297,7 @@ class ScreenListSchema(Schema):
     access_key: str = ''
     off_during_holidays: bool = True
     off_until: Optional[datetime] = None
-    power_method: str = 'cec'
+    power_method: str = 'none'
     power_config: dict = {}
     auto_updates: bool = True
     update_window: dict = {}
@@ -327,7 +327,7 @@ class ScreenUpdateSchema(Schema):
     orientation: Optional[str] = None
     off_during_holidays: Optional[bool] = None
     off_until: Optional[datetime] = None
-    power_method: Optional[Literal['cec', 'hdmi', 'hybrid', 'ddc']] = None
+    power_method: Optional[Literal['none', 'cec', 'hdmi', 'hybrid', 'ddc']] = None
     power_config: Optional[dict] = None
     auto_updates: Optional[bool] = None
     update_window: Optional[dict] = None
@@ -630,11 +630,13 @@ class DeviceSchema(Schema):
 
 
 DEVICE_COMMAND_KINDS = Literal['reload', 'restart_browser', 'reboot', 'power_on', 'power_off',
-                               'update_now', 'screenshot', 'test_pattern']
+                               'update_now', 'screenshot', 'test_pattern',
+                               'power_probe', 'power_test', 'power_test_end']
 
 
 class DeviceCommandCreateSchema(Schema):
     kind: DEVICE_COMMAND_KINDS
+    params: dict = {}
 
 
 class DeviceCommandSchema(Schema):

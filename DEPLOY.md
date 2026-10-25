@@ -252,6 +252,7 @@ curl -fsSL https://stagedesk.t410.de/api/monitor/agent/install.sh | sudo bash
 
 - **Selbst-Update** des Agents ersetzt nur den Python-Code. Änderungen an `agent/systemd/*` oder `agent/kiosk/kiosk.sh` erreichen die Pis erst, wenn `install.sh` dort erneut läuft (Kopplung bleibt erhalten).
 - **Neue Agent-Version ausliefern:** `agent/VERSION` erhöhen und deployen. Der Server baut das Paket beim ersten Abruf neu, verbundene Pis starten das Selbst-Update direkt nach ihrem nächsten Hello, also unmittelbar nach dem Deploy (der Neustart des Backends trennt alle Verbindungen). Das Update-Fenster gilt nur für System-Updates und Neustarts, nicht für den Agent-Code.
+- **Power-Methode `none` und Prüfbefehle** (Migration `signage` 0049, Rückweg `migrate signage 0048` setzt `none` auf `cec`): Neue Bildschirme starten ohne Steuerung, `power_on`/`power_off` werden dann abgelehnt. Die Befehle `power_probe`, `power_test` und `power_test_end` gibt es erst ab Agent 1.1.0, der sich per Selbst-Update selbst einspielt.
 - **Alte Skripte** (`scripts/stagedesk-power*.py`, Kiosk-Anleitung ohne Agent) bleiben im Repo, bis alle Pis umgestellt sind. Das Entfernen ist ein eigener Schritt.
 - **Tests:** `cd agent && python3 -m unittest discover -s tests`. Der E2E-Test im Backend (`monitor/tests_agent_e2e.py`) braucht `websocket-client`: `pip install -r backend/requirements-dev.txt`.
 

@@ -487,3 +487,94 @@ class KioskRetryTests(unittest.TestCase):
         agent = Agent(self.cfg, FakePages(), kiosk_set_url=boom, runner=object())
         agent.on_message({"type": "hello", "kiosk_url": "https://x/m"})
         self.assertIsNone(agent._kiosk_url)
+
+
+class PowerTestWiringTests(unittest.TestCase):
+    def setUp(self):
+        self.paths = make_paths(self)
+        self.cfg = Config.load(self.paths)
+        self.cfg.power_method, self.cfg.power_config = "ddc", {}
+        self.made = []
+        self.timers = []
+        self.sent = []
+        timers = self.timers
+
+        class FakeTimer:
+            def __init__(self, delay, fn):
+                self.delay, self.fn, self.cancelled = delay, fn, False
+                timers.append(self)
+
+            def start(self):
+                pass
+
+            def cancel(self):
+                self.cancelled = True
+
+        def power_factory(method, config, runner):
+            power = FakePower(method, config)
+            self.made.append(power)
+            return power
+        self.agent = Agent(self.cfg, FakePages(), power_factory=power_factory, runner=object(),
+                           timer_factory=FakeTimer, collect=lambda *a, **k: {}, telemetry_interval=60)
+        self.agent.connection = type("C", (), {"send": lambda s, m: self.sent.append(m) or True,
+                                               "stop": lambda s: None})()
+        self.addCleanup(self.agent.stop)
+
+    def wait_for(self, predicate):
+        for _ in range(500):
+            if predicate():
+                return True
+            threading.Event().wait(0.01)
+        return False
+
+    def drain_power_queue(self):
+        done = threading.Event()
+        self.agent._enqueue_power(done.set)
+        self.assertTrue(done.wait(2))
+
+    def test_power_command_during_test_applies_after(self):
+        self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 5}})
+        result = [m for m in self.sent if m.get("type") == "command_result"][0]
+        self.assertTrue(result["ok"], result)
+        tested = self.made[0]
+        self.assertEqual((tested.method, tested.calls), ("cec", [False]))
+        self.agent.on_message({"type": "power_command", "power": False})
+        self.drain_power_queue()
+        self.assertEqual([p.method for p in self.made], ["cec"])  # no switching with the saved method yet
+        self.timers[0].fn()
+        self.assertEqual(tested.calls, [False, True])
+        self.assertTrue(tested.stopped)
+        self.assertTrue(self.wait_for(lambda: len(self.made) == 2 and self.made[1].calls == [False]))
+        self.assertEqual(self.made[1].method, "ddc")
+        self.assertTrue(self.wait_for(lambda: {"type": "power_status", "status": "standby"} in self.sent))
+
+    def test_wanted_on_during_test_is_forced_on_saved_controller_that_remembers_off(self):
+        self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 5}})
+        self.agent.on_message({"type": "power_command", "power": True})
+        self.drain_power_queue()
+        self.assertEqual([p.method for p in self.made], ["cec"])
+        self.timers[0].fn()
+        self.assertTrue(self.wait_for(lambda: len(self.made) == 2 and self.made[1].calls == [True]))
+        self.assertEqual(self.made[1].method, "ddc")
+        self.assertTrue(self.wait_for(lambda: {"type": "power_status", "status": "an"} in self.sent))
+
+    def test_nothing_reapplied_after_test_without_wanted_state(self):
+        self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 5}})
+        self.timers[0].fn()
+        self.drain_power_queue()
+        self.assertEqual([p.method for p in self.made], ["cec"])
+
+    def test_power_command_after_test_switches_directly(self):
+        self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 5}})
+        self.timers[0].fn()
+        self.agent.on_message({"type": "power_command", "power": True})
+        self.assertTrue(self.wait_for(lambda: {"type": "power_status", "status": "an"} in self.sent))
+
+    def test_power_test_end_switches_on_at_once(self):
+        self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 30}})
+        self.agent._run_command({"id": 2, "kind": "power_test_end", "params": {}})
+        self.assertTrue(self.timers[0].cancelled)
+        self.assertEqual(self.timers[1].delay, 0)
+        self.timers[1].fn()
+        self.assertEqual(self.made[0].calls, [False, True])
+        self.assertFalse(self.agent.power_test.active)

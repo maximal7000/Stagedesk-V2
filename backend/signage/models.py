@@ -400,8 +400,9 @@ class Screen(models.Model):
     cec_status_at = models.DateTimeField(null=True, blank=True,
         help_text="Zeitpunkt der letzten CEC-Status-Meldung")
 
-    POWER_METHOD_CHOICES = [('cec', 'CEC'), ('hdmi', 'HDMI'), ('hybrid', 'Hybrid'), ('ddc', 'DDC')]
-    power_method = models.CharField(max_length=10, choices=POWER_METHOD_CHOICES, default='cec')
+    POWER_METHOD_CHOICES = [('none', 'Keine Steuerung'), ('cec', 'CEC'), ('hdmi', 'HDMI-Signal'),
+                            ('hybrid', 'Netzwerk (SICP)'), ('ddc', 'DDC')]
+    power_method = models.CharField(max_length=10, choices=POWER_METHOD_CHOICES, default='none')
     power_config = models.JSONField(default=dict, blank=True,
         help_text="CEC-Gerät, HDMI-Ausgang, SICP-IP/Port/Monitor-ID, DDC-VCP-Werte")
     auto_updates = models.BooleanField(default=True)
@@ -793,7 +794,7 @@ class PairingRequest(models.Model):
 class DeviceCommand(models.Model):
     KIND_CHOICES = [(k, k) for k in (
         'reload', 'restart_browser', 'reboot', 'power_on', 'power_off',
-        'update_now', 'screenshot', 'test_pattern')]
+        'update_now', 'screenshot', 'test_pattern', 'power_probe', 'power_test', 'power_test_end')]
     STATUS_CHOICES = [(k, k) for k in ('pending', 'sent', 'ok', 'failed', 'expired')]
     device = models.ForeignKey(Device, on_delete=models.CASCADE, related_name='commands')
     kind = models.CharField(max_length=20, choices=KIND_CHOICES)

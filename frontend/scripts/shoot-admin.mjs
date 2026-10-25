@@ -10,7 +10,8 @@
 // (GET /api/signage/display?screen=aula → signage-display@screen=aula.json). Eine Aufnahme mit `variant` liest
 // zuerst aus tests/signage/admin-fixtures/<variant>/. Fehlt eine Datei, antwortet die Route mit [] und das Werkzeug
 // nennt den Pfad. Schreibende Anfragen lesen <pfad>.<methode>.json (POST /api/signage/views/preview →
-// signage-views-preview.post.json), sonst antworten sie mit {"success": true}. Fehlerfälle beschreibt
+// signage-views-preview.post.json; mit "kind" im Body zuerst <pfad>.post@kind=<kind>.json), sonst antworten sie
+// mit {"success": true}. Fehlerfälle beschreibt
 // fulfillFixture (Testdatei mit "__status" oder "__abort").
 // Live-Vorschau: Eine Aufnahme mit `preview` beantwortet GET /api/signage/display?preview=… (das iframe der
 // Vorschau) mit tests/signage/display-fixtures/<preview>.json, damit die Vorschau Inhalt zeigt.
@@ -284,6 +285,28 @@ const PAGES = {
     },
   },
   'settings-onair-only': { path: '/signage-admin/settings', variant: 'onair-only', height: 1180 },
+  // Steuerung prüfen: Prüfliste mit Empfehlung, Variante ohne Steuerung, Testfenster mit Countdown und Rückfrage
+  'screen-power-check': { path: '/signage-admin/screens/1', height: 1100, action: showPowerCheck },
+  'screen-power-check-light': { path: '/signage-admin/screens/1', height: 1100, scheme: 'light', action: showPowerCheck },
+  'screen-power-none': { path: '/signage-admin/screens/1', variant: 'power-none', height: 1100, action: showPowerCheck },
+  'screen-power-unsaved': {
+    path: '/signage-admin/screens/1', height: 1100,
+    action: async (page) => {
+      await showPowerCheck(page)
+      await page.getByLabel('SICP-IP').fill('192.0.2.31')
+      await page.waitForSelector('[data-power-check-unsaved]')
+    },
+  },
+  'screen-power-test': { path: '/signage-admin/screens/1', height: 1100, action: openPowerTest },
+  'screen-power-test-light': { path: '/signage-admin/screens/1', height: 1100, scheme: 'light', action: openPowerTest },
+  'screen-power-question': {
+    path: '/signage-admin/screens/1', height: 1100,
+    action: async (page) => {
+      await openPowerTest(page)
+      await page.clock.setFixedTime(new Date(T0.getTime() + 20000))
+      await page.waitForSelector('[data-power-test="question"]')
+    },
+  },
   'stop-filter-dialog': {
     path: '/signage-admin/views/1', preview: 'departures',
     action: async (page) => {
@@ -291,6 +314,18 @@ const PAGES = {
       await page.waitForSelector('[data-stop-filter-dialog]')
     },
   },
+}
+
+async function showPowerCheck(page) {
+  await page.waitForSelector('[data-power-check="done"]')
+  await page.locator('[data-power-method]').evaluate((el) => el.scrollIntoView({ block: 'start' }))
+  await page.evaluate(() => window.scrollBy(0, -24))
+}
+
+async function openPowerTest(page) {
+  await showPowerCheck(page)
+  await page.getByRole('button', { name: 'CEC testen' }).click()
+  await page.waitForSelector('[data-power-test="running"]')
 }
 
 // Bis das iframe der Live-Vorschau die Anzeige gerendert hat
@@ -396,7 +431,9 @@ async function answerApi(route, missing, shot) {
   const apiPath = pathname.slice(pathname.indexOf('/api/') + 5)
   const variant = shot.variant
   if (req.method() !== 'GET') {
-    const posted = fixtureFor(`${apiPath}.${req.method().toLowerCase()}`, '', variant)
+    let kind = ''
+    try { kind = JSON.parse(req.postData() || '{}')?.kind ?? '' } catch { kind = '' }
+    const posted = fixtureFor(`${apiPath}.${req.method().toLowerCase()}`, kind ? `kind=${kind}` : '', variant)
     return fulfillFixture(route, posted ? readFileSync(posted, 'utf8') : '{"success":true}')
   }
   if (apiPath === 'signage/display' && searchParams.has('preview') && shot.preview) {
@@ -452,6 +489,9 @@ async function shoot(context, baseUrl, name, storageKey, outDir) {
 
     await page.goto(`${baseUrl}${shot.path}`)
     await page.waitForSelector('[data-admin-page]:not([data-state="loading"])', { timeout: 15000 })
+    if (shot.scheme === 'light') {
+      await page.evaluate(() => { document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light') })
+    }
     if (shot.action) await shot.action(page)
     await page.evaluate(() => document.fonts.ready)
     await page.waitForTimeout(150)
