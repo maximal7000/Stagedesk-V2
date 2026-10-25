@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { Clock, MonitorSmartphone, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '../../../ui'
 import { Field, Segmented, fieldClass } from './form'
@@ -48,12 +49,16 @@ function CodeInput({ cells, onChange }) {
     else if (e.key === 'ArrowRight') { e.preventDefault(); focusAt(i + 1) }
   }
   return (
-    <div ref={groupRef} role="group" aria-label="Kopplungscode" className="flex items-center gap-2">
+    <div ref={groupRef} role="group" aria-label="Kopplungscode" className="flex items-center justify-center gap-2">
       {cells.map((c, i) => (
-        <input key={i} data-code-index={i} aria-label={`Ziffer ${i + 1} von 6`} type="text" inputMode="numeric" autoComplete="one-time-code"
-          value={c} onChange={onInput(i)} onKeyDown={onKey(i)} onFocus={(e) => e.target.select()}
-          onPaste={(e) => { e.preventDefault(); put(i, normalizeCode(e.clipboardData.getData('text'))) }}
-          className={`${fieldClass} !w-11 px-0 text-center font-display text-2xl tabular-nums ${i === 3 ? 'ml-4' : ''}`} />
+        <span key={i} className="contents">
+          {i === 3 && <span aria-hidden="true" className="w-3 h-0.5 rounded-full bg-line-strong mx-1" />}
+          <input data-code-index={i} aria-label={`Ziffer ${i + 1} von 6`} type="text" inputMode="numeric" autoComplete="one-time-code"
+            value={c} onChange={onInput(i)} onKeyDown={onKey(i)} onFocus={(e) => e.target.select()}
+            onPaste={(e) => { e.preventDefault(); put(i, normalizeCode(e.clipboardData.getData('text'))) }}
+            className={`h-14 w-12 rounded-lg border bg-raised text-center font-display text-3xl font-semibold tabular-nums text-fg caret-accent transition-colors focus:outline-none focus:border-accent ${
+              c ? 'border-line-strong' : 'border-line'}`} />
+        </span>
       ))}
     </div>
   )
@@ -128,18 +133,45 @@ export default function PairDialog({ screens, onClose, onPaired }) {
       onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose?.() }}>
       <form ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} data-pair-dialog={step}
         onSubmit={step === 1 ? next : pair}
-        className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full p-5">
-        <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight text-fg">Bildschirm koppeln</h2>
-        <p className="mt-1 text-xs text-fg-subtle">Schritt {step} von 2</p>
+        className="bg-overlay border border-line rounded-lg shadow-overlay max-w-md w-full">
+        <div className="flex items-start gap-3 px-5 pt-5">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-raised border border-line text-fg-muted">
+            <MonitorSmartphone className="w-5 h-5" />
+          </span>
+          <div className="flex-1 min-w-0">
+            <h2 id={titleId} className="font-display text-xl font-semibold tracking-tight text-fg">Bildschirm koppeln</h2>
+            <p className="text-sm text-fg-muted">{step === 1 ? 'Code vom Raspberry Pi eingeben' : 'Bildschirm zuordnen'}</p>
+          </div>
+          <button type="button" onClick={onClose} disabled={busy} aria-label="Schließen"
+            className="-mr-1.5 -mt-1 p-1.5 rounded-md text-fg-subtle hover:text-fg hover:bg-raised focus:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <ol aria-label={`Schritt ${step} von 2`} className="mt-4 px-5 grid grid-cols-2 gap-2">
+          {['Code', 'Zuordnung'].map((label, i) => (
+            <li key={label} aria-current={step === i + 1 ? 'step' : undefined}>
+              <div className={`h-1 rounded-full ${step >= i + 1 ? 'bg-accent' : 'bg-line'}`} />
+              <div className={`mt-1.5 text-xs ${step === i + 1 ? 'text-fg font-medium' : 'text-fg-subtle'}`}>{i + 1}. {label}</div>
+            </li>
+          ))}
+        </ol>
 
+        <div className="px-5 pb-5">
         {step === 1 ? (
-          <div className="mt-4">
-            <div className="text-sm font-medium text-fg mb-1.5">Kopplungscode</div>
+          <div className="mt-5">
             <CodeInput cells={cells} onChange={setCells} />
-            <p className="text-xs text-fg-subtle mt-1.5">Den Code zeigt der Raspberry Pi nach der Installation auf seinem Bildschirm. Er gilt 15 Minuten.</p>
+            <p className="mt-4 flex items-start justify-center gap-1.5 text-center text-xs text-fg-subtle">
+              <Clock className="w-3.5 h-3.5 mt-px shrink-0" />
+              <span>Der Pi zeigt den Code nach der Installation auf seinem Bildschirm. Er gilt 15 Minuten.</span>
+            </p>
           </div>
         ) : (
-          <div className="mt-4 space-y-4">
+          <div className="mt-5 space-y-4">
+            <div className="flex items-center justify-between gap-3 rounded-lg bg-raised border border-line px-3 py-2">
+              <span className="text-sm text-fg-muted">Code <span className="font-display text-base font-semibold tabular-nums tracking-wider text-fg">{code.slice(0, 3)} {code.slice(3)}</span></span>
+              <button type="button" disabled={busy} onClick={() => { setStep(1); setError('') }}
+                className="text-xs text-fg-muted hover:text-fg focus:outline-none focus-visible:underline">Ändern</button>
+            </div>
             <Segmented label="Zuordnung" options={MODES} value={mode} onChange={(m) => { setMode(m); setError('') }} disabled={busy} />
             {mode === 'existing' ? (
               <Field label="Bildschirm" htmlFor={screenId}
@@ -165,9 +197,9 @@ export default function PairDialog({ screens, onClose, onPaired }) {
         )}
 
         {error && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
+        </div>
 
-        <div className="mt-5 flex justify-end gap-2">
-          {step === 2 && <Button variant="ghost" type="button" disabled={busy} onClick={() => { setStep(1); setError('') }}>Zurück</Button>}
+        <div className="flex justify-end gap-2 border-t border-line-subtle px-5 py-3.5">
           <Button variant="ghost" type="button" disabled={busy} onClick={onClose}>Abbrechen</Button>
           {step === 1 ? (
             <Button variant="primary" type="submit" disabled={!isCompleteCode(code)}>Weiter</Button>

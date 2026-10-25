@@ -45,6 +45,14 @@ const PAGES = {
       await page.waitForSelector('[data-emergency-dialog] input[type="radio"]:checked')
     },
   },
+  'overview-pair-code': {
+    path: '/signage-admin',
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Bildschirm koppeln', exact: true }).click()
+      await page.getByLabel('Ziffer 1 von 6').click()
+      await page.keyboard.type('4829')
+    },
+  },
   'overview-pair-dialog': {
     path: '/signage-admin',
     action: async (page) => {
