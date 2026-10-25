@@ -722,8 +722,16 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
                                         'power_config': {'display_ip': '10.0.0.2', 'display_port': 5000,
                                                          'monitor_id': 0, 'cec_device': '0'}}).status_code, 200)
         self.assertEqual(self.put(url, {'power_config': {'display_port': 70000}}).status_code, 422)
+        r = self.put(url, {'power_config': {'output': 'HDMI-A-1'}})
+        self.assertEqual(r.json()['detail'], "Netzwerk (SICP): unbekanntes Feld „output“.")
         self.assertEqual(self.put(url, {'power_config': {'display_ip': ['x']}}).status_code, 422)
         self.assertEqual(self.put(url, {'power_method': 'cec'}).status_code, 422)
+
+    def test_power_method_labels_match_the_admin(self):
+        from .validation import POWER_METHOD_LABELS
+        expected = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hybrid': 'Netzwerk (SICP)', 'ddc': 'DDC', 'hdmi': 'HDMI-Signal'}
+        self.assertEqual(POWER_METHOD_LABELS, expected)
+        self.assertEqual(dict(Screen.POWER_METHOD_CHOICES), expected)
 
     def test_explicit_null_device_fields_are_ignored(self):
         self.grant('signage.devices')

@@ -400,8 +400,8 @@ class Screen(models.Model):
     cec_status_at = models.DateTimeField(null=True, blank=True,
         help_text="Zeitpunkt der letzten CEC-Status-Meldung")
 
-    POWER_METHOD_CHOICES = [('none', 'Keine Steuerung'), ('cec', 'CEC'), ('hdmi', 'HDMI'),
-                            ('hybrid', 'Hybrid'), ('ddc', 'DDC')]
+    POWER_METHOD_CHOICES = [('none', 'Keine Steuerung'), ('cec', 'CEC'), ('hdmi', 'HDMI-Signal'),
+                            ('hybrid', 'Netzwerk (SICP)'), ('ddc', 'DDC')]
     power_method = models.CharField(max_length=10, choices=POWER_METHOD_CHOICES, default='none')
     power_config = models.JSONField(default=dict, blank=True,
         help_text="CEC-Gerät, HDMI-Ausgang, SICP-IP/Port/Monitor-ID, DDC-VCP-Werte")

@@ -41,8 +41,8 @@ class Migration(migrations.Migration):
                 choices=[
                     ("none", "Keine Steuerung"),
                     ("cec", "CEC"),
-                    ("hdmi", "HDMI"),
-                    ("hybrid", "Hybrid"),
+                    ("hdmi", "HDMI-Signal"),
+                    ("hybrid", "Netzwerk (SICP)"),
                     ("ddc", "DDC"),
                 ],
                 default="none",

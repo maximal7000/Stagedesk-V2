@@ -213,7 +213,7 @@ POWER_CONFIG_KEYS = {
     'ddc': {'vcp_on', 'vcp_off'},
 }
 POWER_CONFIG_INTS = {'display_port': (1, 65535), 'monitor_id': (0, 255)}
-POWER_METHOD_LABELS = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hdmi': 'HDMI-Ausgang', 'hybrid': 'Hybrid', 'ddc': 'DDC/CI'}
+POWER_METHOD_LABELS = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hdmi': 'HDMI-Signal', 'hybrid': 'Netzwerk (SICP)', 'ddc': 'DDC'}
 _HHMM = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 
 
