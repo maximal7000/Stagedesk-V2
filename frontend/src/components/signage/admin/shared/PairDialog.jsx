@@ -56,7 +56,7 @@ function CodeInput({ cells, onChange }) {
           <input data-code-index={i} aria-label={`Ziffer ${i + 1} von 6`} type="text" inputMode="numeric" autoComplete="one-time-code"
             value={c} onChange={onInput(i)} onKeyDown={onKey(i)} onFocus={(e) => e.target.select()}
             onPaste={(e) => { e.preventDefault(); put(i, normalizeCode(e.clipboardData.getData('text'))) }}
-            className={`h-14 w-12 rounded-lg border bg-raised text-center font-display text-3xl font-semibold tabular-nums text-fg caret-accent transition-colors focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/30 ${
+            className={`h-14 w-12 rounded-lg border bg-raised text-center font-display text-3xl font-semibold tabular-nums text-fg caret-accent transition-colors focus:outline-none focus:border-accent ${
               c ? 'border-line-strong' : 'border-line'}`} />
         </span>
       ))}
