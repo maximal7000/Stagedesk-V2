@@ -1,0 +1,4 @@
+{
+  "id": 41, "kind": "power_probe", "status": "ok", "created_at": "2026-10-20T09:59:58+02:00",
+  "result": "{\"checked_at\": \"2026-10-20T09:59:59+02:00\", \"recommended\": \"none\", \"methods\": [{\"method\": \"cec\", \"state\": \"fail\", \"text\": \"CEC-Adapter da, aber kein Display auf Adresse 0.\"}, {\"method\": \"sicp\", \"state\": \"skip\", \"text\": \"Keine Display-IP eingetragen.\"}, {\"method\": \"ddc\", \"state\": \"fail\", \"text\": \"Kein DDC-fähiges Display gefunden.\"}, {\"method\": \"hdmi\", \"state\": \"fail\", \"text\": \"Kein Ausgang gefunden.\"}]}"
+}
