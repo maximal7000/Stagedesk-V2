@@ -328,8 +328,8 @@ class Agent:
     def _after_power_test(self):
         # Runs on a timer thread; the power worker keeps the order with queued power commands.
         def restore():
-            if self._wanted_power is False:
-                self.send({"type": "power_status", "status": self._apply_power(False, force=True)})
+            if self._wanted_power is not None:
+                self.send({"type": "power_status", "status": self._apply_power(self._wanted_power, force=True)})
         self._enqueue_power(restore)
 
     def _send_telemetry(self):

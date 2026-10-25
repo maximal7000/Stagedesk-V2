@@ -548,10 +548,18 @@ class PowerTestWiringTests(unittest.TestCase):
         self.assertEqual(self.made[1].method, "ddc")
         self.assertTrue(self.wait_for(lambda: {"type": "power_status", "status": "standby"} in self.sent))
 
-    def test_wanted_on_is_not_reapplied_after_test(self):
+    def test_wanted_on_during_test_is_forced_on_saved_controller_that_remembers_off(self):
         self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 5}})
         self.agent.on_message({"type": "power_command", "power": True})
         self.drain_power_queue()
+        self.assertEqual([p.method for p in self.made], ["cec"])
+        self.timers[0].fn()
+        self.assertTrue(self.wait_for(lambda: len(self.made) == 2 and self.made[1].calls == [True]))
+        self.assertEqual(self.made[1].method, "ddc")
+        self.assertTrue(self.wait_for(lambda: {"type": "power_status", "status": "an"} in self.sent))
+
+    def test_nothing_reapplied_after_test_without_wanted_state(self):
+        self.agent._run_command({"id": 1, "kind": "power_test", "params": {"method": "cec", "seconds": 5}})
         self.timers[0].fn()
         self.drain_power_queue()
         self.assertEqual([p.method for p in self.made], ["cec"])
