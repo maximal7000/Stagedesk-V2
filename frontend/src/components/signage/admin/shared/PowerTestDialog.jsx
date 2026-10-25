@@ -4,10 +4,18 @@ import { Button } from '../../../ui'
 import { configFor } from '../pages/screenData'
 import { isFinished, watchCommand } from './deviceCommands'
 import { errorText } from './errorText'
-import { methodLabel, nextMethod } from './powerCheck'
+import { methodLabel } from './powerCheck'
 import * as api from './api'
 
 const TEST_SECONDS = 15
+const BUSY_TEXT = 'Es läuft schon ein Test.'
+// The Pi's own timer may end a moment after the browser countdown: one retry after this delay.
+const BUSY_RETRY_MS = 3000
+const FAILURE_TITLES = {
+  agent: 'Der Bildschirm wurde nicht ausgeschaltet.',
+  'not-started': 'Test nicht gestartet',
+  'no-reply': 'Keine Antwort vom Gerät',
+}
 const TICK_MS = 250
 const NONE_TEXT = 'Das Display bleibt an und zeigt außerhalb des Zeitplans einen dunklen Bildschirm mit Uhr.'
 
@@ -49,36 +57,42 @@ export default function PowerTestDialog({ device, screen, method, config, order,
   const [current, setCurrent] = useState(method)
   const [phase, setPhase] = useState('starting')
   const [test, setTest] = useState(null)
-  const [error, setError] = useState('')
+  const [error, setError] = useState({ kind: '', text: '' })
+  const [tested, setTested] = useState([])
   const [now, setNow] = useState(() => Date.now())
   const dialogRef = useRef(null)
   const alive = useRef(true)
   const stopWatch = useRef(null)
+  const retryTimer = useRef(null)
   // True while the display may be off because of this dialog: closing then has to switch it back on.
   const live = useRef(false)
 
   const endTest = useCallback(() => {
     stopWatch.current?.()
     stopWatch.current = null
+    clearTimeout(retryTimer.current)
     if (!live.current) return
     live.current = false
     api.sendDeviceCommand(device.id, 'power_test_end').catch(() => {})
   }, [device.id])
 
-  const start = useCallback(async (next) => {
+  const start = useCallback(async (next, retried = false) => {
     stopWatch.current?.()
+    clearTimeout(retryTimer.current)
     setCurrent(next)
+    setTested((list) => (list.includes(next) ? list : [...list, next]))
     setPhase('starting')
     setTest(null)
-    setError('')
+    setError({ kind: '', text: '' })
     live.current = true
-    const failed = (text) => {
-      live.current = false
-      setError(text)
+    const failed = (kind, text) => {
+      live.current = kind === 'no-reply'
+      setError({ kind, text })
       setPhase('failed')
     }
     const finish = (command) => {
       if (!alive.current) return
+      const text = (command.result || '').trim()
       if (command.status === 'ok') {
         const received = Date.now()
         const started = startedTest(command.result, received)
@@ -89,7 +103,17 @@ export default function PowerTestDialog({ device, screen, method, config, order,
           return
         }
       }
-      failed((command.result || '').trim() || 'Test fehlgeschlagen.')
+      if (command.status === 'failed' && text === BUSY_TEXT) {
+        if (!retried) {
+          retryTimer.current = setTimeout(() => { if (alive.current) start(next, true) }, BUSY_RETRY_MS)
+          return
+        }
+        failed('not-started', text)
+        return
+      }
+      // expired after delivery: the Pi may have switched off without answering
+      if (command.status === 'expired') failed('no-reply', text || 'Der Bildschirm ist vielleicht noch aus.')
+      else failed('agent', text || 'Test fehlgeschlagen.')
     }
     try {
       const command = await api.sendDeviceCommand(device.id, 'power_test', {
@@ -102,14 +126,11 @@ export default function PowerTestDialog({ device, screen, method, config, order,
         onDone: (done) => { stopWatch.current = null; finish(done) },
         onTimeout: () => {
           stopWatch.current = null
-          if (!alive.current) return
-          // The test may still have started late: live stays set so closing switches back on.
-          setError('Keine Antwort vom Gerät.')
-          setPhase('failed')
+          if (alive.current) failed('no-reply', 'Der Bildschirm ist vielleicht noch aus.')
         },
       })
     } catch (e) {
-      if (alive.current) failed(errorText(e, 'Test konnte nicht gestartet werden.'))
+      if (alive.current) failed('not-started', errorText(e, 'Test konnte nicht gestartet werden.'))
     }
   }, [device.id, config])
 
@@ -146,7 +167,7 @@ export default function PowerTestDialog({ device, screen, method, config, order,
 
   const close = () => { endTest(); onClose?.() }
   const adopt = (m) => { endTest(); onAdopt?.(m, m === 'none' ? {} : configFor(m, config)); onClose?.() }
-  const following = nextMethod(order, current)
+  const following = order.find((m) => m !== current && !tested.includes(m)) ?? null
   const label = methodLabel(current)
   const onKeyDown = (e) => {
     if (e.key === 'Escape') { e.stopPropagation(); close() }
@@ -154,6 +175,12 @@ export default function PowerTestDialog({ device, screen, method, config, order,
 
   const title = phase === 'none' ? 'Keine Steuerung' : `${label} testen`
   const place = [`Bildschirm „${screen?.name ?? ''}“`, screen?.location].filter(Boolean).join(' · ')
+  const announcement = {
+    starting: 'Ausschalten wird gesendet',
+    running: test ? `Bildschirm aus, Einschalten nach ${test.seconds} Sekunden` : '',
+    question: 'Ist der Bildschirm aus- und wieder angegangen?',
+    none: 'Keine Steuerung',
+  }[phase] ?? ''
   const progress = test ? Math.min(1, 1 - (test.endAt - now) / (test.seconds * 1000)) : 0
 
   return (
@@ -181,7 +208,8 @@ export default function PowerTestDialog({ device, screen, method, config, order,
           </button>
         </div>
 
-        <div className="px-5 pt-5 pb-5" aria-live="polite">
+        <p role="status" className="sr-only">{announcement}</p>
+        <div className="px-5 pt-5 pb-5">
           {phase === 'starting' && (
             <ol className="space-y-3">
               <Step>Ausschalten wird gesendet</Step>
@@ -193,7 +221,7 @@ export default function PowerTestDialog({ device, screen, method, config, order,
           )}
           {phase === 'running' && test && (
             <>
-              <div className="flex items-baseline gap-3" role="timer" aria-live="off">
+              <div className="flex items-baseline gap-3" role="timer" aria-live="off" aria-atomic="false">
                 <span data-countdown className="font-display text-6xl font-semibold leading-none tabular-nums tracking-tight text-fg">
                   {countdownText(remaining)}
                 </span>
@@ -213,10 +241,10 @@ export default function PowerTestDialog({ device, screen, method, config, order,
           )}
           {phase === 'failed' && (
             <div role="alert" className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-bad" />
+              <AlertTriangle className={`mt-0.5 h-4 w-4 shrink-0 ${error.kind === 'no-reply' ? 'text-warn' : 'text-bad'}`} />
               <div className="min-w-0 text-sm">
-                <p className="font-medium text-fg">Der Bildschirm wurde nicht ausgeschaltet.</p>
-                <p className="mt-1 text-fg-muted break-words">{error}</p>
+                <p className="font-medium text-fg">{FAILURE_TITLES[error.kind] ?? FAILURE_TITLES.agent}</p>
+                <p className="mt-1 text-fg-muted break-words">{error.text}</p>
               </div>
             </div>
           )}
@@ -229,7 +257,7 @@ export default function PowerTestDialog({ device, screen, method, config, order,
         </div>
 
         <div className="flex flex-wrap justify-end gap-2 border-t border-line-subtle px-5 py-3.5">
-          {(phase === 'starting' || phase === 'running') && (
+          {(phase === 'starting' || phase === 'running' || (phase === 'failed' && error.kind === 'no-reply')) && (
             <Button variant="secondary" icon={Power} onClick={close} data-autofocus>Abbrechen und einschalten</Button>
           )}
           {phase === 'question' && (
@@ -240,7 +268,7 @@ export default function PowerTestDialog({ device, screen, method, config, order,
               <Button variant="primary" onClick={() => adopt(current)} data-autofocus>Ja, {label} übernehmen</Button>
             </>
           )}
-          {phase === 'failed' && (
+          {phase === 'failed' && error.kind !== 'no-reply' && (
             <>
               {following && <Button variant="ghost" onClick={() => start(following)}>Nächste Methode testen</Button>}
               <Button variant="secondary" onClick={() => start(current)} data-autofocus>Erneut testen</Button>

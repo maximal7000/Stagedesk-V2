@@ -125,6 +125,6 @@ describe('PowerCheck', () => {
     const hdmi = container.querySelectorAll('[data-probe-row]')[3]
     await click(button('Testen', hdmi))
     expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'hdmi', config: { output: 'HDMI-A-1' }, seconds: 15 })
-    expect(document.querySelector('[role="dialog"]').textContent).toContain('HDMI-Ausgang testen')
+    expect(document.querySelector('[role="dialog"]').textContent).toContain('HDMI-Signal testen')
   })
 })

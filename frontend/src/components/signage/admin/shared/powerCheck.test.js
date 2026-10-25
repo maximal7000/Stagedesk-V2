@@ -55,7 +55,7 @@ describe('powerCheck', () => {
   it('Beschriftungen', () => {
     expect(PROBE_LABELS.sicp).toBe('Netzwerk (SICP)')
     expect(PROBE_TO_METHOD.sicp).toBe('hybrid')
-    expect(methodLabel('hybrid')).toBe('Hybrid (SICP aus, CEC an)')
+    expect(methodLabel('hybrid')).toBe('Netzwerk (SICP)')
     expect(methodLabel('none')).toBe('Keine Steuerung')
   })
 })

@@ -80,7 +80,7 @@ describe('PowerTestDialog', () => {
     await wait(15000)
     await click(button('Nein, nächste Methode testen'))
     expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'hdmi', config: { output: 'HDMI-A-1' }, seconds: 15 })
-    expect(dialog().textContent).toContain('HDMI-Ausgang testen')
+    expect(dialog().textContent).toContain('HDMI-Signal testen')
     await wait(15000)
     expect(button('Nein, nächste Methode testen')).toBeUndefined()
     await click(button('Nein'))
@@ -137,6 +137,67 @@ describe('PowerTestDialog', () => {
     await click(container.querySelector('button[aria-label="Schließen"]'))
     expect(api.sendDeviceCommand).toHaveBeenCalledTimes(1)
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('der Countdown wird nicht jede Sekunde vorgelesen', async () => {
+    api.sendDeviceCommand.mockResolvedValue(started())
+    await mount()
+    const polite = [...container.querySelectorAll('[aria-live="polite"], [aria-live="assertive"], [role="status"]')]
+    for (const region of polite) {
+      expect(region.querySelector('[data-countdown]')).toBeNull()
+      expect(region.textContent).not.toMatch(/Einschalten in \d+/)
+    }
+    const step = [...container.querySelectorAll('li')].find((li) => li.textContent.includes('Einschalten in'))
+    expect(step.closest('[aria-live="polite"]')).toBeNull()
+  })
+
+  it('läuft der vorige Test noch, wird nach 3 s einmal neu gestartet', async () => {
+    api.sendDeviceCommand
+      .mockResolvedValueOnce({ id: 8, kind: 'power_test', status: 'failed', result: 'Es läuft schon ein Test.' })
+      .mockImplementationOnce(() => Promise.resolve(started()))
+    await mount()
+    expect(container.querySelector('[role="alert"]')).toBeNull()
+    expect(container.querySelector('[data-countdown]')).toBeNull()
+    await wait(3000)
+    expect(api.sendDeviceCommand).toHaveBeenCalledTimes(2)
+    expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'cec', config: CONFIG, seconds: 15 })
+    expect(container.querySelector('[data-countdown]')).not.toBeNull()
+  })
+
+  it('läuft er nach dem zweiten Versuch noch: Test nicht gestartet', async () => {
+    api.sendDeviceCommand.mockResolvedValue({ id: 8, kind: 'power_test', status: 'failed', result: 'Es läuft schon ein Test.' })
+    await mount()
+    await wait(3000)
+    expect(api.sendDeviceCommand).toHaveBeenCalledTimes(2)
+    const alert = container.querySelector('[role="alert"]')
+    expect(alert.textContent).toContain('Test nicht gestartet')
+    expect(alert.textContent).not.toContain('nicht ausgeschaltet')
+  })
+
+  it('ohne Antwort: neutrale Überschrift, Abbrechen und einschalten sendet power_test_end', async () => {
+    api.sendDeviceCommand.mockImplementation((id, kind) => Promise.resolve(kind === 'power_test'
+      ? { id: 8, kind, status: 'pending', result: '' } : ended))
+    api.getDeviceCommand.mockResolvedValue({ id: 8, kind: 'power_test', status: 'sent', result: '' })
+    const { onClose } = await mount()
+    await wait(2 * 60 * 1000)
+    const alert = container.querySelector('[role="alert"]')
+    expect(alert.textContent).toContain('Keine Antwort vom Gerät')
+    expect(alert.textContent).not.toContain('nicht ausgeschaltet')
+    await click(button('Abbrechen und einschalten'))
+    expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test_end')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('Keine Steuerung erst, wenn jede Methode getestet ist', async () => {
+    api.sendDeviceCommand.mockImplementation(() => Promise.resolve(started()))
+    await mount({ method: 'hdmi', order: ['cec', 'hdmi'] })
+    await wait(15000)
+    await click(button('Nein, nächste Methode testen'))
+    expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'cec', config: CONFIG, seconds: 15 })
+    await wait(15000)
+    expect(button('Nein, nächste Methode testen')).toBeUndefined()
+    await click(button('Nein'))
+    expect(dialog().textContent).toContain('Keine Steuerung')
   })
 
   it('wartet auf die Antwort des Geräts', async () => {

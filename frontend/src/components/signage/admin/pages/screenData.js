@@ -12,9 +12,9 @@ export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'u
 export const POWER_METHOD_OPTIONS = [
   { value: 'none', label: 'Keine Steuerung' },
   { value: 'cec', label: 'CEC' },
-  { value: 'hdmi', label: 'HDMI-Ausgang' },
-  { value: 'hybrid', label: 'Hybrid (SICP aus, CEC an)' },
-  { value: 'ddc', label: 'DDC/CI' },
+  { value: 'hybrid', label: 'Netzwerk (SICP)' },
+  { value: 'ddc', label: 'DDC' },
+  { value: 'hdmi', label: 'HDMI-Signal' },
 ]
 
 // power_config defaults per method; the agent uses the same
