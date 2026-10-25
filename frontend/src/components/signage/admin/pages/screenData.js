@@ -86,7 +86,7 @@ export function pickFields(screen, fields) {
 
 const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
-function normalizedConfig(method, config) {
+export function normalizedConfig(method, config) {
   const full = configFor(method, config)
   return Object.fromEntries(Object.entries(full).map(([k, v]) => [k, k in POWER_CONFIG_INTS ? Number(v) : String(v).trim()]))
 }

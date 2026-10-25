@@ -14,14 +14,18 @@ export function parseProbe(command) {
   try { data = JSON.parse(command.result) } catch { return failed }
   if (!data || !Array.isArray(data.methods)) return failed
   const checked = data.checked_at ? new Date(data.checked_at) : null
+  const rows = data.methods.filter((m) => m && typeof m === 'object')
+  const usable = (state) => state === 'ok' || state === 'warn'
+  // "hybrid" switches off via SICP but on via CEC, so it needs a working CEC row (like the agent's recommendation).
+  const cecUsable = usable(rows.find((m) => m.method === 'cec')?.state)
   return {
     checkedAt: checked && !Number.isNaN(checked.getTime()) ? checked : null,
-    methods: data.methods.map((m) => ({
+    methods: rows.map((m) => ({
       probe: m.method,
       method: PROBE_TO_METHOD[m.method] ?? m.method,
       state: m.state,
       text: m.text ?? '',
-      testable: m.state === 'ok' || m.state === 'warn',
+      testable: usable(m.state) && (m.method !== 'sicp' || cecUsable),
     })),
     recommended: data.recommended ?? 'none',
   }
@@ -34,9 +38,4 @@ export function testOrder(parsed) {
     if (testable.has(method) && !order.includes(method)) order.push(method)
   }
   return order
-}
-
-export function nextMethod(order, current) {
-  const i = order.indexOf(current)
-  return i >= 0 && i + 1 < order.length ? order[i + 1] : null
 }

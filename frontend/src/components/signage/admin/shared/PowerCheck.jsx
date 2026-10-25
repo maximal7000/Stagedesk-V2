@@ -43,7 +43,7 @@ function LoadingRows() {
   ))
 }
 
-export default function PowerCheck({ device, screen, config, canTest, onAdopt, onRecommended }) {
+export default function PowerCheck({ device, screen, config, canTest, unsaved = false, onAdopt, onRecommended }) {
   const [probe, setProbe] = useState({ state: 'loading' })
   const [testing, setTesting] = useState(null)
   const alive = useRef(true)
@@ -133,6 +133,11 @@ export default function PowerCheck({ device, screen, config, canTest, onAdopt, o
             {probe.state === 'done' && `Geprüft um ${hourMinute(probe.checkedAt)} · ohne den Bildschirm auszuschalten`}
             {probe.state === 'error' && 'Prüfung nicht möglich'}
           </p>
+          {unsaved && (
+            <p className="text-xs text-fg-muted mt-1" data-power-check-unsaved>
+              Die Prüfung nutzt die gespeicherten Einstellungen. Erst speichern, dann erneut prüfen.
+            </p>
+          )}
         </div>
         <Button size="sm" variant="ghost" icon={RotateCw} onClick={retry} disabled={loading}>Erneut prüfen</Button>
       </div>

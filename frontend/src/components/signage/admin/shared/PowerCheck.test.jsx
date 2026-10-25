@@ -111,6 +111,17 @@ describe('PowerCheck', () => {
     expect(button('Erneut prüfen')).toBeDefined()
   })
 
+  it('Hinweis, wenn die Steuerung noch nicht gespeichert ist', async () => {
+    api.sendDeviceCommand.mockResolvedValue(FOUND)
+    await mount()
+    expect(container.querySelector('[data-power-check-unsaved]')).toBeNull()
+    await act(async () => {
+      root.render(createElement(PowerCheck, { device: device(), screen, config: { cec_device: '0' }, canTest: true, unsaved: true }))
+    })
+    expect(container.querySelector('[data-power-check-unsaved]').textContent)
+      .toBe('Die Prüfung nutzt die gespeicherten Einstellungen. Erst speichern, dann erneut prüfen.')
+  })
+
   it('ohne Testrecht keine Testknöpfe', async () => {
     api.sendDeviceCommand.mockResolvedValue(FOUND)
     await mount({ canTest: false })

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PROBE_LABELS, PROBE_TO_METHOD, methodLabel, nextMethod, parseProbe, testOrder } from './powerCheck'
+import { PROBE_LABELS, PROBE_TO_METHOD, methodLabel, parseProbe, testOrder } from './powerCheck'
 
 const SAMPLE = {
   methods: [
@@ -46,10 +46,19 @@ describe('powerCheck', () => {
     expect(testOrder(withStates({ cec: 'ok', sicp: 'ok', ddc: 'ok', hdmi: 'ok' }, 'cec'))).toEqual(['cec', 'hybrid', 'ddc', 'hdmi'])
   })
 
-  it('nächste Methode und Ende', () => {
-    expect(nextMethod(['cec', 'hdmi'], 'cec')).toBe('hdmi')
-    expect(nextMethod(['cec', 'hdmi'], 'hdmi')).toBeNull()
-    expect(nextMethod(['cec', 'hdmi'], 'ddc')).toBeNull()
+  it('SICP nur testbar, wenn CEC geht (Einschalten läuft über CEC)', () => {
+    const testable = (states) => Object.fromEntries(withStates(states, 'none').methods.map((m) => [m.probe, m.testable]))
+    expect(testable({ cec: 'fail', sicp: 'ok' }).sicp).toBe(false)
+    expect(testable({ cec: 'skip', sicp: 'warn' }).sicp).toBe(false)
+    expect(testable({ sicp: 'ok' }).sicp).toBe(false)
+    expect(testable({ cec: 'warn', sicp: 'ok' }).sicp).toBe(true)
+    expect(testable({ cec: 'ok', sicp: 'warn' }).sicp).toBe(true)
+    expect(testOrder(withStates({ cec: 'fail', sicp: 'ok', ddc: 'ok', hdmi: 'warn' }, 'ddc'))).toEqual(['ddc', 'hdmi'])
+  })
+
+  it('leere Einträge in der Liste werden übersprungen', () => {
+    const p = parseProbe({ status: 'ok', result: JSON.stringify({ methods: [null, { method: 'cec', state: 'ok' }, 3], recommended: 'cec' }) })
+    expect(p.methods.map((m) => m.probe)).toEqual(['cec'])
   })
 
   it('Beschriftungen', () => {

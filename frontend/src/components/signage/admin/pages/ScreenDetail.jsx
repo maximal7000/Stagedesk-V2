@@ -23,7 +23,7 @@ import PowerCheck from '../shared/PowerCheck'
 import { isPaired } from '../shared/deviceCommands'
 import {
   COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS,
-  SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, deviceProblems, kioskUrl, lastReport,
+  SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, devicePayload, deviceProblems, kioskUrl, lastReport,
   overridePayload, overrideProblem, pickFields, sectionPayload,
 } from './screenData'
 import * as api from '../shared/api'
@@ -120,7 +120,8 @@ function PowerMethodBlock({ device, original, canDevices, problems, deviceRow, s
     <div className="pt-5 border-t border-line-subtle space-y-5" data-power-method>
       {canDevices && deviceRow && (
         <PowerCheck key={deviceRow.id ?? 'legacy'} device={deviceRow} screen={screen} config={{ ...original.power_config, ...device.draft?.power_config }}
-          canTest={canTest} onAdopt={adopt} onRecommended={setRecommended} />
+          canTest={canTest} unsaved={'power_method' in devicePayload(device.draft ?? {}, original)}
+          onAdopt={adopt} onRecommended={setRecommended} />
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Steuerung des Bildschirms" htmlFor={methodId} className="sm:col-span-2"

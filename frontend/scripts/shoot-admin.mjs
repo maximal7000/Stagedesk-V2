@@ -289,6 +289,14 @@ const PAGES = {
   'screen-power-check': { path: '/signage-admin/screens/1', height: 1100, action: showPowerCheck },
   'screen-power-check-light': { path: '/signage-admin/screens/1', height: 1100, scheme: 'light', action: showPowerCheck },
   'screen-power-none': { path: '/signage-admin/screens/1', variant: 'power-none', height: 1100, action: showPowerCheck },
+  'screen-power-unsaved': {
+    path: '/signage-admin/screens/1', height: 1100,
+    action: async (page) => {
+      await showPowerCheck(page)
+      await page.getByLabel('SICP-IP').fill('192.0.2.31')
+      await page.waitForSelector('[data-power-check-unsaved]')
+    },
+  },
   'screen-power-test': { path: '/signage-admin/screens/1', height: 1100, action: openPowerTest },
   'screen-power-test-light': { path: '/signage-admin/screens/1', height: 1100, scheme: 'light', action: openPowerTest },
   'screen-power-question': {

@@ -74,6 +74,17 @@ describe('PowerTestDialog', () => {
     expect(api.sendDeviceCommand).toHaveBeenCalledTimes(1)
   })
 
+  it('sendet und übernimmt Zahlen aus dem Entwurf als Zahlen', async () => {
+    api.sendDeviceCommand.mockResolvedValue(started())
+    const draft = { display_ip: ' 192.0.2.30 ', display_port: '5000', monitor_id: '1', cec_device: '0' }
+    const { onAdopt } = await mount({ method: 'hybrid', config: draft, order: ['hybrid'] })
+    const sent = { display_ip: '192.0.2.30', display_port: 5000, monitor_id: 1, cec_device: '0' }
+    expect(api.sendDeviceCommand).toHaveBeenCalledWith(5, 'power_test', { method: 'hybrid', config: sent, seconds: 15 })
+    await wait(15000)
+    await click(button('Ja, Netzwerk (SICP) übernehmen'))
+    expect(onAdopt).toHaveBeenCalledWith('hybrid', sent)
+  })
+
   it('Nein springt zur nächsten Methode, am Ende Keine Steuerung', async () => {
     api.sendDeviceCommand.mockImplementation(() => Promise.resolve(started()))
     const { onAdopt } = await mount()

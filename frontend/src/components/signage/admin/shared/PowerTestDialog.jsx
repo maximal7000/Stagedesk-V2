@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { AlertTriangle, Check, Power, X } from 'lucide-react'
 import { Button } from '../../../ui'
-import { configFor } from '../pages/screenData'
+import { normalizedConfig } from '../pages/screenData'
 import { isFinished, watchCommand } from './deviceCommands'
 import { errorText } from './errorText'
 import { methodLabel } from './powerCheck'
@@ -117,7 +117,7 @@ export default function PowerTestDialog({ device, screen, method, config, order,
     }
     try {
       const command = await api.sendDeviceCommand(device.id, 'power_test', {
-        method: next, config: configFor(next, config), seconds: TEST_SECONDS,
+        method: next, config: normalizedConfig(next, config), seconds: TEST_SECONDS,
       })
       if (!alive.current) return
       if (isFinished(command.status)) { finish(command); return }
@@ -166,7 +166,7 @@ export default function PowerTestDialog({ device, screen, method, config, order,
   }, [phase, current])
 
   const close = () => { endTest(); onClose?.() }
-  const adopt = (m) => { endTest(); onAdopt?.(m, m === 'none' ? {} : configFor(m, config)); onClose?.() }
+  const adopt = (m) => { endTest(); onAdopt?.(m, m === 'none' ? {} : normalizedConfig(m, config)); onClose?.() }
   const following = order.find((m) => m !== current && !tested.includes(m)) ?? null
   const label = methodLabel(current)
   const onKeyDown = (e) => {
