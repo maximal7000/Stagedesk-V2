@@ -66,6 +66,12 @@ class ProbeTests(unittest.TestCase):
         self.assertEqual(result["state"], "ok")
         self.assertIn("LH4341UHS", result["text"])
 
+    def test_cec_sends_only_scan(self):
+        runner = runner_with()
+        probe(runner, {}, refusing)
+        cec_inputs = [text for (args, _), text in zip(runner.calls, runner.inputs) if tuple(args) == CEC]
+        self.assertEqual(cec_inputs, ["scan\n"])
+
     def test_cec_no_adapter_fails(self):
         runner = runner_with()
         runner.responses[LIST] = ok("cec_list_none.txt")

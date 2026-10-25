@@ -31,8 +31,8 @@ def _cec(runner):
     found = re.search(r"Found devices:\s*(\d+)", listing.out)
     if not found or int(found.group(1)) == 0:
         return _row("cec", "fail", "Kein CEC-Adapter gefunden.")
-    # One cec-client run for both commands: each start takes seconds.
-    scan = runner.run(CEC_CLIENT, timeout=CEC_TIMEOUT, input="scan\npow 0\n")
+    # CEC_CLIENT runs a single command; the scan output already holds the power status.
+    scan = runner.run(CEC_CLIENT, timeout=CEC_TIMEOUT, input="scan\n")
     problem = _tool_problem(scan, "cec-client")
     if problem:
         return _row("cec", "fail", problem)

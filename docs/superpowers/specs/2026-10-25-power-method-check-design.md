@@ -19,7 +19,7 @@ Neuer Gerätebefehl `power_probe` (Agent, nur gekoppelte Geräte mit Agent; Rech
 
 | Methode | Prüfung | Ergebnis (`ok` / `warn` / `fail` / `skip`) |
 |---|---|---|
-| CEC | `cec-client -l` (Adapter da?), dann `scan` und `pow 0` | `ok`: Display auf Adresse 0 gefunden und Status lesbar, mit Hersteller/Name (OSD-Name, Vendor) falls gemeldet. `warn`: Display gefunden, Status nicht lesbar. `fail`: kein Adapter oder kein Display. |
+| CEC | `cec-client -l` (Adapter da?), dann `scan` (enthält den Power-Status) | `ok`: Display auf Adresse 0 gefunden und Status lesbar, mit Hersteller/Name (OSD-Name, Vendor) falls gemeldet. `warn`: Display gefunden, Status nicht lesbar. `fail`: kein Adapter oder kein Display. |
 | Netzwerk (SICP) | nur wenn `display_ip` eingetragen: TCP auf `display_ip:display_port` (2 s), Statusabfrage `0x19` | `ok`: Antwort. `fail`: keine Verbindung. `skip`: keine IP eingetragen. |
 | DDC | `ddcutil detect --brief`, dann `ddcutil getvcp D6` | `ok`: Display gefunden und D6 lesbar. `fail`: sonst. |
 | HDMI-Signal | `wlr-randr` (Ausgänge) | immer `warn`, wenn ein Ausgang da ist: „Display bleibt an und zeigt ‚Kein Signal‘.“ |
