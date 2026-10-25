@@ -191,6 +191,23 @@ def _periods(text):
     return f'{text}.' if text else ''
 
 
+# WebUntis puts the source or target of a moved lesson into the kind ("Verlegung von 26.10. / 2."),
+# which does not fit the kind column; the detail moves to the note.
+_MOVED = re.compile(r'^(\S+)\s+((?:von|nach)\s+.+)$', re.IGNORECASE)
+_MOVED_DETAIL = re.compile(r'^(von|nach)\s+(\d{1,2}\.\d{1,2}\.)\s*/\s*(\d+(?:\s*-\s*\d+)?)\.?$', re.IGNORECASE)
+
+
+def _split_kind_label(label):
+    match = _MOVED.match(label)
+    if not match:
+        return label, ''
+    word, detail = match.group(1), match.group(2).strip()
+    parts = _MOVED_DETAIL.match(detail)
+    if parts:
+        detail = f"{parts.group(1)} {parts.group(2)}, {_periods(parts.group(3).replace(' ', ''))} Std."
+    return word, detail
+
+
 def _kind(label, css_classes):
     if _CANCEL_TEXT.search(label) or 'cancelStyle' in (css_classes or []):
         return 'cancelled'
@@ -207,7 +224,8 @@ def parse_rows(payload: dict, options: dict) -> list:
         cells = dict(zip(fields, raw.get('data') or []))
         teacher, teacher_old = _split_change(cells.get('teacher'))
         room, room_old = _split_change(cells.get('room'))
-        label = _text(cells.get('kind_label'))
+        label, moved = _split_kind_label(_text(cells.get('kind_label')))
+        note = _text(cells.get('note'))
         rows.append({
             'classes': [c.strip() for c in _text(cells.get('classes')).split(',') if c.strip()],
             'group': raw.get('group') or '',
@@ -217,7 +235,7 @@ def parse_rows(payload: dict, options: dict) -> list:
             'room': room, 'room_old': room_old,
             'kind': _kind(label, raw.get('cssClasses')),
             'kind_label': label or DEFAULT_KIND_LABEL,
-            'note': _text(cells.get('note')),
+            'note': ' · '.join(part for part in (moved, note) if part),
         })
     return rows
 
