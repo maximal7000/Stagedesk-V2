@@ -1,0 +1,1 @@
+VCP code 0xd6 (Power mode                    ): DPM: On,  DPMS: Off (sl=0x01)

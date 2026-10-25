@@ -1,0 +1,10 @@
+CEC bus information
+===================
+device #0: TV
+address:       0.0.0.0
+active source: no
+vendor:        Unknown
+osd string:    LH4341UHS
+CEC version:   1.4
+power status:  on
+language:      eng

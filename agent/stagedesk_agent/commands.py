@@ -1,3 +1,5 @@
+import datetime
+import json
 import logging
 import os
 import stat
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .power import KIOSK_USER, wayland_command
+from .power_probe import probe
 
 log = logging.getLogger("stagedesk_agent.commands")
 MAX_SCREENSHOT = 15 * 1024 * 1024
@@ -159,6 +162,13 @@ def _test_pattern(ctx):
     return True, f"Testbild für {PATTERN_SECONDS} Sekunden"
 
 
+def _power_probe(ctx):
+    power_config = ctx.config.power_config if isinstance(ctx.config.power_config, dict) else {}
+    result = probe(ctx.runner, power_config, root=ctx.config.paths.root)
+    result["checked_at"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
+    return True, json.dumps(result, ensure_ascii=False)
+
+
 HANDLERS = {
     "reload": _reload,
     "restart_browser": _restart_browser,
@@ -168,6 +178,7 @@ HANDLERS = {
     "update_now": _update_now,
     "screenshot": _screenshot,
     "test_pattern": _test_pattern,
+    "power_probe": _power_probe,
 }
 
 

@@ -214,7 +214,15 @@ class DdcPower(PowerController):
         return "an" if self._on else "aus"
 
 
-METHODS = {"cec": CecPower, "hdmi": HdmiPower, "hybrid": HybridPower, "ddc": DdcPower}
+class NonePower(PowerController):
+    def _set(self, on):
+        return "keine Steuerung"
+
+    def _status(self):
+        return "keine Steuerung"
+
+
+METHODS = {"cec": CecPower, "hdmi": HdmiPower, "hybrid": HybridPower, "ddc": DdcPower, "none": NonePower}
 
 
 def make_power(method, config, runner, **options):

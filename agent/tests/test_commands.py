@@ -1,4 +1,5 @@
 import io
+import json
 import os
 import threading
 import unittest
@@ -68,6 +69,14 @@ class Base(unittest.TestCase):
 
 
 class ExecuteTests(Base):
+    def test_power_probe_returns_json_under_2000_chars(self):
+        ok, text = execute({"id": 1, "kind": "power_probe"}, self.ctx)
+        self.assertTrue(ok)
+        data = json.loads(text)
+        self.assertIn("checked_at", data)
+        self.assertEqual([row["method"] for row in data["methods"]], ["cec", "sicp", "ddc", "hdmi"])
+        self.assertLess(len(text), 2000)
+
     def test_unknown_command_fails(self):
         self.assertEqual(execute({"id": 1, "kind": "dance"}, self.ctx), (False, "Unbekannter Befehl"))
 
