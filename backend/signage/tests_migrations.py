@@ -839,3 +839,27 @@ class DeparturesLayoutMigrationTest(MigrationTestCase):
         self.assertEqual(version.data, {'kind': 'departures', 'transit_show_relative': False,
                                         'transit_disruption_banner': False,
                                         'transit_disruption_position': 'bottom'})
+
+
+class PowerMethodNoneMigrationTest(MigrationTestCase):
+    migrate_from = ('signage', '0048_disruption_column')
+    migrate_to = ('signage', '0049_power_method_none')
+
+    def setUpBeforeMigration(self, apps):
+        apps.get_model('signage', 'Screen').objects.create(name='A', slug='a', power_method='ddc')
+
+    def test_0049_forward_keeps_methods_and_allows_none(self):
+        Screen = self.apps.get_model('signage', 'Screen')
+        self.assertEqual(Screen.objects.get(slug='a').power_method, 'ddc')
+        Screen.objects.create(name='B', slug='b')
+        self.assertEqual(Screen.objects.get(slug='b').power_method, 'none')
+
+    def test_0049_backward_maps_none_to_cec(self):
+        Screen = self.apps.get_model('signage', 'Screen')
+        Screen.objects.create(name='B', slug='b', power_method='none')
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([self.migrate_from])
+        apps = executor.loader.project_state([self.migrate_from]).apps
+        rows = dict(apps.get_model('signage', 'Screen').objects.values_list('slug', 'power_method'))
+        self.assertEqual(rows, {'a': 'ddc', 'b': 'cec'})

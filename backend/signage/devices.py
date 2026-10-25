@@ -217,14 +217,17 @@ COMMAND_LABELS = {
     'reload': 'Neu laden', 'restart_browser': 'Browser neu starten', 'reboot': 'Pi neu starten',
     'power_on': 'Bildschirm an', 'power_off': 'Bildschirm aus', 'update_now': 'Jetzt aktualisieren',
     'screenshot': 'Screenshot', 'test_pattern': 'Testbild',
+    'power_probe': 'Steuerung prüfen', 'power_test': 'Steuerung testen', 'power_test_end': 'Test beenden',
 }
 
 
-def create_command(device: Device, kind: str, user_id: str = '', user_name: str = '') -> DeviceCommand:
+def create_command(device: Device, kind: str, user_id: str = '', user_name: str = '',
+                   params: dict | None = None) -> DeviceCommand:
     """Send with push.push_device_command after the commit."""
     with transaction.atomic():
         command = DeviceCommand.objects.create(
-            device=device, kind=kind, created_by_id=(user_id or '')[:64], created_by_name=(user_name or '')[:150])
+            device=device, kind=kind, params=params or {},
+            created_by_id=(user_id or '')[:64], created_by_name=(user_name or '')[:150])
         DeviceEvent.objects.create(
             device=device, screen=device.screen, kind='command',
             text=f"{COMMAND_LABELS.get(kind, kind)} angefordert"[:300],

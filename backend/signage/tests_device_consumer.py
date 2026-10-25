@@ -57,7 +57,7 @@ class DeviceConsumerTest(TransactionTestCase):
             self.assertEqual(
                 hello['kiosk_url'],
                 f'https://example.test/signage?screen=glocke&key={self.screen.access_key}')
-            self.assertEqual(hello['power_method'], 'cec')
+            self.assertEqual(hello['power_method'], 'none')
             for field in ('power_config', 'update_window', 'auto_updates', 'daily_reboot',
                           'agent_version', 'agent_sha256'):
                 self.assertIn(field, hello)

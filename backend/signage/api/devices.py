@@ -22,12 +22,13 @@ from ..permissions import _require_perm
 from ..schemas import (
     DeviceCommandCreateSchema, DeviceCommandSchema, DeviceEventSchema, DevicePairSchema, DeviceSchema,
     PairPollSchema, PairStartSchema)
+from ..validation import validate_power_test_params
 
 router = Router()
 
 MAX_SCREENSHOT_BYTES = 15 * 1024 * 1024
 PNG_MAGIC = b'\x89PNG\r\n\x1a\n'
-POWER_COMMANDS = {'power_on', 'power_off'}
+POWER_COMMANDS = {'power_on', 'power_off', 'power_test', 'power_test_end'}
 REDACTED_KEYS = {'serial', 'ip', 'mac'}
 
 MAX_FAILED_ATTEMPTS = 5
@@ -203,8 +204,15 @@ def create_device_command(request, id: int, payload: DeviceCommandCreateSchema):
     device = get_object_or_404(Device.objects.select_related('screen'), id=id)
     if device.revoked_at is not None or device.screen is None:
         raise HttpError(409, "Gerät nicht mehr gekoppelt.")
+    params = {}
+    if payload.kind in ('power_on', 'power_off') and device.screen.power_method == 'none':
+        raise HttpError(422, "Für diesen Bildschirm ist keine Power-Steuerung eingerichtet.")
+    if payload.kind == 'power_test':
+        params = validate_power_test_params(payload.params)
+        if params is None:
+            raise HttpError(422, "Ungültige Testparameter.")
     user_id, user_name = _author(request)
-    command = devices.create_command(device, payload.kind, user_id, user_name)
+    command = devices.create_command(device, payload.kind, user_id, user_name, params=params)
     transaction.on_commit(lambda: push.push_device_command(command))
     if payload.kind == 'reload':
         slug = device.screen.slug
