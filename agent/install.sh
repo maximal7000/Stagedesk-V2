@@ -15,7 +15,7 @@ work=""
 PACKAGE_CHANGED=0
 UNITS_CHANGED_AGENT=0
 UNITS_CHANGED_KIOSK=0
-PACKAGES=(python3-websocket cage cec-utils ddcutil wlr-randr grim iw curl ca-certificates x11-apps)
+PACKAGES=(python3-websocket cage cec-utils ddcutil wlr-randr grim iw curl ca-certificates)
 
 cleanup() { [ -z "$work" ] || rm -rf "$work"; }
 trap cleanup EXIT
@@ -25,10 +25,14 @@ die() { printf 'Fehler: %s\n' "$*" >&2; exit 1; }
 
 check_system() {
   [ "$(id -u)" -eq 0 ] || die "Root-Rechte nötig (sudo)."
-  [ -r /etc/os-release ] || die "/etc/os-release fehlt. Nur für Raspberry Pi OS Bookworm."
+  [ -r /etc/os-release ] || die "/etc/os-release fehlt. Nur für Raspberry Pi OS Bookworm oder Trixie."
   local codename
   codename="$(. /etc/os-release && printf '%s' "${VERSION_CODENAME:-}")"
-  [ "$codename" = "bookworm" ] || die "Raspberry Pi OS Bookworm erwartet, gefunden: ${codename:-unbekannt}. Mit Bookworm Lite neu aufsetzen."
+  case "$codename" in
+    bookworm) ;;
+    trixie) say "Hinweis: Trixie ist noch nicht auf echter Hardware geprüft. Bei Problemen mit Bookworm Lite (Legacy) neu aufsetzen." ;;
+    *) die "Raspberry Pi OS Bookworm oder Trixie erwartet, gefunden: ${codename:-unbekannt}. Mit Bookworm Lite (Legacy) neu aufsetzen." ;;
+  esac
   [ "$(id -u pi 2>/dev/null || true)" = "1000" ] || die "Der Benutzer pi mit der ID 1000 fehlt. Im Raspberry Pi Imager den Benutzer pi anlegen (der Kiosk-Dienst nutzt /home/pi und /run/user/1000)."
   case "$SERVER" in
     *"$PLACEHOLDER"*|"") die "Server-URL fehlt. Den Installationsbefehl vom Stagedesk-Server verwenden oder STAGEDESK_SERVER setzen." ;;
@@ -43,7 +47,10 @@ install_packages() {
   # On Bookworm the package is chromium; chromium-browser only as a fallback for other sources.
   local browser=chromium
   apt-cache show chromium >/dev/null 2>&1 || browser=chromium-browser
-  apt-get install -y --no-install-recommends "${PACKAGES[@]}" "$browser" </dev/null
+  # Newer Debian releases ship xcursorgen as its own package instead of inside x11-apps.
+  local cursorgen=x11-apps
+  apt-cache show xcursorgen >/dev/null 2>&1 && cursorgen=xcursorgen
+  apt-get install -y --no-install-recommends "${PACKAGES[@]}" "$browser" "$cursorgen" </dev/null
 }
 
 install_package() {
@@ -134,7 +141,7 @@ prepare_kiosk_user() {
   icons="$home/.icons"
   if [ ! -e "$icons/default/cursors/left_ptr" ] || [ ! -e "$icons/blank/cursors/left_ptr" ]; then
     local name
-    command -v xcursorgen >/dev/null 2>&1 || die "xcursorgen fehlt. Paket x11-apps installieren und das Skript erneut starten."
+    command -v xcursorgen >/dev/null 2>&1 || die "xcursorgen fehlt. Paket xcursorgen bzw. x11-apps installieren und das Skript erneut starten."
     local tmp="$work/cursor"
     mkdir -p "$tmp"
     echo "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAE0lEQVR4nGNgGAWjYBSMAgYwAAAEEAABsax5zAAAAABJRU5ErkJggg==" | base64 -d > "$tmp/blank.png"
