@@ -48,7 +48,7 @@ export default function MediaView({ view, orientation = 'landscape', frame = {} 
     return (
       <Frame layout={view.layout} scheme={frame.scheme} orientation={orientation} clock={{ staleSince: frame.staleSince }} wheel={frame.wheel} stripe={frame.stripe}>
         <div data-display-state="view" data-view-kind="media" className="flex h-full items-center">
-          <p className="d-lato max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
+          <p className="d-text max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
             Keine Medien.
           </p>
         </div>

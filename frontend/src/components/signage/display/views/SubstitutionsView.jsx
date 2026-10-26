@@ -28,18 +28,18 @@ function Replaced({ old, value }) {
 // nowrap: short values ("8.–9.", "La1") never break inside; class, teacher, room, kind and note wrap, so an
 // unusually long text from WebUntis stays inside its column.
 const COLUMN_DEFS = {
-  group: { head: 'Kürzel', fr: 7, nowrap: true, cls: 'd-oswald font-medium', lead: true, cell: (row) => row.group },
-  class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-oswald font-medium', cell: (row) => row.classes_label },
-  periods: { head: 'Std.', fr: 6, nowrap: true, cls: 'd-oswald', cell: (row) => row.periods },
-  subject: { head: 'Fach', fr: 6, flag: 'subject', nowrap: true, cls: 'd-lato', cell: (row) => row.subject },
-  teacher: { head: 'Lehrkraft', fr: 12, flag: 'teacher', cls: 'd-lato', cell: (row) => <Replaced old={row.teacher_old} value={row.teacher} /> },
-  room: { head: 'Raum', fr: 10, flag: 'room', cls: 'd-lato', cell: (row) => <Replaced old={row.room_old} value={row.room} /> },
+  group: { head: 'Kürzel', fr: 7, nowrap: true, cls: 'd-head font-medium', lead: true, cell: (row) => row.group },
+  class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-head font-medium', cell: (row) => row.classes_label },
+  periods: { head: 'Std.', fr: 6, nowrap: true, cls: 'd-head', cell: (row) => row.periods },
+  subject: { head: 'Fach', fr: 6, flag: 'subject', nowrap: true, cls: 'd-text', cell: (row) => row.subject },
+  teacher: { head: 'Lehrkraft', fr: 12, flag: 'teacher', cls: 'd-text', cell: (row) => <Replaced old={row.teacher_old} value={row.teacher} /> },
+  room: { head: 'Raum', fr: 10, flag: 'room', cls: 'd-text', cell: (row) => <Replaced old={row.room_old} value={row.room} /> },
   kind: {
-    head: 'Art', fr: 16, cls: 'd-oswald text-[1.25rem] uppercase',
+    head: 'Art', fr: 16, cls: 'd-head text-[1.25rem] uppercase',
     tone: (row) => KIND_TONE[row.kind] ?? '',
     cell: (row) => row.kind_label || KIND_FALLBACK[row.kind] || KIND_FALLBACK.other,
   },
-  note: { head: 'Hinweis', fr: 27, flag: 'note', cls: 'd-lato text-[1.25rem] text-(--d-fg-soft)', cell: (row) => row.note },
+  note: { head: 'Hinweis', fr: 27, flag: 'note', cls: 'd-text text-[1.25rem] text-(--d-fg-soft)', cell: (row) => row.note },
 }
 const ORDER = {
   class: ['class', 'periods', 'subject', 'teacher', 'room', 'kind', 'note'],
@@ -74,7 +74,7 @@ export default function SubstitutionsView({ view }) {
     return (
       <div className="d-card h-full px-[2rem] py-[1.75rem]">
         <Heading>Vertretungsplan</Heading>
-        <p className="d-lato mt-[1.25rem] text-[1.5rem] text-(--d-fg-soft)">
+        <p className="d-text mt-[1.25rem] text-[1.5rem] text-(--d-fg-soft)">
           {data.source == null
             ? 'Kiosk-URL ohne Schlüssel.'
             : 'Vertretungsplan nicht verfügbar.'}
@@ -130,8 +130,8 @@ function DayHead({ day }) {
     <dl data-day-head className="mt-[1rem] grid grid-cols-[auto_minmax(0,1fr)] gap-x-[1rem] gap-y-[0.375rem] text-[1.25rem] leading-[1.35]">
       {lines.map(([label, items]) => (
         <div key={label} className="contents">
-          <dt className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">{label}</dt>
-          <dd className="d-lato line-clamp-2">{items.join(', ')}</dd>
+          <dt className="d-head uppercase tracking-[0.06em] text-(--d-muted)">{label}</dt>
+          <dd className="d-text line-clamp-2">{items.join(', ')}</dd>
         </div>
       ))}
     </dl>
@@ -140,8 +140,8 @@ function DayHead({ day }) {
 
 function Message({ subject, children }) {
   return (
-    <p className="d-lato mt-[0.75rem] line-clamp-3 bg-(--d-soft) px-[0.875rem] py-[0.625rem] text-[1.25rem] leading-[1.35]">
-      <span className="d-oswald pr-[0.5rem] uppercase tracking-[0.06em] text-(--d-muted)">{subject || 'Nachricht'}</span>
+    <p className="d-text mt-[0.75rem] line-clamp-3 bg-(--d-soft) px-[0.875rem] py-[0.625rem] text-[1.25rem] leading-[1.35]">
+      <span className="d-head pr-[0.5rem] uppercase tracking-[0.06em] text-(--d-muted)">{subject || 'Nachricht'}</span>
       {children}
     </p>
   )
@@ -173,14 +173,14 @@ function DayCard({ day, news, columns, seconds, onDone }) {
       {news && <Message>{news}</Message>}
       {(day.messages ?? []).map((m, i) => <Message key={i} subject={m.subject}>{m.body}</Message>)}
       <div
-        className="d-oswald d-rule-bottom mt-[1.25rem] grid gap-x-[0.75rem] pb-[0.375rem] text-[1rem] uppercase tracking-[0.08em] text-(--d-muted)"
+        className="d-head d-rule-bottom mt-[1.25rem] grid gap-x-[0.75rem] pb-[0.375rem] text-[1rem] uppercase tracking-[0.08em] text-(--d-muted)"
         style={{ gridTemplateColumns: columns.template }}
       >
         {columns.keys.map((key) => <span key={key} data-column-head className="min-w-0">{COLUMN_DEFS[key].head}</span>)}
       </div>
       <div ref={bodyRef} className="relative min-h-0 flex-1 overflow-hidden">
         {rows.length === 0
-          ? <p className="d-lato pt-[1rem] text-[1.375rem] text-(--d-muted)">Keine Vertretungen</p>
+          ? <p className="d-text pt-[1rem] text-[1.375rem] text-(--d-muted)">Keine Vertretungen</p>
           : (
             <div data-substitutions-table>
               {page.map((row, i) => (
@@ -256,8 +256,8 @@ function SourceNote({ view }) {
   if (!when) return null
   return (
     <div className="d-card d-footer-item flex h-full items-center gap-[1.5rem] px-[1.375rem] text-[1.375rem]">
-      <span className="d-lato min-w-0 truncate">
-        <span className="d-oswald uppercase tracking-[0.06em] text-(--d-muted)">Stand</span> {when}
+      <span className="d-text min-w-0 truncate">
+        <span className="d-head uppercase tracking-[0.06em] text-(--d-muted)">Stand</span> {when}
       </span>
     </div>
   )

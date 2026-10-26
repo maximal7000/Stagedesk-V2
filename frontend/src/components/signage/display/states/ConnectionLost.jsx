@@ -14,8 +14,8 @@ export default function ConnectionLost({ screenName, lastOkAt, nextRetryAt, orie
       </StateText>
       {lastOkAt != null && (
         <dl className="mt-[3.5rem] grid max-w-[68.75rem] grid-cols-[auto_1fr] items-baseline gap-x-[3.25rem] gap-y-[1rem] d-line-top pt-[2.75rem]">
-          <dt className="d-oswald text-[1.75rem] uppercase tracking-[0.05em] text-(--d-muted)">Letzte Daten</dt>
-          <dd className="d-lato text-[1.75rem]">{formatTimeSeconds(lastOkAt)}</dd>
+          <dt className="d-head text-[1.75rem] uppercase tracking-[0.05em] text-(--d-muted)">Letzte Daten</dt>
+          <dd className="d-text text-[1.75rem]">{formatTimeSeconds(lastOkAt)}</dd>
         </dl>
       )}
     </StateScreen>

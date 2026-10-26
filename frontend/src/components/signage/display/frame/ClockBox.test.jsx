@@ -23,6 +23,10 @@ describe('ClockBox', () => {
     expect(render({ now, variant }).textContent).toContain('09:05:07')
   })
 
+  it.each(['header', 'box'])('hält in der Variante %s die Breite der Uhr fest', (variant) => {
+    expect(render({ now, variant }).querySelector('.d-clock')?.textContent).toBe('09:05:07')
+  })
+
   it('Stand-Hinweis bleibt ohne Sekunden', () => {
     const text = render({ now, variant: 'box', staleSince: stale }).textContent
     expect(text).toContain('Stand 09:01')

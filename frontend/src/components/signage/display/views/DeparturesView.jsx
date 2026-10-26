@@ -47,7 +47,7 @@ export default function DeparturesView({ view }) {
   const ownColumn = withDisruptions && shared === null
 
   if (!stations.length) {
-    return <p className="d-oswald pt-[2rem] text-[2rem] text-(--d-muted)">Keine Haltestellen eingerichtet.</p>
+    return <p className="d-head pt-[2rem] text-[2rem] text-(--d-muted)">Keine Haltestellen eingerichtet.</p>
   }
 
   const cells = columns.length + (ownColumn ? 1 : 0)
@@ -142,26 +142,26 @@ function StationCard({ station, name, format }) {
       <header className="d-line-bottom mb-[0.25rem] flex items-baseline justify-between gap-[0.75rem] pb-[0.375rem]">
         <h2
           ref={headingRef}
-          className="d-kicker d-oswald min-w-0 truncate font-normal uppercase leading-[1.15] tracking-[0.03em]"
+          className="d-kicker d-head min-w-0 truncate font-normal uppercase leading-[1.15] tracking-[0.03em]"
           style={{ fontSize: `${headingRem}rem` }}
         >
           {name}
         </h2>
         {station.walk_minutes > 0 && (
-          <span data-walk title="Fußweg" className="d-lato flex shrink-0 items-center gap-[0.3em] whitespace-nowrap text-[0.9375rem] text-(--d-muted)">
+          <span data-walk title="Fußweg" className="d-text flex shrink-0 items-center gap-[0.3em] whitespace-nowrap text-[0.9375rem] text-(--d-muted)">
             <Footprints aria-label="Fußweg" className="h-[1.1em] w-[1.1em]" strokeWidth={2} />
             {station.walk_minutes} min
           </span>
         )}
       </header>
       {deps.length === 0 ? (
-        <p className="d-lato pt-[0.625rem] text-[1.0625rem] text-(--d-muted)">
+        <p className="d-text pt-[0.625rem] text-[1.0625rem] text-(--d-muted)">
           {station.error ? 'Abfahrten nicht verfügbar' : 'Keine Abfahrten'}
         </p>
       ) : sections.map(([key, label, list]) => (
         <div key={key ?? 'all'} data-section={key ?? undefined} className="flex min-h-0 flex-1 flex-col">
           {label && (
-            <div data-section-label className="d-oswald mt-[0.375rem] text-[1rem] uppercase tracking-[0.06em] text-(--d-muted)">
+            <div data-section-label className="d-head mt-[0.375rem] text-[1rem] uppercase tracking-[0.06em] text-(--d-muted)">
               {label}
             </div>
           )}
@@ -201,7 +201,7 @@ function DepartureRow({ dep, format }) {
       <DepartureTime dep={dep} format={format} cancelled={cancelled} />
       <span
         data-chip
-        className={`d-oswald flex items-center justify-center justify-self-start whitespace-nowrap rounded-[0.0625rem] px-[0.3em] font-medium leading-none ${
+        className={`d-head flex items-center justify-center justify-self-start whitespace-nowrap rounded-[0.0625rem] px-[0.3em] font-medium leading-none ${
           long ? 'h-[1.615em] min-w-[2.85em] text-[0.8em]' : 'h-[1.36em] min-w-[2.4em] text-[0.95em]'
         }`}
         style={{ background: color ?? 'var(--d-chip)', color: color ? chipTextColor(color) : 'var(--d-chip-fg)' }}
@@ -209,9 +209,9 @@ function DepartureRow({ dep, format }) {
         {label}
       </span>
       <span data-destination className="flex min-w-0 items-center gap-x-[0.4em]">
-        <span className={`d-lato min-w-0 flex-1 truncate ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>{dep.direction}</span>
+        <span className={`d-text min-w-0 flex-1 truncate ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>{dep.direction}</span>
         {cancelled
-          ? <span data-cancelled className="d-oswald shrink-0 whitespace-nowrap text-[0.85em] uppercase tracking-[0.02em] text-(--d-red)">fällt aus</span>
+          ? <span data-cancelled className="d-head shrink-0 whitespace-nowrap text-[0.85em] uppercase tracking-[0.02em] text-(--d-red)">fällt aus</span>
           : !isBus(dep) && dep.platform && <Platform dep={dep} />}
       </span>
     </div>
@@ -222,14 +222,14 @@ function Platform({ dep }) {
   const planned = dep.platform_planned
   if (planned && planned !== dep.platform) {
     return (
-      <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em]">
+      <span data-platform className="d-head shrink-0 whitespace-nowrap text-[0.85em]">
         <s className="pr-[0.35em] text-(--d-muted) decoration-[0.1em]"><PlatformPrefix />{planned}</s>{' '}
         <span data-platform-new className="text-(--d-warn)"><PlatformPrefix />{dep.platform}</span>
       </span>
     )
   }
   return (
-    <span data-platform className="d-oswald shrink-0 whitespace-nowrap text-[0.85em] text-(--d-muted)">
+    <span data-platform className="d-head shrink-0 whitespace-nowrap text-[0.85em] text-(--d-muted)">
       <PlatformPrefix />{dep.platform}
     </span>
   )
@@ -244,7 +244,7 @@ function DepartureTime({ dep, format, cancelled }) {
   const now = useClockMinute()
   const { text, delay } = departureTime(dep, now, format)
   return (
-    <span className={`d-oswald whitespace-nowrap text-[1.12em] ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>
+    <span className={`d-head whitespace-nowrap text-[1.12em] ${cancelled ? 'text-(--d-muted) line-through' : ''}`}>
       {text}
       {delay && <span data-delay className="pl-[0.25em] text-[0.7em] text-(--d-warn)">{delay}</span>}
     </span>
@@ -281,12 +281,12 @@ function DisruptionColumn({ items, seconds, span = 1, heading = false }) {
     >
       {heading && (
         <header className="d-line-bottom mb-[0.625rem] pb-[0.375rem]">
-          <h2 className="d-kicker d-oswald truncate text-[1.875rem] font-normal uppercase leading-[1.15] tracking-[0.03em]">Störungen</h2>
+          <h2 className="d-kicker d-head truncate text-[1.875rem] font-normal uppercase leading-[1.15] tracking-[0.03em]">Störungen</h2>
         </header>
       )}
       <div ref={bodyRef} className="relative min-h-0 flex-1 overflow-hidden">
         {items.length === 0
-          ? <p className="d-lato text-[1.0625rem] text-(--d-muted)">Keine Störungen</p>
+          ? <p className="d-text text-[1.0625rem] text-(--d-muted)">Keine Störungen</p>
           : (
             <div ref={scrollRef} data-disruption-page>
               {page.map((d, i) => <Disruption key={d.id ?? i} item={d} imageMax={imageMax} />)}
@@ -297,7 +297,7 @@ function DisruptionColumn({ items, seconds, span = 1, heading = false }) {
         </div>
       </div>
       {count > 1 && (
-        <span className="d-oswald self-end pt-[0.5rem] text-[1rem] text-(--d-muted)">{index + 1} / {count}</span>
+        <span className="d-head self-end pt-[0.5rem] text-[1rem] text-(--d-muted)">{index + 1} / {count}</span>
       )}
     </section>
   )
@@ -326,9 +326,9 @@ function Disruption({ item, imageMax }) {
   return (
     <article className="pb-[0.875rem]">
       <div className="d-line-bottom pb-[0.75rem]">
-        <div className="d-oswald text-[0.9375rem] uppercase tracking-[0.05em] text-(--d-red)">{disruptionLabel(item)}</div>
-        {item.title && <div className="d-lato mt-[0.1875rem] text-[1.0625rem] font-bold leading-[1.3]">{item.title}</div>}
-        {item.text && <p className="d-lato mt-[0.1875rem] text-[0.96875rem] leading-[1.35]">{item.text}</p>}
+        <div className="d-head text-[0.9375rem] uppercase tracking-[0.05em] text-(--d-red)">{disruptionLabel(item)}</div>
+        {item.title && <div className="d-text mt-[0.1875rem] text-[1.0625rem] font-bold leading-[1.3]">{item.title}</div>}
+        {item.text && <p className="d-text mt-[0.1875rem] text-[0.96875rem] leading-[1.35]">{item.text}</p>}
         {item.image && (
           <img
             src={item.image} alt="" data-disruption-image
@@ -357,7 +357,7 @@ function StatusBox({ view }) {
       {parts.map(([key, text, cls], i) => (
         <span key={key} className="contents">
           {i > 0 && <span aria-hidden="true" className="text-(--d-muted)">·</span>}
-          <span data-footer-part className={`d-lato whitespace-nowrap ${cls}`}>{text}</span>
+          <span data-footer-part className={`d-text whitespace-nowrap ${cls}`}>{text}</span>
         </span>
       ))}
     </div>

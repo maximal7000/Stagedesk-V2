@@ -45,14 +45,14 @@ function ExamContent({ mode, titleRem, compact = false }) {
   const kicker = ['Klausur', mode.location].filter(Boolean).join(' · ')
   return (
     <>
-      <div className={`d-kicker d-oswald uppercase leading-[1.1] tracking-[0.06em] text-(--d-red) ${compact ? 'text-[2rem]' : 'text-[2.25rem]'}`}>
+      <div className={`d-kicker d-head uppercase leading-[1.1] tracking-[0.06em] text-(--d-red) ${compact ? 'text-[2rem]' : 'text-[2.25rem]'}`}>
         {kicker}
       </div>
-      <h1 className="d-oswald mt-[1.25rem] font-light leading-[1.05] tracking-[-0.005em]" style={{ fontSize: `${titleRem}rem` }}>
+      <h1 className="d-head mt-[1.25rem] leading-[1.05] tracking-[-0.005em]" style={{ fontSize: `${titleRem}rem` }}>
         {mode.title}
       </h1>
       {mode.text && (
-        <p className={`d-lato text-(--d-fg-soft) ${compact ? 'mt-[1.5rem] text-[1.875rem] leading-[1.45]' : 'mt-[2.25rem] max-w-[66rem] text-[2.5rem] leading-[1.5]'}`}>
+        <p className={`d-text text-(--d-fg-soft) ${compact ? 'mt-[1.5rem] text-[1.875rem] leading-[1.45]' : 'mt-[2.25rem] max-w-[66rem] text-[2.5rem] leading-[1.5]'}`}>
           {mode.text}
         </p>
       )}
@@ -73,8 +73,8 @@ function TimeItem({ label, children }) {
   if (!children) return null
   return (
     <div>
-      <dt className="d-oswald uppercase tracking-[0.05em] text-(--d-muted)">{label}</dt>
-      <dd className="d-oswald mt-[0.5rem] font-light leading-none">{children}</dd>
+      <dt className="d-head uppercase tracking-[0.05em] text-(--d-muted)">{label}</dt>
+      <dd className="d-head mt-[0.5rem] leading-none">{children}</dd>
     </div>
   )
 }

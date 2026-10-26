@@ -1,7 +1,6 @@
 .d-root {
   --d-red: #da1f3d;
-  font-family: 'Lato', sans-serif;
-  font-variant-numeric: tabular-nums;
+  font-family: 'Cabin Variable', 'Cabin', sans-serif;
   -webkit-font-smoothing: antialiased;
   background: var(--d-bg);
   color: var(--d-fg);
@@ -51,12 +50,19 @@
   mask-repeat: no-repeat;
 }
 
-.d-oswald {
-  font-family: 'Oswald', sans-serif;
+.d-head {
+  font-stretch: 75%;
 }
 
-.d-lato {
-  font-family: 'Lato', sans-serif;
+.d-text {
+  font-stretch: 100%;
+}
+
+/* Cabin has no tabular figures. A box as wide as "00:00:00" keeps the ticking clock from
+   shifting its neighbours; per-digit boxes would tear the narrow "1" apart. */
+.d-clock {
+  display: inline-block;
+  min-width: 4em;
 }
 
 .d-kicker {
