@@ -94,12 +94,17 @@ ASGI_APPLICATION = "core.asgi.application"
 
 # REDIS_URL gesetzt: Redis dort. Sonst lokal (DEBUG) im Speicher, in Produktion Redis auf 127.0.0.1 wie bisher.
 _redis_url = os.getenv('REDIS_URL')
+# redis-py 8 defaults socket_timeout to 5 s, the same as channels_redis' BZPOPMIN wait; every idle
+# receive then raises TimeoutError and drops the WebSocket. The read timeout must exceed that wait.
+_REDIS_SOCKET_TIMEOUT = 30
 if _redis_url:
-    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [_redis_url]}}}
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {
+        "hosts": [{"address": _redis_url, "socket_timeout": _REDIS_SOCKET_TIMEOUT}]}}}
 elif DEBUG:
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 else:
-    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [("127.0.0.1", 6379)]}}}
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {
+        "hosts": [{"host": "127.0.0.1", "port": 6379, "socket_timeout": _REDIS_SOCKET_TIMEOUT}]}}}
 # Tests laufen ohne Redis (sonst wartet jeder Push auf Verbindungs-Retries)
 if len(sys.argv) > 1 and sys.argv[1] == 'test':
     CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
