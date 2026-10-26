@@ -35,7 +35,7 @@ export default function InfoView({ view }) {
   const setB = useCallback((v) => setNatural((n) => (n.b === v ? n : { ...n, b: v })), [])
   const stacked = width > 0 && width / remPx < STACK_BELOW_REM
   if (!announcements.length && !events.length && !countdown) {
-    return <p className="d-oswald pt-[3.75rem] text-[2rem] text-(--d-muted)">Keine Ankündigungen oder Termine.</p>
+    return <p className="d-head pt-[3.75rem] text-[2rem] text-(--d-muted)">Keine Ankündigungen oder Termine.</p>
   }
   return (
     <div
@@ -116,10 +116,10 @@ function renderAnnouncement(a) {
   return (
     <article className="d-line-bottom py-[1.125rem]">
       {a.priority === 'urgent' && (
-        <div className="d-oswald text-[1.375rem] uppercase leading-[1.3] tracking-[0.06em] text-(--d-red)">Dringend</div>
+        <div className="d-head text-[1.375rem] uppercase leading-[1.3] tracking-[0.06em] text-(--d-red)">Dringend</div>
       )}
-      <h3 className="d-oswald line-clamp-2 text-[3rem] font-normal leading-[1.15]">{a.title}</h3>
-      {a.text && <p className="d-lato mt-[0.25rem] line-clamp-2 text-[1.6875rem] leading-[1.35] text-(--d-muted)">{a.text}</p>}
+      <h3 className="d-head line-clamp-2 text-[3rem] font-normal leading-[1.15]">{a.title}</h3>
+      {a.text && <p className="d-text mt-[0.25rem] line-clamp-2 text-[1.6875rem] leading-[1.35] text-(--d-muted)">{a.text}</p>}
     </article>
   )
 }
@@ -129,12 +129,12 @@ function renderEvent(ev) {
   return (
     <article className="d-line-bottom grid grid-cols-[10.625rem_minmax(0,1fr)] gap-x-[1rem] py-[1.125rem]">
       <div>
-        <div className="d-oswald text-[2.125rem] leading-[1.15]">{formatShortDate(ev.date_from)}</div>
-        {detail && <div className="d-lato text-[1.1875rem] leading-[1.4] text-(--d-muted)">{detail}</div>}
+        <div className="d-head text-[2.125rem] leading-[1.15]">{formatShortDate(ev.date_from)}</div>
+        {detail && <div className="d-text text-[1.1875rem] leading-[1.4] text-(--d-muted)">{detail}</div>}
       </div>
       <div className="min-w-0 pt-[0.25rem]">
-        <div className="d-lato line-clamp-2 text-[1.875rem] leading-[1.25]">{ev.name}</div>
-        {ev.location && <div className="d-lato truncate text-[1.375rem] leading-[1.4] text-(--d-muted)">{ev.location}</div>}
+        <div className="d-text line-clamp-2 text-[1.875rem] leading-[1.25]">{ev.name}</div>
+        {ev.location && <div className="d-text truncate text-[1.375rem] leading-[1.4] text-(--d-muted)">{ev.location}</div>}
       </div>
     </article>
   )
@@ -147,16 +147,16 @@ function Countdown({ countdown, first = false }) {
   return (
     <section className={`flex shrink-0 items-end justify-between gap-[2rem] ${first ? '' : 'd-rule-top mt-[2.5rem] pt-[2rem]'}`}>
       <div className="min-w-0">
-        <div className="d-oswald text-[1.75rem] uppercase tracking-[0.06em] text-(--d-fg-soft)">Countdown</div>
-        <div className="d-oswald truncate text-[2.375rem] leading-[1.2]">{countdown.name}</div>
+        <div className="d-head text-[1.75rem] uppercase tracking-[0.06em] text-(--d-fg-soft)">Countdown</div>
+        <div className="d-head truncate text-[2.375rem] leading-[1.2]">{countdown.name}</div>
       </div>
-      <div className="d-oswald flex shrink-0 items-baseline gap-[0.75rem] leading-none">
+      <div className="d-head flex shrink-0 items-baseline gap-[0.75rem] leading-none">
         {days === 0
-          ? <span className="text-[4.5rem] font-light">Heute</span>
+          ? <span className="text-[4.5rem]">Heute</span>
           : (
             <>
-              <span className="text-[6.25rem] font-light">{days}</span>
-              <span className="text-[2rem] font-light text-(--d-fg-soft)">{days === 1 ? 'Tag' : 'Tage'}</span>
+              <span className="text-[6.25rem]">{days}</span>
+              <span className="text-[2rem] text-(--d-fg-soft)">{days === 1 ? 'Tag' : 'Tage'}</span>
             </>
           )}
       </div>
@@ -167,7 +167,7 @@ function Countdown({ countdown, first = false }) {
 function QrCorner({ qr }) {
   return (
     <div className="absolute bottom-0 right-0 flex items-end gap-[1rem]">
-      {qr.label && <span className="d-lato pb-[0.125rem] text-[1.25rem] text-(--d-fg-soft)">{qr.label}</span>}
+      {qr.label && <span className="d-text pb-[0.125rem] text-[1.25rem] text-(--d-fg-soft)">{qr.label}</span>}
       <div className="bg-[#fff] p-[0.5rem]">
         <QRCodeSVG value={qr.url} size={256} bgColor="#ffffff" fgColor="#222222" style={{ width: '6.5rem', height: '6.5rem', display: 'block' }} />
       </div>

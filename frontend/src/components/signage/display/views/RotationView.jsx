@@ -22,7 +22,7 @@ export default function RotationView({ view, orientation, frame = {}, screen }) 
     return (
       <Frame layout={view.layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
         <div data-display-state="view" data-view-kind="rotation" className="flex h-full items-center">
-          <p className="d-lato max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
+          <p className="d-text max-w-[60rem] text-[2rem] leading-[1.5] text-(--d-fg-soft)">
             Wechsel ohne Ansichten.
           </p>
         </div>

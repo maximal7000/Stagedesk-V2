@@ -22,7 +22,7 @@ export default function OnAirMode({ mode, panel = null, staleSince = null }) {
           : 'mb-[6rem] px-[9.5rem] py-[4.25rem]'}`}
       >
         <span
-          className="d-oswald text-center font-semibold leading-[1] tracking-[0.04em] text-[#fff]"
+          className="d-head text-center font-semibold leading-[1] tracking-[0.04em] text-[#fff]"
           style={{ fontSize: `${signFontRem(text, panel)}rem` }}
         >
           {text}
