@@ -4,8 +4,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PAIR_HINT = "Im Stagedesk-Admin unter Monitore → Übersicht → Bildschirm koppeln eingeben."
-NO_SERVER = "Keine Verbindung zum Server. Netzwerk prüfen."
+NO_SERVER = "Keine Verbindung zum Server."
 
 _STYLE = """
 html,body{margin:0;height:100%;background:#0b0b0c;color:#f2f2f2;font-family:sans-serif}
@@ -80,8 +79,7 @@ class LocalPages:
             return (f'<div class="grid"></div><h1>{html.escape(name)}</h1>'
                     f"<p>{html.escape(resolution)}</p><div class=\"bars\">{bars}</div>")
         if state[0] == "code":
-            return (f"<h1>Kopplungscode {html.escape(format_code(state[1]))}</h1>"
-                    f"<p>{html.escape(PAIR_HINT)}</p>")
+            return (f"<h1>Kopplungscode {html.escape(format_code(state[1]))}</h1>")
         if state[0] == "no_server":
             return f"<p>{html.escape(NO_SERVER)}</p>"
         return ""
