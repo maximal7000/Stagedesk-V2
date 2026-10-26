@@ -9,6 +9,59 @@ Produktions-Setup auf `stagedesk.t410.de`:
 - Nginx: `/etc/nginx/sites-enabled/tag` (TLS via Certbot)
 - Keycloak: `https://auth.t410.de/realms/technik-ag`
 
+## Parallel-Installation signage.t410.de
+
+Eine zweite, unabhängige Instanz derselben Codebasis unter `signage.t410.de`, parallel zur Hauptinstallation unter `stagedesk.t410.de`. Eigene Datenbank, eigenes venv, eigene `.env`, eigener systemd-Dienst, eigener Socket und eigener nginx-Block. Die Hauptinstallation in `/opt/stagedesk` wird dabei nicht angefasst (der einzige Eingriff am gemeinsamen System ist der zusätzliche nginx-Block).
+
+- Code: `/opt/signage/` (Klon von `main`)
+- DB: PostgreSQL-Rolle und -Datenbank `signage` (frisch; Signage-Schema direkt per `migrate`, **kein** `signage_rename_from_monitor`, da keine `monitor_*`-Tabellen existieren)
+- ASGI: Daphne via Unix-Socket `/run/signage.sock`
+- Systemd: `signage-backend.service` (Vorlage `scripts/signage-backend.service.example`)
+- Nginx: `/etc/nginx/sites-available/signage` (Vorlage `scripts/nginx-signage.conf.example`), TLS via Certbot-Zertifikat `signage.t410.de`
+- Channel-Layer: eigene Redis-DB, `REDIS_URL=redis://127.0.0.1:6379/1` (die Hauptinstallation nutzt db0)
+- Keycloak: derselbe Realm `technik-ag` und Client `stagedesk`; `https://signage.t410.de/*` zu Valid redirect URIs, Valid post logout redirect URIs und Web origins ergänzen
+
+### Einmaliges Setup
+
+1. **Backup der Hauptinstallation:** Tarball von `/opt/stagedesk` und `pg_dump` der DB `stagedesk` nach `~/stagedesk-backups/`.
+2. **Datenbank:**
+   ```bash
+   sudo -u postgres psql <<SQL
+   CREATE USER signage WITH PASSWORD 'DEIN-PASSWORT';
+   CREATE DATABASE signage OWNER signage ENCODING 'UTF8' TEMPLATE template0;
+   SQL
+   ```
+3. **Code + venv:**
+   ```bash
+   git clone https://github.com/maximal7000/Stagedesk-V2.git /opt/signage
+   cd /opt/signage
+   python3 -m venv backend/venv
+   backend/venv/bin/pip install -r backend/requirements.txt
+   ```
+4. **`.env` (Werte nie committen):** `/opt/signage/backend/.env` anlegen mit eigenem `DJANGO_SECRET_KEY`, `DB_ENGINE=postgres`, `DB_NAME=signage`, `DB_USER=signage`, `DB_PASSWORD=…`, `DB_HOST=127.0.0.1`, `DB_PORT=5432`, `DJANGO_DEBUG=False`, `DJANGO_ALLOWED_HOSTS=signage.t410.de`, `DJANGO_CORS_ORIGINS=https://signage.t410.de`, `DJANGO_CSRF_TRUSTED_ORIGINS=https://signage.t410.de`, `PUBLIC_BASE_URL=https://signage.t410.de`, `REDIS_URL=redis://127.0.0.1:6379/1`. Geteilte Werte (`KEYCLOAK_*`, `DB_TT_*`, `EMAIL_*`, `VAPID_*`, `DISCORD_*`) aus der Hauptinstallation übernehmen. `NAHSH_HAFAS_AID` und `SWHL_STORYBLOK_TOKEN` setzen, sonst bleiben NAH.SH-Abfahrten und SWL-Störungen leer. Dazu `/opt/signage/frontend/.env.production` mit `VITE_API_URL=/api` und den `VITE_KEYCLOAK_*`-Werten. Beide Dateien `chmod 600`.
+5. **Migrate + Build:**
+   ```bash
+   cd /opt/signage/backend && source venv/bin/activate
+   python manage.py migrate --noinput
+   python manage.py collectstatic --noinput
+   cd /opt/signage/frontend && npm ci && npm run build
+   ```
+6. **Dienst:** `scripts/signage-backend.service.example` nach `/etc/systemd/system/signage-backend.service` kopieren, dann `systemctl daemon-reload` und `systemctl enable --now signage-backend.service`.
+7. **Nginx:** `scripts/nginx-signage.conf.example` nach `/etc/nginx/sites-available/signage` kopieren, nach `sites-enabled/` verlinken, `nginx -t`, dann `systemctl reload nginx`. Das TLS-Zertifikat `signage.t410.de` muss existieren, sonst vorher `certbot --nginx -d signage.t410.de`.
+
+### Updates
+
+```bash
+sudo bash /opt/signage/scripts/deploy-signage.sh
+```
+
+Das Skript macht `git pull` → `pip install` → `npm ci && build` → `collectstatic` → `migrate` → `systemctl restart signage-backend.service` → `reload nginx`. Es ruft **kein** `signage_rename_from_monitor` auf (frische Signage-DB) und fasst `/opt/stagedesk` nicht an.
+
+### Nach dem Setup
+
+- Der Login auf `signage.t410.de` funktioniert erst, wenn in Keycloak `https://signage.t410.de/*` beim Client `stagedesk` eingetragen ist. Die öffentlichen Anzeige-Seiten (`/signage?screen=…&key=…`) brauchen keinen Login.
+- Die signage-DB ist frisch und leer: Bildschirme, Ansichten und Einstellungen unter `https://signage.t410.de/signage-admin` neu anlegen.
+
 ## Einmaliges Setup
 
 ### 1. Postgres
