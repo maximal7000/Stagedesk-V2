@@ -21,9 +21,10 @@ Wer den Agent nicht nutzen kann, findet die Handeinrichtung ab Abschnitt
 ### 1. SD-Karte schreiben
 
 1. **Raspberry Pi Imager** öffnen.
-2. OS wählen: **Raspberry Pi OS (Legacy, Bookworm) Lite (64-bit)**. Der
-   Standard im Imager ist inzwischen Trixie; `install.sh` bricht auf Trixie ab.
-   Die Legacy-Variante steht in der Imager-Liste unter den weiteren Raspberry-Pi-OS-Images.
+2. OS wählen: **Raspberry Pi OS (Legacy, Bookworm) Lite (64-bit)**. Die
+   Legacy-Variante steht in der Imager-Liste unter den weiteren Raspberry-Pi-OS-Images.
+   Der Standard im Imager, **Trixie Lite (64-bit)**, läuft auch, ist aber noch
+   nicht auf echter Hardware geprüft; `install.sh` weist darauf hin.
 3. Einstellungen bearbeiten:
    - **Hostname**, z. B. `rpi-monitor-mensa`
    - **SSH aktivieren**
@@ -90,7 +91,8 @@ curl -fsSL https://<server>/api/signage/agent/install.sh | sudo STAGEDESK_SERVER
 
 | Symptom | Lösung |
 |---|---|
-| `install.sh` meldet "Bookworm erwartet" | Falsches Image. Mit "Raspberry Pi OS (Legacy, Bookworm) Lite" neu schreiben |
+| `install.sh` meldet "Bookworm oder Trixie erwartet" | Falsches Image. Mit "Raspberry Pi OS (Legacy, Bookworm) Lite" neu schreiben |
+| Auf Trixie startet der Kiosk nicht oder Power/Screenshot schlägt fehl | `journalctl -u stagedesk-kiosk -u stagedesk-agent -n 100` sichern; als Ausweg mit Bookworm Lite (Legacy) neu schreiben |
 | `install.sh` meldet "Benutzer pi fehlt" | Im Imager den Benutzer `pi` anlegen und neu schreiben |
 | Kein Kopplungscode auf dem Bildschirm | `systemctl status stagedesk-agent stagedesk-kiosk`, `journalctl -u stagedesk-agent -n 50`, Netz prüfen |
 | Code abgelaufen | Der Agent zeigt von selbst einen neuen Code. Den neuen Code im Admin eingeben |
