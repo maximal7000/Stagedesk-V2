@@ -7,9 +7,10 @@ from django.utils import timezone
 from ninja.errors import HttpError
 
 from core.auth import KeycloakAuth
-from users.models import Permission, UserProfile
+from users.models import UserProfile
 
 from . import power
+from .fake_tokens import grant_roles
 from .models import DisplayEvent, DisplayEventScreen, DisplayView, Screen
 from .screen_schedule import active_row, is_on, merge_legacy, row_matches, split_legacy
 from .validation import validate_screen_schedule
@@ -219,7 +220,8 @@ class ScheduleApiTest(TestCase):
         self.view = DisplayView.objects.create(name='V', slug='v', api_token='t-v', is_default=True)
         self.screen = Screen.objects.create(name='Halle', slug='halle', default_view=self.view)
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
         push = mock.patch('signage.consumers.push_power_to_screen')
@@ -227,9 +229,7 @@ class ScheduleApiTest(TestCase):
         self.addCleanup(push.stop)
 
     def grant(self, *codes):
-        for code in codes:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            self.profile.permissions.add(perm)
+        grant_roles(self.token, *codes)
 
     def put(self, body):
         return self.client.put(f'/api/monitor/screens/{self.screen.id}', body,

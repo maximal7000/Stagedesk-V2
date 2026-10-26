@@ -2,19 +2,15 @@
 from ninja.errors import HttpError
 
 from users.api import is_admin
-from users.models import UserProfile
+from .roles import signage_roles
 
 
 def _require_perm(request, code: str):
     if is_admin(request):
         return
-    kid = request.auth.get('sub', '') if request.auth else ''
-    if kid:
-        try:
-            if UserProfile.objects.get(keycloak_id=kid).has_permission(code, False):
-                return
-        except UserProfile.DoesNotExist:
-            pass
+    role = code.removeprefix('signage.')
+    if role in signage_roles(request.auth):
+        return
     raise HttpError(403, "Keine Berechtigung")
 
 

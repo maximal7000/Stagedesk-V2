@@ -3,8 +3,9 @@ from unittest import mock
 from django.test import TestCase, override_settings
 
 from core.auth import KeycloakAuth
-from users.models import Permission, UserProfile
+from users.models import UserProfile
 
+from .fake_tokens import grant_roles
 from .models import DisplayView, MonitorSettings, Screen
 from .tests_display import configure_webuntis, fake_load_days
 
@@ -107,13 +108,13 @@ class RegenerateScreenKeyTest(TestCase):
                                                webuntis_url='https://example.org/untis')
         self.screen = Screen.objects.create(name='Halle', slug='halle', default_view=self.view)
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
 
     def grant(self, code):
-        perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-        self.profile.permissions.add(perm)
+        grant_roles(self.token, code)
 
     def regenerate(self):
         return self.client.post(f'/api/monitor/screens/{self.screen.id}/regenerate-key',
@@ -164,14 +165,13 @@ class ScreenAccessKeyVisibilityTest(TestCase):
     def setUp(self):
         self.screen = Screen.objects.create(name='Halle', slug='halle')
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
 
     def grant(self, *codes):
-        for code in codes:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            self.profile.permissions.add(perm)
+        grant_roles(self.token, *codes)
 
     def list_keys(self):
         r = self.client.get('/api/monitor/screens', HTTP_AUTHORIZATION='Bearer x')
@@ -205,7 +205,8 @@ class ScreenAccessKeyVisibilityTest(TestCase):
 class SettingsSecretsTest(TestCase):
     def setUp(self):
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
         settings = MonitorSettings.load()
@@ -215,9 +216,7 @@ class SettingsSecretsTest(TestCase):
         settings.save()
 
     def grant(self, *codes):
-        for code in codes:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            self.profile.permissions.add(perm)
+        grant_roles(self.token, *codes)
 
     def get(self):
         r = self.client.get('/api/monitor/settings', HTTP_AUTHORIZATION='Bearer x')
@@ -291,14 +290,13 @@ class ViewSecretsTest(TestCase):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', weather_api_key='alt-key',
                                                api_token='t' * 32)
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
 
     def grant(self, *codes):
-        for code in codes:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            self.profile.permissions.add(perm)
+        grant_roles(self.token, *codes)
 
     def config(self):
         r = self.client.get('/api/monitor/config', {'view_id': self.view.id}, HTTP_AUTHORIZATION='Bearer x')
@@ -338,9 +336,9 @@ class ChangeViewKindTest(TestCase):
     def setUp(self):
         self.view = DisplayView.objects.create(name='Halle', slug='halle', kind='departures', page_seconds=33)
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        perm, _ = Permission.objects.get_or_create(code='signage.setup', defaults={'name': 'signage.setup'})
-        self.profile.permissions.add(perm)
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.token = {'sub': 'tester'}
+        grant_roles(self.token, 'signage.setup')
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
         auth.start()
         self.addCleanup(auth.stop)
 
@@ -383,8 +381,7 @@ class ChangeViewKindTest(TestCase):
     def test_list_carries_rotation_items(self):
         rot = DisplayView.objects.create(name='W', slug='w', kind='rotation',
                                          rotation_items=[{'view_id': self.view.id, 'seconds': 20}])
-        perm, _ = Permission.objects.get_or_create(code='signage.view', defaults={'name': 'signage.view'})
-        self.profile.permissions.add(perm)
+        grant_roles(self.token, 'signage.view')
         rows = self.client.get('/api/monitor/views', HTTP_AUTHORIZATION='Bearer x').json()
         row = next(x for x in rows if x['id'] == rot.id)
         self.assertEqual(row['rotation_items'], [{'view_id': self.view.id, 'seconds': 20}])

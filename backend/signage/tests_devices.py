@@ -9,9 +9,10 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from core.auth import KeycloakAuth
-from users.models import Permission, UserProfile
+from users.models import UserProfile
 
 from . import push
+from .fake_tokens import grant_roles
 from .models import Device, DeviceEvent, MonitorSettings, PairingRequest, Screen
 
 IN_MEMORY = {'default': {'BACKEND': 'channels.layers.InMemoryChannelLayer'}}
@@ -73,14 +74,13 @@ class PairingTestBase(TestCase):
     def setUp(self):
         cache.clear()
         self.profile = UserProfile.objects.create(keycloak_id='tester')
-        auth = mock.patch.object(KeycloakAuth, '__call__', return_value={'sub': 'tester'})
+        self.user_token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.user_token)
         auth.start()
         self.addCleanup(auth.stop)
 
     def grant(self, *codes):
-        for code in codes:
-            perm, _ = Permission.objects.get_or_create(code=code, defaults={'name': code})
-            self.profile.permissions.add(perm)
+        grant_roles(self.user_token, *codes)
 
     def post(self, path, data):
         return self.client.post(f'/api/monitor{path}', data, content_type='application/json',
@@ -252,7 +252,7 @@ class PairingFlowTest(PairingTestBase):
         close.assert_called_once()
 
     def test_pair_requires_devices_permission(self):
-        self.profile.permissions.clear()
+        self.user_token.pop('resource_access', None)
         body = self.start()
         self.assertEqual(self.pair(body['code'], screen_id=self.screen.id).status_code, 403)
         self.assertEqual(PairingRequest.objects.get().confirmed_device, None)
@@ -319,7 +319,7 @@ class UnpairRevokeTest(PairingTestBase):
         close.assert_called_once_with(self.device)
 
     def test_requires_permission_and_404(self):
-        self.profile.permissions.clear()
+        self.user_token.pop('resource_access', None)
         self.assertEqual(self.post(f'/devices/{self.device.id}/unpair', {}).status_code, 403)
         self.assertEqual(self.post(f'/devices/{self.device.id}/revoke', {}).status_code, 403)
         self.grant('signage.devices')
