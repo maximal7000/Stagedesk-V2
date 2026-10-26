@@ -25,7 +25,8 @@ function Replaced({ old, value }) {
 }
 
 // Columns: flag = switch in data.columns (format options from WebUntis), without flag always visible.
-// nowrap: short values ("8.–9.", "Raumänderung") never break inside; class, teacher, room and note wrap.
+// nowrap: short values ("8.–9.", "La1") never break inside; class, teacher, room, kind and note wrap, so an
+// unusually long text from WebUntis stays inside its column.
 const COLUMN_DEFS = {
   group: { head: 'Kürzel', fr: 7, nowrap: true, cls: 'd-oswald font-medium', lead: true, cell: (row) => row.group },
   class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-oswald font-medium', cell: (row) => row.classes_label },
@@ -34,7 +35,7 @@ const COLUMN_DEFS = {
   teacher: { head: 'Lehrkraft', fr: 12, flag: 'teacher', cls: 'd-lato', cell: (row) => <Replaced old={row.teacher_old} value={row.teacher} /> },
   room: { head: 'Raum', fr: 10, flag: 'room', cls: 'd-lato', cell: (row) => <Replaced old={row.room_old} value={row.room} /> },
   kind: {
-    head: 'Art', fr: 16, nowrap: true, cls: 'd-oswald text-[1.25rem] uppercase',
+    head: 'Art', fr: 16, cls: 'd-oswald text-[1.25rem] uppercase',
     tone: (row) => KIND_TONE[row.kind] ?? '',
     cell: (row) => row.kind_label || KIND_FALLBACK[row.kind] || KIND_FALLBACK.other,
   },

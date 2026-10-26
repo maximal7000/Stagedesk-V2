@@ -95,6 +95,21 @@ class ParseRowsTests(SimpleTestCase):
         self.assertEqual((row['kind'], row['kind_label'], row['periods']),
                          ('room_change', 'Raumänderung', '1.–2.'))
 
+    def test_moved_lesson_detail_goes_to_note(self):
+        options = {'showHour': True, 'showSubstText': True, 'showInfo': True}
+        cases = [
+            (['3', 'Verlegung von 26.10. / 2.', 'AA s. Klassenbuch'],
+             ('Verlegung', 'von 26.10., 2. Std. · AA s. Klassenbuch')),
+            (['4', 'Verlegung nach 28.10. / 5-6', ''], ('Verlegung', 'nach 28.10., 5.–6. Std.')),
+            (['2', 'Verlegung von 26.10.', ''], ('Verlegung', 'von 26.10.')),
+            (['1', 'Vertretung', 'Text'], ('Vertretung', 'Text')),
+            (['1', 'Raumänderung', ''], ('Raumänderung', '')),
+        ]
+        for data, expected in cases:
+            with self.subTest(label=data[1]):
+                [row] = untis_monitor.parse_rows(payload_with(rows=[make_row(data)]), options)
+                self.assertEqual((row['kind_label'], row['note']), expected)
+
     def test_class_list_split(self):
         rows = untis_monitor.parse_rows(load('data-schueler-20261027.json')['payload'], STUDENT_FORMAT)
         greek = rows[4]

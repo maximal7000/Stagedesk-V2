@@ -85,7 +85,8 @@ describe('SubstitutionsView', () => {
     const el = render(<SubstitutionsView view={view(data)} />)
     const cell = (key) => visible(el).querySelector(`[data-column="${key}"]`)
     expect(cell('periods').className).toContain('whitespace-nowrap')
-    expect(cell('kind').className).toContain('whitespace-nowrap')
+    // The kind wraps, so a long WebUntis text stays inside its column
+    expect(cell('kind').className).toContain('whitespace-normal')
     const pair = cell('room').querySelector('.whitespace-nowrap')
     expect(pair.textContent).toBe('113 015')
     const teacher = [...cell('teacher').querySelectorAll('.whitespace-nowrap')].map((s) => s.textContent)
