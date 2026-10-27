@@ -14,12 +14,12 @@ class LocalPageTests(unittest.TestCase):
         pages.show_code("482913")
         html = pages.render()
         self.assertIn("Kopplungscode 482 913", html)
-        self.assertIn("Im Stagedesk-Admin unter Monitore → Übersicht → Bildschirm koppeln eingeben.", html)
+        self.assertNotIn("koppeln", html)
 
     def test_local_page_no_server_text(self):
         pages = LocalPages()
         pages.show_no_server()
-        self.assertIn("Keine Verbindung zum Server. Netzwerk prüfen.", pages.render())
+        self.assertIn("Keine Verbindung zum Server.", pages.render())
 
     def test_test_pattern_then_reverts(self):
         now = [100.0]
@@ -62,7 +62,7 @@ class LocalPageTests(unittest.TestCase):
         pages.show_code("482913")
         self.assertIn("482 913", pages.state()["body"])
         pages.show_no_server()
-        self.assertIn("Keine Verbindung zum Server. Netzwerk prüfen.", pages.state()["body"])
+        self.assertIn("Keine Verbindung zum Server.", pages.state()["body"])
         pages.show_test_pattern("Mensa", "1920x1080", seconds=60)
         self.assertIn("Mensa", pages.state()["body"])
         now[0] = 61

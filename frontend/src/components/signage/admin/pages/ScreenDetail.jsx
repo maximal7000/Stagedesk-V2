@@ -97,6 +97,10 @@ const CONFIG_FIELDS = {
   ddc: [
     { key: 'vcp_on', label: 'DDC-Wert an', help: 'Hexwert für „an“, Standard 01.' },
     { key: 'vcp_off', label: 'DDC-Wert aus', help: 'Hexwert für „aus“, Standard 04.' },
+    {
+      key: 'no_verify', type: 'checkbox', label: 'Ohne Rückprüfung (--noverify)',
+      help: 'Für Bildschirme, die schalten, aber danach einen falschen Wert zurückmelden oder im Standby nicht antworten.',
+    },
   ],
 }
 
@@ -132,14 +136,19 @@ function PowerMethodBlock({ device, original, canDevices, problems, deviceRow, s
             ))}
           </select>
         </Field>
-        {CONFIG_FIELDS[method].map((f) => (
+        {CONFIG_FIELDS[method].map((f) => (f.type === 'checkbox' ? (
+          <div key={`${method}-${f.key}`} className="sm:col-span-2">
+            <Checkbox label={f.label} help={f.help} checked={values.power_config[f.key] === true} disabled={disabled}
+              onChange={(v) => device.set(`power_config.${f.key}`, v)} />
+          </div>
+        ) : (
           <Field key={`${method}-${f.key}`} label={f.label} htmlFor={`${idBase}-${f.key}`} help={f.help}>
             <input id={`${idBase}-${f.key}`} value={values.power_config[f.key] ?? ''} disabled={disabled} inputMode={f.inputMode}
               placeholder={f.placeholder} onChange={(e) => device.set(`power_config.${f.key}`, e.target.value)}
               aria-invalid={problems.config[f.key] ? true : undefined} className={fieldClass} />
             {problems.config[f.key] && <p className="text-xs text-bad mt-1.5">{problems.config[f.key]}</p>}
           </Field>
-        ))}
+        )))}
       </div>
     </div>
   )

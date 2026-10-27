@@ -137,7 +137,7 @@ describe('Geräte-Felder', () => {
       cec: { cec_device: '0' },
       hdmi: { output: 'HDMI-A-1' },
       hybrid: { display_ip: '', display_port: 5000, monitor_id: 0, cec_device: '0' },
-      ddc: { vcp_on: '01', vcp_off: '04' },
+      ddc: { vcp_on: '01', vcp_off: '04', no_verify: false },
     })
     expect(deviceDefaults({}).update_window).toEqual({ weekday: 6, from: '03:00', until: '05:00' })
   })
@@ -161,7 +161,13 @@ describe('Geräte-Felder', () => {
     expect(devicePayload({ ...orig, power_config: { cec_device: '1' } }, orig))
       .toEqual({ power_method: 'cec', power_config: { cec_device: '1' } })
     expect(devicePayload({ ...orig, power_method: 'ddc', power_config: {} }, orig))
-      .toEqual({ power_method: 'ddc', power_config: { vcp_on: '01', vcp_off: '04' } })
+      .toEqual({ power_method: 'ddc', power_config: { vcp_on: '01', vcp_off: '04', no_verify: false } })
+  })
+
+  it('DDC ohne Rückprüfung bleibt ein Wahrheitswert und braucht keine Eingabe', () => {
+    const draft = { ...orig, power_method: 'ddc', power_config: { vcp_on: '01', vcp_off: '04', no_verify: true } }
+    expect(devicePayload(draft, orig).power_config).toEqual({ vcp_on: '01', vcp_off: '04', no_verify: true })
+    expect(deviceProblems(draft, orig).config).toEqual({})
   })
 
   it('prüft das Zeitfenster: von muss vor bis liegen', () => {

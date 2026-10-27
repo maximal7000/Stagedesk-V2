@@ -417,10 +417,11 @@ describe('ScreenDetail', () => {
         expect(api.sendDeviceCommand).toHaveBeenCalledWith(5, 'power_probe')
         expect(byLabel('Steuerung des Bildschirms').querySelector('option[value="ddc"]').textContent).toBe('DDC (empfohlen)')
         await click(button('Testen', box))
-        expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'ddc', config: { vcp_on: '01', vcp_off: '04' }, seconds: 15 })
+        expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'ddc', config: { vcp_on: '01', vcp_off: '04', no_verify: false }, seconds: 15 })
         await act(async () => { await vi.advanceTimersByTimeAsync(15000) })
         await click(button('Ja, DDC übernehmen'))
         expect(byLabel('Steuerung des Bildschirms').value).toBe('ddc')
+        expect(byLabel('Ohne Rückprüfung (--noverify)').checked).toBe(false)
         expect(container.textContent).toContain('2 ungespeicherte Änderungen')
         expect(api.updateScreen).not.toHaveBeenCalled()
       } finally {

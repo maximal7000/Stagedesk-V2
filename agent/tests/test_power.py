@@ -197,6 +197,17 @@ class DdcTests(unittest.TestCase):
         make_power("ddc", {"vcp_off": "02", "vcp_on": "01"}, runner, sleep=no_sleep).set(False)
         self.assertEqual(runner.calls[0][0][-1], "02")
 
+    def test_ddc_no_verify(self):
+        runner = FakeRunner()
+        make_power("ddc", {"no_verify": True}, runner, sleep=no_sleep).set(False)
+        self.assertEqual(runner.calls[0][0], ("ddcutil", "setvcp", "D6", "04", "--noverify"))
+
+    def test_ddc_no_verify_only_for_true(self):
+        for value in (False, "true", 1, None):
+            runner = FakeRunner()
+            make_power("ddc", {"no_verify": value}, runner, sleep=no_sleep).set(False)
+            self.assertEqual(runner.calls[0][0], ("ddcutil", "setvcp", "D6", "04"), value)
+
     def test_ddc_retries_once_then_error(self):
         runner = FakeRunner({("ddcutil", "setvcp", "D6", "04"): RunResult(1, "", "No displays found")})
         status = make_power("ddc", {}, runner, sleep=no_sleep).set(False)

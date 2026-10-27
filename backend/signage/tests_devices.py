@@ -727,6 +727,19 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
         self.assertEqual(self.put(url, {'power_config': {'display_ip': ['x']}}).status_code, 422)
         self.assertEqual(self.put(url, {'power_method': 'cec'}).status_code, 422)
 
+    def test_ddc_no_verify_must_be_boolean(self):
+        self.grant('signage.devices')
+        url = f'/screens/{self.screen.id}'
+        config = {'vcp_on': '01', 'vcp_off': '04', 'no_verify': True}
+        self.assertEqual(self.put(url, {'power_method': 'ddc', 'power_config': config}).status_code, 200)
+        self.screen.refresh_from_db()
+        self.assertIs(self.screen.power_config['no_verify'], True)
+        for bad in ('true', 1, None):
+            r = self.put(url, {'power_method': 'ddc', 'power_config': {**config, 'no_verify': bad}})
+            self.assertEqual(r.status_code, 422, bad)
+        r = self.put(url, {'power_method': 'cec', 'power_config': {'cec_device': '0', 'no_verify': True}})
+        self.assertEqual(r.status_code, 422)
+
     def test_power_method_labels_match_the_admin(self):
         from .validation import POWER_METHOD_LABELS
         expected = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hybrid': 'Netzwerk (SICP)', 'ddc': 'DDC', 'hdmi': 'HDMI-Signal'}

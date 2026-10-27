@@ -196,13 +196,15 @@ class DdcPower(PowerController):
         super().__init__(config, runner, **kw)
         self.vcp_on = _text(self.config.get("vcp_on"), "01")
         self.vcp_off = _text(self.config.get("vcp_off"), "04")
+        # Some displays switch but answer the read-back wrongly (or not at all while in standby).
+        self.verify_flag = ["--noverify"] if self.config.get("no_verify") is True else []
         self._on = True
 
     def _set(self, on):
         value = self.vcp_on if on else self.vcp_off
         result = None
         for attempt in range(2):  # DDC is slow and sometimes flaky
-            result = self.runner.run(["ddcutil", "setvcp", "D6", value], timeout=15)
+            result = self.runner.run(["ddcutil", "setvcp", "D6", value, *self.verify_flag], timeout=15)
             if result.code == 0:
                 self._on = on
                 return "an" if on else "aus"

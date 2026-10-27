@@ -210,9 +210,10 @@ POWER_CONFIG_KEYS = {
     'cec': {'cec_device'},
     'hdmi': {'output'},
     'hybrid': {'display_ip', 'display_port', 'monitor_id', 'cec_device'},
-    'ddc': {'vcp_on', 'vcp_off'},
+    'ddc': {'vcp_on', 'vcp_off', 'no_verify'},
 }
 POWER_CONFIG_INTS = {'display_port': (1, 65535), 'monitor_id': (0, 255)}
+POWER_CONFIG_BOOLS = {'no_verify'}
 POWER_METHOD_LABELS = {'none': 'Keine Steuerung', 'cec': 'CEC', 'hdmi': 'HDMI-Signal', 'hybrid': 'Netzwerk (SICP)', 'ddc': 'DDC'}
 _HHMM = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 
@@ -242,6 +243,9 @@ def validate_power_config(method, config):
             lo, hi = POWER_CONFIG_INTS[key]
             if not (_is_int(value) and lo <= value <= hi):
                 raise HttpError(422, number_message(key, lo, hi))
+        elif key in POWER_CONFIG_BOOLS:
+            if not isinstance(value, bool):
+                raise HttpError(422, f"{key}: nur an oder aus.")
         elif not isinstance(value, str) or len(value) > 64:
             raise HttpError(422, f"{key}: höchstens 64 Zeichen.")
 
