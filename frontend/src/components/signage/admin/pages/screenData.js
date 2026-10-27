@@ -23,12 +23,13 @@ export const POWER_CONFIG_DEFAULTS = {
   cec: { cec_device: '0' },
   hdmi: { output: 'HDMI-A-1' },
   hybrid: { display_ip: '', display_port: 5000, monitor_id: 0, cec_device: '0' },
-  ddc: { vcp_on: '01', vcp_off: '04' },
+  ddc: { vcp_on: '01', vcp_off: '04', no_verify: false },
 }
 const POWER_CONFIG_INTS = { display_port: [1, 65535], monitor_id: [0, 255] }
+const POWER_CONFIG_BOOLS = new Set(['no_verify'])
 const POWER_CONFIG_LABELS = {
   cec_device: 'CEC-Gerät', output: 'HDMI-Ausgang', display_ip: 'SICP-IP', display_port: 'Port', monitor_id: 'Monitor-ID',
-  vcp_on: 'DDC-Wert an', vcp_off: 'DDC-Wert aus',
+  vcp_on: 'DDC-Wert an', vcp_off: 'DDC-Wert aus', no_verify: 'Ohne Rückprüfung',
 }
 
 export const WEEKDAY_OPTIONS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag']
@@ -88,7 +89,7 @@ const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
 export function normalizedConfig(method, config) {
   const full = configFor(method, config)
-  return Object.fromEntries(Object.entries(full).map(([k, v]) => [k, k in POWER_CONFIG_INTS ? Number(v) : String(v).trim()]))
+  return Object.fromEntries(Object.entries(full).map(([k, v]) => [k, k in POWER_CONFIG_INTS ? Number(v) : POWER_CONFIG_BOOLS.has(k) ? v === true : String(v).trim()]))
 }
 
 // Only changed fields. If method or config changes, both go together (the server checks the
@@ -120,6 +121,7 @@ export function deviceProblems(draft, original) {
     const config = configFor(method, draft.power_config)
     for (const [key, value] of Object.entries(config)) {
       const label = configLabel(key)
+      if (POWER_CONFIG_BOOLS.has(key)) continue
       if (key in POWER_CONFIG_INTS) {
         const [lo, hi] = POWER_CONFIG_INTS[key]
         const n = Number(value)
