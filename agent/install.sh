@@ -40,16 +40,19 @@ check_system() {
   SERVER="${SERVER%/}"
 }
 
+# apt-cache show also succeeds for names that are only referenced; only a candidate version is installable.
+has_candidate() { LC_ALL=C apt-cache policy "$1" 2>/dev/null | grep -Eq '^[[:space:]]*Candidate: [0-9]'; }
+
 install_packages() {
   say "1/6 Pakete installieren"
   export DEBIAN_FRONTEND=noninteractive
   apt-get update </dev/null
   # On Bookworm the package is chromium; chromium-browser only as a fallback for other sources.
   local browser=chromium
-  apt-cache show chromium >/dev/null 2>&1 || browser=chromium-browser
+  has_candidate chromium || browser=chromium-browser
   # Newer Debian releases ship xcursorgen as its own package instead of inside x11-apps.
   local cursorgen=x11-apps
-  apt-cache show xcursorgen >/dev/null 2>&1 && cursorgen=xcursorgen
+  has_candidate xcursorgen && cursorgen=xcursorgen
   apt-get install -y --no-install-recommends "${PACKAGES[@]}" "$browser" "$cursorgen" </dev/null
 }
 
