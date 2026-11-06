@@ -43,7 +43,7 @@ function SplitFooter({ view }) {
   })
   if (!cells.some(Boolean)) return null
   return (
-    <div className="grid h-full gap-[1.25rem]" style={{ gridTemplateColumns: `${percent}fr ${100 - percent}fr` }}>
+    <div className="grid h-full gap-[1.25rem]" style={{ gridTemplateColumns: `calc(${percent}cqw - 0.625rem) minmax(0, 1fr)` }}>
       <div className="min-w-0">{cells[0]}</div>
       <div className="min-w-0">{cells[1]}</div>
     </div>

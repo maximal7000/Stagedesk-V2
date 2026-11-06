@@ -77,6 +77,9 @@ describe('DisplayRoot', () => {
     })
     let el = render({ payload: { screen, view: split({ kind: 'departures', data: departures }), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelector('[data-clock="box"]').textContent).not.toContain('Regen')
+    // Footer columns are measured against the full content width (clock box included), like the sides
+    const grid = el.querySelector('.d-footer-row [style*="grid-template-columns"]')
+    expect(grid.style.gridTemplateColumns).toBe('calc(50cqw - 0.625rem) minmax(0, 1fr)')
     expect([...el.querySelectorAll('[data-footer-part]')].map((p) => p.textContent)).toContain('12 °C Regen')
     act(() => root.unmount())
 

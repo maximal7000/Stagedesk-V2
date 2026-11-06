@@ -15,7 +15,7 @@ export default function PortraitFrame({ layout = 'normal', scheme, clock, footer
         {clock && !wide && <ClockBox variant="header" weather={weather} staleSince={clock.staleSince} stacked />}
         <main className="relative min-h-0 flex-1">{children}</main>
         {wide && (footer || clock) && (
-          <div className="flex h-[4.75rem] shrink-0 gap-[1.25rem]">
+          <div className="d-footer-row flex h-[4.75rem] shrink-0 gap-[1.25rem]">
             <div className="min-w-0 flex-1">{footer}</div>
             {clock && <ClockBox variant="box" weather={weather} staleSince={clock.staleSince} />}
           </div>

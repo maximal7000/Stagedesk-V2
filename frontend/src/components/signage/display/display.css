@@ -65,6 +65,12 @@
   min-width: 4em;
 }
 
+/* The footer row is as wide as the content above it, the clock box included: footer columns measured
+   in cqw line up with the sides of a split view. */
+.d-footer-row {
+  container-type: inline-size;
+}
+
 .d-kicker {
   border-left: 0.375rem solid var(--d-red);
   padding-left: 1rem;
