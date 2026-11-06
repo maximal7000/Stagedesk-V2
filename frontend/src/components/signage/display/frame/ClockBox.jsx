@@ -74,7 +74,7 @@ function BoxClock({ time, weather, staleSince, className }) {
 function CompactClock({ time, staleSince, className }) {
   return (
     <div className={`flex flex-col items-end ${className}`}>
-      <span className="d-head leading-[0.9] whitespace-nowrap">{formatTimeSeconds(time)}</span>
+      <span className="d-head d-clock text-right leading-[0.9] whitespace-nowrap">{formatTimeSeconds(time)}</span>
       {staleSince != null && <StaleHint since={staleSince} className="mt-[0.75rem] text-[1.5rem] text-(--d-fg-soft)" />}
     </div>
   )
