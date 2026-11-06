@@ -137,6 +137,7 @@ class DisplayView(models.Model):
         ('empty',    'Leer'),
         ('substitutions', 'Vertretungsplan'),
         ('departures',    'Abfahrten'),
+        ('media',         'Medien'),
     ]
     split_left = models.CharField(max_length=20, choices=SPLIT_CONTENT_CHOICES, default='webuntis',
         help_text="Inhalt der linken Split-Seite")

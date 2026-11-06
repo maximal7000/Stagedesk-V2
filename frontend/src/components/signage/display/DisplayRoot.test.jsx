@@ -84,6 +84,23 @@ describe('DisplayRoot', () => {
     expect(el.querySelector('[data-clock="box"]').textContent).toContain('Regen')
   })
 
+  it('geteilt: Medien auf einer Seite passen in die Seite, Uhr bleibt im Rahmen', () => {
+    const view = {
+      id: 4, kind: 'split', layout: 'wide', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: {
+        left: { kind: 'media', data: { seconds: 10, per_screen: 1, pages: [{ url: '/media/p-0.webp', width: 2160, height: 3840, orientation: 'portrait' }] } },
+        right: { kind: 'media', data: { seconds: 10, per_screen: 1, pages: [] } },
+        left_percent: 40,
+      },
+    }
+    const el = render({ payload: { screen, view, mode: null }, state: 'ok', lastOkAt })
+    const left = el.querySelector('[data-split-side="left"]')
+    expect(left.querySelector('[data-media-pane] img').getAttribute('src')).toBe('/media/p-0.webp')
+    expect(el.querySelector('[data-split-side="right"]').textContent).toBe('Keine Medien.')
+    expect(el.querySelectorAll('.d-root')).toHaveLength(1)
+    expect(el.querySelector('[data-clock="box"]')).not.toBeNull()
+  })
+
   it('wechselt das Schema ohne Neuladen', () => {
     const el = render({ payload: { screen, view, mode: null, scheme: 'light' }, state: 'ok', lastOkAt })
     const before = el.querySelector('.d-root')

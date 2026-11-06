@@ -353,6 +353,8 @@ def _split_side(view, content, key_ok, now):
                 'data': _substitutions_data(view, key_ok, now, compact=True, single_day=True)}
     if content == 'departures':
         return {'kind': 'departures', 'data': _departures_data(view, now)}
+    if content == 'media':
+        return {'kind': 'media', 'data': _media_data(view)}
     return {'kind': content, 'data': None}
 
 

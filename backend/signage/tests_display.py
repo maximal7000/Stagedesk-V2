@@ -319,6 +319,19 @@ class ContractTest(DisplayTestBase):
         data = display.build_payload(None, view, key_ok=False, now=self.now)['view']['data']
         self.assertEqual([p['url'].rsplit('/', 1)[1] for p in data['pages']][:2], ['a-1.webp', 'a-2.webp'])
 
+    def test_split_side_with_media(self):
+        image = MediaFile.objects.create(name='Plakat', file='monitor/img/p.png', kind='image', status='ready')
+        MediaPage.objects.create(file=image, index=0, image='monitor/pages/p-0.webp', width=2160, height=3840,
+                                 orientation='portrait')
+        view = self.view('split', split_left='media', split_right='departures', media_items=[image.id],
+                         media_seconds=20, transit_stops=[{'id': '8000237', 'name': 'Hbf'}])
+        data = self._payload(view)['view']['data']
+        self.assertEqual(data['left']['kind'], 'media')
+        self.assertEqual(set(data['left']['data']), DATA_KEYS['media'])
+        self.assertEqual(data['left']['data']['seconds'], 20)
+        self.assertEqual([p['url'].rsplit('/', 1)[1] for p in data['left']['data']['pages']], ['p-0.webp'])
+        self.assertEqual(data['right']['kind'], 'departures')
+
     def test_legacy_params_still_work(self):
         view = self.view('info', slug='v')
         Screen.objects.create(name='Glocke', slug='glocke', default_view=view)
