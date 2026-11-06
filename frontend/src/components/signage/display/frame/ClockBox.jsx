@@ -66,7 +66,7 @@ function BoxClock({ time, weather, staleSince, className }) {
           )}
         </div>
       )}
-      <span className="d-head d-clock text-[3.5rem] leading-none whitespace-nowrap">{formatTimeSeconds(time)}</span>
+      <span className="d-head d-clock text-center text-[3.5rem] leading-none whitespace-nowrap">{formatTimeSeconds(time)}</span>
     </div>
   )
 }

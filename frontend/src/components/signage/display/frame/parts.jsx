@@ -26,7 +26,7 @@ export function CiStripe({ className }) {
 // so no empty strip takes up space.
 export function FrameFooter({ children }) {
   if (!children) return null
-  return <div className="d-footer mt-[1.5rem] h-[4.75rem] shrink-0">{children}</div>
+  return <div className="d-footer d-footer-row mt-[1.5rem] h-[4.75rem] shrink-0">{children}</div>
 }
 
 // Scheme and layout as CSS classes (switching without a rebuild)
