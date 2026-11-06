@@ -71,6 +71,7 @@ class Agent:
         # never lost between a check and the creation of the next part.
         self.stop_event = threading.Event()
         self._kiosk_url = None
+        self._kiosk_output = None
         self._power = None
         self._power_key = None
         self._power_error = None
@@ -90,7 +91,11 @@ class Agent:
 
     def _set_kiosk(self, url):
         """Remember the URL only after it was applied, so a failed switch is retried by the next call."""
-        if url == self._kiosk_url:
+        output = None
+        if self.kiosk is not None:
+            self.kiosk.set_output(self.config.output_mode, self.config.output_transform)
+            output = self.kiosk.output
+        if url == self._kiosk_url and output == self._kiosk_output:
             return
         try:
             self.kiosk_set_url(url)
@@ -101,6 +106,7 @@ class Agent:
             log.warning("kiosk restart failed, will retry")
             return
         self._kiosk_url = url
+        self._kiosk_output = output
 
     def request_stop(self):
         """Signal-safe: only sets the event (no locks, no I/O). The watcher thread does the closing."""
@@ -369,10 +375,10 @@ class Agent:
             outages = getattr(self.connection, "outages", 0)
             recovered = outages > self._outages_seen
             self._outages_seen = outages
-            url_before = self._kiosk_url
+            kiosk_before = (self._kiosk_url, self._kiosk_output)
             if self.config.kiosk_url:
                 self._set_kiosk(self.config.kiosk_url)
-            if recovered and self.kiosk is not None and self._kiosk_url == url_before:
+            if recovered and self.kiosk is not None and (self._kiosk_url, self._kiosk_output) == kiosk_before:
                 # Replaces the old netwatch cron job: the browser may show an error page from the outage.
                 self._enqueue_command(self.kiosk.restart)
             target = (self.config.power_method, json.loads(json.dumps(self.config.power_config, default=str)))

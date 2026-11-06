@@ -302,6 +302,8 @@ class ScreenListSchema(Schema):
     auto_updates: bool = True
     update_window: dict = {}
     daily_reboot: bool = True
+    output_mode: str = ''
+    output_transform: str = 'normal'
     color_scheme: str = 'inherit'
     created_at: datetime
     updated_at: datetime
@@ -332,6 +334,8 @@ class ScreenUpdateSchema(Schema):
     auto_updates: Optional[bool] = None
     update_window: Optional[dict] = None
     daily_reboot: Optional[bool] = None
+    output_mode: Optional[str] = None
+    output_transform: Optional[Literal['normal', '90', '180', '270']] = None
     color_scheme: Optional[Literal['inherit', 'light', 'dark']] = None
 
 

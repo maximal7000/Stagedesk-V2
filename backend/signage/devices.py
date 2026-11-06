@@ -157,6 +157,8 @@ def hello_payload(device: Device) -> dict:
         "update_window": screen.update_window or {},
         "auto_updates": screen.auto_updates,
         "daily_reboot": screen.daily_reboot,
+        "output_mode": screen.output_mode,
+        "output_transform": screen.output_transform,
         "agent_version": version,
         "agent_sha256": sha256,
     }

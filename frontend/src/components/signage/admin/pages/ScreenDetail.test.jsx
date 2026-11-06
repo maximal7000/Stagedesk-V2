@@ -378,6 +378,24 @@ describe('ScreenDetail', () => {
       })
     })
 
+    it('Bildausgabe: Auflösung aus der Liste des Pi, Drehung 90° stellt die Ausrichtung auf Hoch', async () => {
+      perms.add('signage.devices').add('signage.setup')
+      api.getDevices.mockImplementation(() => Promise.resolve([pairedDevice({
+        telemetry: { display: { resolution: '4096x2160', modes: ['4096x2160@30', '3840x2160@60', '3840x2160@59.939999'], transform: 'normal' } },
+      })]))
+      await mount()
+      const section = container.querySelector('[data-section="output"]')
+      expect([...byLabel('Auflösung').options].map((o) => o.textContent))
+        .toEqual(['Automatisch, wie vom Bildschirm bevorzugt', '4096 × 2160, 30 Hz', '3840 × 2160, 60 Hz', '3840 × 2160, 59,94 Hz'])
+      expect(section.textContent).toContain('Gerade: 4096 × 2160.')
+      await select('Auflösung', '3840x2160@60')
+      await click([...section.querySelectorAll('button')].find((b) => b.textContent === '90°'))
+      expect(container.querySelector('[data-section="display"] [aria-label="Ausrichtung"] [aria-checked="true"]').textContent).toBe('Hoch')
+      await click(button('Speichern'))
+      expect(api.updateScreen).toHaveBeenCalledWith(1, expect.objectContaining({ orientation: 'portrait' }))
+      expect(api.updateScreen).toHaveBeenCalledWith(1, { output_mode: '3840x2160@60', output_transform: '90' })
+    })
+
     it('Hybrid ohne SICP-IP wird nicht gespeichert', async () => {
       perms.add('signage.devices')
       await mount()

@@ -16,6 +16,20 @@ class KioskTests(unittest.TestCase):
     def restarts(self):
         return [c for c in self.runner.calls if c == RESTART]
 
+    def test_output_lines_only_when_set(self):
+        self.kiosk.set_output("1920x1080@59.939999", "270")
+        self.kiosk.apply("https://x/a")
+        self.assertEqual(self.paths.kiosk_env.read_text(),
+                         "KIOSK_URL=https://x/a\nOUTPUT_MODE=1920x1080@59.939999\nOUTPUT_TRANSFORM=270\n")
+        self.kiosk.set_output("", "normal")
+        self.assertTrue(self.kiosk.apply("https://x/a"))
+        self.assertEqual(self.paths.kiosk_env.read_text(), "KIOSK_URL=https://x/a\n")
+
+    def test_malformed_output_falls_back_to_automatic(self):
+        for mode, transform in (("3840x2160\nEVIL=1", "90"), ("4k", "45"), (None, None), ("3840x2160@60 x", "normal")):
+            self.kiosk.set_output(mode, transform)
+            self.assertEqual(self.kiosk.output, ("", "90" if transform == "90" else "normal"), mode)
+
     def test_kiosk_apply_writes_and_restarts_only_on_change(self):
         self.assertTrue(self.kiosk.apply("https://x/monitor?screen=a&key=k"))
         self.assertEqual(self.paths.kiosk_env.read_text(), "KIOSK_URL=https://x/monitor?screen=a&key=k\n")

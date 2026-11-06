@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, POWER_CONFIG_DEFAULTS, deviceDefaults, deviceProblems, devicePayload, DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
+  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, POWER_CONFIG_DEFAULTS, deviceDefaults, deviceProblems, formatOutputMode, outputModeOptions, devicePayload, DISPLAY_FIELDS, OVERRIDE_CLEAR, POWER_FIELDS, activeOverride, cecLabel, kioskUrl, lastReport, overridePayload, overrideProblem,
   pickFields, powerSummary, sectionPayload,
 } from './screenData'
 
@@ -117,9 +117,23 @@ describe('overridePayload / overrideProblem', () => {
 describe('Geräte-Felder', () => {
   const orig = {
     power_method: 'cec', power_config: { cec_device: '0' }, auto_updates: true,
-    update_window: { weekday: 6, from: '03:00', until: '05:00' }, daily_reboot: true,
+    update_window: { weekday: 6, from: '03:00', until: '05:00' }, daily_reboot: true, output_mode: '', output_transform: 'normal',
   }
   const screen = { ...glocke, ...orig }
+
+  it('Bildausgabe: Auflösung und Drehung gehen als eigene Felder mit', () => {
+    expect(devicePayload({ ...orig, output_mode: '3840x2160@60', output_transform: '90' }, orig))
+      .toEqual({ output_mode: '3840x2160@60', output_transform: '90' })
+    expect(deviceDefaults({}).output_transform).toBe('normal')
+  })
+
+  it('Auflösungen: lesbar, gespeicherter Wert bleibt wählbar', () => {
+    expect(formatOutputMode('3840x2160@59.939999')).toBe('3840 × 2160, 59,94 Hz')
+    expect(formatOutputMode('3840x2160@30')).toBe('3840 × 2160, 30 Hz')
+    expect(formatOutputMode('1920x1080')).toBe('1920 × 1080')
+    expect(outputModeOptions(['3840x2160@60', 7], '4096x2160@30').map((o) => o.value)).toEqual(['4096x2160@30', '3840x2160@60'])
+    expect(outputModeOptions(undefined, '')).toEqual([])
+  })
 
   it('neue Bildschirme starten ohne Steuerung', () => {
     expect(deviceDefaults({}).power_method).toBe('none')
@@ -127,7 +141,7 @@ describe('Geräte-Felder', () => {
   })
 
   it('DEVICE_FIELDS und pickFields', () => {
-    expect(DEVICE_FIELDS).toEqual(['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'])
+    expect(DEVICE_FIELDS).toEqual(['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot', 'output_mode', 'output_transform'])
     expect(pickFields(screen, DEVICE_FIELDS)).toEqual(orig)
   })
 

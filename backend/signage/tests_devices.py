@@ -687,6 +687,29 @@ class ScreenDeviceFieldsApiTest(DeviceApiBase):
         self.screen.refresh_from_db()
         self.assertEqual((self.screen.power_method, self.screen.daily_reboot), ('hdmi', False))
 
+    def test_output_mode_and_transform(self):
+        url = f'/screens/{self.screen.id}'
+        self.grant('signage.setup')
+        self.assertEqual(self.put(url, {'output_transform': '90'}).status_code, 403)
+        self.grant('signage.devices')
+        with mock.patch('signage.push.push_device_hello') as hello, \
+                self.captureOnCommitCallbacks(execute=True):
+            r = self.put(url, {'output_mode': '3840x2160@59.939999', 'output_transform': '270'})
+        self.assertEqual(r.status_code, 200, r.content)
+        hello.assert_called_once()
+        self.screen.refresh_from_db()
+        self.assertEqual((self.screen.output_mode, self.screen.output_transform), ('3840x2160@59.939999', '270'))
+        from .devices import hello_payload
+        self.device.refresh_from_db()
+        payload = hello_payload(self.device)
+        self.assertEqual((payload['output_mode'], payload['output_transform']), ('3840x2160@59.939999', '270'))
+        for bad in ('4k', '3840x2160@60\nX=1', '3840 x 2160', 5):
+            self.assertEqual(self.put(url, {'output_mode': bad}).status_code, 422, bad)
+        self.assertEqual(self.put(url, {'output_transform': '45'}).status_code, 422)
+        self.assertEqual(self.put(url, {'output_mode': '', 'output_transform': None}).status_code, 200)
+        self.screen.refresh_from_db()
+        self.assertEqual((self.screen.output_mode, self.screen.output_transform), ('', '270'))
+
     def test_devices_permission_alone_does_not_edit_other_fields(self):
         self.grant('signage.devices')
         self.assertEqual(self.put(f'/screens/{self.screen.id}', {'name': 'Neu'}).status_code, 403)

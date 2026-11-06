@@ -7,7 +7,7 @@ import { describeSchedule, normalizeExceptions, normalizeSchedule } from '../sha
 export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme']
 export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'power_exceptions']
 // The backend needs signage.devices for these fields.
-export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot']
+export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot', 'output_mode', 'output_transform']
 
 export const POWER_METHOD_OPTIONS = [
   { value: 'none', label: 'Keine Steuerung' },
@@ -51,7 +51,34 @@ export function deviceDefaults(draft) {
     auto_updates: draft?.auto_updates ?? true,
     update_window: { ...DEFAULT_UPDATE_WINDOW, ...(draft?.update_window || {}) },
     daily_reboot: draft?.daily_reboot ?? true,
+    output_mode: draft?.output_mode ?? '',
+    output_transform: draft?.output_transform ?? 'normal',
   }
+}
+
+export const OUTPUT_TRANSFORM_OPTIONS = [
+  { value: 'normal', label: 'Keine' },
+  { value: '90', label: '90°' },
+  { value: '180', label: '180°' },
+  { value: '270', label: '270°' },
+]
+export const isPortraitTransform = (value) => value === '90' || value === '270'
+
+// "3840x2160@59.939999" -> "3840 × 2160, 59,94 Hz"
+export function formatOutputMode(mode) {
+  const match = /^(\d+)x(\d+)(?:@([\d.]+))?$/.exec(mode ?? '')
+  if (!match) return mode ?? ''
+  const size = `${match[1]} × ${match[2]}`
+  if (!match[3]) return size
+  const hz = Math.round(Number(match[3]) * 100) / 100
+  return `${size}, ${String(hz).replace('.', ',')} Hz`
+}
+
+// Modes the Pi reports, plus a saved one it no longer lists (so the selection never jumps).
+export function outputModeOptions(reported, saved) {
+  const modes = Array.isArray(reported) ? reported.filter((m) => typeof m === 'string') : []
+  if (saved && !modes.includes(saved)) modes.unshift(saved)
+  return modes.map((value) => ({ value, label: formatOutputMode(value) }))
 }
 
 export const SCALE_OPTIONS = [
@@ -96,7 +123,7 @@ export function normalizedConfig(method, config) {
 // config against the method of the request).
 export function devicePayload(draft, original) {
   const out = {}
-  for (const key of ['auto_updates', 'update_window', 'daily_reboot']) {
+  for (const key of ['auto_updates', 'update_window', 'daily_reboot', 'output_mode', 'output_transform']) {
     if (draft[key] !== undefined && !sameValue(draft[key], original?.[key])) out[key] = draft[key]
   }
   if (!sameValue(draft.power_method, original?.power_method) || !sameValue(draft.power_config, original?.power_config)) {

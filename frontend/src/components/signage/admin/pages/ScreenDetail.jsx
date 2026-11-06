@@ -22,9 +22,10 @@ import DeviceLog from '../shared/DeviceLog'
 import PowerCheck from '../shared/PowerCheck'
 import { isPaired } from '../shared/deviceCommands'
 import {
-  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS, POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS,
-  SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, devicePayload, deviceProblems, kioskUrl, lastReport,
-  overridePayload, overrideProblem, pickFields, sectionPayload,
+  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OUTPUT_TRANSFORM_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS,
+  POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS, SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, devicePayload,
+  deviceProblems, formatOutputMode, isPortraitTransform, kioskUrl, lastReport, outputModeOptions, overridePayload, overrideProblem, pickFields,
+  sectionPayload,
 } from './screenData'
 import * as api from '../shared/api'
 
@@ -223,6 +224,38 @@ function UpdatesSection({ device, canDevices, problem }) {
         <Checkbox label="Täglicher Neustart um 04:00" checked={values.daily_reboot} disabled={disabled}
           help="Mit derselben Sperre wie die Updates."
           onChange={(v) => device.set('daily_reboot', v)} />
+      </div>
+    </Section>
+  )
+}
+
+function OutputSection({ device, deviceRow, canDevices, orientation, onOrientation }) {
+  const ids = { mode: useId() }
+  const values = deviceDefaults(device.draft)
+  const disabled = !canDevices || device.saving
+  const display = deviceRow?.telemetry?.display || {}
+  const modes = outputModeOptions(display.modes, values.output_mode)
+  const changeTransform = (value) => {
+    device.set('output_transform', value)
+    const portrait = isPortraitTransform(value)
+    if (onOrientation && portrait !== (orientation === 'portrait')) onOrientation(portrait ? 'portrait' : 'landscape')
+  }
+  const current = [display.resolution && formatOutputMode(display.resolution), display.transform && display.transform !== 'normal' && `gedreht ${display.transform}°`]
+    .filter(Boolean).join(', ')
+  return (
+    <Section title="Bildausgabe" data-section="output"
+      aside={!canDevices ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für Geräte fehlt</span> : null}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Auflösung" htmlFor={ids.mode}
+          help={modes.length ? (current ? `Gerade: ${current}.` : null) : 'Die Liste kommt vom Pi, sobald er verbunden ist und das Bild läuft.'}>
+          <select id={ids.mode} value={values.output_mode} disabled={disabled} onChange={(e) => device.set('output_mode', e.target.value)} className={fieldClass}>
+            <option value="">Automatisch, wie vom Bildschirm bevorzugt</option>
+            {modes.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+        </Field>
+        <Field label="Drehung" help="Für hochkant montierte Bildschirme 90° oder 270°, je nachdem, wie herum er hängt. Die Ausrichtung unter Anzeige stellt sich dabei mit um.">
+          <Segmented label="Drehung" options={OUTPUT_TRANSFORM_OPTIONS} value={values.output_transform} disabled={disabled} onChange={changeTransform} />
+        </Field>
       </div>
     </Section>
   )
@@ -587,6 +620,10 @@ export default function ScreenDetail() {
               <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems}
                 methodBlock={<PowerMethodBlock device={deviceDraft} original={originals.device} canDevices={canDevices} problems={deviceIssues}
                   deviceRow={device} screen={screen} canTest={canDevices && canPower} />} />
+              {(canDevices || isPaired(device)) && (
+                <OutputSection device={deviceDraft} deviceRow={device} canDevices={canDevices} orientation={display.draft.orientation}
+                  onOrientation={canSetup ? (v) => display.set('orientation', v) : null} />
+              )}
               {(canDevices || isPaired(device)) && <UpdatesSection device={deviceDraft} canDevices={canDevices} problem={deviceIssues.window} />}
               {canSetup && <KioskSection screen={screen} onRegenerate={() => setConfirmKey(true)} />}
               {canDevices && <DeviceLog screenId={screenId} reloadKey={logKey} />}

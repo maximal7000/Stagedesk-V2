@@ -83,6 +83,10 @@ class AgentTests(unittest.TestCase):
 
         class Kiosk:
             pending_restart = False
+            output = ("", "normal")
+
+            def set_output(self, mode, transform):
+                pass
 
             def apply(self, url):
                 return True
@@ -467,6 +471,21 @@ class KioskRetryTests(unittest.TestCase):
     def setUp(self):
         self.paths = make_paths(self)
         self.cfg = Config.load(self.paths)
+
+    def test_output_change_rewrites_kiosk_env_and_restarts(self):
+        from stagedesk_agent.kiosk import Kiosk
+        from tests.fakes import FakeRunner
+        runner = FakeRunner()
+        agent = Agent(self.cfg, FakePages(), runner=runner, kiosk=Kiosk(runner, self.paths))
+        restart = (("systemctl", "restart", "stagedesk-kiosk"), None)
+        agent._set_kiosk("https://x/m")
+        agent._set_kiosk("https://x/m")
+        self.assertEqual(runner.calls.count(restart), 1)
+        self.cfg.output_mode, self.cfg.output_transform = "3840x2160@60", "90"
+        agent._set_kiosk("https://x/m")
+        self.assertEqual(runner.calls.count(restart), 2)
+        self.assertEqual(self.paths.kiosk_env.read_text(),
+                         "KIOSK_URL=https://x/m\nOUTPUT_MODE=3840x2160@60\nOUTPUT_TRANSFORM=90\n")
 
     def test_failed_kiosk_switch_is_retried_on_next_hello(self):
         from stagedesk_agent.kiosk import Kiosk

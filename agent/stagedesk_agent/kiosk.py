@@ -1,8 +1,12 @@
 import logging
 import os
+import re
 
 log = logging.getLogger("stagedesk_agent.kiosk")
 SERVICE = "stagedesk-kiosk"
+# kiosk.sh hands these to wlr-randr before Chromium starts.
+OUTPUT_MODE = re.compile(r"^\d{3,5}x\d{3,5}(@\d{1,3}(\.\d{1,6})?)?$")
+OUTPUT_TRANSFORMS = ("normal", "90", "180", "270")
 
 
 class Kiosk:
@@ -10,6 +14,13 @@ class Kiosk:
         self.runner = runner
         self.paths = paths
         self.pending_restart = False  # a written URL whose restart failed; the next apply retries
+        self.output = ("", "normal")
+
+    def set_output(self, mode, transform):
+        """Malformed values fall back to automatic; the next apply writes them."""
+        mode = mode if isinstance(mode, str) and OUTPUT_MODE.match(mode) else ""
+        transform = transform if transform in OUTPUT_TRANSFORMS else "normal"
+        self.output = (mode, transform)
 
     def _current(self):
         try:
@@ -18,10 +29,15 @@ class Kiosk:
             return None
 
     def apply(self, url):
-        """Return False when the URL is unchanged and no restart is pending."""
+        """Return False when URL and output are unchanged and no restart is pending."""
         if "\n" in url or "\r" in url:
             raise ValueError("Kiosk-URL enthält einen Zeilenumbruch")
+        mode, transform = self.output
         content = f"KIOSK_URL={url}\n"
+        if mode:
+            content += f"OUTPUT_MODE={mode}\n"
+        if transform != "normal":
+            content += f"OUTPUT_TRANSFORM={transform}\n"
         if self._current() == content and not self.pending_restart:
             return False
         if self._current() != content:
