@@ -27,6 +27,12 @@ const VIEWS = {
     id: 6, name: 'Aushänge', slug: 'notices', kind: 'media', layout: 'auto', is_default: false, on_air_behavior: 'fullscreen',
     media_items: [], media_seconds: 10, pdf_per_screen: 1, pdf_mode: 'cycle', transit_stops: [], rotation_items: [],
   },
+  7: {
+    id: 7, name: 'Plan und Aushang', slug: 'split-notices', kind: 'split', layout: 'auto', is_default: false,
+    on_air_behavior: 'fullscreen', split_left: 'substitutions', split_right: 'departures', split_left_percent: 50,
+    substitutions_source: 'embed', page_seconds: 15, webuntis_link_id: null, webuntis_link_next_day_id: null,
+    transit_stops: [], rotation_items: [], media_items: [], media_seconds: 10, pdf_per_screen: 1, pdf_mode: 'cycle',
+  },
   4: {
     id: 4, name: 'Wechsel Mensa', slug: 'rotation-canteen', kind: 'rotation', layout: 'auto', is_default: false,
     on_air_behavior: 'fullscreen', rotation_items: [{ view_id: 1, seconds: 20 }, { view_id: 2, seconds: 30 }], transit_stops: [], media_items: [],
@@ -197,6 +203,16 @@ describe('ViewEdit', () => {
     await mount('/signage-admin/views/6')
     const select = container.querySelector('[data-editor-section="media"] select')
     expect([...select.options].map((o) => o.textContent)).toEqual(['Datei wählen', 'Speiseplan', 'Plakat'])
+  })
+
+  it('Geteilt: Medien als Seite zeigt die Medienauswahl und speichert die Seite', async () => {
+    await mount('/signage-admin/views/7')
+    expect(container.querySelector('[data-editor-section="media"]')).toBeNull()
+    const right = container.querySelector('[role="radiogroup"][aria-label="Inhalt rechts"]')
+    await act(async () => [...right.querySelectorAll('button')].find((b) => b.textContent === 'Medien').click())
+    expect(container.querySelector('[data-editor-section="media"]')).not.toBeNull()
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).toHaveBeenCalledWith(7, { split_right: 'media' })
   })
 
   it('Abfahrten: blendet eine aktuelle Meldung aus und speichert die Vorausschau', async () => {

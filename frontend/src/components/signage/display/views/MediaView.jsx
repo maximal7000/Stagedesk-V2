@@ -29,8 +29,7 @@ function useSlideshow(count, seconds) {
   return { index, previous }
 }
 
-export default function MediaView({ view, orientation = 'landscape', frame = {} }) {
-  const data = view.data ?? {}
+function useSlides(data) {
   const perScreen = Math.min(3, Math.max(1, Number(data.per_screen) || 1))
   const slides = useMemo(() => paginate(data.pages ?? [], perScreen), [data.pages, perScreen])
   const { index, previous } = useSlideshow(slides.length, data.seconds)
@@ -43,6 +42,12 @@ export default function MediaView({ view, orientation = 'landscape', frame = {} 
       img.src = page.url
     }
   }, [slides, index])
+  return { slides, index, previous }
+}
+
+export default function MediaView({ view, orientation = 'landscape', frame = {} }) {
+  const data = view.data ?? {}
+  const { slides, index, previous } = useSlides(data)
 
   if (!slides.length) {
     return (
@@ -89,6 +94,24 @@ function Slide({ pages, layout, orientation, frame, fadeIn }) {
   )
 }
 
+// One side of a split view: the pages fit into the side, the split view's frame carries the clock.
+function MediaPane({ view }) {
+  const { slides, index, previous } = useSlides(view.data ?? {})
+  if (!slides.length) {
+    return <p className="d-text text-[2rem] leading-[1.5] text-(--d-fg-soft)">Keine Medien.</p>
+  }
+  const shown = previous != null ? [previous, index] : [index]
+  return (
+    <div data-media-pane className="absolute inset-0">
+      {shown.map((i) => (
+        <div key={i} className={`absolute inset-0 flex gap-[1.5rem] ${i === index && previous != null ? 'd-fade-in' : ''}`}>
+          {slides[i].map((p, j) => <Page key={`${p.url}-${j}`} page={p} framed />)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // framed: page in the CI frame with a fine edge so a white page on white stays recognisable as a page
 function Page({ page, framed = false }) {
   return (
@@ -106,3 +129,4 @@ function Page({ page, framed = false }) {
 }
 
 MediaView.ownFrame = true
+MediaView.Pane = MediaPane

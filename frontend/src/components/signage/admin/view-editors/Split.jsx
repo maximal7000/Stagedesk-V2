@@ -1,11 +1,13 @@
 import { useId } from 'react'
 import { Field, Section, Segmented } from '../shared/form'
 import DeparturesEditor from './Departures'
+import MediaEditor from './Media'
 import SubstitutionsEditor from './Substitutions'
 
 const SIDE_CONTENT = [
   { value: 'substitutions', label: 'Vertretungsplan' },
   { value: 'departures', label: 'Abfahrten' },
+  { value: 'media', label: 'Medien' },
 ]
 const isSubstitutions = (v) => v === 'substitutions' || v === 'webuntis'
 
@@ -36,6 +38,7 @@ export default function SplitEditor({ draft, set, viewId }) {
       </Section>
       {sides.includes('departures') && <DeparturesEditor draft={draft} set={set} viewId={viewId} />}
       {sides.includes('substitutions') && <SubstitutionsEditor draft={draft} set={set} />}
+      {sides.includes('media') && <MediaEditor draft={draft} set={set} />}
     </>
   )
 }

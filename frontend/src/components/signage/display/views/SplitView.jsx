@@ -1,11 +1,13 @@
 import { VIEW_COMPONENTS } from './index'
 
-// Old side values without data (exam, clock, empty) stay empty.
+// Old side values without data (exam, clock, empty) stay empty. A view with its own frame takes part
+// through its Pane.
 
 const clampPercent = (value) => Math.min(80, Math.max(20, Number(value) || 50))
 
 function sideView(view, side) {
-  const View = side?.data != null ? VIEW_COMPONENTS[side.kind] : null
+  const full = side?.data != null ? VIEW_COMPONENTS[side.kind] : null
+  const View = full?.Pane ?? full
   if (!View || View.ownFrame) return { View: null, sub: null }
   return { View, sub: { ...view, kind: side.kind, data: side.data } }
 }
