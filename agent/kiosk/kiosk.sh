@@ -15,6 +15,22 @@ done
 PREF="$HOME/.config/chromium/Default/Preferences"
 [ -f "$PREF" ] && sed -i 's/"exit_type":"[^"]*"/"exit_type":"Normal"/' "$PREF"
 
+# Resolution and rotation from the admin (kiosk.env). cage already runs here, so wlr-randr reaches it;
+# a mode the screen rejects only leaves the previous one in place.
+if [ -n "${OUTPUT_MODE:-}" ] || [ -n "${OUTPUT_TRANSFORM:-}" ]; then
+  OUTPUT="$(wlr-randr 2>/dev/null | awk '/^[^ ]/ {print $1; exit}')"
+  if [ -n "$OUTPUT" ]; then
+    ARGS=()
+    case "${OUTPUT_MODE:-}" in
+      "") ;;
+      *@*) ARGS+=(--mode "${OUTPUT_MODE}Hz") ;;
+      *) ARGS+=(--mode "$OUTPUT_MODE") ;;
+    esac
+    [ -n "${OUTPUT_TRANSFORM:-}" ] && ARGS+=(--transform "$OUTPUT_TRANSFORM")
+    wlr-randr --output "$OUTPUT" "${ARGS[@]}" || echo "wlr-randr ${ARGS[*]} fehlgeschlagen" >&2
+  fi
+fi
+
 BROWSER=chromium
 command -v "$BROWSER" >/dev/null 2>&1 || BROWSER=chromium-browser
 

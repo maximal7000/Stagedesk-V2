@@ -80,9 +80,18 @@ curl -fsSL https://<server>/api/signage/agent/install.sh | sudo STAGEDESK_SERVER
   Der Agent aktualisiert bei Terminen, Klausuren, Notfall oder On-Air nicht.
 - **Entkoppeln** oder **Token zurückziehen** im Bildschirm-Detail. Der Pi zeigt
   danach wieder einen neuen Kopplungscode.
-- **Selbst-Update des Agents** ersetzt nur den Python-Code. Änderungen an den
-  systemd-Diensten oder am Kiosk-Skript kommen erst an, wenn `install.sh` auf
-  dem Pi erneut läuft (derselbe Befehl wie oben, die Kopplung bleibt).
+- **Selbst-Update des Agents** ersetzt den Code samt Kiosk-Skript; das neue
+  Kiosk-Skript gilt ab dem nächsten Start des Kiosk. Änderungen an den
+  systemd-Diensten kommen erst an, wenn `install.sh` auf dem Pi erneut läuft
+  (derselbe Befehl wie oben, die Kopplung bleibt).
+- **Bildausgabe** im Bildschirm-Detail (ab Agent 1.3.0): **Auflösung** (Liste
+  der Modi, die der Pi meldet; leer = was der Bildschirm bevorzugt) und
+  **Drehung** (90° oder 270° für hochkant montierte Bildschirme; die
+  Ausrichtung unter "Anzeige" stellt sich mit um). Der Agent schreibt beides
+  nach `/etc/stagedesk-agent/kiosk.env`, `kiosk.sh` setzt es mit `wlr-randr`,
+  bevor Chromium startet. Ein Modus, den der Bildschirm ablehnt, ändert nichts.
+  Pi 4 mit 4K und 60 Hz braucht `hdmi_enable_4kp60=1` in
+  `/boot/firmware/config.txt`.
 - **Ohne Netz:** Der Agent verbindet sich mit Backoff neu, der Kiosk zeigt die
   letzte Anzeige. Ohne Token und ohne Server steht auf dem Bildschirm "Keine
   Verbindung zum Server. Netzwerk prüfen."

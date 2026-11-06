@@ -126,8 +126,18 @@ class TelemetryTests(unittest.TestCase):
             WLR: ok(sample("wlr_randr.txt")),
             ("systemctl", "is-active", "stagedesk-kiosk"): ok("active\n"),
         }, power_status="an")
-        self.assertEqual(data["display"], {"resolution": "3840x2160", "browser_running": True, "power": "an"})
+        self.assertEqual(data["display"], {"resolution": "3840x2160", "output": "HDMI-A-1",
+                                           "modes": ["3840x2160@30", "1920x1080@60"], "transform": "normal",
+                                           "browser_running": True, "power": "an"})
         self.assertIn((WLR, "pi"), runner.calls)
+
+    def test_display_modes_deduplicated_with_fractional_rates(self):
+        out = ('HDMI-A-2 "TV"\n  Modes:\n    3840x2160 px, 59.939999 Hz\n    3840x2160 px, 60.000000 Hz (preferred)\n'
+               '    4096x2160 px, 30.000000 Hz (current)\n    4096x2160 px, 30.000000 Hz\n  Transform: 90\n')
+        data, _ = self.collect({WLR: ok(out)})
+        display = data["display"]
+        self.assertEqual(display["modes"], ["3840x2160@59.939999", "3840x2160@60", "4096x2160@30"])
+        self.assertEqual((display["output"], display["resolution"], display["transform"]), ("HDMI-A-2", "4096x2160", "90"))
 
     def test_kiosk_inactive(self):
         data, _ = self.collect({("systemctl", "is-active", "stagedesk-kiosk"): RunResult(3, "inactive\n", "")})
@@ -136,7 +146,8 @@ class TelemetryTests(unittest.TestCase):
     def test_display_unavailable_gives_none(self):
         failed = RunResult(127, "", "x")
         data, _ = self.collect({WLR: failed, ("systemctl", "is-active", "stagedesk-kiosk"): failed})
-        self.assertEqual(data["display"], {"resolution": None, "browser_running": None, "power": None})
+        self.assertEqual(data["display"], {"resolution": None, "output": None, "modes": [], "transform": None,
+                                           "browser_running": None, "power": None})
 
     def test_updates_from_state_file(self):
         self.put("var/lib/stagedesk-agent/update-state.json", json.dumps({

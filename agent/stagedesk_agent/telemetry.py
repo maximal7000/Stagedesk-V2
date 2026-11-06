@@ -147,10 +147,30 @@ def _system(runner, paths):
     }
 
 
-def _resolution(runner, paths):
-    out = _output(runner, wayland_command(["wlr-randr"], paths.root), user=KIOSK_USER) or ""
-    match = re.search(r"(\d+x\d+)\s+px[^\n]*\bcurrent\b", out)
-    return match.group(1) if match else None
+MAX_MODES = 60
+_MODE_LINE = re.compile(r"^\s+(\d+x\d+) px, ([\d.]+) Hz(.*)$", re.M)
+
+
+def _refresh(value):
+    return value.rstrip("0").rstrip(".") if "." in value else value
+
+
+def _screen_output(runner, paths):
+    """First output of wlr-randr: name, current resolution, offered modes (WxH@Hz) and rotation."""
+    out = _output(runner, wayland_command(["wlr-randr"], paths.root), user=KIOSK_USER)
+    if not out:
+        return {}
+    first = re.search(r"^(\S+)", out, re.M)
+    modes, resolution = [], None
+    for size, refresh, flags in _MODE_LINE.findall(out):
+        mode = f"{size}@{_refresh(refresh)}"
+        if mode not in modes and len(modes) < MAX_MODES:
+            modes.append(mode)
+        if "current" in flags:
+            resolution = size
+    transform = re.search(r"^\s+Transform: (\S+)", out, re.M)
+    return {"output": first.group(1) if first else None, "resolution": resolution, "modes": modes,
+            "transform": transform.group(1) if transform else None}
 
 
 def _browser_running(runner):
@@ -161,8 +181,12 @@ def _browser_running(runner):
 
 
 def _display(runner, paths, power_status):
+    screen_output = _safe(_screen_output, runner, paths) or {}
     return {
-        "resolution": _safe(_resolution, runner, paths),
+        "resolution": screen_output.get("resolution"),
+        "output": screen_output.get("output"),
+        "modes": screen_output.get("modes", []),
+        "transform": screen_output.get("transform"),
         "browser_running": _safe(_browser_running, runner),
         "power": power_status,
     }

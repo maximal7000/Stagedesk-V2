@@ -269,8 +269,17 @@ def validate_power_test_params(params):
     return {'method': method, 'config': config, 'seconds': seconds}
 
 
+# Same pattern as the agent (kiosk.OUTPUT_MODE); wlr-randr gets it as --mode.
+OUTPUT_MODE = re.compile(r'^\d{3,5}x\d{3,5}(@\d{1,3}(\.\d{1,6})?)?$')
+
+
 def validate_screen_device_data(data: dict, current_method: str, current_config: dict) -> None:
     """If only the method changes, the stored config must fit the new method."""
+    if 'output_mode' in data:
+        mode = data['output_mode'] or ''
+        if not isinstance(mode, str) or (mode and not OUTPUT_MODE.match(mode)):
+            raise HttpError(422, "Auflösung ungültig (zum Beispiel 3840x2160@60).")
+        data['output_mode'] = mode
     if 'update_window' in data:
         validate_update_window(data['update_window'])
     method = data.get('power_method', current_method)

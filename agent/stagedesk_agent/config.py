@@ -5,7 +5,7 @@ import random
 
 DEFAULT_SERVER = "https://stagedesk.t410.de"
 _HELLO_FIELDS = ("slug", "key", "kiosk_url", "power_method", "power_config",
-                 "update_window", "auto_updates", "daily_reboot")
+                 "update_window", "auto_updates", "daily_reboot", "output_mode", "output_transform")
 
 
 class Config:
@@ -21,6 +21,8 @@ class Config:
         self.update_window = {}
         self.auto_updates = True
         self.daily_reboot = True
+        self.output_mode = ""
+        self.output_transform = "normal"
 
     @classmethod
     def load(cls, paths):

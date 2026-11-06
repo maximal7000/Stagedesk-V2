@@ -90,11 +90,13 @@ def create_screen(request, payload: ScreenCreateSchema):
     return {'id': screen.id, 'name': screen.name, 'slug': screen.slug}
 
 
-AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
+AGENT_HELLO_FIELDS = {'slug', 'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot',
+                      'output_mode', 'output_transform'}
 SCREEN_POWER_FIELDS = {'power_mode', 'schedule', 'power_exceptions', 'off_during_holidays', 'off_until'}
-NON_NULL_DEVICE_FIELDS = ('power_method', 'auto_updates', 'daily_reboot')
+NON_NULL_DEVICE_FIELDS = ('power_method', 'auto_updates', 'daily_reboot', 'output_transform')
 NON_NULL_SCREEN_FIELDS = NON_NULL_DEVICE_FIELDS + ('color_scheme',)
-SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot'}
+SCREEN_DEVICE_FIELDS = {'power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot',
+                        'output_mode', 'output_transform'}
 
 
 @router.put("/screens/{int:id}", response=ScreenListSchema, auth=keycloak_auth)

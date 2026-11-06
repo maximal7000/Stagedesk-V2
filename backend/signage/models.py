@@ -410,6 +410,11 @@ class Screen(models.Model):
     update_window = models.JSONField(default=default_update_window, blank=True,
         help_text='{"weekday": 0-6 (0=Montag), "from": "HH:MM", "until": "HH:MM"}')
     daily_reboot = models.BooleanField(default=True)
+    # Set by the agent with wlr-randr when the kiosk starts; empty = what the screen prefers.
+    output_mode = models.CharField(max_length=24, blank=True, default='',
+        help_text="Auflösung als BREITExHÖHE@HZ, leer = automatisch")
+    OUTPUT_TRANSFORM_CHOICES = [('normal', 'Keine'), ('90', '90°'), ('180', '180°'), ('270', '270°')]
+    output_transform = models.CharField(max_length=6, choices=OUTPUT_TRANSFORM_CHOICES, default='normal')
 
     COLOR_SCHEME_CHOICES = [
         ('inherit', 'Wie eingestellt'),
