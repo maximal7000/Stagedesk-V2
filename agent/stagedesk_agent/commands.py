@@ -69,6 +69,7 @@ class CommandContext:
     screenshot_path: Any = None  # default: <runtime dir of pi>/sd-shot.png
     power_lock: Any = field(default_factory=threading.Lock)  # the agent's lock around all display access
     power_test: Any = None
+    cec_session: Any = None
     params: dict = field(default_factory=dict)
 
 
@@ -171,6 +172,8 @@ def _test_pattern(ctx):
 def _power_probe(ctx):
     power_config = ctx.config.power_config if isinstance(ctx.config.power_config, dict) else {}
     with ctx.power_lock:
+        if ctx.cec_session is not None:
+            ctx.cec_session.close()  # the probe needs the adapter for its own cec-client
         result = probe(ctx.runner, power_config, root=ctx.config.paths.root)
     result["checked_at"] = datetime.datetime.now().astimezone().isoformat(timespec="seconds")
     return True, json.dumps(result, ensure_ascii=False)

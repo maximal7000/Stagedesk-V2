@@ -8,6 +8,8 @@ import threading
 import time
 from functools import reduce
 
+from .cec_session import CecUnavailable
+
 log = logging.getLogger("stagedesk_agent.power")
 KIOSK_USER = "pi"
 RUNTIME_DIR = "/run/user/1000"
@@ -68,13 +70,24 @@ class PowerController:
 
 
 class CecPower(PowerController):
-    """Every cec-client run announces the Pi to the TV again, and many TVs then show a "device connected"
-    message. So the state is read from the TV only while it is unknown; after that the last switch counts."""
+    """With a CecSession the open cec-client carries commands and status reads. Without one (or when it
+    fails) each command starts its own cec-client, which announces the Pi to the TV again and makes many
+    TVs show a message; so that path reads the state only while it is unknown."""
 
-    def __init__(self, config, runner, **kw):
+    def __init__(self, config, runner, cec_session=None, **kw):
         super().__init__(config, runner, **kw)
         self.device = _text(self.config.get("cec_device"), "0")
+        self.session = cec_session
         self._known = None
+
+    def command(self, command):
+        if self.session is not None:
+            try:
+                self.session.send(command)
+                return
+            except CecUnavailable as exc:
+                log.warning("cec session: %s, single command instead", exc)
+        self._cec(command)
 
     def _cec(self, command):
         result = self.runner.run(CEC_CLIENT, timeout=20, input=f"{command}\n")
@@ -85,11 +98,17 @@ class CecPower(PowerController):
         return result
 
     def _set(self, on):
-        self._cec(f"on {self.device}" if on else f"standby {self.device}")
+        self.command(f"on {self.device}" if on else f"standby {self.device}")
         self._known = "an" if on else "standby"
         return self._known
 
     def _status(self):
+        if self.session is not None:
+            try:
+                self._known = self.session.query_power(self.device)
+                return self._known
+            except CecUnavailable as exc:
+                log.warning("cec session: %s", exc)
         if self._known is not None:
             return self._known
         out = self._cec(f"pow {self.device}").out
@@ -142,13 +161,13 @@ class HdmiPower(PowerController):
 class HybridPower(PowerController):
     """CEC standby does not work on this panel, so off goes via SICP over TCP."""
 
-    def __init__(self, config, runner, connect=socket.create_connection, **kw):
+    def __init__(self, config, runner, connect=socket.create_connection, cec_session=None, **kw):
         super().__init__(config, runner, **kw)
         self.connect = connect
         self.ip = self.config.get("display_ip")
         self.port = int(_text(self.config.get("display_port"), "5000"))
         self.monitor_id = int(_text(self.config.get("monitor_id"), "0"))
-        self.cec = CecPower(self.config, runner, **kw)
+        self.cec = CecPower(self.config, runner, cec_session=cec_session, **kw)
 
     def _frame(self, data):
         packet = [0xA6, self.monitor_id, 0, 0, 0, len(data) + 2, 0x01] + list(data)
@@ -177,9 +196,9 @@ class HybridPower(PowerController):
         self._need_ip()
         if on:
             for _ in range(2):
-                self.cec._cec(f"on {self.cec.device}")
+                self.cec.command(f"on {self.cec.device}")
                 self.sleep(1)
-                self.cec._cec("as")
+                self.cec.command("as")
                 self.sleep(1)
             return "an"
         for attempt in range(SICP_ATTEMPTS):
@@ -246,4 +265,6 @@ def make_power(method, config, runner, **options):
         accepted.add("watchdog_interval")
     if cls is HybridPower:
         accepted.add("connect")
+    if cls in (CecPower, HybridPower):
+        accepted.add("cec_session")
     return cls(config, runner, **{k: v for k, v in options.items() if k in accepted})

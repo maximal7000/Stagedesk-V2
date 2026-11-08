@@ -30,6 +30,8 @@ import {
 } from './screenData'
 import * as api from '../shared/api'
 
+const DEVICE_STATE_MS = 5000
+
 const DOT = { online: 'bg-ok', offline: 'bg-bad', off: 'bg-fg-subtle', unknown: 'bg-fg-subtle' }
 
 const isoToday = () => {
@@ -482,6 +484,14 @@ export default function ScreenDetail() {
     const timer = setInterval(reloadDevices, 60 * 1000)
     return () => clearInterval(timer)
   }, [reloadDevices])
+
+  // The TV's on/standby state comes in as soon as it changes: follow it closely while the page is open
+  useEffect(() => {
+    const timer = setInterval(() => {
+      api.getDevices().then(setDevices, () => {})
+    }, DEVICE_STATE_MS)
+    return () => clearInterval(timer)
+  }, [])
 
   const display = useDraft(originals?.display)
   const power = useDraft(originals?.power)

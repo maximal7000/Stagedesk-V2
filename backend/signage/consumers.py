@@ -323,6 +323,14 @@ class ScreenPiConsumer(AsyncWebsocketConsumer):
             screen.save(update_fields=["cec_status", "cec_status_at", "updated_at"])
         except Screen.DoesNotExist:
             pass
+        if self.device is not None:
+            # The device box reads the display state from the telemetry; between two telemetry reports
+            # (one a minute) a change from the CEC session shows up here at once.
+            from .models import Device
+            telemetry = Device.objects.filter(pk=self.device.pk).values_list('last_telemetry', flat=True).first()
+            if isinstance(telemetry, dict):
+                display = dict(telemetry.get("display") or {}, power=status)
+                Device.objects.filter(pk=self.device.pk).update(last_telemetry={**telemetry, "display": display})
 
 
 class DisplayConsumer(AsyncWebsocketConsumer):

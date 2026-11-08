@@ -4,9 +4,11 @@ import queue
 import signal
 import threading
 from datetime import datetime, timezone
+from functools import partial
 from urllib.parse import urlencode
 
 from . import telemetry
+from .cec_session import CecSession
 from .self_update import SelfUpdater
 from .timers import write_timers
 from .updater import Updater
@@ -33,10 +35,15 @@ def read_identity(paths):
 class Agent:
     def __init__(self, config, pages, kiosk_set_url=None, pairing_factory=None, connection_factory=None,
                  runner=None, power_factory=make_power, collect=telemetry.collect, telemetry_interval=60,
-                 kiosk=None, updater=None, timer_factory=threading.Timer, self_updater=None, timer_writer=None):
+                 kiosk=None, updater=None, timer_factory=threading.Timer, self_updater=None, timer_writer=None,
+                 cec_session=None, cec_poll_interval=15):
         self.config = config
         self.pages = pages
         self.kiosk = kiosk
+        self.cec_session = cec_session
+        self.cec_poll_interval = cec_poll_interval
+        if cec_session is not None:
+            cec_session.on_change = self._on_display_power
         self.kiosk_set_url = kiosk_set_url or (kiosk.apply if kiosk else (lambda url: None))
         self.updater = updater or PlaceholderUpdater()  # main() wires the real Updater
         self.self_updater = self_updater
@@ -166,6 +173,23 @@ class Agent:
         with self._power_lock:
             if self._power:
                 self._power.stop()
+        if self.cec_session is not None:
+            self.cec_session.close()
+
+    def _on_display_power(self, state):
+        """From the CEC session: the TV changed state, also by its own remote."""
+        self.send({"type": "power_status", "status": state})
+        if state == "standby" and self._wanted_power and not self.power_test.active:
+            def back_on():
+                if self._wanted_power and not self.power_test.active:
+                    self.send({"type": "power_status", "status": self._apply_power(True)})
+            self._enqueue_power(back_on)
+
+    def _cec_poll_loop(self, ended):
+        """Reads the TV's state over the open CEC session, so the admin sees it within seconds."""
+        while not ended.wait(self.cec_poll_interval) and not self.stop_event.is_set():
+            if self.config.power_method == "cec" and not self.power_test.active:
+                self._enqueue_power(self._power_status)
 
     def _drop_power_jobs(self):
         try:
@@ -216,7 +240,8 @@ class Agent:
         return CommandContext(
             config=self.config, kiosk=self.kiosk, pages=self.pages, runner=self.runner, updater=self.updater,
             apply_power=self._apply_power, last_telemetry=lambda: self.last_telemetry,
-            set_kiosk=self._set_kiosk, defer=self._defer, power_lock=self._power_lock, power_test=self.power_test)
+            set_kiosk=self._set_kiosk, defer=self._defer, power_lock=self._power_lock, power_test=self.power_test,
+            cec_session=self.cec_session)
 
     def _run_command(self, message):
         self._after_ack = []
@@ -452,6 +477,8 @@ class Agent:
         ended = threading.Event()
         wake = self._telemetry_wake = threading.Event()
         threading.Thread(target=self._telemetry_loop, args=(ended, wake), daemon=True, name="telemetry").start()
+        if self.cec_session is not None:
+            threading.Thread(target=self._cec_poll_loop, args=(ended,), daemon=True, name="cec-poll").start()
         try:
             self.connection.run_forever()
         finally:
@@ -475,8 +502,10 @@ def main():
     config = Config.load(paths)
     pages = LocalPages()
     runner = Runner()
+    cec_session = CecSession()
     agent = Agent(config, pages, runner=runner, kiosk=Kiosk(runner, paths),
-                  self_updater=SelfUpdater(paths, runner, config.server), timer_writer=write_timers)
+                  self_updater=SelfUpdater(paths, runner, config.server), timer_writer=write_timers,
+                  power_factory=partial(make_power, cec_session=cec_session), cec_session=cec_session)
     agent.updater = Updater(paths, runner, agent.send)
     signal.signal(signal.SIGTERM, lambda *_: agent.request_stop())
     signal.signal(signal.SIGUSR1, lambda *_: agent.request_update())

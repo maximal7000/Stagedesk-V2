@@ -379,6 +379,20 @@ describe('ScreenDetail', () => {
       })
     })
 
+    it('Gerätezustand wird alle 5 Sekunden nachgeladen, solange die Seite offen ist', async () => {
+      vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+      try {
+        await mount()
+        const before = api.getDevices.mock.calls.length
+        await act(async () => { vi.advanceTimersByTime(5000) })
+        expect(api.getDevices.mock.calls.length).toBe(before + 1)
+        await act(async () => { vi.advanceTimersByTime(10000) })
+        expect(api.getDevices.mock.calls.length).toBe(before + 3)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
     it('On-Air: aus als Standard, eingeschaltet mit Darstellung und Seite, gespeichert mit der Anzeige', async () => {
       perms.add('signage.setup')
       await mount()

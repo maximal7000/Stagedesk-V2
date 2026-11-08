@@ -597,3 +597,43 @@ class PowerTestWiringTests(unittest.TestCase):
         self.timers[1].fn()
         self.assertEqual(self.made[0].calls, [False, True])
         self.assertFalse(self.agent.power_test.active)
+
+
+class CecSessionWiringTests(unittest.TestCase):
+    def setUp(self):
+        self.paths = make_paths(self)
+        self.cfg = Config.load(self.paths)
+        self.cfg.power_method, self.cfg.power_config = "cec", {}
+        self.sent = []
+        self.power = FakePower("cec", {})
+        self.session = type("S", (), {"on_change": None, "close": lambda s: None})()
+        self.agent = Agent(self.cfg, FakePages(), power_factory=lambda m, c, r: self.power, runner=object(),
+                           collect=lambda *a, **k: {}, cec_session=self.session)
+        self.agent.connection = type("C", (), {"send": lambda s, m: self.sent.append(m) or True,
+                                               "stop": lambda s: None})()
+        self.addCleanup(self.agent.stop)
+
+    def drain(self):
+        done = threading.Event()
+        self.agent._enqueue_power(done.set)
+        self.assertTrue(done.wait(2))
+
+    def test_tv_change_is_reported_at_once(self):
+        self.session.on_change("an")
+        self.assertEqual(self.sent, [{"type": "power_status", "status": "an"}])
+
+    def test_tv_switched_off_by_hand_is_switched_back_on_when_it_should_be_on(self):
+        self.agent.on_message({"type": "power_command", "power": True})
+        self.drain()
+        self.power.state = "standby"
+        self.session.on_change("standby")
+        self.drain()
+        self.assertEqual(self.power.calls, [True, True])
+        self.assertEqual(self.sent[-1], {"type": "power_status", "status": "an"})
+
+    def test_tv_off_while_it_should_be_off_stays_off(self):
+        self.agent.on_message({"type": "power_command", "power": False})
+        self.drain()
+        self.session.on_change("standby")
+        self.drain()
+        self.assertEqual(self.power.calls, [])
