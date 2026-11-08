@@ -8,9 +8,25 @@ SERVICE = "stagedesk-kiosk"
 # kiosk.sh hands these to wlr-randr before Chromium starts.
 OUTPUT_MODE = re.compile(r"^\d{3,5}x\d{3,5}(@\d{1,3}(\.\d{1,6})?)?$")
 OUTPUT_TRANSFORMS = ("normal", "90", "180", "270")
-# Chromium ignores --disable-features=Translate for the bubble on German pages with an English UI;
-# the policy holds.
-BROWSER_POLICY = {"TranslateEnabled": False}
+# Nobody can click away a prompt on a kiosk, so the policy switches off everything that could show one.
+# TranslateEnabled is needed because --disable-features=Translate no longer stops the bubble.
+BROWSER_POLICY = {
+    "TranslateEnabled": False,
+    "PrivacySandboxPromptEnabled": False,
+    "PasswordManagerEnabled": False,
+    "AutofillAddressEnabled": False,
+    "AutofillCreditCardEnabled": False,
+    "DefaultNotificationsSetting": 2,
+    "DefaultGeolocationSetting": 2,
+    "DefaultBrowserSettingEnabled": False,
+    "PromotionalTabsEnabled": False,
+    "BrowserSignin": 0,
+    "SpellcheckEnabled": False,
+    "AutoplayAllowed": True,
+    "MetricsReportingEnabled": False,
+    "SyncDisabled": True,
+    "SearchSuggestEnabled": False,
+}
 
 
 class Kiosk:

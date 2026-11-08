@@ -92,9 +92,13 @@ curl -fsSL https://<server>/api/signage/agent/install.sh | sudo STAGEDESK_SERVER
   bevor Chromium startet. Ein Modus, den der Bildschirm ablehnt, ändert nichts.
   Pi 4 mit 4K und 60 Hz braucht `hdmi_enable_4kp60=1` in
   `/boot/firmware/config.txt`.
-- **Kein Übersetzungs-Hinweis** in Chromium: Der Agent (ab 1.4.0) legt beim
-  Start die Policy `/etc/chromium/policies/managed/stagedesk.json` mit
-  `TranslateEnabled: false` an und startet den Kiosk dafür einmal neu.
+- **Keine Chromium-Hinweise** auf dem Bildschirm: Der Agent (ab 1.4.0) legt
+  beim Start die Policy `/etc/chromium/policies/managed/stagedesk.json` an
+  (keine Übersetzung, kein Werbe-Datenschutz-Dialog, keine Fragen zu
+  Passwörtern, Ausfüllen, Benachrichtigungen, Standort, Standardbrowser oder
+  Anmeldung; Videos dürfen ohne Klick starten) und startet den Kiosk einmal
+  neu, wenn sich die Datei geändert hat. Liste: `BROWSER_POLICY` in
+  `agent/stagedesk_agent/kiosk.py`.
 - **Ohne Netz:** Der Agent verbindet sich mit Backoff neu, der Kiosk zeigt die
   letzte Anzeige. Ohne Token und ohne Server steht auf dem Bildschirm "Keine
   Verbindung zum Server. Netzwerk prüfen."

@@ -19,7 +19,10 @@ class KioskTests(unittest.TestCase):
 
     def test_browser_policy_written_once(self):
         self.assertTrue(self.kiosk.ensure_browser_policy())
-        self.assertEqual(json.loads(self.paths.browser_policy.read_text()), {"TranslateEnabled": False})
+        policy = json.loads(self.paths.browser_policy.read_text())
+        self.assertIs(policy["TranslateEnabled"], False)
+        self.assertIs(policy["PrivacySandboxPromptEnabled"], False)
+        self.assertEqual(policy["DefaultNotificationsSetting"], 2)
         self.assertEqual(oct(self.paths.browser_policy.stat().st_mode & 0o777), "0o644")
         self.assertFalse(self.kiosk.ensure_browser_policy())
         self.paths.browser_policy.write_text("{}")
