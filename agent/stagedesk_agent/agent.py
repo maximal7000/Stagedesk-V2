@@ -485,6 +485,11 @@ def main():
         agent.request_update()
     if early["reboot"]:
         agent.request_daily_reboot()
+    try:
+        if agent.kiosk.ensure_browser_policy() and agent.kiosk.is_running():
+            agent.kiosk.restart()
+    except Exception:
+        log.exception("browser policy failed")
     pages.start()
     try:
         agent.run()
