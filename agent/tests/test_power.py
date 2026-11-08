@@ -63,11 +63,28 @@ class CecTests(unittest.TestCase):
 
     def test_cec_status_parsed(self):
         runner = FakeRunner({CEC: RunResult(0, "opening a connection...\npower status: standby\n", "")})
-        power = make_power("cec", {}, runner)
-        self.assertEqual(power.status(), "standby")
+        self.assertEqual(make_power("cec", {}, runner).status(), "standby")
         self.assertEqual(runner.inputs, ["pow 0\n"])
+        runner = FakeRunner({CEC: RunResult(0, "power status: on\n", "")})
+        self.assertEqual(make_power("cec", {}, runner).status(), "an")
+
+    def test_cec_status_read_from_the_tv_only_while_unknown(self):
+        runner = FakeRunner({CEC: RunResult(0, "power status: on\n", "")})
+        power = make_power("cec", {}, runner)
+        for _ in range(5):
+            self.assertEqual(power.status(), "an")
+        self.assertEqual(runner.inputs, ["pow 0\n"])
+        self.assertEqual(power.set(False), "standby")
+        self.assertEqual(power.status(), "standby")
+        self.assertEqual(runner.inputs, ["pow 0\n", "standby 0\n"])
+
+    def test_cec_unreadable_status_is_asked_again(self):
+        runner = FakeRunner({CEC: RunResult(0, "nothing useful\n", "")})
+        power = make_power("cec", {}, runner)
+        self.assertTrue(power.status().startswith("Fehler: "))
         runner.responses[CEC] = RunResult(0, "power status: on\n", "")
         self.assertEqual(power.status(), "an")
+        self.assertEqual(runner.inputs, ["pow 0\n", "pow 0\n"])
 
     def test_cec_status_unknown_is_error_text(self):
         runner = FakeRunner({CEC: RunResult(0, "nothing useful\n", "")})

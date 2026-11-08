@@ -403,6 +403,9 @@ class DeviceConsumerTest(TransactionTestCase):
         self.assertEqual(self.device.last_telemetry['last_update']['ok'], True)
 
     def test_power_status_writes_cec_status(self):
+        Device.objects.filter(pk=self.device.pk).update(
+            last_telemetry={'display': {'resolution': '3840x2160', 'power': 'an'}, 'system': {'model': 'Pi'}})
+
         async def run():
             comm = _communicator('glocke', self.token)
             await comm.connect()
@@ -414,6 +417,9 @@ class DeviceConsumerTest(TransactionTestCase):
         self.screen.refresh_from_db()
         self.assertEqual(self.screen.cec_status, 'standby')
         self.assertIsNotNone(self.screen.cec_status_at)
+        self.device.refresh_from_db()
+        self.assertEqual(self.device.last_telemetry['display'], {'resolution': '3840x2160', 'power': 'standby'})
+        self.assertEqual(self.device.last_telemetry['system'], {'model': 'Pi'})
 
 
 @override_settings(CHANNEL_LAYERS=LAYERS)
