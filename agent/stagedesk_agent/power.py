@@ -68,9 +68,13 @@ class PowerController:
 
 
 class CecPower(PowerController):
+    """Every cec-client run announces the Pi to the TV again, and many TVs then show a "device connected"
+    message. So the state is read from the TV only while it is unknown; after that the last switch counts."""
+
     def __init__(self, config, runner, **kw):
         super().__init__(config, runner, **kw)
         self.device = _text(self.config.get("cec_device"), "0")
+        self._known = None
 
     def _cec(self, command):
         result = self.runner.run(CEC_CLIENT, timeout=20, input=f"{command}\n")
@@ -82,15 +86,20 @@ class CecPower(PowerController):
 
     def _set(self, on):
         self._cec(f"on {self.device}" if on else f"standby {self.device}")
-        return "an" if on else "standby"
+        self._known = "an" if on else "standby"
+        return self._known
 
     def _status(self):
+        if self._known is not None:
+            return self._known
         out = self._cec(f"pow {self.device}").out
         if "power status: on" in out:
-            return "an"
-        if "power status: standby" in out:
-            return "standby"
-        raise PowerError("CEC-Status nicht lesbar")
+            self._known = "an"
+        elif "power status: standby" in out:
+            self._known = "standby"
+        else:
+            raise PowerError("CEC-Status nicht lesbar")
+        return self._known
 
 
 class HdmiPower(PowerController):
