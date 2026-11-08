@@ -9,7 +9,7 @@ from core.auth import keycloak_auth
 from .. import media, push
 from ..models import DisplayView, MediaFile
 from ..permissions import _require_perm
-from ..schemas import MediaFileSchema
+from ..schemas import MediaFileRenameSchema, MediaFileSchema
 
 router = Router(tags=["Monitor"])
 
@@ -63,6 +63,20 @@ def get_file(request, id: int):
         ],
         'used_in': used_in,
     }
+
+
+@router.put("/files/{id}", response=MediaFileSchema, auth=keycloak_auth)
+def rename_file(request, id: int, payload: MediaFileRenameSchema):
+    _require_perm(request, 'signage.media')
+    obj = get_object_or_404(MediaFile, id=id, deleted_at__isnull=True)
+    name = payload.name.strip()
+    if not name:
+        raise HttpError(422, "Name fehlt.")
+    if len(name) > MediaFile._meta.get_field('name').max_length:
+        raise HttpError(422, "Name: höchstens 200 Zeichen.")
+    obj.name = name
+    obj.save(update_fields=['name'])
+    return obj
 
 
 @router.delete("/files/{id}", auth=keycloak_auth)

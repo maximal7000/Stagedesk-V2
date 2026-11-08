@@ -233,3 +233,42 @@ class ListFilesTest(MediaTestBase):
         from django.http import Http404
         with mock.patch.object(api_media, '_require_perm'), self.assertRaises(Http404):
             api_media.get_file(mock.Mock(), f.id)
+
+
+class RenameTest(MediaTestBase):
+    def setUp(self):
+        super().setUp()
+        from core.auth import KeycloakAuth
+        from users.models import UserProfile
+        UserProfile.objects.create(keycloak_id='tester')
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
+        auth.start()
+        self.addCleanup(auth.stop)
+        self.file = self.make('image', b'x', 'png')
+
+    def put(self, body, file_id=None):
+        return self.client.put(f'/api/signage/files/{file_id or self.file.id}', body,
+                               content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
+
+    def test_rename_needs_media_permission(self):
+        from .fake_tokens import grant_roles
+        grant_roles(self.token, 'signage.view')
+        self.assertEqual(self.put({'name': 'Neu'}).status_code, 403)
+        grant_roles(self.token, 'signage.media')
+        r = self.put({'name': '  Speiseplan November  '})
+        self.assertEqual(r.status_code, 200, r.content)
+        self.assertEqual(r.json()['name'], 'Speiseplan November')
+        self.file.refresh_from_db()
+        self.assertEqual(self.file.name, 'Speiseplan November')
+
+    def test_rename_rejects_empty_and_too_long_names_and_trashed_files(self):
+        from django.utils import timezone
+        from .fake_tokens import grant_roles
+        grant_roles(self.token, 'signage.media')
+        self.assertEqual(self.put({'name': '   '}).status_code, 422)
+        self.assertEqual(self.put({'name': 'x' * 201}).status_code, 422)
+        self.file.refresh_from_db()
+        self.assertEqual(self.file.name, 't')
+        MediaFile.objects.filter(pk=self.file.pk).update(deleted_at=timezone.now())
+        self.assertEqual(self.put({'name': 'Neu'}).status_code, 404)

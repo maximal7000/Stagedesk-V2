@@ -6,6 +6,10 @@ from ninja import Schema
 from .sun import sun_times
 
 
+class MediaFileRenameSchema(Schema):
+    name: str
+
+
 class MediaFileSchema(Schema):
     id: int
     name: str

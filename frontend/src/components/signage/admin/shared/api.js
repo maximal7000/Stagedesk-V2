@@ -44,6 +44,7 @@ export function uploadFile(file, { name = '', kind = 'image' } = {}) {
   return post('/files', form)
 }
 export const deleteFile = (id) => del(`/files/${id}`)
+export const renameFile = (id, name) => put(`/files/${id}`, { name })
 export const getTrash = () => get('/trash')
 export const restoreFromTrash = (kind, id) => post('/trash/restore', null, { kind, id })
 export const purgeFromTrash = (kind, id) => del('/trash/purge', undefined, { kind, id })
