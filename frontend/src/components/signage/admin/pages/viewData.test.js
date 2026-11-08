@@ -148,6 +148,10 @@ describe('Haltestellen', () => {
     expect(stopSource({ id: '8000237', source: 'nahsh' }, both)).toBe('NAH.SH')
     expect(stopSource({ id: '8000237', source: 'both' }, both)).toBe('DB und NAH.SH')
   })
+  it('DB OpenBoards als eigene Quelle', () => {
+    expect(stopSource({ id: '8000237', source: 'openboards' }, {})).toBe('DB OpenBoards')
+    expect(stopSource({ id: '8000237', source: 'openboards' }, {}, false)).toBe('DB OpenBoards (auf dem Server nicht eingerichtet)')
+  })
   it('ohne DB-Zugang auf dem Server: Automatisch fragt NAH.SH, feste DB wird so benannt', () => {
     expect(stopSource({ id: '8000237' }, {}, false)).toBe('NAH.SH')
     expect(stopSource({ id: '8000237', source: 'db' }, {}, false)).toBe('DB (auf dem Server nicht eingerichtet)')

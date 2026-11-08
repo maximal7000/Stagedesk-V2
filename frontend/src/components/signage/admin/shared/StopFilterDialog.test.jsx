@@ -25,7 +25,7 @@ describe('StopFilterDialog', () => {
       root.render(createElement(StopFilterDialog, { stop: { id: '8000237', name: 'Lübeck Hbf' }, onApply, onCancel: () => {} }))
     })
     const select = [...container.querySelectorAll('select')].find((s) => s.labels?.[0]?.textContent === 'Quelle')
-    expect([...select.options].map((o) => o.textContent)).toEqual(['Automatisch', 'Deutsche Bahn', 'NAH.SH', 'Beide (zusammengeführt)'])
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Automatisch', 'Deutsche Bahn', 'NAH.SH', 'Beide (zusammengeführt)', 'DB OpenBoards (nur Bahn, mit SEV)'])
     expect(select.value).toBe('')
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, 'nahsh')
