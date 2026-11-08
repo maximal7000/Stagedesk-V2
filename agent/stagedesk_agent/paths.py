@@ -19,6 +19,11 @@ class Paths:
         return self.config_dir / "kiosk.env"
 
     @property
+    def browser_policy(self):
+        """Debian's Chromium reads managed policies from here."""
+        return self.root / "etc" / "chromium" / "policies" / "managed" / "stagedesk.json"
+
+    @property
     def opt_dir(self):
         return self.root / "opt" / "stagedesk-agent"
 

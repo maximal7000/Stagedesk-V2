@@ -40,6 +40,7 @@ exec "$BROWSER" \
   --disable-infobars \
   --disable-session-crashed-bubble \
   --disable-features=Translate \
+  --lang=de \
   --no-first-run \
   --check-for-update-interval=31536000 \
   --ozone-platform=wayland \

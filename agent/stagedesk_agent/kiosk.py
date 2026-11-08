@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import re
@@ -7,6 +8,25 @@ SERVICE = "stagedesk-kiosk"
 # kiosk.sh hands these to wlr-randr before Chromium starts.
 OUTPUT_MODE = re.compile(r"^\d{3,5}x\d{3,5}(@\d{1,3}(\.\d{1,6})?)?$")
 OUTPUT_TRANSFORMS = ("normal", "90", "180", "270")
+# Nobody can click away a prompt on a kiosk, so the policy switches off everything that could show one.
+# TranslateEnabled is needed because --disable-features=Translate no longer stops the bubble.
+BROWSER_POLICY = {
+    "TranslateEnabled": False,
+    "PrivacySandboxPromptEnabled": False,
+    "PasswordManagerEnabled": False,
+    "AutofillAddressEnabled": False,
+    "AutofillCreditCardEnabled": False,
+    "DefaultNotificationsSetting": 2,
+    "DefaultGeolocationSetting": 2,
+    "DefaultBrowserSettingEnabled": False,
+    "PromotionalTabsEnabled": False,
+    "BrowserSignin": 0,
+    "SpellcheckEnabled": False,
+    "AutoplayAllowed": True,
+    "MetricsReportingEnabled": False,
+    "SyncDisabled": True,
+    "SearchSuggestEnabled": False,
+}
 
 
 class Kiosk:
@@ -21,6 +41,22 @@ class Kiosk:
         mode = mode if isinstance(mode, str) and OUTPUT_MODE.match(mode) else ""
         transform = transform if transform in OUTPUT_TRANSFORMS else "normal"
         self.output = (mode, transform)
+
+    def ensure_browser_policy(self):
+        """Return True when the policy file was written; Chromium reads it at its next start."""
+        target = self.paths.browser_policy
+        content = json.dumps(BROWSER_POLICY, indent=2) + "\n"
+        try:
+            if target.read_text(encoding="utf-8") == content:
+                return False
+        except OSError:
+            pass
+        target.parent.mkdir(parents=True, exist_ok=True)
+        tmp = target.with_name(target.name + ".tmp")
+        tmp.write_text(content, encoding="utf-8")
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, target)
+        return True
 
     def _current(self):
         try:

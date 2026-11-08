@@ -1,3 +1,4 @@
+import json
 import unittest
 
 from stagedesk_agent.kiosk import Kiosk
@@ -15,6 +16,17 @@ class KioskTests(unittest.TestCase):
 
     def restarts(self):
         return [c for c in self.runner.calls if c == RESTART]
+
+    def test_browser_policy_written_once(self):
+        self.assertTrue(self.kiosk.ensure_browser_policy())
+        policy = json.loads(self.paths.browser_policy.read_text())
+        self.assertIs(policy["TranslateEnabled"], False)
+        self.assertIs(policy["PrivacySandboxPromptEnabled"], False)
+        self.assertEqual(policy["DefaultNotificationsSetting"], 2)
+        self.assertEqual(oct(self.paths.browser_policy.stat().st_mode & 0o777), "0o644")
+        self.assertFalse(self.kiosk.ensure_browser_policy())
+        self.paths.browser_policy.write_text("{}")
+        self.assertTrue(self.kiosk.ensure_browser_policy())
 
     def test_output_lines_only_when_set(self):
         self.kiosk.set_output("1920x1080@59.939999", "270")
