@@ -1,0 +1,20 @@
+[
+  {
+    "id": "9073191",
+    "name": "Lübeck Hauptbahnhof/ZOB",
+    "kind": "bus",
+    "source": "nahsh",
+    "products": [
+      "bus"
+    ]
+  },
+  {
+    "id": "708100",
+    "name": "Lübeck Kücknitz, Bahnhof",
+    "kind": "bus",
+    "source": "nahsh",
+    "products": [
+      "bus"
+    ]
+  }
+]

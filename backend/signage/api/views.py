@@ -196,6 +196,14 @@ def regenerate_token(request, view_id: int = None):
     return {"api_token": view.api_token}
 
 
+@router.get("/transit/status", auth=keycloak_auth)
+def transit_status(request):
+    """Only whether the DB access is set up on the server; the credentials never leave it."""
+    _require_perm(request, 'signage.setup')
+    from ..transit import db as db_api
+    return {"db_configured": bool(db_api.DB_TT_CLIENT_ID and db_api.DB_TT_API_KEY)}
+
+
 @router.get("/transit/search", auth=keycloak_auth)
 def search_transit_stops(request, q: str = "", results: int = 10,
                          use_db: bool = True, use_nahsh: bool = True):

@@ -4,7 +4,10 @@ import { createRoot } from 'react-dom/client'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-vi.mock('../shared/api', () => ({ getDisruptions: vi.fn(() => Promise.resolve([])) }))
+vi.mock('../shared/api', () => ({
+  getDisruptions: vi.fn(() => Promise.resolve([])),
+  getTransitStatus: vi.fn(() => Promise.resolve({ db_configured: true })),
+}))
 vi.mock('../shared/StopSearch', () => ({ default: () => null }))
 vi.mock('../shared/StopFilterDialog', () => ({ default: () => null }))
 

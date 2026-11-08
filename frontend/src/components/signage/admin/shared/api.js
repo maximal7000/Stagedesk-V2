@@ -22,7 +22,11 @@ export const restoreViewVersion = (versionId) => post('/config/restore', null, {
 export const regenerateViewToken = (id) => post('/config/regenerate-token', null, { view_id: id })
 export const previewView = (draft, screenId = null) => post('/views/preview', { view: draft, screen_id: screenId })
 export const getDisruptions = (viewId) => get('/disruptions', { view_id: viewId })
-export const searchStops = (q, results = 10) => get('/transit/search', { q, results })
+// sources: 'all', 'db' or 'nahsh'
+export const searchStops = (q, results = 10, sources = 'all') => get('/transit/search', {
+  q, results, use_db: sources !== 'nahsh', use_nahsh: sources !== 'db',
+})
+export const getTransitStatus = () => get('/transit/status')
 
 export const getScreens = () => get('/screens')
 export const createScreen = (body) => post('/screens', body)

@@ -57,6 +57,7 @@ vi.mock('../shared/api', () => ({
     { id: 11, name: 'Speiseplan', kind: 'pdf' }, { id: 12, name: 'Plakat', kind: 'image' },
     { id: 13, name: 'Schullogo', kind: 'logo' }, { id: 14, name: 'Hintergrund Aula', kind: 'background' },
   ])),
+  getTransitStatus: vi.fn(() => Promise.resolve({ db_configured: true })),
   searchStops: vi.fn(() => Promise.resolve([])),
   getDisruptions: vi.fn(() => Promise.resolve([
     { id: 'm1', kind: 'disruption', title: 'RE8 fällt aus', lines: ['RE8'] },

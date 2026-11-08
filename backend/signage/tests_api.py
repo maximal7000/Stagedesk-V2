@@ -408,3 +408,27 @@ class ExamDefaultSideTest(TestCase):
                                                 'active_until': '2026-10-20T10:00:00+02:00'})
         self.assertEqual(exam['split_side'], 'right')
         self.assertEqual(self.post('/api/monitor/exam-templates', {'name': 'Abi'})['split_side'], 'right')
+
+
+class TransitStatusApiTest(TestCase):
+    def setUp(self):
+        from core.auth import KeycloakAuth
+        from users.models import UserProfile
+        UserProfile.objects.create(keycloak_id='tester')
+        self.token = {'sub': 'tester'}
+        auth = mock.patch.object(KeycloakAuth, '__call__', return_value=self.token)
+        auth.start()
+        self.addCleanup(auth.stop)
+
+    def get(self):
+        return self.client.get('/api/signage/transit/status', HTTP_AUTHORIZATION='Bearer x')
+
+    def test_reports_only_whether_db_is_set_up(self):
+        from .fake_tokens import grant_roles
+        from .transit import db as db_api
+        self.assertEqual(self.get().status_code, 403)
+        grant_roles(self.token, 'signage.setup')
+        with mock.patch.object(db_api, 'DB_TT_CLIENT_ID', 'id'), mock.patch.object(db_api, 'DB_TT_API_KEY', ''):
+            self.assertEqual(self.get().json(), {'db_configured': False})
+        with mock.patch.object(db_api, 'DB_TT_CLIENT_ID', 'id'), mock.patch.object(db_api, 'DB_TT_API_KEY', 'key'):
+            self.assertEqual(self.get().json(), {'db_configured': True})

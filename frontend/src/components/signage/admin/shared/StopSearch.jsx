@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { searchStops } from './api'
 import { errorText } from './errorText'
-import { fieldClass } from './form'
+import { Segmented, fieldClass } from './form'
 
 const SEARCH_DELAY_MS = 300
 
@@ -15,34 +15,45 @@ const PRODUCT_GROUPS = [
   ['Fähre', ['ferry']],
 ]
 
+const SOURCE_LABEL = { db: 'DB', nahsh: 'NAH.SH', 'db+nahsh': 'DB und NAH.SH' }
+const SOURCE_OPTIONS = [
+  { value: 'all', label: 'Beide' },
+  { value: 'db', label: 'Deutsche Bahn' },
+  { value: 'nahsh', label: 'NAH.SH' },
+]
+
 function productLabel(products) {
   const set = new Set(products ?? [])
   return PRODUCT_GROUPS.filter(([, keys]) => keys.some((k) => set.has(k))).map(([label]) => label).join(', ')
 }
 
-export default function StopSearch({ onSelect, excludeIds = [], label = 'Haltestelle suchen', autoFocus = false, search = searchStops }) {
+// sourcePicker: { dbConfigured } shows "Suchen in" and each hit's system; without it both systems are searched.
+export default function StopSearch({ onSelect, excludeIds = [], label = 'Haltestelle suchen', autoFocus = false, search = searchStops,
+  sourcePicker = null }) {
   const inputId = useId()
   const listId = useId()
   const [query, setQuery] = useState('')
+  const [sources, setSources] = useState('all')
   const [state, setState] = useState({ query: '', results: [], error: null })
   const [active, setActive] = useState(0)
   const [open, setOpen] = useState(false)
   const seq = useRef(0)
   const term = query.trim()
 
+  const searchKey = `${sources}:${term}`
   useEffect(() => {
     if (term.length < 2) return undefined
     const mine = ++seq.current
     const timer = setTimeout(() => {
-      search(term).then(
-        (results) => { if (mine === seq.current) setState({ query: term, results: Array.isArray(results) ? results : [], error: null }) },
-        (error) => { if (mine === seq.current) setState({ query: term, results: [], error }) },
+      search(term, 10, sources).then(
+        (results) => { if (mine === seq.current) setState({ query: searchKey, results: Array.isArray(results) ? results : [], error: null }) },
+        (error) => { if (mine === seq.current) setState({ query: searchKey, results: [], error }) },
       )
     }, SEARCH_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [term, search])
+  }, [term, sources, searchKey, search])
 
-  const loading = term.length >= 2 && state.query !== term
+  const loading = term.length >= 2 && state.query !== searchKey
   const results = term.length >= 2 && !loading ? state.results : []
   const showList = open && term.length >= 2
 
@@ -71,8 +82,20 @@ export default function StopSearch({ onSelect, excludeIds = [], label = 'Haltest
   }
 
   const optionId = (i) => `${listId}-${i}`
+  const pickerOptions = sourcePicker?.dbConfigured === false ? SOURCE_OPTIONS.filter((o) => o.value !== 'db') : SOURCE_OPTIONS
   return (
     <div className="relative" data-stop-search>
+      {sourcePicker && (
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="text-xs text-fg-muted">Suchen in</span>
+          <div className="w-full max-w-sm">
+            <Segmented label="Suchen in" options={pickerOptions} value={sources} onChange={setSources} />
+          </div>
+          {sourcePicker.dbConfigured === false && (
+            <span className="text-xs text-fg-subtle" data-db-missing>Deutsche Bahn: auf dem Server nicht eingerichtet</span>
+          )}
+        </div>
+      )}
       <label htmlFor={inputId} className="sr-only">{label}</label>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle pointer-events-none" aria-hidden="true" />
@@ -98,7 +121,9 @@ export default function StopSearch({ onSelect, excludeIds = [], label = 'Haltest
                   onMouseDown={(e) => { e.preventDefault(); choose(r) }} onMouseEnter={() => setActive(i)}
                   className={`px-3 py-2 text-sm flex items-baseline justify-between gap-3 ${taken ? 'text-fg-disabled' : 'text-fg cursor-pointer'} ${i === active ? 'bg-hover' : ''}`}>
                   <span className="truncate">{r.name}</span>
-                  <span className="text-xs text-fg-subtle shrink-0">{taken ? 'schon in der Liste' : productLabel(r.products)}</span>
+                  <span className="text-xs text-fg-subtle shrink-0">
+                    {taken ? 'schon in der Liste' : [productLabel(r.products), sourcePicker && SOURCE_LABEL[r.source]].filter(Boolean).join(' · ')}
+                  </span>
                 </li>
               )
             })}

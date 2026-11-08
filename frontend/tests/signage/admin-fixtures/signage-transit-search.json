@@ -1,0 +1,29 @@
+[
+  {
+    "id": "8003800",
+    "name": "Lübeck-Kücknitz",
+    "kind": "station",
+    "source": "db",
+    "products": [
+      "regional"
+    ]
+  },
+  {
+    "id": "8003819",
+    "name": "Lübeck-Travemünde Strand",
+    "kind": "station",
+    "source": "db",
+    "products": [
+      "regional"
+    ]
+  },
+  {
+    "id": "9073191",
+    "name": "Lübeck Hauptbahnhof/ZOB",
+    "kind": "bus",
+    "source": "nahsh",
+    "products": [
+      "bus"
+    ]
+  }
+]

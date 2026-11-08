@@ -103,8 +103,19 @@ function ColumnOverview({ stops, columns, disruptions }) {
   )
 }
 
+function useDbConfigured() {
+  const [configured, setConfigured] = useState(null)
+  useEffect(() => {
+    let alive = true
+    api.getTransitStatus().then((s) => { if (alive) setConfigured(s?.db_configured !== false) }, () => {})
+    return () => { alive = false }
+  }, [])
+  return configured
+}
+
 function StopsSection({ draft, set }) {
   const stops = draft.transit_stops ?? []
+  const dbConfigured = useDbConfigured()
   const columns = columnCount(draft)
   const placed = assignColumns(stops, columns)
   const columnOf = (stop) => placed.findIndex((group) => group.includes(stop)) + 1
@@ -130,7 +141,7 @@ function StopsSection({ draft, set }) {
           </thead>
           <tbody>
             {stops.map((stop, i) => (
-              <StopRow key={stop.id} stop={stop} index={i} columns={columns} column={columnOf(stop)} source={stopSource(stop, draft)} drag={drag}
+              <StopRow key={stop.id} stop={stop} index={i} columns={columns} column={columnOf(stop)} source={stopSource(stop, draft, dbConfigured !== false)} drag={drag}
                 onChange={(patch) => setStops(stops.map((s, j) => (j === i ? { ...s, ...patch } : s)))}
                 onFilter={() => setFilterIndex(i)} />
             ))}
@@ -148,6 +159,7 @@ function StopsSection({ draft, set }) {
           <div className="flex items-start gap-2">
             <div className="flex-1">
               <StopSearch autoFocus label="Haltestelle hinzufügen" excludeIds={stops.map((s) => s.id)}
+                sourcePicker={{ dbConfigured: dbConfigured !== false }}
                 onSelect={(r) => { setStops([...stops, newStop(r)]); setAdding(false) }} />
             </div>
             <Button variant="ghost" onClick={() => setAdding(false)}>Fertig</Button>
