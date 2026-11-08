@@ -9,6 +9,7 @@ import ConfirmDialog from '../shared/ConfirmDialog'
 import UndoToast from '../shared/UndoToast'
 import { useMediaFiles } from '../shared/useMediaFiles'
 import { errorText } from '../shared/errorText'
+import { fieldClass } from '../shared/form'
 import { fileMeta, mediaStatus, uploadKind, uploadProblem } from './mediaData'
 import * as api from '../shared/api'
 
@@ -53,7 +54,41 @@ function Tile({ file, onOpen }) {
   )
 }
 
-function DetailPanel({ file, detail, error, canOpenViews, onClose, onDelete }) {
+// The name only shows in the admin (file list, media editor); displays never show it.
+function RenameField({ file, onRenamed }) {
+  const id = useId()
+  const [name, setName] = useState(file.name)
+  const [saving, setSaving] = useState(false)
+  const trimmed = name.trim()
+  const changed = trimmed !== file.name
+  const save = async (e) => {
+    e.preventDefault()
+    if (!changed || !trimmed || saving) return
+    setSaving(true)
+    try {
+      await api.renameFile(file.id, trimmed)
+      setName(trimmed)
+      toast.success('Umbenannt.')
+      await onRenamed()
+    } catch (err) {
+      toast.error(errorText(err))
+    }
+    setSaving(false)
+  }
+  return (
+    <form onSubmit={save} data-media-rename>
+      <label htmlFor={id} className="block text-sm font-medium text-fg mb-1.5">Name</label>
+      <div className="flex gap-2">
+        <input id={id} value={name} maxLength={200} onChange={(e) => setName(e.target.value)} disabled={saving}
+          aria-invalid={!trimmed ? true : undefined} className={`${fieldClass} flex-1`} />
+        <Button type="submit" disabled={!changed || !trimmed || saving}>Umbenennen</Button>
+      </div>
+      {!trimmed && <p className="text-xs text-bad mt-1.5">Name fehlt.</p>}
+    </form>
+  )
+}
+
+function DetailPanel({ file, detail, error, canOpenViews, canEdit, onClose, onDelete, onRenamed }) {
   const pages = detail?.pages ?? []
   return (
     <SidePanel eyebrow="Datei" title={file.name} onClose={onClose} width="max-w-2xl" data-media-panel
@@ -65,6 +100,7 @@ function DetailPanel({ file, detail, error, canOpenViews, onClose, onDelete }) {
         </>
       )}>
       <div className="space-y-6">
+        {canEdit && <RenameField key={file.id} file={file} onRenamed={onRenamed} />}
         <div>
           <div className="text-sm text-fg-muted">{fileMeta(detail ?? file)}</div>
           <div className="mt-2"><StatusLine file={detail ?? file} /></div>
@@ -244,7 +280,7 @@ export default function Media() {
 
       {openFile && (
         <DetailPanel file={openFile} detail={detail} error={detailError} canOpenViews={hasPermission('signage.setup')}
-          onClose={closePanel} onDelete={askDelete} />
+          canEdit={hasPermission('signage.media')} onClose={closePanel} onDelete={askDelete} onRenamed={reload} />
       )}
       {confirmDelete && openFile && (
         <ConfirmDialog title={`„${openFile.name}“ in den Papierkorb legen?`} tone="danger" confirmLabel="In den Papierkorb"
