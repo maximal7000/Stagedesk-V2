@@ -13,8 +13,6 @@ from .models import DisplayView, validate_rotation_items
 CHOICE_FIELDS = {
     'kind': 'Typ',
     'layout': 'Aufteilung',
-    'on_air_behavior': 'On-Air-Verhalten',
-    'on_air_split_side': 'On-Air-Seite',
     'split_left': 'Split links',
     'split_right': 'Split rechts',
     'pdf_mode': 'Medien-Modus',

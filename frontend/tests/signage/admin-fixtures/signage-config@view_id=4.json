@@ -58,9 +58,7 @@
   ],
   "transit_disruption_manual": [],
   "transit_disruption_hidden": [],
-  "on_air_split_side": "right",
   "style": "auto",
-  "on_air_behavior": "fullscreen",
   "rotation_items": [
     {
       "view_id": 1,

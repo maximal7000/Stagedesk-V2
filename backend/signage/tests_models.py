@@ -77,13 +77,12 @@ class UpdateViewApiTest(TestCase):
     def test_update_view_rejects_invalid_choices(self):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')
         for body, fragment in [({'kind': 'tabelle'}, 'Typ'), ({'layout': 'bunt'}, 'Aufteilung'),
-                               ({'on_air_split_side': 'oben'}, 'On-Air'), ({'pdf_mode': 'zufall'}, 'Modus')]:
+                               ({'pdf_mode': 'zufall'}, 'Modus')]:
             r = self._put(view, body)
             self.assertEqual(r.status_code, 422, r.content)
             self.assertIn(fragment, r.json()['detail'])
         view.refresh_from_db()
-        self.assertEqual((view.kind, view.layout, view.on_air_split_side, view.pdf_mode),
-                         ('info', 'auto', 'right', 'cycle'))
+        self.assertEqual((view.kind, view.layout, view.pdf_mode), ('info', 'auto', 'cycle'))
 
     def test_update_view_countdown_date(self):
         view = DisplayView.objects.create(name='I', slug='i', kind='info')

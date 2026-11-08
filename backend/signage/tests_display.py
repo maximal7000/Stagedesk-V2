@@ -218,18 +218,47 @@ class ContractTest(DisplayTestBase):
                          ('exam', 'split', 'left', None))
 
         exam.delete()
-        view.on_air_behavior = 'split'
-        view.on_air_split_side = 'left'
+        screen.on_air_enabled, screen.on_air_display, screen.on_air_side = True, 'split', 'left'
         mode = display.build_payload(screen, view, key_ok=False, now=self.now)['mode']
         self.assertEqual(set(mode), MODE_KEYS['on_air'])
         self.assertEqual((mode['kind'], mode['display'], mode['side']), ('on_air', 'split', 'left'))
 
-    def test_on_air_none_behavior(self):
-        view = self.view('info', on_air_behavior='none')
+    def test_on_air_only_on_enabled_screens(self):
+        view = self.view('info')
         settings = MonitorSettings.load()
         settings.on_air_active = True
         settings.save()
+        screen = Screen.objects.create(name='Halle', slug='halle', default_view=view)
+        self.assertIsNone(display.build_payload(screen, view, key_ok=False, now=self.now)['mode'])
         self.assertIsNone(display.build_payload(None, view, key_ok=False, now=self.now)['mode'])
+        screen.on_air_enabled = True
+        self.assertEqual(display.build_payload(screen, view, key_ok=False, now=self.now)['mode']['kind'], 'on_air')
+
+    def test_on_air_switches_screen_on_outside_its_times_full_screen(self):
+        view = self.view('info')
+        settings = MonitorSettings.load()
+        settings.on_air_active = True
+        settings.save()
+        monday = timezone.make_aware(datetime(2026, 10, 19, 10, 41))
+        # Only on Sundays and set to "always off": on air still switches it on
+        screen = Screen.objects.create(name='Halle', slug='halle', default_view=view, on_air_enabled=True,
+                                       on_air_display='split', on_air_side='left', power_mode='manual_off',
+                                       schedule=[{'days': [6], 'from': '07:00', 'until': '08:00'}])
+        payload = display.build_payload(screen, view, key_ok=False, now=monday)
+        self.assertIs(payload['screen']['power'], True)
+        self.assertEqual((payload['mode']['display'], payload['mode']['side']), ('fullscreen', 'left'))
+        settings.on_air_active = False
+        settings.save()
+        payload = display.build_payload(screen, view, key_ok=False, now=monday)
+        self.assertIs(payload['screen']['power'], False)
+        self.assertIsNone(payload['mode'])
+
+    def test_on_air_toggle_pushes_power_to_all_screens(self):
+        self.view('info', api_token='tok')
+        with mock.patch('signage.api.settings.push_power_to_all') as push_all:
+            self.client.post('/api/monitor/on-air', {'on_air': True}, content_type='application/json',
+                             HTTP_X_MONITOR_TOKEN='tok')
+        push_all.assert_called_once()
 
     def test_substitutions_without_key_returns_fallback_only(self):
         view = self.view('substitutions', webuntis_url='https://example.org/untis')
@@ -602,7 +631,6 @@ class PreviewValidationTest(PreviewTestBase):
     def test_invalid_choices_rejected(self):
         self.assert_rejected({'view': {'kind': 'tabelle'}}, 'Typ')
         self.assert_rejected({'view': {'id': self.saved.id, 'layout': 'bunt'}}, 'Aufteilung')
-        self.assert_rejected({'view': {'on_air_behavior': 'flash'}}, 'On-Air')
         self.assert_rejected({'view': {'split_left': 'kantine'}}, 'Split')
 
     def test_invalid_substitution_fields_rejected(self):

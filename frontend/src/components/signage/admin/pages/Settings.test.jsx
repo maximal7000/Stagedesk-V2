@@ -87,6 +87,21 @@ describe('Settings', () => {
     expect(api.getView).not.toHaveBeenCalled()
   })
 
+  it('On-Air: listet die Bildschirme mit On-Air und markiert, wer sich dafür einschaltet', async () => {
+    perms.add('signage.onair')
+    api.getScreens.mockResolvedValue([
+      { id: 4, name: 'Mensa', on_air_enabled: true, on_air_display: 'split', on_air_side: 'left', scheduled_on: true },
+      { id: 5, name: 'Aula', on_air_enabled: false, scheduled_on: true },
+      { id: 6, name: 'Technikraum', on_air_enabled: true, on_air_display: 'fullscreen', scheduled_on: false },
+    ])
+    await mount()
+    const list = container.querySelector('[data-on-air-screens]')
+    expect(list.textContent).toContain('2 von 3')
+    expect([...list.querySelectorAll('li')].map((li) => li.textContent))
+      .toEqual(['MensaGeteilt, links', 'TechnikraumVollbildschaltet sich ein'])
+    expect(list.querySelector('a').getAttribute('href')).toBe('/signage-admin/screens/4')
+  })
+
   it('Passwort: gespeichert als Platzhalter, leer bleibt unverändert, nur geänderte Felder gehen raus', async () => {
     perms.add('signage.setup')
     api.updateSettings.mockResolvedValue({ ...settings(), webuntis_school: 'neu' })

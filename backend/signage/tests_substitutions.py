@@ -427,5 +427,7 @@ class DisplaySubstitutionsTest(SubstitutionsTestBase):
         settings = MonitorSettings.load()
         settings.on_air_active = True
         settings.save()
-        display.build_payload(None, self.view(on_air_behavior='fullscreen'), key_ok=True, now=MONDAY_8)
+        view = self.view()
+        screen = Screen.objects.create(name='Halle', slug='halle', default_view=view, on_air_enabled=True)
+        display.build_payload(screen, view, key_ok=True, now=MONDAY_8)
         self.assertEqual(self.load_days.call_args.kwargs['count'], 2)

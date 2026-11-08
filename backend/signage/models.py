@@ -95,12 +95,6 @@ class DisplayView(models.Model):
         ('wide', 'Breit'),
     ]
     layout = models.CharField(max_length=10, choices=LAYOUT_CHOICES, default='auto')
-    ON_AIR_BEHAVIOR_CHOICES = [
-        ('fullscreen', 'Vollbild'),
-        ('split', 'Geteilt'),
-        ('none', 'Keine'),
-    ]
-    on_air_behavior = models.CharField(max_length=12, choices=ON_AIR_BEHAVIOR_CHOICES, default='fullscreen')
     rotation_items = models.JSONField(default=list, blank=True,
         help_text='[{"view_id": 3, "seconds": 15}]')
     media_items = models.JSONField(default=list, blank=True)
@@ -240,10 +234,7 @@ class DisplayView(models.Model):
     transit_disruption_hidden = models.JSONField(default=list, blank=True,
         help_text="IDs manuell ausgeblendeter Störungen (auto-bereinigt wenn Meldung verschwindet)")
 
-    # On air: behaviour per view; status and text are global in MonitorSettings
     SIDE_CHOICES = [('left', 'Links'), ('right', 'Rechts')]
-    on_air_split_side = models.CharField(max_length=6, choices=SIDE_CHOICES, default='right',
-        help_text="Auf welcher Seite ON AIR im Splitscreen steht")
 
     api_token = models.CharField(max_length=64, unique=True, blank=True,
                                  help_text="Token für externe ON AIR Steuerung")
@@ -415,6 +406,13 @@ class Screen(models.Model):
         help_text="Auflösung als BREITExHÖHE@HZ, leer = automatisch")
     OUTPUT_TRANSFORM_CHOICES = [('normal', 'Keine'), ('90', '90°'), ('180', '180°'), ('270', '270°')]
     output_transform = models.CharField(max_length=6, choices=OUTPUT_TRANSFORM_CHOICES, default='normal')
+
+    # On air per screen; status and text are global in MonitorSettings. Outside its schedule an enabled
+    # screen switches on and shows on air full screen.
+    on_air_enabled = models.BooleanField(default=False)
+    ON_AIR_DISPLAY_CHOICES = [('fullscreen', 'Vollbild'), ('split', 'Geteilt')]
+    on_air_display = models.CharField(max_length=10, choices=ON_AIR_DISPLAY_CHOICES, default='fullscreen')
+    on_air_side = models.CharField(max_length=6, choices=DisplayView.SIDE_CHOICES, default='right')
 
     COLOR_SCHEME_CHOICES = [
         ('inherit', 'Wie eingestellt'),

@@ -76,18 +76,19 @@ class GlobalStateApiTest(TestCase):
     def setUp(self):
         self.view = DisplayView.objects.create(name='V', slug='v', is_default=True, api_token='tok',
                                                kind='departures')
+        Screen.objects.create(name='Halle', slug='halle', default_view=self.view, on_air_enabled=True)
 
     def test_display_returns_kind_and_global_state(self):
         self.client.post('/api/monitor/on-air', {'on_air': True},
                          content_type='application/json', HTTP_X_MONITOR_TOKEN='tok')
         self.client.post('/api/monitor/emergency', {'active': True, 'text': 'Alarm'},
                          content_type='application/json', HTTP_X_MONITOR_TOKEN='tok')
-        data = self.client.get('/api/monitor/display', {'view': 'v'}).json()
+        data = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()
         self.assertEqual(data['view']['kind'], 'departures')
         self.assertEqual((data['mode']['kind'], data['mode']['text']), ('emergency', 'Alarm'))
         self.client.post('/api/monitor/emergency', {'active': False},
                          content_type='application/json', HTTP_X_MONITOR_TOKEN='tok')
-        data = self.client.get('/api/monitor/display', {'view': 'v'}).json()
+        data = self.client.get('/api/monitor/display', {'screen': 'halle'}).json()
         self.assertEqual(data['mode']['kind'], 'on_air')
 
     def test_on_air_off_clears_since_and_clock_reads_settings(self):

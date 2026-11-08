@@ -74,7 +74,11 @@
       "until": "05:00"
     },
     "daily_reboot": true,
-    "color_scheme": "inherit"
+    "color_scheme": "inherit",
+    "on_air_enabled": true,
+    "on_air_display": "split",
+    "on_air_side": "right",
+    "scheduled_on": true
   },
   {
     "id": 2,
@@ -107,7 +111,11 @@
       "until": "05:00"
     },
     "daily_reboot": true,
-    "color_scheme": "inherit"
+    "color_scheme": "inherit",
+    "on_air_enabled": false,
+    "on_air_display": "fullscreen",
+    "on_air_side": "right",
+    "scheduled_on": true
   },
   {
     "id": 3,
@@ -140,7 +148,11 @@
       "until": "05:00"
     },
     "daily_reboot": true,
-    "color_scheme": "inherit"
+    "color_scheme": "inherit",
+    "on_air_enabled": true,
+    "on_air_display": "fullscreen",
+    "on_air_side": "right",
+    "scheduled_on": false
   },
   {
     "id": 4,
@@ -173,7 +185,11 @@
       "until": "05:00"
     },
     "daily_reboot": true,
-    "color_scheme": "inherit"
+    "color_scheme": "inherit",
+    "on_air_enabled": false,
+    "on_air_display": "fullscreen",
+    "on_air_side": "right",
+    "scheduled_on": true
   },
   {
     "id": 5,
@@ -206,6 +222,10 @@
       "until": "05:00"
     },
     "daily_reboot": true,
-    "color_scheme": "inherit"
+    "color_scheme": "inherit",
+    "on_air_enabled": false,
+    "on_air_display": "fullscreen",
+    "on_air_side": "right",
+    "scheduled_on": true
   }
 ]

@@ -102,6 +102,7 @@ describe('ScreenDetail', () => {
     const [displayCall, powerCall] = api.updateScreen.mock.calls
     expect(displayCall[1]).toEqual({
       name: 'Glocke', location: 'Eingangshalle Nord', default_view_id: 1, scale: 'auto', orientation: 'landscape', color_scheme: 'inherit',
+      on_air_enabled: false, on_air_display: 'fullscreen', on_air_side: 'right',
     })
     expect(Object.keys(powerCall[1]).sort()).toEqual(['off_during_holidays', 'power_exceptions', 'power_mode', 'schedule'])
     expect(powerCall[1].schedule).toEqual([{ days: [0, 1, 2, 3, 4, 5], from: '07:00', until: '17:00', view_id: null }])
@@ -376,6 +377,23 @@ describe('ScreenDetail', () => {
         power_method: 'hybrid',
         power_config: { display_ip: '192.0.2.30', display_port: 5000, monitor_id: 0, cec_device: '0' },
       })
+    })
+
+    it('On-Air: aus als Standard, eingeschaltet mit Darstellung und Seite, gespeichert mit der Anzeige', async () => {
+      perms.add('signage.setup')
+      await mount()
+      const section = container.querySelector('[data-section="on-air"]')
+      expect(byLabel('Bei On-Air anzeigen').checked).toBe(false)
+      expect(section.textContent).toContain('schaltet sich dafür nicht ein')
+      await click(byLabel('Bei On-Air anzeigen'))
+      expect(section.textContent).toContain('auch bei „Immer aus“')
+      expect(section.querySelector('[aria-label="Seite"]')).toBeNull()
+      await click([...section.querySelectorAll('button')].find((b) => b.textContent === 'Geteilt'))
+      await click([...section.querySelector('[aria-label="Seite"]').querySelectorAll('button')].find((b) => b.textContent === 'Links'))
+      await click(button('Speichern'))
+      expect(api.updateScreen).toHaveBeenCalledWith(1, expect.objectContaining({
+        on_air_enabled: true, on_air_display: 'split', on_air_side: 'left',
+      }))
     })
 
     it('Bildausgabe: Auflösung aus der Liste des Pi, Drehung 90° stellt die Ausrichtung auf Hoch', async () => {

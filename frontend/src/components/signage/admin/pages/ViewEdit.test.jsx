@@ -10,7 +10,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const VIEWS = {
   1: {
     id: 1, name: 'Abfahrten Halle', slug: 'departures-hall', kind: 'departures', layout: 'auto', is_default: false,
-    on_air_behavior: 'fullscreen', on_air_split_side: 'right', show_weather: false, show_qr_code: false,
+    show_weather: false, show_qr_code: false,
     transit_stops: [
       { id: 'a', name: 'Katharineum', walk_minutes: 1, max_departures: 10 },
       { id: 'b', name: 'Kohlmarkt', walk_minutes: 4, max_departures: 10 },
@@ -20,22 +20,22 @@ const VIEWS = {
   },
   2: {
     id: 2, name: 'Vertretungsplan', slug: 'substitutions-plan', kind: 'substitutions', layout: 'auto', is_default: false,
-    on_air_behavior: 'fullscreen', webuntis_url: '', webuntis_url_next_day: '', webuntis_link_id: 5,
+    webuntis_url: '', webuntis_url_next_day: '', webuntis_link_id: 5,
     webuntis_link_next_day_id: null, page_seconds: 15, substitutions_source: 'embed', substitutions_next_day_from: '16:00', transit_stops: [], rotation_items: [], media_items: [],
   },
   6: {
-    id: 6, name: 'Aushänge', slug: 'notices', kind: 'media', layout: 'auto', is_default: false, on_air_behavior: 'fullscreen',
+    id: 6, name: 'Aushänge', slug: 'notices', kind: 'media', layout: 'auto', is_default: false,
     media_items: [], media_seconds: 10, pdf_per_screen: 1, pdf_mode: 'cycle', transit_stops: [], rotation_items: [],
   },
   7: {
     id: 7, name: 'Plan und Aushang', slug: 'split-notices', kind: 'split', layout: 'auto', is_default: false,
-    on_air_behavior: 'fullscreen', split_left: 'substitutions', split_right: 'departures', split_left_percent: 50,
+    split_left: 'substitutions', split_right: 'departures', split_left_percent: 50,
     substitutions_source: 'embed', page_seconds: 15, webuntis_link_id: null, webuntis_link_next_day_id: null,
     transit_stops: [], rotation_items: [], media_items: [], media_seconds: 10, pdf_per_screen: 1, pdf_mode: 'cycle',
   },
   4: {
     id: 4, name: 'Wechsel Mensa', slug: 'rotation-canteen', kind: 'rotation', layout: 'auto', is_default: false,
-    on_air_behavior: 'fullscreen', rotation_items: [{ view_id: 1, seconds: 20 }, { view_id: 2, seconds: 30 }], transit_stops: [], media_items: [],
+    rotation_items: [{ view_id: 1, seconds: 20 }, { view_id: 2, seconds: 30 }], transit_stops: [], media_items: [],
   },
 }
 const LIST = [

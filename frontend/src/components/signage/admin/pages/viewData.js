@@ -23,17 +23,6 @@ export function layoutHelp(layout) {
   return 'Info und Medien: Normal. Abfahrten, Vertretungsplan, Geteilt und Wechsel: Breit.'
 }
 
-export const ON_AIR_OPTIONS = [
-  { value: 'fullscreen', label: 'Vollbild' },
-  { value: 'split', label: 'Daneben' },
-  { value: 'none', label: 'Nicht zeigen' },
-]
-
-export const SIDE_OPTIONS = [
-  { value: 'left', label: 'Links' },
-  { value: 'right', label: 'Rechts' },
-]
-
 export const MIN_ROTATION_SECONDS = 5
 export const MAX_ROTATION_SECONDS = 600
 export const DEFAULT_MAX_DEPARTURES = 10
@@ -58,7 +47,7 @@ const inRange = (value, min, max) => value !== '' && value != null && Number.isI
   && Number(value) >= min && Number(value) <= max
 
 export const EDITABLE_FIELDS = [
-  'name', 'kind', 'layout', 'on_air_behavior', 'on_air_split_side', 'page_seconds',
+  'name', 'kind', 'layout', 'page_seconds',
   'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',

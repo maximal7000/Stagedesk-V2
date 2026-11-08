@@ -22,7 +22,8 @@ import DeviceLog from '../shared/DeviceLog'
 import PowerCheck from '../shared/PowerCheck'
 import { isPaired } from '../shared/deviceCommands'
 import {
-  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ORIENTATION_OPTIONS, OUTPUT_TRANSFORM_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS,
+  COLOR_SCHEME_OPTIONS, DEVICE_FIELDS, DISPLAY_FIELDS, ON_AIR_DISPLAY_OPTIONS, ON_AIR_SIDE_OPTIONS, ORIENTATION_OPTIONS,
+  OUTPUT_TRANSFORM_OPTIONS, OVERRIDE_CLEAR, POWER_FIELDS,
   POWER_METHOD_OPTIONS, POWER_MODE_OPTIONS, SCALE_OPTIONS, WEEKDAY_OPTIONS, activeOverride, cecLabel, configFor, deviceDefaults, devicePayload,
   deviceProblems, formatOutputMode, isPortraitTransform, kioskUrl, lastReport, outputModeOptions, overridePayload, overrideProblem, pickFields,
   sectionPayload,
@@ -225,6 +226,35 @@ function UpdatesSection({ device, canDevices, problem }) {
           help="Mit derselben Sperre wie die Updates."
           onChange={(v) => device.set('daily_reboot', v)} />
       </div>
+    </Section>
+  )
+}
+
+function OnAirSection({ draft, set, disabled, readOnly }) {
+  const enabled = draft.on_air_enabled === true
+  const split = draft.on_air_display === 'split'
+  return (
+    <Section title="On-Air" data-section="on-air"
+      aside={readOnly ? <span className="text-xs text-fg-subtle">Nur lesend, Recht für die Einrichtung fehlt</span> : null}>
+      <Checkbox label="Bei On-Air anzeigen" checked={enabled} disabled={disabled} onChange={(v) => set('on_air_enabled', v)}
+        help={enabled
+          ? 'Außerhalb seiner Zeiten schaltet sich der Bildschirm für On-Air ein und zeigt es als Vollbild, auch bei „Immer aus“, „Aus bis“ und in den Ferien. Danach gilt wieder der Zeitplan.'
+          : 'Aus: Der Bildschirm bleibt bei On-Air, wie er ist, und schaltet sich dafür nicht ein.'} />
+      {enabled && (
+        <div className="grid gap-4 sm:grid-cols-2 mt-5 pt-5 border-t border-line-subtle">
+          <Field label="In den Zeiten des Bildschirms"
+            help={split ? `Geteilt: On-Air ${draft.on_air_side === 'left' ? 'links' : 'rechts'}, die laufende Ansicht daneben.` : 'Vollbild: On-Air füllt den Bildschirm.'}>
+            <Segmented label="In den Zeiten des Bildschirms" options={ON_AIR_DISPLAY_OPTIONS} value={draft.on_air_display ?? 'fullscreen'}
+              disabled={disabled} onChange={(v) => set('on_air_display', v)} />
+          </Field>
+          {split && (
+            <Field label="Seite">
+              <Segmented label="Seite" options={ON_AIR_SIDE_OPTIONS} value={draft.on_air_side ?? 'right'} disabled={disabled}
+                onChange={(v) => set('on_air_side', v)} />
+            </Field>
+          )}
+        </div>
+      )}
     </Section>
   )
 }
@@ -620,6 +650,7 @@ export default function ScreenDetail() {
               <PowerSection draft={power.draft} set={power.set} readOnly={!canPower} disabled={!canPower || power.saving} problems={problems}
                 methodBlock={<PowerMethodBlock device={deviceDraft} original={originals.device} canDevices={canDevices} problems={deviceIssues}
                   deviceRow={device} screen={screen} canTest={canDevices && canPower} />} />
+              <OnAirSection draft={display.draft} set={display.set} readOnly={!canSetup} disabled={!canSetup || display.saving} />
               {(canDevices || isPaired(device)) && (
                 <OutputSection device={deviceDraft} deviceRow={device} canDevices={canDevices} orientation={display.draft.orientation}
                   onOrientation={canSetup ? (v) => display.set('orientation', v) : null} />
