@@ -85,21 +85,25 @@ export default function SubstitutionsView({ view }) {
   return <DayColumns data={data} seconds={view.page_seconds} />
 }
 
-// Two days side by side. In narrow areas (layout "Normal", split screen) there is no room for both days
-// stacked with their headers: then one day after the other, each with all its pages.
+// Two days side by side; in an area taller than wide (portrait screen) one above the other. In narrow
+// areas (layout "Normal", split screen) there is no room for both days with their headers: then one day
+// after the other, each with all its pages.
 const STACK_BELOW_REM = 100
+const MIN_DAY_HEIGHT_REM = 30
 
 function DayColumns({ data, seconds }) {
   const ref = useRef(null)
-  const { width, remPx } = useBoxSize(ref)
+  const { width, height, remPx } = useBoxSize(ref)
   const [turn, setTurn] = useState(0)
   const next = useCallback(() => setTurn((t) => t + 1), [])
   const days = data.days
   const columns = useMemo(() => tableColumns(data), [data])
-  const oneByOne = days.length > 1 && width > 0 && width / remPx < STACK_BELOW_REM
+  const stacked = days.length > 1 && height > width && height / remPx >= days.length * MIN_DAY_HEIGHT_REM
+  const oneByOne = !stacked && days.length > 1 && width > 0 && width / remPx < STACK_BELOW_REM
   const shown = oneByOne ? [turn % days.length] : days.map((_, i) => i)
   return (
-    <div ref={ref} className="flex h-full gap-[1.25rem]">
+    <div ref={ref} data-days={stacked ? 'stacked' : oneByOne ? 'one-by-one' : 'side-by-side'}
+      className={`flex h-full gap-[1.25rem] ${stacked ? 'flex-col' : ''}`}>
       {shown.map((i) => (
         <DayCard
           key={days[i].date ?? i} day={days[i]} news={i === 0 ? data.news : null} columns={columns} seconds={seconds}

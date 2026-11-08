@@ -169,6 +169,31 @@ describe('SubstitutionsView', () => {
     expect(el.textContent).not.toContain('Im Admin')
   })
 
+  it('im Hochformat beide Tage untereinander, in einer schmalen niedrigen Fläche nicht', () => {
+    const days = ['2026-10-21', '2026-10-22'].map((date, i) => ({
+      date, label: i ? 'Morgen' : 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
+      rows: [row({ subject: i ? 'Ph' : 'De' })],
+    }))
+    const box = (width, height) => vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue({ width, height, top: 0, left: 0, right: width, bottom: height, x: 0, y: 0 })
+    let rect = box(1080, 1700)
+    try {
+      const el = render(<SubstitutionsView view={view({ days })} />)
+      expect(el.querySelector('[data-days]').getAttribute('data-days')).toBe('stacked')
+      expect(el.querySelectorAll('section')).toHaveLength(2)
+    } finally {
+      rect.mockRestore()
+    }
+    act(() => root.unmount())
+    rect = box(500, 700)  // taller than wide, but no room for two days
+    try {
+      const el = render(<SubstitutionsView view={view({ days })} />)
+      expect(el.querySelector('[data-days]').getAttribute('data-days')).toBe('one-by-one')
+    } finally {
+      rect.mockRestore()
+    }
+  })
+
   it('in schmalen Flächen ein Tag nach dem anderen', () => {
     vi.useFakeTimers()
     const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
