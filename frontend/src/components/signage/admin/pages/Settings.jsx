@@ -2,6 +2,7 @@
 // weather need signage.setup, on-air signage.onair, emergency templates signage.emergency.
 // Credentials are write-only: an empty field keeps the stored value.
 import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Copy, Eye, EyeOff, Plug, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { PageHeader, Button } from '../../../ui'
@@ -16,6 +17,7 @@ import { errorText } from '../shared/errorText'
 import { Checkbox, Field, Section, Segmented, fieldClass } from '../shared/form'
 import { formatDayTime } from '../shared/explain'
 import { moveItem } from './viewData'
+import { onAirLabel } from './screenData'
 import {
   COLOR_SCHEME_OPTIONS, ON_AIR_ANIMATION_HELP, ON_AIR_ANIMATION_OPTIONS, ON_AIR_FIELDS, SCHEME_FIELDS, SETUP_FIELDS,
   DEVICE_NUMBER_FIELDS, changedIn, checkSentence, deviceProblems, installCommand, legacyScreenNames, settingsPayload, sourceSentence, templateChangeCount, templateChanges, templateProblems,
@@ -176,7 +178,39 @@ function DevicesSection({ draft, set, disabled, readOnly, legacyNames }) {
   )
 }
 
-function OnAirSection({ draft, set, disabled, readOnly }) {
+// Which screens show on air, and which of them are off by their own times and switch on for it.
+function OnAirScreens({ screens }) {
+  if (!screens) return null
+  const shown = screens.filter((s) => s.on_air_enabled)
+  return (
+    <div data-on-air-screens>
+      <div className="flex items-baseline justify-between gap-3 mb-1.5">
+        <div className="text-sm font-medium text-fg">Bildschirme mit On-Air</div>
+        <span className="text-xs text-fg-subtle">{shown.length} von {screens.length}</span>
+      </div>
+      {shown.length ? (
+        <ul className="divide-y divide-line-subtle border-y border-line-subtle">
+          {shown.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-3 py-2">
+              <div className="min-w-0">
+                <Link to={`/signage-admin/screens/${s.id}`} className="text-sm text-fg hover:underline">{s.name}</Link>
+                <div className="text-xs text-fg-subtle">{onAirLabel(s)}</div>
+              </div>
+              {s.scheduled_on === false && <span className="text-xs text-warn whitespace-nowrap">schaltet sich ein</span>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-fg-subtle">Noch kein Bildschirm. Eingestellt wird das beim Bildschirm unter „On-Air“.</p>
+      )}
+      {shown.some((s) => s.scheduled_on === false) && (
+        <p className="text-xs text-fg-subtle mt-1.5">„Schaltet sich ein“: Der Bildschirm ist laut Zeitplan gerade aus und zeigt On-Air als Vollbild.</p>
+      )}
+    </div>
+  )
+}
+
+function OnAirSection({ draft, set, disabled, readOnly, screens }) {
   const textId = useId()
   return (
     <Section title="On-Air" data-section="on-air" aside={readOnly ? readOnlyNote('On-Air') : null}>
@@ -191,6 +225,7 @@ function OnAirSection({ draft, set, disabled, readOnly }) {
         </Field>
         <Checkbox label="Uhr anzeigen" help="Zeigt die aktuelle Uhrzeit unter dem Schild." checked={draft.on_air_show_clock} disabled={disabled}
           onChange={(v) => set('on_air_show_clock', v)} />
+        <OnAirScreens screens={screens} />
       </div>
     </Section>
   )
@@ -325,6 +360,7 @@ export default function Settings() {
   const [settings, setSettings] = useState(null)
   const [error, setError] = useState(null)
   const [legacyNames, setLegacyNames] = useState(null)
+  const [screens, setScreens] = useState(null)
   const [templates, setTemplates] = useState(null)
   const [templateList, setTemplateList] = useState([])
   const [clearing, setClearing] = useState(null)
@@ -346,7 +382,10 @@ export default function Settings() {
     }
     setError(null)
     setSettings(settingsRes.value)
-    if (devicesRes.status === 'fulfilled') setLegacyNames(legacyScreenNames(devicesRes.value[0], devicesRes.value[1]))
+    if (devicesRes.status === 'fulfilled') {
+      setLegacyNames(legacyScreenNames(devicesRes.value[0], devicesRes.value[1]))
+      setScreens(devicesRes.value[1])
+    }
     if (templatesRes.status === 'fulfilled' && templatesRes.value) {
       const sorted = [...templatesRes.value].sort((x, y) => x.sort_order - y.sort_order)
       setTemplates(sorted)
@@ -464,7 +503,7 @@ export default function Settings() {
             dirty={webuntisDirty} onClear={() => setClearing('webuntis_password')} />
           {canEmergency && templates && <TemplatesSection list={templateList} setList={setTemplateList} />}
           <ColorSchemeSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup} />
-          <OnAirSection draft={values.draft} set={values.set} disabled={onAirDisabled} readOnly={!canOnAir} />
+          <OnAirSection draft={values.draft} set={values.set} disabled={onAirDisabled} readOnly={!canOnAir} screens={screens} />
           {canSetup && <ExternalControlSection />}
           <WeatherSection settings={settings} draft={values.draft} set={values.set} disabled={setupDisabled} readOnly={!canSetup}
             onClear={() => setClearing('weather_api_key')} />

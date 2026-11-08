@@ -60,9 +60,7 @@
   "transit_disruption_hidden": [
     "b2"
   ],
-  "on_air_split_side": "right",
   "style": "dense",
-  "on_air_behavior": "fullscreen",
   "rotation_items": [],
   "media_items": [],
   "media_seconds": 10,

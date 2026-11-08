@@ -23,6 +23,7 @@ def _set_on_air(active: bool):
     settings.on_air_since = timezone.now() if active else None
     settings.save(update_fields=['on_air_active', 'on_air_since'])
     push.notify_changed_on_commit()
+    push_power_to_all()  # screens with on air switch on outside their times, and off again
 
 
 def _set_emergency(active: bool, text: str, note: str):

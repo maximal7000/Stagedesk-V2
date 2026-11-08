@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from . import color_scheme, substitutions, transit
 from .models import Announcement, DisplayView, MediaFile, MonitorSettings
-from .power import compute_power_state
+from .power import compute_power_state, scheduled_power_state
 
 logger = logging.getLogger(__name__)
 
@@ -504,7 +504,7 @@ def _view_object(view, key_ok, now, single_day=False):
     }
 
 
-def _mode(screen, view, settings):
+def _mode(screen, view, settings, now):
     """Precedence: emergency > exam > on-air."""
     if settings.emergency_active:
         return {'kind': 'emergency', 'text': settings.emergency_text, 'note': settings.emergency_note,
@@ -516,8 +516,10 @@ def _mode(screen, view, settings):
                 'title': exam.title, 'text': exam.text,
                 'active_from': _iso(exam.active_from), 'active_until': _iso(exam.active_until),
                 'location': None}
-    if settings.on_air_active and view.on_air_behavior != 'none':
-        return {'kind': 'on_air', 'display': view.on_air_behavior, 'side': view.on_air_split_side,
+    if settings.on_air_active and screen is not None and screen.on_air_enabled:
+        # Outside its own times the screen is only on for on air, so nothing sits beside it.
+        display = screen.on_air_display if scheduled_power_state(screen, now) else 'fullscreen'
+        return {'kind': 'on_air', 'display': display, 'side': screen.on_air_side,
                 'text': settings.on_air_text, 'animation': settings.on_air_animation,
                 'show_clock': settings.on_air_show_clock, 'since': _iso(settings.on_air_since)}
     return None
@@ -539,7 +541,7 @@ def build_payload(screen, view, *, key_ok, now, preview=False):
     screen_data = _screen_object(screen, now, settings) if screen else None
     if screen_data and preview:
         screen_data['power'] = True
-    mode = _mode(screen, view, settings) if view and not preview else None
+    mode = _mode(screen, view, settings, now) if view and not preview else None
     single_day = bool(mode) and mode.get('display') == 'split'
     return {
         'generated_at': now.isoformat(),

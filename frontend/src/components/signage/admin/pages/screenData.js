@@ -4,7 +4,8 @@ import { describeSchedule, normalizeExceptions, normalizeSchedule } from '../sha
 
 // Saving sends only the fields of its own section. Display needs signage.setup, schedule and
 // power signage.power (backend: SCREEN_POWER_FIELDS).
-export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme']
+export const DISPLAY_FIELDS = ['name', 'location', 'default_view_id', 'scale', 'orientation', 'color_scheme',
+  'on_air_enabled', 'on_air_display', 'on_air_side']
 export const POWER_FIELDS = ['power_mode', 'schedule', 'off_during_holidays', 'power_exceptions']
 // The backend needs signage.devices for these fields.
 export const DEVICE_FIELDS = ['power_method', 'power_config', 'auto_updates', 'update_window', 'daily_reboot', 'output_mode', 'output_transform']
@@ -54,6 +55,20 @@ export function deviceDefaults(draft) {
     output_mode: draft?.output_mode ?? '',
     output_transform: draft?.output_transform ?? 'normal',
   }
+}
+
+export const ON_AIR_DISPLAY_OPTIONS = [
+  { value: 'fullscreen', label: 'Vollbild' },
+  { value: 'split', label: 'Geteilt' },
+]
+export const ON_AIR_SIDE_OPTIONS = [
+  { value: 'left', label: 'Links' },
+  { value: 'right', label: 'Rechts' },
+]
+
+export function onAirLabel(screen) {
+  if (screen?.on_air_display !== 'split') return 'Vollbild'
+  return screen.on_air_side === 'left' ? 'Geteilt, links' : 'Geteilt, rechts'
 }
 
 export const OUTPUT_TRANSFORM_OPTIONS = [
@@ -175,6 +190,9 @@ export function sectionPayload(section, draft, original) {
       scale: draft.scale,
       orientation: draft.orientation,
       color_scheme: draft.color_scheme ?? 'inherit',
+      on_air_enabled: draft.on_air_enabled === true,
+      on_air_display: draft.on_air_display ?? 'fullscreen',
+      on_air_side: draft.on_air_side ?? 'right',
     }
   }
   return {

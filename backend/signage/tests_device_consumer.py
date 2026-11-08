@@ -338,6 +338,7 @@ class DeviceConsumerTest(TransactionTestCase):
         self.assertFalse(devices.update_gate(self.screen, now)[0])
         exam.delete()
         MonitorSettings.objects.update_or_create(pk=1, defaults={'on_air_active': True})
+        self.screen.on_air_enabled = True
         allowed, reason = devices.update_gate(self.screen, now)
         self.assertFalse(allowed)
         self.assertIn('On-Air', reason)
@@ -353,10 +354,7 @@ class DeviceConsumerTest(TransactionTestCase):
         exam.screens.add(self.screen)
         self.assertEqual(devices.update_gate(self.screen, now), (True, ''))
 
-    def test_update_gate_on_air_behavior_none_allowed(self):
-        view = DisplayView.objects.create(name='Ohne', slug='ohne', is_default=True, on_air_behavior='none')
-        Screen.objects.filter(pk=self.screen.pk).update(default_view=view)
-        self.screen.refresh_from_db()
+    def test_update_gate_on_air_ignored_when_screen_not_enabled(self):
         MonitorSettings.objects.update_or_create(pk=1, defaults={'on_air_active': True})
         self.assertEqual(devices.update_gate(self.screen, timezone.now()), (True, ''))
 

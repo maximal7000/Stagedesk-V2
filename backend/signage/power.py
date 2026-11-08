@@ -49,9 +49,21 @@ def _schedule_entries(screen):
             if isinstance(e, dict) and isinstance(e.get('days', []), list)]
 
 
+def _on_air_active() -> bool:
+    from .models import MonitorSettings
+    return MonitorSettings.objects.filter(pk=1, on_air_active=True).exists()
+
+
 def compute_power_state(screen, now: datetime) -> bool:
     if _emergency_active():
         return True
+    if screen.on_air_enabled and _on_air_active():
+        return True  # nothing blocks on air, not even "always off"
+    return scheduled_power_state(screen, now)
+
+
+def scheduled_power_state(screen, now: datetime) -> bool:
+    """Power from mode, exceptions, holidays and schedule, without emergency and on air."""
     if screen.power_mode == 'manual_on':
         return True
     if screen.power_mode == 'manual_off':

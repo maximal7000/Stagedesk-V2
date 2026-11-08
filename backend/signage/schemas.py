@@ -127,10 +127,8 @@ class DisplayViewSchema(Schema):
     transit_disruption_bus_lines: list = []
     transit_disruption_manual: list = []
     transit_disruption_hidden: list = []
-    on_air_split_side: str = 'right'
     kind: str = 'info'
     layout: str = 'auto'
-    on_air_behavior: str = 'fullscreen'
     rotation_items: list = []
     media_items: list = []
     media_seconds: int = 10
@@ -214,10 +212,8 @@ class DisplayViewUpdateSchema(Schema):
     transit_disruption_bus_lines: Optional[list] = None
     transit_disruption_manual: Optional[list] = None
     transit_disruption_hidden: Optional[list] = None
-    on_air_split_side: Optional[str] = None
     kind: Optional[str] = None
     layout: Optional[str] = None
-    on_air_behavior: Optional[str] = None
     rotation_items: Optional[list] = None
     media_items: Optional[list] = None
     media_seconds: Optional[int] = None
@@ -304,9 +300,19 @@ class ScreenListSchema(Schema):
     daily_reboot: bool = True
     output_mode: str = ''
     output_transform: str = 'normal'
+    on_air_enabled: bool = False
+    on_air_display: str = 'fullscreen'
+    on_air_side: str = 'right'
     color_scheme: str = 'inherit'
     created_at: datetime
     updated_at: datetime
+    # On by its own times (without emergency and on air): the admin shows which screens on air wakes.
+    scheduled_on: bool = True
+
+    @staticmethod
+    def resolve_scheduled_on(obj):
+        from .power import scheduled_power_state
+        return scheduled_power_state(obj, timezone.now())
 
 
 class ScreenCreateSchema(Schema):
@@ -336,6 +342,9 @@ class ScreenUpdateSchema(Schema):
     daily_reboot: Optional[bool] = None
     output_mode: Optional[str] = None
     output_transform: Optional[Literal['normal', '90', '180', '270']] = None
+    on_air_enabled: Optional[bool] = None
+    on_air_display: Optional[Literal['fullscreen', 'split']] = None
+    on_air_side: Optional[Literal['left', 'right']] = None
     color_scheme: Optional[Literal['inherit', 'light', 'dark']] = None
 
 

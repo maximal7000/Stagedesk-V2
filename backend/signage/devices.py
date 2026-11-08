@@ -269,10 +269,8 @@ def update_gate(screen: Screen, now) -> tuple:
     exam = screen.get_active_exam()
     if exam is not None and exam.display_mode in ('fullscreen', 'split'):
         return False, f"Klausur „{exam.title}\" läuft"
-    if cfg.on_air_active:
-        view = screen.get_active_view()
-        if view is not None and view.on_air_behavior != 'none':
-            return False, "On-Air aktiv"
+    if cfg.on_air_active and screen.on_air_enabled:
+        return False, "On-Air aktiv"
     for assignment in screen.event_assignments.select_related('event'):
         if assignment.event.is_active_now:
             return False, f"Termin „{assignment.event.name}\" läuft"

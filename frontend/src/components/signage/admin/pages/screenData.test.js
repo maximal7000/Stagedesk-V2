@@ -29,7 +29,8 @@ describe('Abschnitte', () => {
 
   it('sectionPayload normalisiert Zeitplan und Ausnahmen und kürzt Texte', () => {
     expect(sectionPayload('display', { ...pickFields(glocke, DISPLAY_FIELDS), name: ' Glocke 2 ', default_view_id: '' }))
-      .toEqual({ name: 'Glocke 2', location: 'Eingangshalle', default_view_id: null, scale: 'auto', orientation: 'landscape', color_scheme: 'inherit' })
+      .toEqual({ name: 'Glocke 2', location: 'Eingangshalle', default_view_id: null, scale: 'auto', orientation: 'landscape', color_scheme: 'inherit',
+        on_air_enabled: false, on_air_display: 'fullscreen', on_air_side: 'right' })
     expect(sectionPayload('display', { ...pickFields(glocke, DISPLAY_FIELDS), color_scheme: undefined }).color_scheme).toBe('inherit')
     expect(sectionPayload('power', {
       power_mode: 'auto', off_during_holidays: false,

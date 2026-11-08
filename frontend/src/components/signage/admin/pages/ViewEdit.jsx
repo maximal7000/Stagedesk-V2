@@ -20,7 +20,7 @@ import MediaEditor from '../view-editors/Media'
 import InfoEditor from '../view-editors/Info'
 import RotationEditor from '../view-editors/Rotation'
 import {
-  KIND_OPTIONS, ON_AIR_OPTIONS, SIDE_OPTIONS, LAYOUT_OPTIONS, changedKeys, draftFromView, kindChangeProblem, kindLabel, previewPayload,
+  KIND_OPTIONS, LAYOUT_OPTIONS, changedKeys, draftFromView, kindChangeProblem, kindLabel, previewPayload,
   layoutHelp, usedOn, viewPayload, viewProblems,
 } from './viewData'
 import * as api from '../shared/api'
@@ -170,20 +170,6 @@ function GeneralSection({ draft, set, kindProblem }) {
             </div>
           )}
         </div>
-        <Field label="Bei On-Air" className="sm:col-span-2"
-          help={draft.on_air_behavior === 'none' ? 'Die Ansicht bleibt bei On-Air unverändert.' : draft.on_air_behavior === 'split'
-            ? 'Das On-Air-Schild steht neben der Ansicht.' : 'Das On-Air-Schild füllt den Bildschirm.'}>
-          <div className="flex flex-wrap gap-3">
-            <div className="w-full max-w-sm">
-              <Segmented label="Bei On-Air" options={ON_AIR_OPTIONS} value={draft.on_air_behavior ?? 'fullscreen'} onChange={(v) => set('on_air_behavior', v)} />
-            </div>
-            {draft.on_air_behavior === 'split' && (
-              <div className="w-40">
-                <Segmented label="Seite des On-Air-Schilds" options={SIDE_OPTIONS} value={draft.on_air_split_side ?? 'right'} onChange={(v) => set('on_air_split_side', v)} />
-              </div>
-            )}
-          </div>
-        </Field>
       </div>
     </Section>
   )
