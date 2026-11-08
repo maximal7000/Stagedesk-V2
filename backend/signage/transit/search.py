@@ -22,7 +22,7 @@ def search_stations(query, results=10, use_db=True, use_nahsh=True):
 
     def _search_db():
         # DB Timetables /station/{pattern} -> EVA numbers
-        if not db.DB_TT_CLIENT_ID:
+        if not (db.DB_TT_CLIENT_ID and db.DB_TT_API_KEY):
             return []
         root = _db_tt_get(f"/station/{urllib.parse.quote(query)}", timeout=REQUEST_TIMEOUT_SEARCH)
         out = []

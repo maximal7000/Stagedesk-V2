@@ -132,7 +132,7 @@ describe('Haltestellen', () => {
     expect(newStop({ id: '8000237', name: 'Lübeck Hbf', source: 'db' })).toEqual({
       id: '8000237', name: 'Lübeck Hbf', walk_minutes: 0, max_departures: 10, filter_lines: [],
       filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
-      source: '',
+      source: 'db',
     })
     expect(newStop({ id: '708049', name: 'Wahmstraße', source: 'nahsh' }).source).toBe('nahsh')
     expect(newStop({ id: '8000237', name: 'Lübeck Hbf', source: 'db+nahsh' }).source).toBe('')
@@ -147,6 +147,11 @@ describe('Haltestellen', () => {
     expect(stopSource({ id: '708049', source: 'db' }, { transit_source_db: false })).toBe('DB')
     expect(stopSource({ id: '8000237', source: 'nahsh' }, both)).toBe('NAH.SH')
     expect(stopSource({ id: '8000237', source: 'both' }, both)).toBe('DB und NAH.SH')
+  })
+  it('ohne DB-Zugang auf dem Server: Automatisch fragt NAH.SH, feste DB wird so benannt', () => {
+    expect(stopSource({ id: '8000237' }, {}, false)).toBe('NAH.SH')
+    expect(stopSource({ id: '8000237', source: 'db' }, {}, false)).toBe('DB (auf dem Server nicht eingerichtet)')
+    expect(stopSource({ id: '8000237', source: 'both' }, {}, false)).toBe('NAH.SH (DB auf dem Server nicht eingerichtet)')
   })
   it('beschreibt die Verkehrsmittel', () => {
     expect(stopTransport({})).toBe('Bus, Zug, Fernzug')

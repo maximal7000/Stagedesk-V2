@@ -172,6 +172,23 @@ const PAGES = {
       await waitForPreview(page)
     },
   },
+  'view-edit-stop-search': {
+    path: '/signage-admin/views/1', preview: 'departures', height: 1100,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Haltestelle hinzufügen' }).click()
+      await page.getByRole('radio', { name: 'Deutsche Bahn' }).click()
+      await page.getByLabel('Haltestelle hinzufügen', { exact: true }).fill('Lübeck')
+      await page.locator('[data-stop-search] [role="option"]').first().waitFor()
+    },
+  },
+  'view-edit-stop-search-no-db': {
+    path: '/signage-admin/views/1', variant: 'no-db', preview: 'departures', height: 1100,
+    action: async (page) => {
+      await page.getByRole('button', { name: 'Haltestelle hinzufügen' }).click()
+      await page.getByLabel('Haltestelle hinzufügen', { exact: true }).fill('Lübeck')
+      await page.locator('[data-stop-search] [role="option"]').first().waitFor()
+    },
+  },
   'view-edit-rotation': {
     path: '/signage-admin/views/4', preview: 'rotation', height: 1060,
     action: waitForPreview,

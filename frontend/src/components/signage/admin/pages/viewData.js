@@ -219,7 +219,8 @@ export function newStop(result) {
   return {
     id: result.id, name: result.name, walk_minutes: 0, max_departures: DEFAULT_MAX_DEPARTURES, filter_lines: [],
     filter_direction: '', filter_via: '', show_bus: true, show_rail: true, show_long_distance: true, split_modes: true,
-    source: result.source === 'nahsh' ? 'nahsh' : '',
+    // A hit from one system only uses that system: its id belongs to it (DB: EVA number).
+    source: result.source === 'db' || result.source === 'nahsh' ? result.source : '',
   }
 }
 
@@ -233,12 +234,15 @@ export const STOP_SOURCES = [
 // Same rule as the backend (transit/departures.py): DB Timetables knows only railway stations (EVA 80xxxxx).
 export const isRailwayStation = (id) => /^80\d{5}$/.test(String(id ?? '').trim())
 
+const DB_MISSING = 'auf dem Server nicht eingerichtet'
+
 // Which source the backend actually asks for this stop; the view-wide switches apply only to "automatic".
-export function stopSource(stop, draft) {
-  if (stop.source === 'db') return 'DB'
+// dbConfigured false: the server has no DB access, so "automatic" never asks the DB.
+export function stopSource(stop, draft, dbConfigured = true) {
+  if (stop.source === 'db') return dbConfigured ? 'DB' : `DB (${DB_MISSING})`
   if (stop.source === 'nahsh') return 'NAH.SH'
-  if (stop.source === 'both') return 'DB und NAH.SH'
-  const db = draft.transit_source_db !== false && isRailwayStation(stop.id)
+  if (stop.source === 'both') return dbConfigured ? 'DB und NAH.SH' : `NAH.SH (DB ${DB_MISSING})`
+  const db = dbConfigured && draft.transit_source_db !== false && isRailwayStation(stop.id)
   const nahsh = draft.transit_source_nahsh !== false
   if (db && nahsh) return 'DB, Ersatz NAH.SH'
   if (db) return 'DB'
