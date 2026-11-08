@@ -229,6 +229,7 @@ export const STOP_SOURCES = [
   { value: 'db', label: 'Deutsche Bahn' },
   { value: 'nahsh', label: 'NAH.SH' },
   { value: 'both', label: 'Beide (zusammengeführt)' },
+  { value: 'openboards', label: 'DB OpenBoards (nur Bahn, mit SEV)' },
 ]
 
 // Same rule as the backend (transit/departures.py): DB Timetables knows only railway stations (EVA 80xxxxx).
@@ -242,6 +243,7 @@ export function stopSource(stop, draft, dbConfigured = true) {
   if (stop.source === 'db') return dbConfigured ? 'DB' : `DB (${DB_MISSING})`
   if (stop.source === 'nahsh') return 'NAH.SH'
   if (stop.source === 'both') return dbConfigured ? 'DB und NAH.SH' : `NAH.SH (DB ${DB_MISSING})`
+  if (stop.source === 'openboards') return dbConfigured ? 'DB OpenBoards' : `DB OpenBoards (${DB_MISSING})`
   const db = dbConfigured && draft.transit_source_db !== false && isRailwayStation(stop.id)
   const nahsh = draft.transit_source_nahsh !== false
   if (db && nahsh) return 'DB, Ersatz NAH.SH'

@@ -75,7 +75,7 @@ def _check_numbers(data):
 
 
 # '' = automatic: DB for railway stations, NAH.SH for everything else
-STOP_SOURCES = ('', 'db', 'nahsh', 'both')
+STOP_SOURCES = ('', 'db', 'nahsh', 'both', 'openboards')
 
 
 def _check_stops(stops):

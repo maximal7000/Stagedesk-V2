@@ -7,6 +7,7 @@ from .common import REQUEST_TIMEOUT, TIMEZONE
 from . import db as db_api
 from .db import _fetch_departures_db, _fetch_sbahn_meta
 from .nahsh import _fetch_departures_nahsh
+from .openboards import fetch_departures_openboards
 
 logger = logging.getLogger('signage.transit')
 
@@ -78,6 +79,8 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
             return False, True
         if source == "both":
             return True, True
+        if source == "openboards":
+            return False, False  # its own branch in _fetch_single
         return use_db and _is_eva(station.get("id")), use_nahsh
 
     def _extra_uses_db(station):
@@ -107,6 +110,15 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         error = None
 
         need_stopovers = bool(filter_via) or show_via
+
+        if station_source == "openboards":
+            try:
+                raw_departures = fetch_departures_openboards(station_id, duration, max_per_stop * 2,
+                                                             stopovers=need_stopovers)
+            except Exception as e:
+                logger.warning(f"DB OpenBoards Abfahrten Fehler ({station_name}): {e}")
+                errors.add("openboards")
+                error = str(e)
 
         if st_use_db:
             failed = []
@@ -350,8 +362,10 @@ def fetch_departures(stops, duration=60, max_per_stop=20,
         nahsh_active = any(
             _stop_sources(s)[1] or (s.get("extra_id", "").strip() and s.get("extra_source", "") != "db")
             for _, s in valid)
-        return {"stations": stations,
-                "sources": {"db": _status("db", db_active), "nahsh": _status("nahsh", nahsh_active)}}
+        sources = {"db": _status("db", db_active), "nahsh": _status("nahsh", nahsh_active)}
+        if any(s.get("source") == "openboards" for _, s in valid):
+            sources["openboards"] = _status("openboards", bool(db_api.DB_TT_CLIENT_ID and db_api.DB_TT_API_KEY))
+        return {"stations": stations, "sources": sources}
 
     if not valid:
         return _result([])

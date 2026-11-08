@@ -56,7 +56,7 @@ export default function StopFilterDialog({ stop, onApply, onCancel, onRemove }) 
             </div>
           </Field>
           <Field label="Quelle" htmlFor={ids.source}
-            help="Automatisch: Bahnhöfe zuerst von der Deutschen Bahn (mit Gleisen), sonst NAH.SH. Beide: Abfahrten aus beiden Quellen zusammengeführt.">
+            help="Automatisch: Bahnhöfe zuerst von der Deutschen Bahn (mit Gleisen), sonst NAH.SH. Beide: Abfahrten aus beiden Quellen zusammengeführt. DB OpenBoards: nur Züge und Schienenersatzverkehr (SEV) mit Echtzeit, ohne Busse; braucht eine Bahnhofsnummer der DB.">
             <select id={ids.source} value={draft.source ?? ''} onChange={(e) => set('source', e.target.value)} className={`${fieldClass} max-w-64`}>
               {STOP_SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>

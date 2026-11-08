@@ -1,0 +1,937 @@
+{
+ "administrations": [
+  {
+   "administrationId": "X1",
+   "operatorCode": "erx",
+   "operatorName": "erixx"
+  },
+  {
+   "administrationId": "800292",
+   "operatorCode": "DB",
+   "operatorName": "DB Regio AG Nord"
+  },
+  {
+   "administrationId": "B1SH",
+   "operatorCode": "DB",
+   "operatorName": "DB Regio AG Nord"
+  }
+ ],
+ "departures": [
+  {
+   "departureId": "378258_D_1",
+   "evaNumber": "378258",
+   "journeyId": "20261108-044470a0-035b-39b8-b1d0-32062dad62ed",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "702684"
+    },
+    "headerAdministrationId": "X1",
+    "headerJourneyNumber": 9324,
+    "origin": {
+     "evaNumber": "378258"
+    },
+    "scheduledStartTime": "2026-11-08T16:59:00+01:00",
+    "transportAtStart": {
+     "administrationId": "X1",
+     "category": "Bus",
+     "categoryInternal": "Bsv",
+     "journeyDescription": "Bus RE83",
+     "journeyNumber": 9324,
+     "line": {
+      "name": "RE83"
+     },
+     "operationalJourneyNumber": "9324",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "platform": {},
+   "platformSchedule": {},
+   "time": "2026-11-08T16:59:00+01:00",
+   "timeSchedule": "2026-11-08T16:59:00+01:00",
+   "timeType": "PREVIEW",
+   "transport": {
+    "administrationId": "X1",
+    "category": "Bus",
+    "categoryInternal": "Bsv",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "702684"
+      }
+     ]
+    },
+    "journeyDescription": "Bus RE83",
+    "journeyNumber": 9324,
+    "line": {
+     "name": "RE83"
+    },
+    "operationalJourneyNumber": "9324",
+    "replacementTransport": {
+     "realType": "BUS"
+    },
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "699626"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "699931"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "699362"
+     }
+    ]
+   }
+  },
+  {
+   "departureId": "8000237_D_1",
+   "evaNumber": "8000237",
+   "journeyId": "20261108-ac349eed-2d9a-3116-9294-a9e5033ef191",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "8003778"
+    },
+    "headerAdministrationId": "800292",
+    "headerJourneyNumber": 11424,
+    "origin": {
+     "evaNumber": "8002549"
+    },
+    "scheduledStartTime": "2026-11-08T16:06:00+01:00",
+    "transportAtStart": {
+     "administrationId": "800292",
+     "category": "RE",
+     "categoryInternal": "NRE",
+     "dfid": "de:hvv:RE8::11424|1606",
+     "dtid": "de:hvv:RE8:",
+     "journeyDescription": "RE8",
+     "journeyNumber": 11424,
+     "line": {
+      "name": "RE8"
+     },
+     "operationalJourneyNumber": "11424",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "messages": [
+    1,
+    2
+   ],
+   "platform": {
+    "ifopt": "de:01003:57819::6",
+    "name": "6"
+   },
+   "platformSchedule": {
+    "ifopt": "de:01003:57819::6",
+    "name": "6"
+   },
+   "time": "2026-11-08T17:03:00+01:00",
+   "timeSchedule": "2026-11-08T17:03:00+01:00",
+   "timeType": "PREVIEW",
+   "transport": {
+    "administrationId": "800292",
+    "category": "RE",
+    "categoryInternal": "NRE",
+    "dfid": "de:hvv:RE8::11424|1606",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "8003778"
+      }
+     ]
+    },
+    "dtid": "de:hvv:RE8:",
+    "journeyDescription": "RE8",
+    "journeyNumber": 11424,
+    "line": {
+     "name": "RE8"
+    },
+    "operationalJourneyNumber": "11424",
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "8003786"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "8003776"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "8006704"
+     }
+    ]
+   },
+   "vehicleSequenceAvailable": true
+  },
+  {
+   "departureId": "378258_D_1",
+   "evaNumber": "378258",
+   "journeyId": "20261108-093c9364-1926-3ddf-b93d-d73735693504",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "699362"
+    },
+    "headerAdministrationId": "X1",
+    "headerJourneyNumber": 4324,
+    "origin": {
+     "evaNumber": "378258"
+    },
+    "scheduledStartTime": "2026-11-08T17:05:00+01:00",
+    "transportAtStart": {
+     "administrationId": "X1",
+     "category": "Bus",
+     "categoryInternal": "Bsv",
+     "journeyDescription": "Bus RE83",
+     "journeyNumber": 4324,
+     "line": {
+      "name": "RE83"
+     },
+     "operationalJourneyNumber": "4324",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "platform": {},
+   "platformSchedule": {},
+   "time": "2026-11-08T17:05:00+01:00",
+   "timeSchedule": "2026-11-08T17:05:00+01:00",
+   "timeType": "PREVIEW",
+   "transport": {
+    "administrationId": "X1",
+    "category": "Bus",
+    "categoryInternal": "Bsv",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "699362"
+      }
+     ]
+    },
+    "journeyDescription": "Bus RE83",
+    "journeyNumber": 4324,
+    "line": {
+     "name": "RE83"
+    },
+    "operationalJourneyNumber": "4324",
+    "replacementTransport": {
+     "realType": "BUS"
+    },
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "700044"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "700067"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "699626"
+     }
+    ]
+   }
+  },
+  {
+   "departureId": "8000237_D_1",
+   "evaNumber": "8000237",
+   "journeyId": "20261108-cc96c1ec-4df2-3abc-ae1c-8c01e13c37f0",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "8002549"
+    },
+    "headerAdministrationId": "800292",
+    "headerJourneyNumber": 11427,
+    "origin": {
+     "evaNumber": "8003778"
+    },
+    "scheduledStartTime": "2026-11-08T16:34:00+01:00",
+    "transportAtStart": {
+     "administrationId": "800292",
+     "category": "RE",
+     "categoryInternal": "NRE",
+     "dfid": "de:hvv:RE8::11427|1634",
+     "dtid": "de:hvv:RE8:",
+     "journeyDescription": "RE8",
+     "journeyNumber": 11427,
+     "line": {
+      "name": "RE8"
+     },
+     "operationalJourneyNumber": "11427",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "messages": [
+    1,
+    2
+   ],
+   "platform": {
+    "ifopt": "de:01003:57819::7",
+    "name": "7"
+   },
+   "platformSchedule": {
+    "ifopt": "de:01003:57819::7",
+    "name": "7"
+   },
+   "time": "2026-11-08T17:09:00+01:00",
+   "timeSchedule": "2026-11-08T17:09:00+01:00",
+   "timeType": "PREVIEW",
+   "transport": {
+    "administrationId": "800292",
+    "category": "RE",
+    "categoryInternal": "NRE",
+    "dfid": "de:hvv:RE8::11427|1634",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "8002549"
+      }
+     ]
+    },
+    "dtid": "de:hvv:RE8:",
+    "journeyDescription": "RE8",
+    "journeyNumber": 11427,
+    "line": {
+     "name": "RE8"
+    },
+    "operationalJourneyNumber": "11427",
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "8003775"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "8005019"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "8000023"
+     }
+    ]
+   },
+   "vehicleSequenceAvailable": true
+  },
+  {
+   "departureId": "560021_D_1",
+   "evaNumber": "560021",
+   "journeyId": "20261108-3ada312d-81ce-39ca-836e-df154e036909",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "230245"
+    },
+    "headerAdministrationId": "B1SH",
+    "headerJourneyNumber": 8524,
+    "origin": {
+     "evaNumber": "560021"
+    },
+    "scheduledStartTime": "2026-11-08T17:12:00+01:00",
+    "transportAtStart": {
+     "administrationId": "B1SH",
+     "category": "Bus",
+     "categoryInternal": "Bsv",
+     "journeyDescription": "Bus X85",
+     "journeyNumber": 8524,
+     "line": {
+      "name": "X85"
+     },
+     "operationalJourneyNumber": "4308524",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "messages": [
+    3,
+    4
+   ],
+   "platform": {},
+   "platformSchedule": {},
+   "time": "2026-11-08T17:12:00+01:00",
+   "timeSchedule": "2026-11-08T17:12:00+01:00",
+   "timeType": "SCHEDULE",
+   "transport": {
+    "administrationId": "B1SH",
+    "category": "Bus",
+    "categoryInternal": "Bsv",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "230245"
+      }
+     ]
+    },
+    "journeyDescription": "Bus X85",
+    "journeyNumber": 8524,
+    "line": {
+     "name": "X85"
+    },
+    "operationalJourneyNumber": "4308524",
+    "replacementTransport": {
+     "realType": "BUS"
+    },
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "130146"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "139271"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "230244"
+     }
+    ]
+   }
+  },
+  {
+   "departureId": "8000237_D_1",
+   "evaNumber": "8000237",
+   "journeyId": "20261108-e6d1417e-6b84-3a2c-bc23-6c2c13a91905",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "8004327"
+    },
+    "headerAdministrationId": "800292",
+    "headerJourneyNumber": 11624,
+    "origin": {
+     "evaNumber": "8000237"
+    },
+    "scheduledStartTime": "2026-11-08T17:12:00+01:00",
+    "transportAtStart": {
+     "administrationId": "800292",
+     "category": "RB",
+     "categoryInternal": "NRB",
+     "dfid": "de:NAHSH:RB85::11624|1712",
+     "dtid": "de:NAHSH:RB85:",
+     "journeyDescription": "RB85",
+     "journeyNumber": 11624,
+     "line": {
+      "name": "RB85"
+     },
+     "operationalJourneyNumber": "11624",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "messages": [
+    5,
+    2
+   ],
+   "platform": {
+    "ifopt": "de:01003:57819::2",
+    "name": "2"
+   },
+   "platformSchedule": {
+    "ifopt": "de:01003:57819::2",
+    "name": "2"
+   },
+   "time": "2026-11-08T17:12:00+01:00",
+   "timeSchedule": "2026-11-08T17:12:00+01:00",
+   "timeType": "PREVIEW",
+   "transport": {
+    "administrationId": "800292",
+    "category": "RB",
+    "categoryInternal": "NRB",
+    "dfid": "de:NAHSH:RB85::11624|1712",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "8004327"
+      }
+     ]
+    },
+    "dtid": "de:NAHSH:RB85:",
+    "journeyDescription": "RB85",
+    "journeyNumber": 11624,
+    "line": {
+     "name": "RB85"
+    },
+    "operationalJourneyNumber": "11624",
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "8000749"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "8005874"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "8005321"
+     }
+    ]
+   },
+   "vehicleSequenceAvailable": true
+  },
+  {
+   "departureId": "378258_D_1",
+   "evaNumber": "378258",
+   "journeyId": "20261108-f2b0e035-3082-35c1-abf5-7e9d386bf820",
+   "journeyInfo": {
+    "destination": {
+     "evaNumber": "896071"
+    },
+    "headerAdministrationId": "X1",
+    "headerJourneyNumber": 1327,
+    "origin": {
+     "evaNumber": "378258"
+    },
+    "scheduledStartTime": "2026-11-08T17:15:00+01:00",
+    "transportAtStart": {
+     "administrationId": "X1",
+     "category": "Bus",
+     "categoryInternal": "Bsv",
+     "journeyDescription": "Bus RE83",
+     "journeyNumber": 1327,
+     "line": {
+      "name": "RE83"
+     },
+     "operationalJourneyNumber": "1327",
+     "type": "REGIONAL_TRAIN"
+    },
+    "type": "REGULAR"
+   },
+   "platform": {},
+   "platformSchedule": {},
+   "time": "2026-11-08T17:15:00+01:00",
+   "timeSchedule": "2026-11-08T17:15:00+01:00",
+   "timeType": "PREVIEW",
+   "transport": {
+    "administrationId": "X1",
+    "category": "Bus",
+    "categoryInternal": "Bsv",
+    "direction": {
+     "stopPlaces": [
+      {
+       "evaNumber": "896071"
+      }
+     ]
+    },
+    "journeyDescription": "Bus RE83",
+    "journeyNumber": 1327,
+    "line": {
+     "name": "RE83"
+    },
+    "operationalJourneyNumber": "1327",
+    "replacementTransport": {
+     "realType": "BUS"
+    },
+    "type": "REGIONAL_TRAIN",
+    "via": [
+     {
+      "displayPriority": 1,
+      "evaNumber": "8071067"
+     },
+     {
+      "displayPriority": 2,
+      "evaNumber": "695945"
+     },
+     {
+      "displayPriority": 3,
+      "evaNumber": "705362"
+     }
+    ]
+   }
+  }
+ ],
+ "messages": {
+  "attributes": [
+   {
+    "code": "G",
+    "descriptions": [
+     {
+      "language": "deu",
+      "text": "Fahrradmitnahme begrenzt möglich"
+     }
+    ],
+    "messageID": 1
+   },
+   {
+    "code": "EH",
+    "descriptions": [
+     {
+      "language": "deu",
+      "text": "Rollstuhl: Einstieg mit Bahnhofs-/Zugpersonal, Anmeldung empfohlen"
+     }
+    ],
+    "messageID": 2
+   },
+   {
+    "code": "TF",
+    "descriptions": [
+     {
+      "language": "deu",
+      "text": "Bus mit Fahrradträger"
+     }
+    ],
+    "messageID": 3
+   },
+   {
+    "code": "FB",
+    "descriptions": [
+     {
+      "language": "deu",
+      "text": "Fahrradmitnahme begrenzt möglich"
+     }
+    ],
+    "messageID": 4
+   },
+   {
+    "code": "FK",
+    "descriptions": [
+     {
+      "language": "deu",
+      "text": "Fahrradmitnahme begrenzt möglich"
+     }
+    ],
+    "messageID": 5
+   }
+  ]
+ },
+ "meta": {
+  "consideredStopPlaces": [
+   "129701",
+   "189404",
+   "303213",
+   "304021",
+   "378258",
+   "560021",
+   "697342",
+   "700364",
+   "700374",
+   "8000237",
+   "8089404",
+   "895081"
+  ]
+ },
+ "stations": [
+  {
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck Hbf"
+    }
+   ],
+   "stada": "3807"
+  }
+ ],
+ "stopPlaces": [
+  {
+   "evaNumber": "378258",
+   "ifopt": "de:01003:58085::SEV",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "ZOB/Hauptbahnhof, Lübeck"
+    }
+   ]
+  },
+  {
+   "evaNumber": "702684",
+   "ifopt": "de:01057:3368",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Bahnhof, Ascheberg (Holstein)"
+    }
+   ]
+  },
+  {
+   "evaNumber": "699626",
+   "ifopt": "de:01055:26341",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "ZOB/Bahnhof, Eutin"
+    }
+   ]
+  },
+  {
+   "evaNumber": "699931",
+   "ifopt": "de:01055:5243",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Bahnhof, Malente"
+    }
+   ]
+  },
+  {
+   "evaNumber": "699362",
+   "ifopt": "de:01057:74187",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "ZOB/Bahnhof, Plön"
+    }
+   ]
+  },
+  {
+   "evaNumber": "8000237",
+   "ifopt": "de:01003:57819",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck Hbf"
+    }
+   ],
+   "stada": "3807"
+  },
+  {
+   "evaNumber": "8002549",
+   "ifopt": "de:02000:10950",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Hamburg Hbf"
+    }
+   ],
+   "stada": "2514"
+  },
+  {
+   "evaNumber": "8003778",
+   "ifopt": "de:01003:58104",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck-Travemünde Strand"
+    }
+   ],
+   "stada": "3814"
+  },
+  {
+   "evaNumber": "8003786",
+   "ifopt": "de:01003:58093",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck-Dänischburg IKEA"
+    }
+   ],
+   "stada": "8300"
+  },
+  {
+   "evaNumber": "8003776",
+   "ifopt": "de:01003:58094",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck-Kücknitz"
+    }
+   ],
+   "stada": "3810"
+  },
+  {
+   "evaNumber": "8006704",
+   "ifopt": "de:01003:58101",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck-Travem. Skandinavienkai"
+    }
+   ],
+   "stada": "3813"
+  },
+  {
+   "evaNumber": "700044",
+   "ifopt": "de:01055:72966",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Pansdorf Bahnhof, Ratekau"
+    }
+   ]
+  },
+  {
+   "evaNumber": "700067",
+   "ifopt": "de:01055:80983",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Pönitz Bahnhof/Schule, Scharbeutz"
+    }
+   ]
+  },
+  {
+   "evaNumber": "8003775",
+   "ifopt": "de:01003:8003775",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck-Moisling"
+    }
+   ],
+   "stada": "8378"
+  },
+  {
+   "evaNumber": "8005019",
+   "ifopt": "de:01062:8005019",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Reinfeld(Holst)"
+    }
+   ],
+   "stada": "5201"
+  },
+  {
+   "evaNumber": "8000023",
+   "ifopt": "de:01062:37979",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Bad Oldesloe"
+    }
+   ],
+   "stada": "317"
+  },
+  {
+   "evaNumber": "560021",
+   "ifopt": "de:01003:58085::1",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "ZOB/Hauptbahnhof, Lübeck"
+    }
+   ]
+  },
+  {
+   "evaNumber": "230245",
+   "ifopt": "de:01055:74912::SEV",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Puttgarden Bahnhof, Fehmarn"
+    }
+   ]
+  },
+  {
+   "evaNumber": "130146",
+   "ifopt": "de:01055:80974::SEV",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Haffkrug Bahnhof, Scharbeutz"
+    }
+   ]
+  },
+  {
+   "evaNumber": "139271",
+   "ifopt": "de:01055:9039271::1",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Dieselstraße, Lensahn"
+    }
+   ]
+  },
+  {
+   "evaNumber": "230244",
+   "ifopt": "de:01055:70724::SEV",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "ZOB/Bahnhof, Oldenburg in Holstein"
+    }
+   ]
+  },
+  {
+   "evaNumber": "8004327",
+   "ifopt": "de:01055:66582",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Neustadt(Holst)"
+    }
+   ],
+   "stada": "4447"
+  },
+  {
+   "evaNumber": "8000749",
+   "ifopt": "de:01055:6090",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Bad Schwartau"
+    }
+   ],
+   "stada": "343"
+  },
+  {
+   "evaNumber": "8005874",
+   "ifopt": "de:01055:90920",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Timmendorfer Strand"
+    }
+   ],
+   "stada": "6218"
+  },
+  {
+   "evaNumber": "8005321",
+   "ifopt": "de:01055:80952",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Scharbeutz"
+    }
+   ],
+   "stada": "5541"
+  },
+  {
+   "evaNumber": "896071",
+   "ifopt": "de:01053:85718",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Bahnhof (Ladestraße), Büchen"
+    }
+   ]
+  },
+  {
+   "evaNumber": "8071067",
+   "ifopt": "de:01003:57678",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Lübeck Alexander-Fleming-Straße"
+    }
+   ]
+  },
+  {
+   "evaNumber": "695945",
+   "ifopt": "de:01003:57775",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Flughafen(Bus), Lübeck"
+    }
+   ]
+  },
+  {
+   "evaNumber": "705362",
+   "ifopt": "de:01053:85189",
+   "localizedNames": [
+    {
+     "language": "deu",
+     "name": "Bahnhof, Ratzeburg"
+    }
+   ]
+  }
+ ]
+}
