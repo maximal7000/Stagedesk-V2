@@ -88,6 +88,14 @@ function typeInto(input, value) {
   input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 const button = (name) => [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === name || b.getAttribute('aria-label') === name)
+const byLabel = (text) => {
+  const label = [...container.querySelectorAll('label')].find((l) => l.textContent.trim() === text)
+  return document.getElementById(label.htmlFor)
+}
+function choose(select, value) {
+  Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(select, value)
+  select.dispatchEvent(new Event('change', { bubbles: true }))
+}
 const stopNames = () => [...container.querySelectorAll('[data-stop-row]')].map((r) => r.getAttribute('data-stop-row'))
 
 function dragEvent(type) {
@@ -209,11 +217,20 @@ describe('ViewEdit', () => {
   it('Geteilt: Medien als Seite zeigt die Medienauswahl und speichert die Seite', async () => {
     await mount('/signage-admin/views/7')
     expect(container.querySelector('[data-editor-section="media"]')).toBeNull()
-    const right = container.querySelector('[role="radiogroup"][aria-label="Inhalt rechts"]')
-    await act(async () => [...right.querySelectorAll('button')].find((b) => b.textContent === 'Medien').click())
+    await act(async () => { choose(byLabel('Rechts'), 'media') })
     expect(container.querySelector('[data-editor-section="media"]')).not.toBeNull()
     await act(async () => button('Speichern').click())
     expect(api.updateView).toHaveBeenCalledWith(7, { split_right: 'media' })
+  })
+
+  it('Geteilt: Ankündigungen als Seite zeigen ihre Auswahl und speichern die Seite', async () => {
+    await mount('/signage-admin/views/7')
+    expect([...byLabel('Links').options].map((o) => o.textContent)).toEqual(['Vertretungsplan', 'Abfahrten', 'Medien', 'Ankündigungen'])
+    await act(async () => { choose(byLabel('Links'), 'info') })
+    const section = container.querySelector('[data-editor-section="info"]')
+    expect(section.textContent).toContain('Ankündigungen und Termine')
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).toHaveBeenCalledWith(7, { split_left: 'info' })
   })
 
   it('Abfahrten: blendet eine aktuelle Meldung aus und speichert die Vorausschau', async () => {

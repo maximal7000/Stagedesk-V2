@@ -87,6 +87,20 @@ describe('DisplayRoot', () => {
     expect(el.querySelector('[data-clock="box"]').textContent).toContain('Regen')
   })
 
+  it('geteilt: Ankündigungen auf einer Seite', () => {
+    const view = {
+      id: 5, kind: 'split', layout: 'wide', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: {
+        left: { kind: 'info', data: { announcements: [{ id: 1, title: 'Aula gesperrt', text: 'Generalprobe', priority: 'high', active_until: null }], events: [], countdown: null } },
+        right: { kind: 'info', data: { announcements: [], events: [], countdown: null } },
+        left_percent: 50,
+      },
+    }
+    const el = render({ payload: { screen, view, mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-split-side="left"]').textContent).toContain('Aula gesperrt')
+    expect(el.querySelector('[data-split-side="right"]').textContent).toBe('Keine Ankündigungen oder Termine.')
+  })
+
   it('geteilt: Medien auf einer Seite passen in die Seite, Uhr bleibt im Rahmen', () => {
     const view = {
       id: 4, kind: 'split', layout: 'wide', page_seconds: 15, show_weather: false, weather: null, qr: null,
