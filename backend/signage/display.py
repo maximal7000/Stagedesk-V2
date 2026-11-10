@@ -355,6 +355,8 @@ def _split_side(view, content, key_ok, now):
         return {'kind': 'departures', 'data': _departures_data(view, now)}
     if content == 'media':
         return {'kind': 'media', 'data': _media_data(view)}
+    if content == 'info':
+        return {'kind': 'info', 'data': _info_data(view, now)}
     return {'kind': content, 'data': None}
 
 

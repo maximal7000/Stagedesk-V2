@@ -1,0 +1,524 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true,
+    "scheme": "light"
+  },
+  "scheme": "light",
+  "mode": null,
+  "view": {
+    "id": 9,
+    "kind": "split",
+    "layout": "wide",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "left": {
+        "kind": "substitutions",
+        "data": {
+          "source": "monitor",
+          "fallback": false,
+          "group_by": "class",
+          "columns": {
+            "class": true,
+            "subject": true,
+            "teacher": true,
+            "room": true,
+            "note": true
+          },
+          "days": [
+            {
+              "date": "2026-10-19",
+              "label": "Heute",
+              "absent": [
+                {
+                  "name": "ZEB",
+                  "kind": "teacher",
+                  "periods": ""
+                },
+                {
+                  "name": "ÖLZ",
+                  "kind": "teacher",
+                  "periods": "1."
+                },
+                {
+                  "name": "BEC",
+                  "kind": "teacher",
+                  "periods": "3.–6."
+                },
+                {
+                  "name": "WAG",
+                  "kind": "teacher",
+                  "periods": "5."
+                },
+                {
+                  "name": "8b",
+                  "kind": "class",
+                  "periods": ""
+                }
+              ],
+              "affected": {
+                "classes": [
+                  "5a",
+                  "5c",
+                  "6a",
+                  "6b",
+                  "7a",
+                  "7c",
+                  "8a",
+                  "9a",
+                  "9b",
+                  "Ea",
+                  "Ed",
+                  "10b",
+                  "Q1a",
+                  "Q1c",
+                  "Q1d",
+                  "Q2a",
+                  "Q2b",
+                  "Q2c",
+                  "Q2d"
+                ],
+                "teachers": [
+                  "ZEB",
+                  "BEC",
+                  "GUT",
+                  "ROT",
+                  "KLM",
+                  "LOR",
+                  "ÖLZ",
+                  "T-K",
+                  "ROS",
+                  "FEN",
+                  "JOR",
+                  "SNR",
+                  "WAG",
+                  "VAN"
+                ]
+              },
+              "messages": [
+                {
+                  "subject": "Aula",
+                  "body": "Ab der 5. Stunde ist die Aula für die Generalprobe gesperrt. Sportunterricht Q1 findet in Halle 2 statt."
+                }
+              ],
+              "rows": [
+                {
+                  "classes": [
+                    "5a",
+                    "6a",
+                    "7a",
+                    "8a",
+                    "9a"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Fö",
+                  "teacher": "",
+                  "teacher_old": "LOR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "5",
+                  "classes_label": "5a"
+                },
+                {
+                  "classes": [
+                    "5c"
+                  ],
+                  "group": "",
+                  "periods": "1.",
+                  "subject": "De",
+                  "teacher": "ROT",
+                  "teacher_old": "ÖLZ",
+                  "room": "179",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "5",
+                  "classes_label": "5c"
+                },
+                {
+                  "classes": [
+                    "5a",
+                    "6a",
+                    "7a",
+                    "8a",
+                    "9a"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Fö",
+                  "teacher": "",
+                  "teacher_old": "LOR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "6",
+                  "classes_label": "6a"
+                },
+                {
+                  "classes": [
+                    "6b"
+                  ],
+                  "group": "",
+                  "periods": "5.–6.",
+                  "subject": "Sp",
+                  "teacher": "",
+                  "teacher_old": "BEC",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "6",
+                  "classes_label": "6b"
+                },
+                {
+                  "classes": [
+                    "7a"
+                  ],
+                  "group": "",
+                  "periods": "1.–2.",
+                  "subject": "Ma",
+                  "teacher": "FEN",
+                  "teacher_old": "",
+                  "room": "204",
+                  "room_old": "209",
+                  "kind": "room_change",
+                  "kind_label": "Raumänderung",
+                  "note": "",
+                  "grade": "7",
+                  "classes_label": "7a"
+                },
+                {
+                  "classes": [
+                    "5a",
+                    "6a",
+                    "7a",
+                    "8a",
+                    "9a"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Fö",
+                  "teacher": "",
+                  "teacher_old": "LOR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "7",
+                  "classes_label": "7a"
+                },
+                {
+                  "classes": [
+                    "7c"
+                  ],
+                  "group": "",
+                  "periods": "2.",
+                  "subject": "En",
+                  "teacher": "SNR",
+                  "teacher_old": "",
+                  "room": "015",
+                  "room_old": "201",
+                  "kind": "room_change",
+                  "kind_label": "Raumänderung",
+                  "note": "",
+                  "grade": "7",
+                  "classes_label": "7c"
+                },
+                {
+                  "classes": [
+                    "8a"
+                  ],
+                  "group": "",
+                  "periods": "5.",
+                  "subject": "Bio",
+                  "teacher": "LOR",
+                  "teacher_old": "WAG",
+                  "room": "112",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Aufgaben im Moodle",
+                  "grade": "8",
+                  "classes_label": "8a"
+                },
+                {
+                  "classes": [
+                    "5a",
+                    "6a",
+                    "7a",
+                    "8a",
+                    "9a"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Fö",
+                  "teacher": "",
+                  "teacher_old": "LOR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "8",
+                  "classes_label": "8a"
+                },
+                {
+                  "classes": [
+                    "5a",
+                    "6a",
+                    "7a",
+                    "8a",
+                    "9a"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Fö",
+                  "teacher": "",
+                  "teacher_old": "LOR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "9",
+                  "classes_label": "9a"
+                },
+                {
+                  "classes": [
+                    "9b"
+                  ],
+                  "group": "",
+                  "periods": "3.–4.",
+                  "subject": "Ch",
+                  "teacher": "KLM",
+                  "teacher_old": "BEC",
+                  "room": "214",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Versuch zur Elektrolyse entfällt, Theorieteil im Buch S. 84",
+                  "grade": "9",
+                  "classes_label": "9b"
+                },
+                {
+                  "classes": [
+                    "10b"
+                  ],
+                  "group": "",
+                  "periods": "4.",
+                  "subject": "Mu",
+                  "teacher": "",
+                  "teacher_old": "ZEB",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "Selbststudium in der Bibliothek",
+                  "grade": "10",
+                  "classes_label": "10b"
+                },
+                {
+                  "classes": [
+                    "Ea"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Geo",
+                  "teacher": "GUT",
+                  "teacher_old": "",
+                  "room": "180",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "E",
+                  "classes_label": "Ea"
+                },
+                {
+                  "classes": [
+                    "Ed"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Geo",
+                  "teacher": "VAN",
+                  "teacher_old": "",
+                  "room": "179",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "E",
+                  "classes_label": "Ed"
+                },
+                {
+                  "classes": [
+                    "Q1a"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "Ku",
+                  "teacher": "ROS",
+                  "teacher_old": "BEC",
+                  "room": "307",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Bitte Zeichenmappe und Acrylfarben mitbringen, die Arbeit am Selbstporträt wird fortgesetzt und am Ende der Stunde eingesammelt",
+                  "grade": "Q1",
+                  "classes_label": "Q1a"
+                },
+                {
+                  "classes": [
+                    "Q1c",
+                    "Q1d",
+                    "Q2a",
+                    "Q2b",
+                    "Q2d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Gr",
+                  "teacher": "JOR",
+                  "teacher_old": "",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "Q1",
+                  "classes_label": "Q1c, d"
+                },
+                {
+                  "classes": [
+                    "Q1c",
+                    "Q1d",
+                    "Q2a",
+                    "Q2b",
+                    "Q2d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Gr",
+                  "teacher": "JOR",
+                  "teacher_old": "",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "Q2",
+                  "classes_label": "Q2a, b, d"
+                },
+                {
+                  "classes": [
+                    "Q2b",
+                    "Q2c",
+                    "Q2d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "If",
+                  "teacher": "T-K",
+                  "teacher_old": "",
+                  "room": "G10",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "Q2",
+                  "classes_label": "Q2b–d"
+                }
+              ]
+            }
+          ],
+          "news": null,
+          "updated_at": "2026-10-19T07:42:00+02:00",
+          "fetched_at": "2026-10-19T10:38:00+02:00",
+          "embed_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst",
+          "mode": "live"
+        }
+      },
+      "right": {
+        "kind": "info",
+        "data": {
+          "announcements": [
+            {
+              "id": 1,
+              "title": "Aula ab 16:30 gesperrt",
+              "text": "Generalprobe Theater-AG bis 21:00",
+              "priority": "urgent",
+              "active_until": "2026-10-19T19:00:00+00:00"
+            },
+            {
+              "id": 2,
+              "title": "Elternabend Jahrgang 9",
+              "text": "Mensa · Donnerstag 19:00",
+              "priority": "important",
+              "active_until": null
+            },
+            {
+              "id": 3,
+              "title": "Fundsachen bis Freitag abholen",
+              "text": "Hausmeisterloge",
+              "priority": "normal",
+              "active_until": null
+            }
+          ],
+          "events": [
+            {
+              "id": 7,
+              "name": "Herbstkonzert",
+              "location": "Aula",
+              "date_from": "2026-10-22T16:00:00+00:00",
+              "date_until": "2026-10-22T19:00:00+00:00",
+              "status": "bestaetigt",
+              "is_running": false
+            },
+            {
+              "id": 8,
+              "name": "Wandertag Jahrgang 7",
+              "location": "",
+              "date_from": "2026-10-22T22:00:00+00:00",
+              "date_until": "2026-10-23T21:59:00+00:00",
+              "status": "bestaetigt",
+              "is_running": false
+            },
+            {
+              "id": 9,
+              "name": "Beginn Herbstferien",
+              "location": "",
+              "date_from": "2026-10-25T23:00:00+00:00",
+              "date_until": "2026-10-26T22:59:00+00:00",
+              "status": "bestaetigt",
+              "is_running": false
+            }
+          ],
+          "countdown": {
+            "name": "Herbstkonzert",
+            "date": "2026-10-22T16:00:00+00:00"
+          }
+        }
+      },
+      "left_percent": 55
+    }
+  }
+}

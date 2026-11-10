@@ -12,7 +12,7 @@ from . import display
 from .fake_tokens import grant_roles
 from .transit.common import TIMEZONE
 from .models import (
-    DisplayView, Exam, MediaFile, MediaPage, MonitorSettings, Screen,
+    Announcement, DisplayView, Exam, MediaFile, MediaPage, MonitorSettings, Screen,
 )
 
 TOP_KEYS = {'generated_at', 'reload_requested_at', 'screen', 'scheme', 'mode', 'view'}
@@ -347,6 +347,16 @@ class ContractTest(DisplayTestBase):
         view.pdf_static_page = 2
         data = display.build_payload(None, view, key_ok=False, now=self.now)['view']['data']
         self.assertEqual([p['url'].rsplit('/', 1)[1] for p in data['pages']][:2], ['a-1.webp', 'a-2.webp'])
+
+    def test_split_side_with_announcements(self):
+        Announcement.objects.create(title='Aula gesperrt', text='Generalprobe', is_active=True)
+        view = self.view('split', split_left='departures', split_right='info', show_events=False,
+                         transit_stops=[{'id': '8000237', 'name': 'Hbf'}])
+        data = self._payload(view)['view']['data']
+        self.assertEqual(data['right']['kind'], 'info')
+        self.assertEqual(set(data['right']['data']), DATA_KEYS['info'])
+        self.assertEqual([a['title'] for a in data['right']['data']['announcements']], ['Aula gesperrt'])
+        self.assertEqual(data['right']['data']['events'], [])
 
     def test_split_side_with_media(self):
         image = MediaFile.objects.create(name='Plakat', file='monitor/img/p.png', kind='image', status='ready')

@@ -12,7 +12,7 @@ function countdownMode(draft) {
   return draft.show_countdown ? 'next' : 'none'
 }
 
-export default function InfoEditor({ draft, set }) {
+export default function InfoEditor({ draft, set, title = 'Inhalt' }) {
   const ids = { name: useId(), date: useId() }
   const mode = countdownMode(draft)
   const setMode = (value) => {
@@ -20,7 +20,7 @@ export default function InfoEditor({ draft, set }) {
     set('show_custom_countdown', value === 'custom')
   }
   return (
-    <Section title="Inhalt" data-editor-section="info">
+    <Section title={title} data-editor-section="info">
       <div className="space-y-4">
         <Checkbox label="Ankündigungen" checked={draft.show_announcements !== false} onChange={(v) => set('show_announcements', v)}
           help="Aktive Ankündigungen, wichtige zuerst. Gepflegt unter Klausuren & Termine." />

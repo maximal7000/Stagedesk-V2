@@ -103,10 +103,11 @@ function PagedSection({ title, items, seconds, renderItem, after = null, onNatur
       <div ref={bodyRef} className="relative mt-[1.75rem] min-h-0 flex-1 overflow-hidden">
         <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">
           {items.map((item) => <div key={item.id}>{renderItem(item)}</div>)}
-          {after}
+          {after && <div className="flow-root">{after}</div>}
         </div>
         {page.map((i) => <div key={items[i].id}>{renderItem(items[i])}</div>)}
-        {after}
+        {/* flow-root: the countdown's top margin counts into the measured height that pages reserve */}
+        {after && <div className="flow-root">{after}</div>}
       </div>
     </section>
   )
