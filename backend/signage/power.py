@@ -54,11 +54,20 @@ def _on_air_active() -> bool:
     return MonitorSettings.objects.filter(pk=1, on_air_active=True).exists()
 
 
+def _event_active(screen, now: datetime) -> bool:
+    """An event assigned to this screen is running (by hand or in its time window)."""
+    if screen.pk is None:
+        return False
+    return any(a.event.active_at(now) for a in screen.event_assignments.select_related('event'))
+
+
 def compute_power_state(screen, now: datetime) -> bool:
     if _emergency_active():
         return True
     if screen.on_air_enabled and _on_air_active():
         return True  # nothing blocks on air, not even "always off"
+    if _event_active(screen, now):
+        return True  # like on air: the event's screens are on for it, then follow their schedule again
     return scheduled_power_state(screen, now)
 
 

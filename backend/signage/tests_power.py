@@ -8,7 +8,8 @@ from django.utils import timezone
 from core.auth import KeycloakAuth
 from signage.api import screens as api_screens, settings as api_settings
 from . import power
-from .models import EmergencyTemplate, HolidayPeriod, MonitorSettings, Screen
+from .models import (DisplayEvent, DisplayEventScreen, DisplayView, EmergencyTemplate, HolidayPeriod, MonitorSettings,
+                     Screen)
 from .schemas import MonitorSettingsUpdateSchema, ScreenUpdateSchema
 
 WEEKDAYS = [0, 1, 2, 3, 4]
@@ -73,6 +74,32 @@ class ComputePowerStateTest(TestCase):
         # 06:30 UTC = 08:30 Berlin (summer time until 25.10.)
         utc_time = datetime(2026, 10, 19, 6, 30, tzinfo=dt_timezone.utc)
         self.assertTrue(power.compute_power_state(screen, utc_time))
+
+    def event_for(self, screen, **kwargs):
+        view = DisplayView.objects.create(name='Elternsprechtag', slug='parents')
+        event = DisplayEvent.objects.create(name='Elternsprechtag', **kwargs)
+        DisplayEventScreen.objects.create(event=event, screen=screen, view=view)
+        return event
+
+    def test_event_switches_on_outside_the_schedule_and_off_after(self):
+        screen = self.screen(power_mode='manual_off', off_during_holidays=True)
+        HolidayPeriod.objects.create(name='Ferien', start_date=date(2026, 10, 19), end_date=date(2026, 10, 30))
+        evening = local(2026, 10, 19, 19)
+        self.event_for(screen, active_from=evening - timedelta(hours=1), active_until=evening + timedelta(hours=2))
+        self.assertTrue(power.compute_power_state(screen, evening))
+        self.assertFalse(power.compute_power_state(screen, evening + timedelta(hours=3)))
+        self.assertFalse(power.compute_power_state(screen, evening - timedelta(hours=2)))
+
+    def test_event_by_hand_and_only_for_its_screens(self):
+        screen = self.screen()
+        other = Screen.objects.create(name='T', slug='t', schedule=OFFICE_HOURS)
+        night = local(2026, 10, 19, 22)
+        event = self.event_for(screen, is_active=True)
+        self.assertTrue(power.compute_power_state(screen, night))
+        self.assertFalse(power.compute_power_state(other, night))
+        event.is_active = False
+        event.save()
+        self.assertFalse(power.compute_power_state(screen, night))
 
     def test_get_power_state_delegates(self):
         screen = self.screen(power_mode='manual_off')
@@ -232,6 +259,24 @@ class EmergencyEndpointTest(TestCase):
         self.assertEqual(r.status_code, 200)
         push.assert_called_once_with()
         self.assertEqual(MonitorSettings.load().emergency_note, '')
+
+
+class EventPowerPushTest(TestCase):
+
+    def test_event_changes_push_power(self):
+        screen = Screen.objects.create(name='A', slug='a')
+        view = DisplayView.objects.create(name='V', slug='v')
+        body = {'name': 'Elternsprechtag', 'description': '', 'assignments': [{'screen_id': screen.id, 'view_id': view.id}]}
+        with _auth(), mock.patch('signage.api.exams._require_perm'), mock.patch('signage.api.exams._log_audit'), \
+                mock.patch('signage.api.exams.push_power_to_all') as push, \
+                self.captureOnCommitCallbacks(execute=True):
+            r = self.client.post('/api/signage/events', body, content_type='application/json')
+            self.assertEqual(r.status_code, 200, r.content)
+            event_id = r.json()['id']
+            self.client.post(f'/api/signage/events/{event_id}/activate')
+            self.client.post(f'/api/signage/events/{event_id}/deactivate')
+            self.client.delete(f'/api/signage/events/{event_id}')
+        self.assertEqual(push.call_count, 4)
 
 
 class PushPowerToAllTest(TestCase):

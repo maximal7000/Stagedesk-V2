@@ -5,7 +5,10 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from core.auth import keycloak_auth
+from django.db import transaction
+
 from .. import push
+from ..consumers import push_power_to_all
 from ..models import Announcement, DisplayEvent, DisplayEventScreen, Exam, ExamTemplate, Screen
 from ..permissions import _log_audit, _require_perm
 from ..schemas import (
@@ -127,6 +130,12 @@ def _apply_event_assignments(event, assignments):
                 event=event, screen_id=d['screen_id'], view_id=d['view_id'])
 
 
+def _changed_event():
+    """An event switches its screens on and off again, so every change sends the new power state."""
+    push.notify_changed_on_commit()
+    transaction.on_commit(push_power_to_all)
+
+
 @router.get("/events", response=list[DisplayEventSchema], auth=keycloak_auth)
 def list_events(request):
     _require_perm(request, 'signage.view')
@@ -140,7 +149,7 @@ def create_event(request, payload: DisplayEventCreateSchema):
     assignments = data.pop('assignments', [])
     event = DisplayEvent.objects.create(**data)
     _apply_event_assignments(event, assignments)
-    push.notify_changed_on_commit()
+    _changed_event()
     return event
 
 
@@ -155,7 +164,7 @@ def update_event(request, id: int, payload: DisplayEventUpdateSchema):
     event.save()
     if assignments is not None:
         _apply_event_assignments(event, assignments)
-    push.notify_changed_on_commit()
+    _changed_event()
     return event
 
 
@@ -163,7 +172,7 @@ def update_event(request, id: int, payload: DisplayEventUpdateSchema):
 def delete_event(request, id: int):
     _require_perm(request, 'signage.exams')
     get_object_or_404(DisplayEvent, id=id).delete()
-    push.notify_changed_on_commit()
+    _changed_event()
     return {"success": True}
 
 
@@ -173,7 +182,7 @@ def activate_event(request, id: int):
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = True
     event.save(update_fields=['is_active'])
-    push.notify_changed_on_commit()
+    _changed_event()
     _log_audit(request, 'Event aktiviert', event.name)
     return event
 
@@ -184,7 +193,7 @@ def deactivate_event(request, id: int):
     event = get_object_or_404(DisplayEvent, id=id)
     event.is_active = False
     event.save(update_fields=['is_active'])
-    push.notify_changed_on_commit()
+    _changed_event()
     _log_audit(request, 'Event deaktiviert', event.name)
     return event
 

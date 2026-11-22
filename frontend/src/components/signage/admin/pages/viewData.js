@@ -260,7 +260,20 @@ export function stopTransport(stop) {
   return parts.length ? parts.join(', ') : 'Keine'
 }
 
-// Preview size: screen resolution (the model has none; 4K like the existing devices)
+const parseSize = (value) => {
+  const match = /^(\d{3,5})x(\d{3,5})/.exec(value ?? '')
+  return match ? { width: Number(match[1]), height: Number(match[2]) } : null
+}
+
+// Preview size in the screen's own pixels: what its Pi last reported, else the resolution set in the
+// admin, else 4K. A rotation by 90 or 270 degrees swaps width and height. Without anything reported or set,
+// "Hoch" still means portrait, as before.
 export function screenSize(screen) {
-  return screen?.orientation === 'portrait' ? { width: 2160, height: 3840 } : { width: 3840, height: 2160 }
+  const reported = parseSize(screen?.display_resolution)
+  const size = reported ?? parseSize(screen?.output_mode) ?? { width: 3840, height: 2160 }
+  const transform = screen?.display_transform || screen?.output_transform || 'normal'
+  if (transform === '90' || transform === '270') return { width: size.height, height: size.width }
+  const known = reported || screen?.display_transform || screen?.output_mode || (screen?.output_transform && screen.output_transform !== 'normal')
+  if (!known && screen?.orientation === 'portrait' && size.width > size.height) return { width: size.height, height: size.width }
+  return size
 }
