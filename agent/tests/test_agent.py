@@ -212,6 +212,9 @@ class WiringTests(unittest.TestCase):
 
         def power_factory(method, config, runner):
             power = FakePower(method, config)
+            if getattr(self, "unconfirmed", False):
+                power.state = "an"  # remembered, but the TV does not confirm it
+                power.confirmed_status = lambda: None
             self.made.append(power)
             return power
 
@@ -280,6 +283,13 @@ class WiringTests(unittest.TestCase):
         self.run_agent(agent, lambda: self.conns and self.conns[0].of_type("power_status"))
         threading.Event().wait(0.05)
         self.assertEqual(self.made[0].calls, [])
+
+    def test_power_command_sent_when_the_state_is_not_confirmed(self):
+        agent = self.agent([{"type": "hello", "power_method": "cec"}, {"type": "power_command", "power": True}],
+                           interval=60)
+        self.unconfirmed = True
+        self.run_agent(agent, lambda: self.made and self.made[0].calls)
+        self.assertEqual(self.made[0].calls, [True])
 
     def test_controller_rebuilt_only_when_method_or_config_changes(self):
         agent = self.agent([
@@ -531,6 +541,9 @@ class PowerTestWiringTests(unittest.TestCase):
 
         def power_factory(method, config, runner):
             power = FakePower(method, config)
+            if getattr(self, "unconfirmed", False):
+                power.state = "an"  # remembered, but the TV does not confirm it
+                power.confirmed_status = lambda: None
             self.made.append(power)
             return power
         self.agent = Agent(self.cfg, FakePages(), power_factory=power_factory, runner=object(),

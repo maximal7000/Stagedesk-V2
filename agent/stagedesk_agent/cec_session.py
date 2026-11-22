@@ -9,9 +9,10 @@ log = logging.getLogger("stagedesk_agent.cec")
 # Log level 1 (errors) + 8 (traffic): the TV's own broadcasts arrive as TRAFFIC lines.
 COMMAND = ["cec-client", "-d", "9"]
 ANSWER_TIMEOUT = 8
-_POWER = re.compile(r"power status: (on|standby|in transition from standby to on|in transition from on to standby)")
+_POWER = re.compile(r"power status: (on|standby|in transition from standby to on|in transition from on to standby|unknown)")
 _TRAFFIC = re.compile(r">> ([0-9a-f])[0-9a-f]:([0-9a-f]{2})(?::([0-9a-f]{2}))?", re.IGNORECASE)
-_POWER_TEXT = {"on": "an", "standby": "standby",
+# "unknown" is cec-client's own note that the TV did not answer.
+_POWER_TEXT = {"on": "an", "standby": "standby", "unknown": None,
                "in transition from standby to on": "an", "in transition from on to standby": "standby"}
 STANDBY_OPCODE = "36"
 REPORT_POWER_OPCODE = "90"
@@ -19,6 +20,10 @@ REPORT_POWER_OPCODE = "90"
 
 class CecUnavailable(Exception):
     pass
+
+
+class CecNoAnswer(CecUnavailable):
+    """The session runs, but the TV did not answer (many TVs stay silent in standby now and then)."""
 
 
 class CecSession:
@@ -56,7 +61,8 @@ class CecSession:
                 self._last_answer = state
                 self._answers += 1
                 self._answer.notify_all()
-            self._set_state(state)
+            if state is not None:
+                self._set_state(state)
             return
         traffic = _TRAFFIC.search(line)
         if not traffic or traffic.group(1) != "0":  # only what the TV itself sends
@@ -92,14 +98,17 @@ class CecSession:
             raise CecUnavailable(str(exc)) from exc
 
     def query_power(self, device, timeout=ANSWER_TIMEOUT):
-        """"an" or "standby"; raises CecUnavailable when the session cannot run or the TV does not answer."""
+        """"an" or "standby"; raises CecNoAnswer when the TV does not answer, CecUnavailable when the
+        session cannot run."""
         with self._lock:
             with self._answer:
                 seen = self._answers
             self._write(f"pow {device}")
             with self._answer:
                 if not self._answer.wait_for(lambda: self._answers > seen, timeout):
-                    raise CecUnavailable("Fernseher antwortet nicht über CEC")
+                    raise CecNoAnswer("Fernseher antwortet nicht über CEC")
+                if self._last_answer is None:
+                    raise CecNoAnswer("Fernseher antwortet nicht über CEC")
                 return self._last_answer
 
     def close(self):

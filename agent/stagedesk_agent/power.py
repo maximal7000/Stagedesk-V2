@@ -8,13 +8,17 @@ import threading
 import time
 from functools import reduce
 
-from .cec_session import CecUnavailable
+from .cec_session import CecNoAnswer, CecUnavailable
 
 log = logging.getLogger("stagedesk_agent.power")
 KIOSK_USER = "pi"
 RUNTIME_DIR = "/run/user/1000"
 CEC_CLIENT = ["cec-client", "-s", "-d", "1"]
 SICP_ATTEMPTS = 7
+CEC_QUERY_ATTEMPTS = 2
+CEC_QUERY_PAUSE = 1
+# A TV that stays silent this long shows as an error; shorter gaps keep the last known state.
+CEC_SILENCE_LIMIT = 120
 
 
 class PowerError(Exception):
@@ -54,6 +58,12 @@ class PowerController:
             log.warning("power status: %s", exc)
             return f"Fehler: {exc}"
 
+    def confirmed_status(self):
+        """The state as the display reports it right now, or None when it cannot tell. Switching skips
+        the command only on a confirmed state."""
+        status = self.status()
+        return None if str(status).startswith("Fehler") else status
+
     def stop(self):
         pass
 
@@ -74,11 +84,13 @@ class CecPower(PowerController):
     fails) each command starts its own cec-client, which announces the Pi to the TV again and makes many
     TVs show a message; so that path reads the state only while it is unknown."""
 
-    def __init__(self, config, runner, cec_session=None, **kw):
+    def __init__(self, config, runner, cec_session=None, clock=time.monotonic, **kw):
         super().__init__(config, runner, **kw)
         self.device = _text(self.config.get("cec_device"), "0")
         self.session = cec_session
+        self.clock = clock
         self._known = None
+        self._silent_since = None
 
     def command(self, command):
         if self.session is not None:
@@ -102,13 +114,45 @@ class CecPower(PowerController):
         self._known = "an" if on else "standby"
         return self._known
 
+    def _query(self):
+        """The TV's answer over the session, or None when it stays silent; raises CecUnavailable when the
+        session cannot run."""
+        for attempt in range(CEC_QUERY_ATTEMPTS):
+            try:
+                state = self.session.query_power(self.device)
+            except CecNoAnswer:
+                if attempt < CEC_QUERY_ATTEMPTS - 1:
+                    self.sleep(CEC_QUERY_PAUSE)
+                continue
+            self._known, self._silent_since = state, None
+            return state
+        if self._silent_since is None:
+            self._silent_since = self.clock()
+        return None
+
+    def confirmed_status(self):
+        """Our own memory (last command, an earlier answer) is not confirmed: the TV may have been switched
+        by its remote or a power test since, and skipping on it left the TV off."""
+        if self.session is None:
+            return None
+        try:
+            return self._query()
+        except CecUnavailable:
+            return None
+
     def _status(self):
         if self.session is not None:
             try:
-                self._known = self.session.query_power(self.device)
-                return self._known
+                state = self._query()
             except CecUnavailable as exc:
                 log.warning("cec session: %s", exc)
+            else:
+                # A running session never falls back to single cec-clients: those announce the Pi again.
+                if state is not None:
+                    return state
+                if self.clock() - self._silent_since >= CEC_SILENCE_LIMIT:
+                    raise PowerError("Fernseher antwortet nicht über CEC")
+                return self._known or self.session.state or "unbekannt"
         if self._known is not None:
             return self._known
         out = self._cec(f"pow {self.device}").out

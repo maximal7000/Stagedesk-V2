@@ -321,7 +321,8 @@ class Agent:
             if controller is None:
                 return self._power_error
             if not force:
-                current = controller.status()
+                confirmed = getattr(controller, "confirmed_status", controller.status)
+                current = confirmed()
                 if (on and current == "an") or (not on and current in ("standby", "aus")):
                     return current
             return controller.set(on)

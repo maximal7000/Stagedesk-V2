@@ -3,8 +3,8 @@ import threading
 import time
 import unittest
 
-from stagedesk_agent.cec_session import COMMAND, CecSession, CecUnavailable
-from stagedesk_agent.power import make_power
+from stagedesk_agent.cec_session import COMMAND, CecNoAnswer, CecSession, CecUnavailable
+from stagedesk_agent.power import CecPower, make_power
 from tests.fakes import FakeRunner
 
 
@@ -93,6 +93,16 @@ class CecSessionTests(unittest.TestCase):
         with self.assertRaises(CecUnavailable):
             session.query_power("0", timeout=0.05)
 
+    def test_unknown_power_status_is_no_answer_at_once(self):
+        popen = FakePopen({"pow 0": ["power status: unknown\n"]})
+        session = CecSession(popen=popen)
+        self.addCleanup(session.close)
+        start = time.monotonic()
+        with self.assertRaises(CecNoAnswer):
+            session.query_power("0", timeout=5)
+        self.assertLess(time.monotonic() - start, 1)
+        self.assertIsNone(session.state)
+
     def test_tv_broadcasts_change_the_state(self):
         popen = FakePopen()
         session = CecSession(popen=popen)
@@ -156,6 +166,46 @@ class CecPowerWithSessionTests(unittest.TestCase):
         self.assertEqual(power.set(True), "an")
         self.assertEqual(power.status(), "an")  # remembered, no extra announcement
         self.assertEqual(runner.inputs, ["on 0\n"])
+
+    def test_silent_tv_is_asked_again(self):
+        popen = FakePopen({"pow 0": ["power status: unknown\n"]})
+        session = CecSession(popen=popen)
+        self.addCleanup(session.close)
+        answer_next = lambda seconds: popen.script.update({"pow 0": ["power status: standby\n"]})
+        power = make_power("cec", {}, FakeRunner(), cec_session=session, sleep=answer_next)
+        self.assertEqual(power.status(), "standby")
+        self.assertEqual(popen.procs[0].written, ["pow 0\n", "pow 0\n"])
+
+    def test_silent_tv_keeps_the_last_state_then_shows_an_error(self):
+        popen = FakePopen({"pow 0": ["power status: unknown\n"]})
+        session = CecSession(popen=popen)
+        self.addCleanup(session.close)
+        now = [1000.0]
+        runner = FakeRunner()
+        power = CecPower({}, runner, cec_session=session, clock=lambda: now[0], sleep=lambda s: None)
+        self.assertEqual(power.status(), "unbekannt")
+        power.set(True)
+        self.assertEqual(power.status(), "an")
+        now[0] += 119
+        self.assertEqual(power.status(), "an")
+        now[0] += 2
+        self.assertEqual(power.status(), "Fehler: Fernseher antwortet nicht über CEC")
+        self.assertEqual(runner.calls, [])  # no single cec-client while the session runs
+        popen.script["pow 0"] = ["power status: standby\n"]
+        self.assertEqual(power.status(), "standby")
+
+    def test_only_an_answer_confirms_the_state(self):
+        # Switched on by us, then off by the remote or a power test: our memory says "an".
+        popen = FakePopen({"pow 0": ["power status: unknown\n"]})
+        session = CecSession(popen=popen)
+        self.addCleanup(session.close)
+        power = CecPower({}, FakeRunner(), cec_session=session, sleep=lambda s: None)
+        power.set(True)
+        self.assertEqual(power.status(), "an")
+        self.assertIsNone(power.confirmed_status())
+        popen.script["pow 0"] = ["power status: on\n"]
+        self.assertEqual(power.confirmed_status(), "an")
+        self.assertIsNone(CecPower({}, FakeRunner()).confirmed_status())
 
     def test_hybrid_switches_on_through_the_session(self):
         popen = FakePopen()
