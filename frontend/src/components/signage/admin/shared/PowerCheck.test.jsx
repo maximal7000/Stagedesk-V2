@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
-vi.mock('./api', () => ({ sendDeviceCommand: vi.fn(), getDeviceCommand: vi.fn() }))
+vi.mock('./api', () => ({ sendDeviceCommand: vi.fn(), getDeviceCommand: vi.fn(), getLatestPowerProbe: vi.fn() }))
 
 const api = await import('./api')
 const { default: PowerCheck } = await import('./PowerCheck')
@@ -43,6 +43,7 @@ const click = async (el) => { await act(async () => { el.click() }) }
 beforeEach(() => {
   vi.clearAllMocks()
   vi.useFakeTimers()
+  api.getLatestPowerProbe.mockRejectedValue({ response: { status: 404 } })
 })
 afterEach(() => {
   if (root) act(() => root.unmount())
@@ -65,8 +66,33 @@ describe('PowerCheck', () => {
     expect(button('Testen', rows[2])).toBeUndefined()
     expect(button('Testen', rows[3])).toBeDefined()
     expect(container.textContent).toContain('Empfehlung: CEC')
-    expect(container.textContent).toContain('Geprüft um 10:42 · ohne den Bildschirm auszuschalten')
+    expect(container.textContent).toContain('Geprüft am 25.10. um 10:42')
+    expect(container.textContent).not.toContain('ohne den Bildschirm auszuschalten')
     expect(onRecommended).toHaveBeenLastCalledWith('cec')
+  })
+
+  it('eingerichteter Bildschirm: zeigt die letzte Prüfung und prüft nicht von selbst', async () => {
+    api.getLatestPowerProbe.mockResolvedValue({ ...FOUND, finished_at: '2026-10-25T10:42:05' })
+    const { onRecommended } = await mount({ autoProbe: false })
+    expect(api.getLatestPowerProbe).toHaveBeenCalledWith(5)
+    expect(api.sendDeviceCommand).not.toHaveBeenCalled()
+    expect(container.querySelectorAll('[data-probe-row]')).toHaveLength(4)
+    expect(container.textContent).toContain('Geprüft am 25.10. um 10:42')
+    expect(onRecommended).toHaveBeenLastCalledWith('cec')
+    api.sendDeviceCommand.mockResolvedValue(FOUND)
+    await click(button('Erneut prüfen'))
+    expect(api.sendDeviceCommand).toHaveBeenCalledWith(5, 'power_probe')
+  })
+
+  it('eingerichteter Bildschirm ohne gespeicherte Prüfung: erst auf Knopfdruck', async () => {
+    await mount({ autoProbe: false })
+    expect(api.sendDeviceCommand).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Noch nicht geprüft')
+    expect(container.querySelectorAll('[data-probe-row]')).toHaveLength(0)
+    api.sendDeviceCommand.mockResolvedValue(FOUND)
+    await click(button('Jetzt prüfen'))
+    expect(api.sendDeviceCommand).toHaveBeenCalledWith(5, 'power_probe')
+    expect(container.querySelectorAll('[data-probe-row]')).toHaveLength(4)
   })
 
   it('wartet auf das Ergebnis und prüft erneut', async () => {

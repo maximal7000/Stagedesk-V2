@@ -18,6 +18,10 @@ const ROW = 'grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[9.5rem_minmax(0,1
 
 const pad = (n) => String(n).padStart(2, '0')
 const hourMinute = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+const checkedText = (d) => (sameDay(d, new Date())
+  ? `Geprüft um ${hourMinute(d)}`
+  : `Geprüft am ${pad(d.getDate())}.${pad(d.getMonth() + 1)}. um ${hourMinute(d)}`)
 
 function Notice({ icon, tone = 'muted', children }) {
   const Icon = icon
@@ -43,7 +47,9 @@ function LoadingRows() {
   ))
 }
 
-export default function PowerCheck({ device, screen, config, canTest, unsaved = false, onAdopt, onRecommended }) {
+// `autoProbe`: check on opening only while the screen has no control yet. Otherwise the last stored
+// result shows; a CEC check closes the agent's session and the TV announces the Pi again.
+export default function PowerCheck({ device, screen, config, canTest, unsaved = false, autoProbe = true, onAdopt, onRecommended }) {
   const [probe, setProbe] = useState({ state: 'loading' })
   const [testing, setTesting] = useState(null)
   const alive = useRef(true)
@@ -87,6 +93,22 @@ export default function PowerCheck({ device, screen, config, canTest, unsaved = 
     }
   }, [deviceId])
 
+  const loadLast = useCallback(async () => {
+    try {
+      const command = await api.getLatestPowerProbe(deviceId)
+      if (!alive.current) return
+      const parsed = parseProbe(command)
+      if (parsed.error) throw new Error(parsed.error)
+      const finished = command.finished_at ? new Date(command.finished_at) : null
+      setProbe({ state: 'done', parsed, checkedAt: parsed.checkedAt ?? finished ?? new Date() })
+      recommendedRef.current?.(parsed.recommended)
+    } catch {
+      if (!alive.current) return
+      if (autoProbe) probeNow()
+      else setProbe({ state: 'idle' })
+    }
+  }, [deviceId, autoProbe, probeNow])
+
   const retry = () => {
     setProbe({ state: 'loading' })
     probeNow()
@@ -94,13 +116,13 @@ export default function PowerCheck({ device, screen, config, canTest, unsaved = 
 
   useEffect(() => {
     alive.current = true
-    if (!legacy && !offline) probeNow()
+    if (!legacy && !offline) loadLast()
     return () => {
       alive.current = false
       stopWatch.current?.()
       stopWatch.current = null
     }
-  }, [legacy, offline, probeNow])
+  }, [legacy, offline, loadLast])
 
   if (legacy) {
     return (
@@ -112,7 +134,11 @@ export default function PowerCheck({ device, screen, config, canTest, unsaved = 
   if (offline) {
     return (
       <div data-power-check="offline">
-        <Notice icon={WifiOff}>Bildschirm ist offline. Die Prüfung startet, sobald er wieder verbunden ist.</Notice>
+        <Notice icon={WifiOff}>
+          {autoProbe
+            ? 'Bildschirm ist offline. Die Prüfung startet, sobald er wieder verbunden ist.'
+            : 'Bildschirm ist offline. Prüfen geht wieder, sobald er verbunden ist.'}
+        </Notice>
       </div>
     )
   }
@@ -129,8 +155,9 @@ export default function PowerCheck({ device, screen, config, canTest, unsaved = 
         <div className="min-w-0">
           <div className="text-sm font-medium text-fg">Prüfung</div>
           <p className="text-xs text-fg-subtle mt-0.5">
-            {loading && 'Wird geprüft · ohne den Bildschirm auszuschalten'}
-            {probe.state === 'done' && `Geprüft um ${hourMinute(probe.checkedAt)} · ohne den Bildschirm auszuschalten`}
+            {loading && 'Wird geprüft'}
+            {probe.state === 'done' && checkedText(probe.checkedAt)}
+            {probe.state === 'idle' && 'Noch nicht geprüft'}
             {probe.state === 'error' && 'Prüfung nicht möglich'}
           </p>
           {unsaved && (
@@ -139,10 +166,12 @@ export default function PowerCheck({ device, screen, config, canTest, unsaved = 
             </p>
           )}
         </div>
-        <Button size="sm" variant="ghost" icon={RotateCw} onClick={retry} disabled={loading}>Erneut prüfen</Button>
+        <Button size="sm" variant="ghost" icon={RotateCw} onClick={retry} disabled={loading}>
+          {probe.state === 'idle' ? 'Jetzt prüfen' : 'Erneut prüfen'}
+        </Button>
       </div>
 
-      {probe.state === 'error' ? (
+      {probe.state === 'idle' ? null : probe.state === 'error' ? (
         <Notice icon={AlertTriangle} tone="bad"><span role="alert">{probe.error}</span></Notice>
       ) : (
         <ul className="rounded-lg border border-line divide-y divide-line-subtle">

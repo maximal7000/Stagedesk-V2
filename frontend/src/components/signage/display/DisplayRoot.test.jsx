@@ -118,6 +118,30 @@ describe('DisplayRoot', () => {
     expect(el.querySelector('[data-clock="box"]')).not.toBeNull()
   })
 
+  it('Klausur und On-Air geteilt ersetzen bei einer geteilten Ansicht ihre Seite, die Breite der Ansicht zählt nicht', () => {
+    const view = {
+      id: 5, kind: 'split', layout: 'wide', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: {
+        left: { kind: 'info', data: { announcements: [{ id: 1, title: 'Aula gesperrt', text: '', priority: 'normal', active_until: null }], events: [], countdown: null } },
+        right: { kind: 'media', data: { seconds: 10, per_screen: 1, pages: [] } },
+        left_percent: 70,
+      },
+    }
+    const exam = { kind: 'exam', display: 'split', side: 'right', title: 'Abitur Mathematik', text: '',
+      active_from: null, active_until: null, location: null }
+    let el = render({ payload: { screen, view, mode: exam }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-mode-split="right"]')).not.toBeNull()
+    expect(el.textContent).toContain('Abitur Mathematik')
+    expect(el.textContent).toContain('Aula gesperrt')
+    expect(el.textContent).not.toContain('Keine Medien.')
+    expect(el.querySelector('[data-split-side]')).toBeNull()
+    act(() => root.unmount())
+    el = render({ payload: { screen, view, mode: { ...onAir, display: 'split', side: 'left' } }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-mode-split="left"]')).not.toBeNull()
+    expect(el.textContent).not.toContain('Aula gesperrt')
+    expect(el.textContent).toContain('Keine Medien.')
+  })
+
   it('wechselt das Schema ohne Neuladen', () => {
     const el = render({ payload: { screen, view, mode: null, scheme: 'light' }, state: 'ok', lastOkAt })
     const before = el.querySelector('.d-root')

@@ -15,6 +15,7 @@ vi.mock('../shared/api', () => ({
   getScreenEvents: vi.fn(() => Promise.resolve([])),
   sendDeviceCommand: vi.fn(),
   getDeviceCommand: vi.fn(),
+  getLatestPowerProbe: vi.fn(() => Promise.reject({ response: { status: 404 } })),
   unpairDevice: vi.fn(),
   revokeDevice: vi.fn(),
   updateScreen: vi.fn(),
@@ -460,11 +461,17 @@ describe('ScreenDetail', () => {
           result: JSON.stringify({ methods: [{ method: 'ddc', state: 'ok', text: 'Display gefunden (LH4341), Energiemodus lesbar.' }], recommended: 'ddc' }),
         }
         : { id: 8, kind, status: 'ok', result: JSON.stringify({ off_at: new Date().toISOString(), seconds: 15 }) }))
+      api.getLatestPowerProbe.mockResolvedValueOnce({
+        id: 6, kind: 'power_probe', status: 'ok', finished_at: new Date().toISOString(),
+        result: JSON.stringify({ methods: [{ method: 'ddc', state: 'ok', text: 'Display gefunden (LH4341), Energiemodus lesbar.' }], recommended: 'ddc' }),
+      })
       vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'Date'] })
       try {
         await mount()
         const box = container.querySelector('[data-power-method]')
-        expect(api.sendDeviceCommand).toHaveBeenCalledWith(5, 'power_probe')
+        // Set up (CEC): the stored check shows, opening starts none
+        expect(api.getLatestPowerProbe).toHaveBeenCalledWith(5)
+        expect(api.sendDeviceCommand).not.toHaveBeenCalledWith(5, 'power_probe')
         expect(byLabel('Steuerung des Bildschirms').querySelector('option[value="ddc"]').textContent).toBe('DDC (empfohlen)')
         await click(button('Testen', box))
         expect(api.sendDeviceCommand).toHaveBeenLastCalledWith(5, 'power_test', { method: 'ddc', config: { vcp_on: '01', vcp_off: '04', no_verify: false }, seconds: 15 })
