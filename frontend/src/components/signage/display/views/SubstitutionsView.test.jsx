@@ -94,6 +94,21 @@ describe('SubstitutionsView', () => {
     expect(cell('teacher').textContent).toBe('BEC KLM, HRT')
   })
 
+  it('langer Raumtext bricht in seiner Spalte um', () => {
+    const data = { days: [{
+      date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
+      rows: [row({ room: 'Aula (Generalprobe Theater-AG)', room_old: '209' }), row({ room: 'R101/R102/R103', room_old: '' })],
+    }] }
+    const el = render(<SubstitutionsView view={view(data)} />)
+    const rooms = [...visible(el).querySelectorAll('[data-column="room"]')]
+    expect(rooms[0].textContent).toBe('209 Aula (Generalprobe Theater-AG)')
+    expect(rooms[0].querySelector('.whitespace-nowrap').textContent).toBe('209 Aula')
+    expect(rooms[0].className).toContain('[overflow-wrap:anywhere]')
+    expect(rooms[1].textContent).toBe('R101/R102/R103')
+    expect(rooms[1].querySelector('.whitespace-nowrap')).toBeNull()
+    expect(rooms[1].querySelectorAll('wbr')).toHaveLength(2)
+  })
+
   it('zeigt Altwerte durchgestrichen und die Art nach kind_label', () => {
     const data = { days: [{
       date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
@@ -108,6 +123,9 @@ describe('SubstitutionsView', () => {
     expect(kinds.map((k) => k.textContent)).toEqual(['Raumänderung', 'Entfall'])
     expect(kinds[0].className).toContain('text-(--d-info)')
     expect(kinds[1].className).toContain('text-(--d-red)')
+    const subjects = [...visible(el).querySelectorAll('[data-column="subject"]')]
+    expect(subjects[0].querySelector('s')).toBeNull()
+    expect(subjects[1].querySelector('s').textContent).toBe('De')
   })
 
   it('Kopf zeigt Abwesend und Betroffen', () => {

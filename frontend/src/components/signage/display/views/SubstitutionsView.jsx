@@ -8,18 +8,33 @@ const ROW_MIN_REM = 2.1875
 const KIND_TONE = { cancelled: 'text-(--d-red)', room_change: 'text-(--d-info)' }
 const KIND_FALLBACK = { substitution: 'Vertretung', cancelled: 'Entfall', room_change: 'Raumänderung', other: 'Änderung' }
 
-// Replaced values struck through, new ones after them. Old value and first new value stay together ("~~113~~ 015");
-// wrapping only happens between separate values of a list ("KLM, HRT").
+// Breaks are allowed after "/" too ("R101/R102/R103").
+function Breakable({ text }) {
+  const parts = String(text).split('/')
+  return parts.map((part, i) => <span key={i}>{part}{i < parts.length - 1 && <>/<wbr /></>}</span>)
+}
+
+// Replaced values struck through, new ones after them. The old value stays together with the first word of
+// the new one ("~~113~~ 015"); the rest wraps inside the column, so a long text from WebUntis
+// ("Aula (Generalprobe Theater)", "R101/R102/R103") never runs into the next column. Only a short word is
+// kept unbroken: a long one could not wrap at all.
+const GLUE_MAX = 8
+
+function Item({ old, text }) {
+  const [word = '', ...more] = text.split(/\s+/)
+  const strike = old ? <s className="text-(--d-muted)">{old}</s> : null
+  const head = word.length <= GLUE_MAX
+    ? <span className="whitespace-nowrap">{strike}{strike && word ? ' ' : ''}{word}</span>
+    : <>{strike && <span className="whitespace-nowrap">{strike}</span>}{strike ? ' ' : ''}<Breakable text={word} /></>
+  return <>{head}{more.length > 0 && <> <Breakable text={more.join(' ')} /></>}</>
+}
+
 function Replaced({ old, value }) {
   const [first = '', ...rest] = String(value ?? '').split(/,\s*/)
   return (
     <>
-      <span className="whitespace-nowrap">
-        {old && <s className="text-(--d-muted)">{old}</s>}
-        {old && first ? ' ' : ''}
-        {first}
-      </span>
-      {rest.map((item, i) => <span key={i}>, <span className="whitespace-nowrap">{item}</span></span>)}
+      <Item old={old} text={first} />
+      {rest.map((item, i) => <span key={i}>, <Item text={item} /></span>)}
     </>
   )
 }
@@ -31,7 +46,11 @@ const COLUMN_DEFS = {
   group: { head: 'Kürzel', fr: 7, nowrap: true, cls: 'd-head font-medium', lead: true, cell: (row) => row.group },
   class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-head font-medium', cell: (row) => row.classes_label },
   periods: { head: 'Std.', fr: 6, nowrap: true, cls: 'd-head', cell: (row) => row.periods },
-  subject: { head: 'Fach', fr: 6, flag: 'subject', nowrap: true, cls: 'd-text', cell: (row) => row.subject },
+  subject: {
+    head: 'Fach', fr: 6, flag: 'subject', nowrap: true, cls: 'd-text',
+    // A cancelled lesson: the subject struck through like a replaced value
+    cell: (row) => (row.kind === 'cancelled' && row.subject ? <s className="text-(--d-muted)">{row.subject}</s> : row.subject),
+  },
   teacher: { head: 'Lehrkraft', fr: 12, flag: 'teacher', cls: 'd-text', cell: (row) => <Replaced old={row.teacher_old} value={row.teacher} /> },
   room: { head: 'Raum', fr: 10, flag: 'room', cls: 'd-text', cell: (row) => <Replaced old={row.room_old} value={row.room} /> },
   kind: {
@@ -215,7 +234,7 @@ function SubstitutionRow({ row, columns, showLead }) {
         const def = COLUMN_DEFS[key]
         const hidden = key === columns.leadKey && !showLead
         return (
-          <span key={key} data-column={key} className={`min-w-0 ${def.nowrap ? 'whitespace-nowrap' : 'whitespace-normal break-words'} ${def.cls} ${def.tone?.(row) ?? ''}`}>
+          <span key={key} data-column={key} className={`min-w-0 ${def.nowrap ? 'whitespace-nowrap' : 'whitespace-normal [overflow-wrap:anywhere]'} ${def.cls} ${def.tone?.(row) ?? ''}`}>
             {hidden ? '' : def.cell(row)}
           </span>
         )
