@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   EDITABLE_FIELDS, KIND_OPTIONS, LAYOUT_OPTIONS, layoutHelp, changedKeys, draftFromView, moveItem, newStop, normalizeStop, previewPayload, rotationChoices,
-  kindChangeProblem, stopSource, stopTransport, usedOn, viewPayload, viewProblems,
+  kindChangeProblem, screenSize, stopSource, stopTransport, usedOn, viewPayload, viewProblems,
 } from './viewData'
 
 const VIEW = {
@@ -280,5 +280,26 @@ describe('Typ im Entwurf', () => {
     expect(changedKeys(base, draft)).toEqual(['kind'])
     expect(viewPayload(draft, ['kind'])).toEqual({ kind: 'info' })
     expect(previewPayload(7, base, draft)).toEqual({ id: 7, kind: 'info' })
+  })
+})
+
+describe('screenSize', () => {
+  it('nimmt die gemeldete Auflösung und dreht bei 90/270 Grad', () => {
+    expect(screenSize({ display_resolution: '1920x1080', display_transform: 'normal' })).toEqual({ width: 1920, height: 1080 })
+    expect(screenSize({ display_resolution: '1920x1080', display_transform: '270' })).toEqual({ width: 1080, height: 1920 })
+    // Reported beats the admin setting: the Pi shows what it really uses
+    expect(screenSize({ display_resolution: '1366x768', output_mode: '1920x1080@60' })).toEqual({ width: 1366, height: 768 })
+  })
+
+  it('ohne Meldung die Einstellung im Admin, sonst 4K', () => {
+    expect(screenSize({ output_mode: '1920x1080@60', output_transform: '90' })).toEqual({ width: 1080, height: 1920 })
+    expect(screenSize({ orientation: 'landscape' })).toEqual({ width: 3840, height: 2160 })
+    expect(screenSize({ orientation: 'portrait' })).toEqual({ width: 2160, height: 3840 })
+    expect(screenSize(null)).toEqual({ width: 3840, height: 2160 })
+  })
+
+  it('„Hoch“ ohne Drehung bleibt quer, wenn der Pi quer meldet', () => {
+    expect(screenSize({ orientation: 'portrait', display_resolution: '3840x2160', display_transform: 'normal' }))
+      .toEqual({ width: 3840, height: 2160 })
   })
 })

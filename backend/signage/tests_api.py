@@ -1,6 +1,7 @@
 from unittest import mock
 
 from django.test import TestCase, override_settings
+from django.utils import timezone
 
 from core.auth import KeycloakAuth
 from users.models import UserProfile
@@ -182,6 +183,20 @@ class ScreenAccessKeyVisibilityTest(TestCase):
     def update(self, body):
         return self.client.put(f'/api/monitor/screens/{self.screen.id}', body,
                                content_type='application/json', HTTP_AUTHORIZATION='Bearer x')
+
+    def test_list_carries_the_reported_display(self):
+        from .models import Device
+        self.grant('signage.view')
+        r = self.client.get('/api/monitor/screens', HTTP_AUTHORIZATION='Bearer x').json()[0]
+        self.assertEqual((r['display_resolution'], r['display_transform']), ('', ''))
+        device = Device.objects.create(screen=self.screen, serial='p', last_telemetry={
+            'display': {'resolution': '1920x1080', 'transform': '90', 'modes': []}})
+        r = self.client.get('/api/monitor/screens', HTTP_AUTHORIZATION='Bearer x').json()[0]
+        self.assertEqual((r['display_resolution'], r['display_transform']), ('1920x1080', '90'))
+        device.revoked_at = timezone.now()
+        device.save()
+        r = self.client.get('/api/monitor/screens', HTTP_AUTHORIZATION='Bearer x').json()[0]
+        self.assertEqual(r['display_resolution'], '')
 
     def test_view_only_gets_no_key(self):
         self.grant('signage.view')

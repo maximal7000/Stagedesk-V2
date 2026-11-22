@@ -312,6 +312,31 @@ class ScreenListSchema(Schema):
     updated_at: datetime
     # On by its own times (without emergency and on air): the admin shows which screens on air wakes.
     scheduled_on: bool = True
+    # What the paired Pi last reported (current mode "3840x2160", rotation "normal"/"90"/...), for the
+    # preview size; empty without a device or while the TV is off.
+    display_resolution: str = ''
+    display_transform: str = ''
+
+    @staticmethod
+    def _reported_display(obj):
+        try:
+            device = obj.device
+        except Exception:
+            return {}
+        if device is None or device.revoked_at is not None:
+            return {}
+        display = (device.last_telemetry or {}).get('display')
+        return display if isinstance(display, dict) else {}
+
+    @staticmethod
+    def resolve_display_resolution(obj):
+        value = ScreenListSchema._reported_display(obj).get('resolution')
+        return value if isinstance(value, str) else ''
+
+    @staticmethod
+    def resolve_display_transform(obj):
+        value = ScreenListSchema._reported_display(obj).get('transform')
+        return value if isinstance(value, str) else ''
 
     @staticmethod
     def resolve_scheduled_on(obj):

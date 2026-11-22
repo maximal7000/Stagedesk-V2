@@ -69,7 +69,7 @@ def _hide_key_without_setup(request, screens):
 @router.get("/screens", response=list[ScreenListSchema], auth=keycloak_auth)
 def list_screens(request):
     _require_perm(request, 'signage.view')
-    return _hide_key_without_setup(request, list(Screen.objects.all()))
+    return _hide_key_without_setup(request, list(Screen.objects.select_related('device')))
 
 
 @router.post("/screens", auth=keycloak_auth)

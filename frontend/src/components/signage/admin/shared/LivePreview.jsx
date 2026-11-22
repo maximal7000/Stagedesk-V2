@@ -1,4 +1,4 @@
-// Resolution and orientation come from the screen (4K landscape, portrait 2160 × 3840).
+// Size and orientation come from the screen: what its Pi reports, else the admin setting, else 4K (screenSize).
 import { useEffect, useId, useRef, useState } from 'react'
 import { previewErrorText, usePreviewToken } from './usePreviewToken'
 import { fieldClass } from './form'
