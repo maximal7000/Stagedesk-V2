@@ -444,9 +444,7 @@ class Screen(models.Model):
                        .select_related('event', 'view')
                        .order_by('-event__is_active', '-event__created_at'))
         for a in assignments:
-            ev = a.event
-            active = ev.is_active or (ev.active_from and ev.active_until and ev.active_from <= now <= ev.active_until)
-            if active and a.view_id:
+            if a.event.active_at(now) and a.view_id:
                 return a.view
         return None
 
@@ -625,14 +623,17 @@ class DisplayEvent(models.Model):
         verbose_name = 'Event'
         verbose_name_plural = 'Events'
 
-    @property
-    def is_active_now(self):
+    def active_at(self, now):
+        """Switched on by hand, or inside its time window."""
         if self.is_active:
             return True
-        now = timezone.now()
         if self.active_from and self.active_until:
             return self.active_from <= now <= self.active_until
         return False
+
+    @property
+    def is_active_now(self):
+        return self.active_at(timezone.now())
 
     def __str__(self):
         return self.name

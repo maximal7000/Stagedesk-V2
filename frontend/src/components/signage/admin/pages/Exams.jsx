@@ -98,7 +98,7 @@ function EventForm({ draft, set, screens, views }) {
         <input id={descriptionId} value={draft.description} onChange={(e) => set('description', e.target.value)} className={fieldClass} />
       </Field>
       <TimeRange draft={draft} set={set} help="Ohne Zeitraum wird der Termin nur von Hand in der Liste aktiviert." />
-      <Field label="Zuordnung" help="Während des Termins zeigt jeder Bildschirm die gewählte Ansicht.">
+      <Field label="Zuordnung" help="Während des Termins ist jeder Bildschirm an, auch außerhalb seines Zeitplans, und zeigt die gewählte Ansicht. Danach gilt wieder sein Zeitplan.">
         <ul className="space-y-2" data-assignments>
           {rows.map((row, i) => (
             <li key={i} className="flex items-center gap-2">
