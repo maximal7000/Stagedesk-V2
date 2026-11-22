@@ -506,6 +506,23 @@ class DeviceCommandApiTest(DeviceApiBase):
         other = Device.objects.create(serial='o')
         self.assertEqual(self.get(f'/devices/{other.id}/commands/{cid}').status_code, 404)
 
+    def test_latest_power_probe(self):
+        url = f'/devices/{self.device.id}/power-probe'
+        self.assertEqual(self.get(url).status_code, 403)
+        self.grant('signage.devices')
+        self.assertEqual(self.get(url).status_code, 404)
+        now = timezone.now()
+        old = DeviceCommand.objects.create(device=self.device, kind='power_probe', status='ok', result='{"a": 1}',
+                                           finished_at=now - timedelta(days=2))
+        new = DeviceCommand.objects.create(device=self.device, kind='power_probe', status='ok', result='{"a": 2}',
+                                           finished_at=now - timedelta(hours=1))
+        DeviceCommand.objects.create(device=self.device, kind='power_probe', status='failed', result='x',
+                                     finished_at=now)
+        DeviceCommand.objects.create(device=self.device, kind='power_probe', status='pending')
+        body = self.get(url).json()
+        self.assertEqual((body['id'], body['result']), (new.id, '{"a": 2}'))
+        self.assertNotEqual(body['id'], old.id)
+
     def test_get_command_expires_stale_pending(self):
         self.grant('signage.devices')
         cid = self.cmd('reboot').json()['id']

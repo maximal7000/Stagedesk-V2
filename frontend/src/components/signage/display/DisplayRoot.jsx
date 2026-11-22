@@ -55,9 +55,19 @@ function DisplayContent({ payload, state, lastOkAt, nextRetryAt, error, slug = '
   return <ViewScreen view={payload.view} scheme={scheme} orientation={orientation} staleSince={staleSince} />
 }
 
-function ModeSplit({ mode, view, scheme, orientation, staleSince }) {
+// A split view gives the exam or on-air its own side: only the other side stays, at the mode's usual
+// width (the split view's own width does not count).
+function remainingView(view, modeSide) {
+  if (view?.kind !== 'split') return view
+  const other = view.data?.[modeSide === 'left' ? 'right' : 'left']
+  if (!other?.kind || other.data == null) return view
+  return { ...view, kind: other.kind, data: other.data }
+}
+
+function ModeSplit({ mode, view: fullView, scheme, orientation, staleSince }) {
   const Mode = MODE_COMPONENTS[mode.kind]
   const side = mode.side === 'left' ? 'left' : 'right'
+  const view = remainingView(fullView, side)
   const portrait = orientation === 'portrait'
   const modePanel = (
     <div key="mode" className="relative shrink-0" style={{ flexBasis: '38%' }}>

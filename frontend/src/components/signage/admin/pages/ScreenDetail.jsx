@@ -129,6 +129,7 @@ function PowerMethodBlock({ device, original, canDevices, problems, deviceRow, s
       {canDevices && deviceRow && (
         <PowerCheck key={deviceRow.id ?? 'legacy'} device={deviceRow} screen={screen} config={{ ...original.power_config, ...device.draft?.power_config }}
           canTest={canTest} unsaved={'power_method' in devicePayload(device.draft ?? {}, original)}
+          autoProbe={(original.power_method ?? 'none') === 'none'}
           onAdopt={adopt} onRecommended={setRecommended} />
       )}
       <div className="grid gap-4 sm:grid-cols-2">

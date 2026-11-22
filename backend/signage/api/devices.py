@@ -228,6 +228,18 @@ def get_device_command(request, id: int, cid: int):
     return get_object_or_404(DeviceCommand, id=cid, device=device)
 
 
+@router.get("/devices/{int:id}/power-probe", response={200: DeviceCommandSchema, 404: dict}, auth=keycloak_auth)
+def latest_power_probe(request, id: int):
+    """The last finished check, so opening a screen does not start a new one (a CEC check closes the
+    agent's session and the TV announces the Pi again)."""
+    _require_perm(request, 'signage.devices')
+    device = get_object_or_404(Device, id=id)
+    command = device.commands.filter(kind='power_probe', status='ok').order_by('-finished_at', '-id').first()
+    if command is None:
+        return 404, {"detail": "Noch nicht geprüft."}
+    return command
+
+
 @router.get("/screens/{int:id}/events", response=list[DeviceEventSchema], auth=keycloak_auth)
 def list_screen_events(request, id: int, kind: str = '', limit: int = 100):
     _require_perm(request, 'signage.devices')
