@@ -39,6 +39,7 @@ BOOL_FIELDS = {
     'transit_show_disruptions': 'Störungen anzeigen',
     'transit_strip_city': 'Ortsnamen weglassen',
     'transit_show_via': 'Zwischenhalte anzeigen',
+    'map_all_lines': 'Alle Linien',
 }
 WALK_MINUTES = (0, 60)
 MAX_DEPARTURES = (1, 50)
@@ -72,6 +73,26 @@ def _check_numbers(data):
     # Left width: clamped into the range as before, but never empty
     if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
         raise HttpError(422, number_message('Breite links', 20, 80))
+    if 'map_zoom' in data and not (_is_int(data['map_zoom']) and 13 <= data['map_zoom'] <= 17):
+        raise HttpError(422, number_message('Maßstab', 13, 17))
+    if 'map_center' in data and parse_map_center(data['map_center']) is None:
+        raise HttpError(422, "Mittelpunkt ungültig (Breite, Länge, zum Beispiel 53.8699, 10.6892).")
+
+
+def parse_map_center(value):
+    """"53.8699, 10.6892" (as Google Maps copies it) -> (lat, lon) inside Germany, else None."""
+    if not isinstance(value, str):
+        return None
+    parts = [p.strip() for p in value.replace(';', ',').split(',')]
+    if len(parts) != 2:
+        return None
+    try:
+        lat, lon = float(parts[0]), float(parts[1])
+    except ValueError:
+        return None
+    if not (47 <= lat <= 56 and 5 <= lon <= 16):
+        return None
+    return lat, lon
 
 
 # '' = automatic: DB for railway stations, NAH.SH for everything else

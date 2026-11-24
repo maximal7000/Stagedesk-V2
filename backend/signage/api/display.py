@@ -1,3 +1,4 @@
+import logging
 import secrets
 
 from django.utils import timezone
@@ -8,6 +9,9 @@ from core.auth import keycloak_auth
 from .. import display as display_payload
 from ..models import DisplayView, MonitorSettings, Screen
 from ..permissions import _require_perm
+from ..transit import vehicles
+
+logger = logging.getLogger('signage.transit')
 
 router = Router(tags=["Monitor"])
 
@@ -54,6 +58,24 @@ def get_display_data(request, view: str = None, screen: str = None,
         view_obj = DisplayView.get(slug=view or profil)
     key_ok = _display_key_ok(request, screen_obj, key)
     return display_payload.build_payload(screen_obj, view_obj, key_ok=key_ok, now=now)
+
+
+@router.get("/display/vehicles")
+def get_vehicles(request, bbox: str):
+    """Public like /display: positions are public anyway. `bbox` = south,west,north,east; at most
+    0.4 degrees per side, so nobody runs large requests over our NAH.SH access. Answers are shared for 15 s."""
+    try:
+        south, west, north, east = (float(v) for v in bbox.split(','))
+    except ValueError:
+        raise HttpError(422, "bbox ungültig (Süd,West,Nord,Ost).")
+    if not (south < north and west < east and north - south <= vehicles.MAX_SPAN and east - west <= vehicles.MAX_SPAN
+            and 47 <= south and north <= 56 and 5 <= west and east <= 16):
+        raise HttpError(422, "bbox ungültig (Süd,West,Nord,Ost).")
+    try:
+        return vehicles.fetch_vehicles((south, west, north, east))
+    except Exception:
+        logger.exception("Fahrzeugpositionen nicht abrufbar")
+        raise HttpError(502, "Fahrzeugpositionen gerade nicht abrufbar.")
 
 
 @router.get("/clock")

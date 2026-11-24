@@ -133,6 +133,7 @@ class DisplayView(models.Model):
         ('departures',    'Abfahrten'),
         ('media',         'Medien'),
         ('info',          'Ankündigungen'),
+        ('map',           'Karte'),
     ]
     split_left = models.CharField(max_length=20, choices=SPLIT_CONTENT_CHOICES, default='webuntis',
         help_text="Inhalt der linken Split-Seite")
@@ -140,6 +141,11 @@ class DisplayView(models.Model):
         help_text="Inhalt der rechten Split-Seite")
     split_left_percent = models.IntegerField(default=50,
         help_text="Breite der linken Seite in Prozent (20–80)")
+    # Map side: live bus positions (NAH.SH) around a centre ("lat, lon", default the Katharineum)
+    map_center = models.CharField(max_length=40, blank=True, default='53.8699, 10.6892')
+    map_zoom = models.IntegerField(default=15, help_text="Kartenmaßstab 13 (weit) bis 17 (nah)")
+    map_all_lines = models.BooleanField(default=False,
+        help_text="Alle Linien statt nur der Linien an den Haltestellen der Ansicht")
 
     show_clock = models.BooleanField(default=True)
     show_events = models.BooleanField(default=True)

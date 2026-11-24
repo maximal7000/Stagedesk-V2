@@ -15,6 +15,7 @@ export function endpoints(base = API_BASE, loc = window.location) {
   const origin = apiUrl.origin
   return {
     display: `${apiUrl.href}/signage/display`,
+    vehicles: `${apiUrl.href}/signage/display/vehicles`,
     wsBase: origin.replace(/^http/, 'ws'),
   }
 }

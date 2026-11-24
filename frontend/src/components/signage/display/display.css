@@ -155,3 +155,8 @@
 .d-page-edge {
   outline: 0.0625rem solid var(--d-line);
 }
+
+/* Map side: OpenStreetMap tiles darkened for the dark scheme, so the map does not glare */
+.d-scheme-dark [data-map-tiles] {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.85);
+}

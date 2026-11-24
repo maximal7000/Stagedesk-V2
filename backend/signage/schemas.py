@@ -91,6 +91,9 @@ class DisplayViewSchema(Schema):
     split_left: str = 'exam'
     split_right: str = 'webuntis'
     split_left_percent: int = 50
+    map_center: str = '53.8699, 10.6892'
+    map_zoom: int = 15
+    map_all_lines: bool = False
     webuntis_url: str
     webuntis_url_next_day: str = ''
     webuntis_link_id: Optional[int] = None
@@ -175,6 +178,9 @@ class DisplayViewUpdateSchema(Schema):
     split_left: Optional[str] = None
     split_right: Optional[str] = None
     split_left_percent: Optional[int] = None
+    map_center: Optional[str] = None
+    map_zoom: Optional[int] = None
+    map_all_lines: Optional[bool] = None
     webuntis_url: Optional[str] = None
     webuntis_url_next_day: Optional[str] = None
     webuntis_link_id: Optional[int] = None

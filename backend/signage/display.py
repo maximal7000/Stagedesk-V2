@@ -15,6 +15,8 @@ from django.utils import timezone
 from . import color_scheme, substitutions, transit
 from .models import Announcement, DisplayView, MediaFile, MonitorSettings
 from .power import compute_power_state, scheduled_power_state
+from .transit.vehicles import line_key
+from .validation import parse_map_center
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +49,8 @@ def _store_cache(view, fields):
 def _wants_transit(view):
     if view.kind == 'departures' or view.show_transit:
         return True
-    return view.kind == 'split' and 'departures' in (view.split_left, view.split_right)
+    # The map takes its lines from the departures at the view's stops
+    return view.kind == 'split' and bool({'departures', 'map'} & {view.split_left, view.split_right})
 
 
 def _fetch_weather(view):
@@ -357,7 +360,25 @@ def _split_side(view, content, key_ok, now):
         return {'kind': 'media', 'data': _media_data(view)}
     if content == 'info':
         return {'kind': 'info', 'data': _info_data(view, now)}
+    if content == 'map':
+        return {'kind': 'map', 'data': _map_data(view)}
     return {'kind': content, 'data': None}
+
+
+DEFAULT_MAP_CENTER = (53.8699, 10.6892)  # Katharineum
+
+
+def _map_data(view):
+    """The screen loads the vehicles itself (/display/vehicles) every 15 s; here only centre, scale and
+    the lines to show (None = all)."""
+    lat, lon = parse_map_center(view.map_center) or DEFAULT_MAP_CENTER
+    lines = None
+    if not view.map_all_lines and view.transit_stops:
+        fetched = _fetch_transit(view) or {}
+        lines = sorted({line_key(d.get('line')) for s in fetched.get('stations', []) for d in s.get('departures') or []
+                        if isinstance(d, dict) and d.get('line')})
+    zoom = view.map_zoom if isinstance(view.map_zoom, int) else 15
+    return {'center': [lat, lon], 'zoom': max(13, min(17, zoom)), 'lines': lines}
 
 
 def _split_data(view, key_ok, now):
