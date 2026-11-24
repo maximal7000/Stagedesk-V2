@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { Field, Section, fieldClass } from '../shared/form'
 import DeparturesEditor from './Departures'
 import InfoEditor from './Info'
+import MapEditor from './Map'
 import MediaEditor from './Media'
 import SubstitutionsEditor from './Substitutions'
 
@@ -10,6 +11,7 @@ const SIDE_CONTENT = [
   { value: 'departures', label: 'Abfahrten' },
   { value: 'media', label: 'Medien' },
   { value: 'info', label: 'Ankündigungen' },
+  { value: 'map', label: 'Karte' },
 ]
 const isSubstitutions = (v) => v === 'substitutions' || v === 'webuntis'
 
@@ -43,7 +45,9 @@ export default function SplitEditor({ draft, set, viewId }) {
           </Field>
         </div>
       </Section>
-      {sides.includes('departures') && <DeparturesEditor draft={draft} set={set} viewId={viewId} />}
+      {sides.includes('map') && <MapEditor draft={draft} set={set} />}
+      {/* The map takes its lines from the stops, so they stay editable beside it */}
+      {(sides.includes('departures') || sides.includes('map')) && <DeparturesEditor draft={draft} set={set} viewId={viewId} />}
       {sides.includes('substitutions') && <SubstitutionsEditor draft={draft} set={set} />}
       {sides.includes('media') && <MediaEditor draft={draft} set={set} />}
       {sides.includes('info') && <InfoEditor draft={draft} set={set} title="Ankündigungen und Termine" />}

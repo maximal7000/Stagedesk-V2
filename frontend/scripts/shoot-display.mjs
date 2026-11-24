@@ -99,6 +99,17 @@ function setLayout(view, layout) {
   for (const item of view.data?.items ?? []) if (item.view) setLayout(item.view, layout)
 }
 
+// 1 x 1 light grey PNG
+const GREY_TILE = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mN4+vTpfwAIuQOz8WNjpwAAAABJRU5ErkJggg==', 'base64')
+
+function serveTile(route) {
+  const dir = process.env.SHOOT_TILE_DIR
+  const path = new URL(route.request().url()).pathname
+  const file = dir ? join(dir, path) : null
+  if (file && existsSync(file)) return route.fulfill({ status: 200, contentType: 'image/png', body: readFileSync(file) })
+  return route.fulfill({ status: 200, contentType: 'image/png', body: GREY_TILE })
+}
+
 function outName(name, opts) {
   const parts = [`display-${opts.state && !opts.only ? opts.state : name}`]
   if (opts.state && opts.only) parts.push(opts.state)
@@ -139,6 +150,12 @@ async function shootPage(page, context, baseUrl, name, payload, opts) {
   await page.route('**/api/signage/display*', (route) => (failing
     ? route.fulfill({ status: 503, contentType: 'application/json', body: '{"detail":"Service Unavailable"}' })
     : route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) })))
+  // Map side: vehicles from the fixture ("_vehicles"), tiles from SHOOT_TILE_DIR (z/x/y.png) or plain grey
+  await page.route('**/api/signage/display/vehicles*', (route) => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ step_ms: 5000, vehicles: payload._vehicles ?? [] }),
+  }))
+  await page.route('https://tile.openstreetmap.org/**', (route) => serveTile(route))
   await page.route('**/media/monitor/**', (route) => serveAsset(route))
   await page.route('**/WebUntis/monitor**', (route) => serveAsset(route, 'untis-fallback.html'))
 
@@ -211,7 +228,7 @@ async function main() {
       serviceWorkers: 'block',
     })
     // Nur der Vorschau-Server ist erreichbar; alles andere (Keycloak, CDNs) wird abgewiesen
-    await context.route((u) => u.hostname !== '127.0.0.1', (route) => route.abort())
+    await context.route((u) => u.hostname !== '127.0.0.1' && u.hostname !== 'tile.openstreetmap.org', (route) => route.abort())
     // Jede Testdatei für sich: ein Fehler bricht nicht den ganzen Lauf ab, setzt aber den Exit-Code
     for (const name of names) {
       try {

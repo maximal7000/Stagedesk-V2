@@ -34,6 +34,7 @@ export const NUMBER_RULES = {
   pdf_per_screen: { label: 'Seiten nebeneinander', min: 1, max: 3 },
   pdf_static_page: { label: 'Feste Seite', min: 1, max: 999 },
   split_left_percent: { label: 'Breite links', min: 20, max: 80 },
+  map_zoom: { label: 'Ausschnitt', min: 13, max: 17 },
   transit_duration: { label: 'Vorausschau', min: 10, max: 240 },
   transit_columns: { label: 'Spalten', min: 1, max: 5 },
 }
@@ -58,13 +59,13 @@ export const EDITABLE_FIELDS = [
   'media_items', 'media_seconds', 'pdf_per_screen', 'pdf_mode', 'pdf_pages', 'pdf_static_page',
   'show_announcements', 'show_events', 'show_countdown',
   'show_custom_countdown', 'custom_countdown_name', 'custom_countdown_date',
-  'split_left', 'split_right', 'split_left_percent',
+  'split_left', 'split_right', 'split_left_percent', 'map_center', 'map_zoom', 'map_all_lines',
   'rotation_items',
 ]
 
-const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'transit_duration', 'transit_columns'])
+const INT_FIELDS = new Set(['page_seconds', 'media_seconds', 'pdf_per_screen', 'pdf_static_page', 'split_left_percent', 'map_zoom', 'transit_duration', 'transit_columns'])
 const TEXT_FIELDS = new Set(['name', 'substitutions_custom_format', 'weather_city', 'qr_code_url', 'qr_code_label', 'transit_strike_text',
-  'webuntis_url', 'webuntis_url_next_day', 'pdf_pages', 'custom_countdown_name'])
+  'webuntis_url', 'webuntis_url_next_day', 'pdf_pages', 'custom_countdown_name', 'map_center'])
 const LINK_FIELDS = new Set(['webuntis_link_id', 'webuntis_link_next_day_id'])
 const LIST_FIELDS = new Set(['transit_disruption_rail_lines', 'transit_disruption_bus_lines', 'transit_strike_lines', 'transit_strike_types'])
 
@@ -158,12 +159,23 @@ export function rotationProblems(items) {
 }
 
 // keys: changed fields; only their numbers are checked (old unchanged values block nothing)
+// "53.8699, 10.6892" as Google Maps copies it; inside Germany (backend: parse_map_center)
+export function validMapCenter(value) {
+  const parts = String(value ?? '').replace(';', ',').split(',').map((p) => p.trim())
+  if (parts.length !== 2 || parts.some((p) => p === '' || Number.isNaN(Number(p)))) return false
+  const [lat, lon] = parts.map(Number)
+  return lat >= 47 && lat <= 56 && lon >= 5 && lon <= 16
+}
+
 export function viewProblems(draft, keys = []) {
   const problems = []
   if (!String(draft.name ?? '').trim()) problems.push('Name fehlt.')
   if (draft.kind === 'rotation') problems.push(...rotationProblems(draft.rotation_items))
   for (const [key, { label, min, max }] of Object.entries(NUMBER_RULES)) {
     if (keys.includes(key) && !inRange(draft[key], min, max)) problems.push(numberMessage(label, min, max))
+  }
+  if (keys.includes('map_center') && !validMapCenter(draft.map_center)) {
+    problems.push('Mittelpunkt ungültig (Breite, Länge, zum Beispiel 53.8699, 10.6892).')
   }
   if (keys.includes('transit_stops')) {
     for (const stop of draft.transit_stops ?? []) {

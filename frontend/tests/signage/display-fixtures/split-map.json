@@ -1,0 +1,754 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true,
+    "scheme": "light"
+  },
+  "scheme": "light",
+  "mode": null,
+  "view": {
+    "id": 4,
+    "kind": "split",
+    "layout": "wide",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "left": {
+        "kind": "departures",
+        "data": {
+          "stations": [
+            {
+              "station_name": "Katharineum",
+              "station_id": "8000999",
+              "departures": [
+                {
+                  "line": "5",
+                  "direction": "Travemünde Strandbahnhof",
+                  "departure": "10:44",
+                  "departure_actual": "10:44",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Dornbreite",
+                  "departure": "10:48",
+                  "departure_actual": "10:48",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "5",
+                  "direction": "Moisling",
+                  "departure": "10:52",
+                  "departure_actual": "10:52",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": true,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Bornkamp",
+                  "departure": "10:56",
+                  "departure_actual": "10:56",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "31",
+                  "direction": "Bad Schwartau",
+                  "departure": "11:00",
+                  "departure_actual": "11:00",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "5",
+                  "direction": "Travemünde Strandbahnhof",
+                  "departure": "11:04",
+                  "departure_actual": "11:04",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Dornbreite",
+                  "departure": "11:08",
+                  "departure_actual": "11:10",
+                  "delay": 2,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "5",
+                  "direction": "Moisling",
+                  "departure": "11:12",
+                  "departure_actual": "11:12",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "31",
+                  "direction": "Stockelsdorf",
+                  "departure": "11:16",
+                  "departure_actual": "11:16",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "11",
+                  "direction": "Bornkamp",
+                  "departure": "11:20",
+                  "departure_actual": "11:20",
+                  "delay": 0,
+                  "platform": "",
+                  "kind": "bus",
+                  "kind_icon": "bus",
+                  "cancelled": false,
+                  "remarks": []
+                }
+              ],
+              "max_departures": 10,
+              "walk_minutes": 1
+            },
+            {
+              "station_name": "Lübeck Hbf",
+              "station_id": "8000237",
+              "departures": [
+                {
+                  "line": "RE8",
+                  "direction": "Hamburg Hbf",
+                  "departure": "11:00",
+                  "departure_actual": "11:00",
+                  "delay": 0,
+                  "platform": "5",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB85",
+                  "direction": "Puttgarden",
+                  "departure": "11:04",
+                  "departure_actual": "11:08",
+                  "delay": 4,
+                  "platform": "7",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RE83",
+                  "direction": "Kiel Hbf",
+                  "departure": "11:08",
+                  "departure_actual": "11:08",
+                  "delay": 0,
+                  "platform": "3",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB86",
+                  "direction": "Travemünde Strand",
+                  "departure": "11:12",
+                  "departure_actual": "11:12",
+                  "delay": 0,
+                  "platform": "9",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RE8",
+                  "direction": "Hamburg Hbf",
+                  "departure": "11:16",
+                  "departure_actual": "11:16",
+                  "delay": 0,
+                  "platform": "5",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB84",
+                  "direction": "Kiel Hbf",
+                  "departure": "11:20",
+                  "departure_actual": "11:20",
+                  "delay": 0,
+                  "platform": "4",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RE83",
+                  "direction": "Lüneburg",
+                  "departure": "11:24",
+                  "departure_actual": "11:24",
+                  "delay": 0,
+                  "platform": "2",
+                  "kind": "regionalExpress",
+                  "kind_icon": "re",
+                  "cancelled": false,
+                  "remarks": []
+                },
+                {
+                  "line": "RB81",
+                  "direction": "Bad Oldesloe",
+                  "departure": "11:28",
+                  "departure_actual": "11:28",
+                  "delay": 0,
+                  "platform": "6",
+                  "kind": "regional",
+                  "kind_icon": "rb",
+                  "cancelled": false,
+                  "remarks": []
+                }
+              ],
+              "max_departures": 10,
+              "walk_minutes": 14
+            }
+          ],
+          "disruptions": [
+            {
+              "id": "swl-1a2b3c",
+              "source": "swl",
+              "kind": "disruption",
+              "title": "Umleitung Moislinger Allee",
+              "text": "Haltestellen Lindenplatz bis Holstentor entfallen, Ersatzhalt Possehlstraße.",
+              "lines": [
+                "5"
+              ],
+              "from": "2026-10-12T05:00:00+02:00",
+              "until": "2026-10-30T23:59:00+01:00",
+              "all_lines": false,
+              "image": null,
+              "stops": [],
+              "suggestion": "",
+              "highlighted": true
+            }
+          ]
+        }
+      },
+      "right": {
+        "kind": "map",
+        "data": {
+          "center": [
+            53.8699,
+            10.6892
+          ],
+          "zoom": 15,
+          "lines": null
+        }
+      },
+      "left_percent": 50
+    }
+  },
+  "_vehicles": [
+    {
+      "id": "1|46535|1|100|24112026",
+      "line": "9",
+      "key": "9",
+      "direction": "Bad Schwartau ZOB",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86632,
+          10.67526
+        ],
+        [
+          53.86634,
+          10.675
+        ],
+        [
+          53.86641,
+          10.67478
+        ],
+        [
+          53.8664,
+          10.67455
+        ],
+        [
+          53.86629,
+          10.67437
+        ],
+        [
+          53.86623,
+          10.67415
+        ],
+        [
+          53.86622,
+          10.67389
+        ]
+      ]
+    },
+    {
+      "id": "1|46515|1|100|24112026",
+      "line": "9",
+      "key": "9",
+      "direction": "Grillenweg",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86722,
+          10.67185
+        ],
+        [
+          53.86708,
+          10.67161
+        ],
+        [
+          53.86692,
+          10.6712
+        ],
+        [
+          53.86676,
+          10.6708
+        ],
+        [
+          53.86661,
+          10.67037
+        ],
+        [
+          53.86641,
+          10.67007
+        ],
+        [
+          53.86613,
+          10.67004
+        ]
+      ]
+    },
+    {
+      "id": "1|46492|0|100|24112026",
+      "line": "7",
+      "key": "7",
+      "direction": "ZOB/Hauptbahnhof",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86632,
+          10.67526
+        ],
+        [
+          53.86634,
+          10.675
+        ],
+        [
+          53.86641,
+          10.67478
+        ],
+        [
+          53.8664,
+          10.67455
+        ],
+        [
+          53.86629,
+          10.67437
+        ],
+        [
+          53.86623,
+          10.67415
+        ],
+        [
+          53.86622,
+          10.67389
+        ]
+      ]
+    },
+    {
+      "id": "1|46455|1|100|24112026",
+      "line": "6",
+      "key": "6",
+      "direction": "Hamburger Straße",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86627,
+          10.6758
+        ],
+        [
+          53.86628,
+          10.67559
+        ],
+        [
+          53.86631,
+          10.67536
+        ],
+        [
+          53.86633,
+          10.67515
+        ],
+        [
+          53.86636,
+          10.67495
+        ],
+        [
+          53.86642,
+          10.67477
+        ],
+        [
+          53.8664,
+          10.67457
+        ]
+      ]
+    },
+    {
+      "id": "1|46433|1|100|24112026",
+      "line": "6",
+      "key": "6",
+      "direction": "Blankenseer Dorfplatz",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86587,
+          10.67072
+        ],
+        [
+          53.86587,
+          10.67072
+        ],
+        [
+          53.86587,
+          10.67072
+        ],
+        [
+          53.86587,
+          10.67072
+        ],
+        [
+          53.86587,
+          10.67072
+        ],
+        [
+          53.86587,
+          10.67072
+        ],
+        [
+          53.86587,
+          10.67072
+        ]
+      ]
+    },
+    {
+      "id": "1|46378|0|100|24112026",
+      "line": "5",
+      "key": "5",
+      "direction": "Bahnhof Moisling",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86618,
+          10.67285
+        ],
+        [
+          53.86617,
+          10.67261
+        ],
+        [
+          53.86616,
+          10.67237
+        ],
+        [
+          53.86612,
+          10.67221
+        ],
+        [
+          53.86613,
+          10.672
+        ],
+        [
+          53.86607,
+          10.67181
+        ],
+        [
+          53.86598,
+          10.67163
+        ]
+      ]
+    },
+    {
+      "id": "1|46299|1|100|24112026",
+      "line": "5",
+      "key": "5",
+      "direction": "Eichholz",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.8657,
+          10.67044
+        ],
+        [
+          53.8657,
+          10.67044
+        ],
+        [
+          53.8657,
+          10.67044
+        ],
+        [
+          53.8657,
+          10.67044
+        ],
+        [
+          53.8657,
+          10.67044
+        ],
+        [
+          53.8657,
+          10.67044
+        ],
+        [
+          53.8657,
+          10.67044
+        ]
+      ]
+    },
+    {
+      "id": "1|46182|1|100|24112026",
+      "line": "2",
+      "key": "2",
+      "direction": "Stockelsdorf",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86618,
+          10.67317
+        ],
+        [
+          53.86618,
+          10.67294
+        ],
+        [
+          53.86618,
+          10.67271
+        ],
+        [
+          53.86617,
+          10.67248
+        ],
+        [
+          53.86615,
+          10.6723
+        ],
+        [
+          53.86612,
+          10.67214
+        ],
+        [
+          53.86614,
+          10.67192
+        ]
+      ]
+    },
+    {
+      "id": "1|46169|1|100|24112026",
+      "line": "2",
+      "key": "2",
+      "direction": "Estlandring",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86599,
+          10.67106
+        ],
+        [
+          53.86599,
+          10.67106
+        ],
+        [
+          53.86599,
+          10.67106
+        ],
+        [
+          53.86599,
+          10.67106
+        ],
+        [
+          53.86599,
+          10.67106
+        ],
+        [
+          53.86599,
+          10.67106
+        ],
+        [
+          53.86599,
+          10.67106
+        ]
+      ]
+    },
+    {
+      "id": "1|46142|0|100|24112026",
+      "line": "16",
+      "key": "16",
+      "direction": "ZOB/Hauptbahnhof",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86646,
+          10.67831
+        ],
+        [
+          53.86645,
+          10.67812
+        ],
+        [
+          53.86644,
+          10.6779
+        ],
+        [
+          53.86643,
+          10.67769
+        ],
+        [
+          53.86641,
+          10.67749
+        ],
+        [
+          53.8664,
+          10.67728
+        ],
+        [
+          53.86637,
+          10.67706
+        ]
+      ]
+    },
+    {
+      "id": "1|45972|1|100|24112026",
+      "line": "10",
+      "key": "10",
+      "direction": "Wesloer Brücke",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86963,
+          10.67206
+        ],
+        [
+          53.86948,
+          10.67199
+        ],
+        [
+          53.86932,
+          10.6719
+        ],
+        [
+          53.86918,
+          10.67181
+        ],
+        [
+          53.86907,
+          10.67166
+        ],
+        [
+          53.86894,
+          10.67176
+        ],
+        [
+          53.86881,
+          10.67196
+        ]
+      ]
+    },
+    {
+      "id": "1|45945|0|100|24112026",
+      "line": "10",
+      "key": "10",
+      "direction": "Groß Parin",
+      "kind": "bus",
+      "replacement": false,
+      "frames": [
+        [
+          53.86618,
+          10.67279
+        ],
+        [
+          53.86617,
+          10.67254
+        ],
+        [
+          53.86615,
+          10.6723
+        ],
+        [
+          53.86611,
+          10.67215
+        ],
+        [
+          53.86614,
+          10.67194
+        ],
+        [
+          53.86605,
+          10.67175
+        ],
+        [
+          53.86596,
+          10.67157
+        ]
+      ]
+    }
+  ]
+}

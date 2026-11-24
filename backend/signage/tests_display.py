@@ -26,6 +26,7 @@ DATA_KEYS = {
     'split': {'left', 'right', 'left_percent'},
     'media': {'seconds', 'per_screen', 'pages'},
     'info': {'announcements', 'events', 'countdown'},
+    'map': {'center', 'zoom', 'lines'},
     'rotation': {'items'},
 }
 MODE_KEYS = {
@@ -357,6 +358,22 @@ class ContractTest(DisplayTestBase):
         self.assertEqual(set(data['right']['data']), DATA_KEYS['info'])
         self.assertEqual([a['title'] for a in data['right']['data']['announcements']], ['Aula gesperrt'])
         self.assertEqual(data['right']['data']['events'], [])
+
+    def test_split_side_with_map(self):
+        result = {'stations': [{'station_name': 'Kohlmarkt', 'station_id': '1', 'departures': [
+            {'line': 'Bus    9', 'direction': 'X', 'departure': '10:05'},
+            {'line': 'Bus 5', 'direction': 'Y', 'departure': '10:06'},
+            {'line': 'Bus 9', 'direction': 'Z', 'departure': '10:07'}]}], 'sources': {}}
+        view = self.view('split', split_left='departures', split_right='map', map_zoom=16,
+                         map_center='53.87, 10.68', transit_stops=[{'id': '1', 'name': 'Kohlmarkt'}])
+        with mock.patch('signage.display.transit.fetch_departures', return_value=result):
+            data = self._payload(view)['view']['data']
+        self.assertEqual(data['right']['kind'], 'map')
+        self.assertEqual(data['right']['data'], {'center': [53.87, 10.68], 'zoom': 16, 'lines': ['5', '9']})
+        view.map_all_lines = True
+        view.map_center = 'kaputt'
+        self.assertEqual(self._payload(view)['view']['data']['right']['data'],
+                         {'center': [53.8699, 10.6892], 'zoom': 16, 'lines': None})
 
     def test_split_side_with_media(self):
         image = MediaFile.objects.create(name='Plakat', file='monitor/img/p.png', kind='image', status='ready')

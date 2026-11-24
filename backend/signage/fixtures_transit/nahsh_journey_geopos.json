@@ -1,0 +1,2651 @@
+{
+ "graph": {
+  "id": "standard",
+  "index": 0
+ },
+ "subGraph": {
+  "id": "global",
+  "index": 0
+ },
+ "svcResL": [
+  {
+   "meth": "JourneyGeoPos",
+   "res": {
+    "common": {
+     "icoL": [
+      {
+       "bg": {
+        "b": 0,
+        "g": 120,
+        "r": 255
+       },
+       "fg": {
+        "b": 255,
+        "g": 255,
+        "r": 255
+       },
+       "res": "PROD_BUS"
+      },
+      {
+       "res": "SVL",
+       "txt": "Stadtwerke Lübeck Mobil GmbH"
+      },
+      {
+       "bg": {
+        "b": 135,
+        "g": 47,
+        "r": 214
+       },
+       "fg": {
+        "b": 255,
+        "g": 255,
+        "r": 255
+       },
+       "res": "PROD_REPLACEMENT"
+      }
+     ],
+     "locL": [
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10731934,
+        "y": 53827488
+       },
+       "gidL": [
+        "A×de:01003:57798::1",
+        "b×SVL_3032"
+       ],
+       "entry": true,
+       "extId": "707575",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Grillenweg@X=10731934@Y=53827479@U=100@L=707575@",
+       "name": "Lübeck Grillenweg",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10678349,
+        "y": 53866501
+       },
+       "gidL": [
+        "A×de:01003:57837::2",
+        "b×SVL_1622"
+       ],
+       "entry": true,
+       "extId": "3409057",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Holstentorplatz@X=10678349@Y=53866501@U=100@L=3409057@",
+       "name": "Lübeck Holstentorplatz",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10670483,
+        "y": 53865422
+       },
+       "gidL": [
+        "A×de:01003:58085::8",
+        "b×SVL_18"
+       ],
+       "entry": true,
+       "extId": "3402021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10670474@Y=53865422@U=100@L=3402021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10694080,
+        "y": 53919016
+       },
+       "gidL": [
+        "A×de:01055:6127::6",
+        "b×SVL_35"
+       ],
+       "entry": true,
+       "extId": "4360003",
+       "icoX": 0,
+       "lid": "A=1@O=Bad Schwartau ZOB@X=10694251@Y=53919025@U=100@L=4360003@",
+       "name": "Bad Schwartau ZOB",
+       "pCls": 544,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10694080,
+        "y": 53919016
+       },
+       "gidL": [
+        "A×de:01055:6127::4",
+        "b×SVL_33"
+       ],
+       "entry": true,
+       "extId": "4380003",
+       "icoX": 0,
+       "lid": "A=1@O=Bad Schwartau ZOB@X=10694008@Y=53918998@U=100@L=4380003@",
+       "name": "Bad Schwartau ZOB",
+       "pCls": 544,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10672218,
+        "y": 53867310
+       },
+       "gidL": [
+        "A×de:01003:57895::1",
+        "b×SVL_1461",
+        "b×AK_622021",
+        "b×DB_895081",
+        "b×DB_89508100"
+       ],
+       "entry": true,
+       "extId": "707192",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck LindenArcaden@X=10672218@Y=53867310@U=100@L=707192@",
+       "name": "Lübeck LindenArcaden",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10670717,
+        "y": 53865863
+       },
+       "gidL": [
+        "A×de:01003:58085::5",
+        "b×SVL_15"
+       ],
+       "entry": true,
+       "extId": "3405021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10670708@Y=53865863@U=100@L=3405021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10731934,
+        "y": 53827488
+       },
+       "gidL": [
+        "A×de:01003:57798::2",
+        "b×SVL_3031"
+       ],
+       "entry": true,
+       "extId": "9911280",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Grillenweg@X=10731934@Y=53827488@U=100@L=9911280@",
+       "name": "Lübeck Grillenweg",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10659211,
+        "y": 53843273
+       },
+       "gidL": [
+        "A×de:01003:57828::2",
+        "b×SVL_3542"
+       ],
+       "entry": true,
+       "extId": "9911300",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Hinter den Kirschkaten@X=10659211@Y=53843264@U=100@L=9911300@",
+       "name": "Lübeck Hinter den Kirschkaten",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10714432,
+        "y": 53796233
+       },
+       "gidL": [
+        "A×de:01003:57716::2",
+        "b×SVL_2672"
+       ],
+       "entry": true,
+       "extId": "9910935",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Blankenseer Dorfplatz@X=10714387@Y=53796188@U=100@L=9910935@",
+       "name": "Lübeck Blankenseer Dorfplatz",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10671616,
+        "y": 53866016
+       },
+       "gidL": [
+        "A×de:01003:58085::12",
+        "b×SVL_112"
+       ],
+       "entry": true,
+       "extId": "4307021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10671607@Y=53866007@U=100@L=4307021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10636990,
+        "y": 53849943
+       },
+       "gidL": [
+        "A×de:01003:57813::2",
+        "b×SVL_2242"
+       ],
+       "entry": true,
+       "extId": "9911291",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Hamburger Straße@X=10636909@Y=53849988@U=100@L=9911291@",
+       "name": "Lübeck Hamburger Straße",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10636990,
+        "y": 53849943
+       },
+       "gidL": [
+        "A×de:01003:57813::1",
+        "b×SVL_2241"
+       ],
+       "entry": true,
+       "extId": "707595",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Hamburger Straße@X=10636954@Y=53850078@U=100@L=707595@",
+       "name": "Lübeck Hamburger Straße",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10679257,
+        "y": 53865989
+       },
+       "gidL": [
+        "A×de:01003:57837::1",
+        "b×SVL_1621",
+        "b×NAHBUS_2000091"
+       ],
+       "entry": true,
+       "extId": "3460057",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Holstentorplatz@X=10679257@Y=53865989@U=100@L=3460057@",
+       "name": "Lübeck Holstentorplatz",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10714432,
+        "y": 53796233
+       },
+       "gidL": [
+        "A×de:01003:57716::1",
+        "b×SVL_2671"
+       ],
+       "entry": true,
+       "extId": "707600",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Blankenseer Dorfplatz@X=10714450@Y=53796250@U=100@L=707600@",
+       "name": "Lübeck Blankenseer Dorfplatz",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10747961,
+        "y": 53846941
+       },
+       "gidL": [
+        "A×de:01003:57756::2",
+        "b×SVL_1502"
+       ],
+       "entry": true,
+       "extId": "9911248",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Eichholz@X=10747952@Y=53846932@U=100@L=9911248@",
+       "name": "Lübeck Eichholz",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10671014,
+        "y": 53865728
+       },
+       "gidL": [
+        "A×de:01003:58085::10",
+        "b×SVL_110"
+       ],
+       "entry": true,
+       "extId": "4309021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10671005@Y=53865728@U=100@L=4309021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10629097,
+        "y": 53837053
+       },
+       "gidL": [
+        "A×de:01003:9000871::1",
+        "b×SVL_8711",
+        "b×DB_308711",
+        "b×AK_609131",
+        "b×DB_30871100"
+       ],
+       "entry": true,
+       "extId": "4308711",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck-Moisling Bahnhof@X=10628998@Y=53836765@U=100@L=4308711@",
+       "name": "Lübeck-Moisling Bahnhof",
+       "pCls": 552,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10628818,
+        "y": 53836423
+       },
+       "gidL": [
+        "A×de:01003:9000871::2",
+        "b×SVL_8712"
+       ],
+       "entry": true,
+       "extId": "4308712",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck-Moisling Bahnhof@X=10628809@Y=53836387@U=100@L=4308712@",
+       "name": "Lübeck-Moisling Bahnhof",
+       "pCls": 552,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10670438,
+        "y": 53865701
+       },
+       "gidL": [
+        "A×de:01003:58085::6",
+        "b×SVL_16"
+       ],
+       "entry": true,
+       "extId": "4306021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10670429@Y=53865692@U=100@L=4306021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10748168,
+        "y": 53846788
+       },
+       "gidL": [
+        "A×de:01003:57756::1",
+        "b×SVL_1501",
+        "b×NAHBUS_2000030"
+       ],
+       "entry": true,
+       "extId": "707168",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Eichholz@X=10748168@Y=53846788@U=100@L=707168@",
+       "name": "Lübeck Eichholz",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10652586,
+        "y": 53836019
+       },
+       "gidL": [
+        "A×de:01003:9000885::1",
+        "b×SVL_8851"
+       ],
+       "entry": true,
+       "extId": "4300885",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Estlandring@X=10652586@Y=53836019@U=100@L=4300885@",
+       "name": "Lübeck Estlandring",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10671337,
+        "y": 53865890
+       },
+       "gidL": [
+        "A×de:01003:58085::11",
+        "b×SVL_111"
+       ],
+       "entry": true,
+       "extId": "4308021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10671328@Y=53865890@U=100@L=4308021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10642006,
+        "y": 53889657
+       },
+       "gidL": [
+        "A×de:01055:88063::2",
+        "b×SVL_3302"
+       ],
+       "entry": true,
+       "extId": "9912932",
+       "icoX": 0,
+       "lid": "A=1@O=Stockelsdorf Ravensbusch@X=10641997@Y=53889657@U=100@L=9912932@",
+       "name": "Stockelsdorf Ravensbusch",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10641349,
+        "y": 53890017
+       },
+       "gidL": [
+        "A×de:01055:88063::1",
+        "b×SVL_3301",
+        "b×AK_568221"
+       ],
+       "entry": true,
+       "extId": "707501",
+       "icoX": 0,
+       "lid": "A=1@O=Stockelsdorf Ravensbusch@X=10641349@Y=53890017@U=100@L=707501@",
+       "name": "Stockelsdorf Ravensbusch",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10671059,
+        "y": 53865989
+       },
+       "gidL": [
+        "A×de:01003:58085::4",
+        "b×SVL_14"
+       ],
+       "entry": true,
+       "extId": "3406021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10671041@Y=53865989@U=100@L=3406021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10652352,
+        "y": 53835965
+       },
+       "gidL": [
+        "A×de:01003:9000885::2",
+        "b×SVL_8852"
+       ],
+       "entry": true,
+       "extId": "4390885",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Estlandring@X=10652352@Y=53835992@U=100@L=4390885@",
+       "name": "Lübeck Estlandring",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10653674,
+        "y": 53774964
+       },
+       "gidL": [
+        "A×de:01053:44511::4452",
+        "b×SVL_4452"
+       ],
+       "entry": true,
+       "extId": "4304452",
+       "icoX": 0,
+       "lid": "A=1@O=Krummesse Tannenweg@X=10653647@Y=53774964@U=100@L=4304452@",
+       "name": "Krummesse Tannenweg",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10694260,
+        "y": 53938954
+       },
+       "gidL": [
+        "A×de:01055:6103::1",
+        "b×SVL_2691"
+       ],
+       "entry": true,
+       "extId": "707174",
+       "icoX": 0,
+       "lid": "A=1@O=Bad Schwartau Groß Parin@X=10694251@Y=53938954@U=100@L=707174@",
+       "name": "Bad Schwartau Groß Parin",
+       "pCls": 544,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10672057,
+        "y": 53869692
+       },
+       "gidL": [
+        "A×de:01003:57766::2",
+        "b×SVL_1181",
+        "b×AK_609016"
+       ],
+       "entry": true,
+       "extId": "9911258",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Fackenburger Allee@X=10672057@Y=53869692@U=100@L=9911258@",
+       "name": "Lübeck Fackenburger Allee",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10737822,
+        "y": 53871014
+       },
+       "gidL": [
+        "A×de:01003:58076::1",
+        "b×SVL_1321",
+        "b×SVL_1322"
+       ],
+       "entry": true,
+       "extId": "707343",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Wesloer Brücke@X=10737822@Y=53871014@U=100@L=707343@",
+       "name": "Lübeck Wesloer Brücke",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10736977,
+        "y": 53871239
+       },
+       "gidL": [
+        "A×de:01003:58076::2",
+        "b×SVL_1323",
+        "b×SVL_1324"
+       ],
+       "entry": true,
+       "extId": "4300132",
+       "icoX": 0,
+       "lid": "A=1@O=Lübeck Wesloer Brücke@X=10736977@Y=53871239@U=100@L=4300132@",
+       "name": "Lübeck Wesloer Brücke",
+       "pCls": 32,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10670942,
+        "y": 53865665
+       },
+       "gidL": [
+        "A×de:01003:58085::9",
+        "b×SVL_19"
+       ],
+       "entry": true,
+       "extId": "3401021",
+       "icoX": 2,
+       "lid": "A=1@O=Lübeck ZOB/Hauptbahnhof@X=10670924@Y=53865674@U=100@L=3401021@",
+       "name": "Lübeck ZOB/Hauptbahnhof",
+       "pCls": 40,
+       "state": "F",
+       "type": "S"
+      },
+      {
+       "crd": {
+        "floor": 0,
+        "x": 10694260,
+        "y": 53938954
+       },
+       "gidL": [
+        "A×de:01055:6103::2",
+        "b×SVL_2692"
+       ],
+       "entry": true,
+       "extId": "9900236",
+       "icoX": 0,
+       "lid": "A=1@O=Bad Schwartau Groß Parin@X=10694251@Y=53938936@U=100@L=9900236@",
+       "name": "Bad Schwartau Groß Parin",
+       "pCls": 544,
+       "state": "F",
+       "type": "S"
+      }
+     ],
+     "opL": [
+      {
+       "email": "info@svhl.de",
+       "fax": "0451 8882784",
+       "icoX": 1,
+       "id": "589",
+       "name": "Stadtwerke Lübeck Mobil GmbH",
+       "phone": "+49 451 8882828",
+       "street": "Ratekauer Weg 1-7",
+       "town": "23554 Lübeck",
+       "url": "https://www.sv-luebeck.de/de/"
+      }
+     ],
+     "polyL": [
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "owwgIk_d`ACr@Mj@@l@Tb@Jj@@r@",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "c}wgIajc`AZn@^pA^nA\\tAf@z@v@D",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "ewwgIwbd`AAh@El@Ch@Ef@Kb@Bf@",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "utwgI_cc`A????????????",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "svwgIipc`A@n@@n@F^Ah@Jd@Pb@",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "sswgIgac`A????????????",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "svwgIirc`A?l@?l@@l@Bb@D^Cj@",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "muwgIcec`A????????????",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "kxwgImrd`A@d@@j@@h@Bf@@h@Dj@",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "elxgIkkc`A\\L^PZPT\\XSXg@",
+       "delta": true,
+       "dim": 2
+      },
+      {
+       "crdEncF": "???????",
+       "crdEncS": "NNNNNNN",
+       "crdEncYX": "svwgI}oc`A@p@Bn@F\\Eh@Pd@Pb@",
+       "delta": true,
+       "dim": 2
+      }
+     ],
+     "prodL": [
+      {
+       "himIdL": [
+        "HIM_FREETEXT_275159",
+        "HIM_FREETEXT_296350"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "9",
+        "lineId": "de:NAHSH:01003|9:",
+        "matchId": "9",
+        "name": "Bus    9"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 9",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|9:::*"
+      },
+      {
+       "himIdL": [
+        "HIM_FREETEXT_296350",
+        "HIM_FREETEXT_296394"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "7",
+        "lineId": "de:NAHSH:01003|7:",
+        "matchId": "7",
+        "name": "Bus    7"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 7",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|7:::*"
+      },
+      {
+       "himIdL": [
+        "HIM_FREETEXT_275157",
+        "HIM_FREETEXT_275159",
+        "HIM_FREETEXT_283853",
+        "HIM_FREETEXT_292578",
+        "HIM_FREETEXT_294830",
+        "HIM_FREETEXT_296350"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "6",
+        "lineId": "de:NAHSH:01003|6:",
+        "matchId": "6",
+        "name": "Bus    6"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 6",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|6:::*"
+      },
+      {
+       "himIdL": [
+        "HIM_FREETEXT_296350"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "5",
+        "lineId": "de:NAHSH:01003|5:",
+        "matchId": "5",
+        "name": "Bus    5"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 5",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|5:::*"
+      },
+      {
+       "himIdL": [
+        "HIM_FREETEXT_295220",
+        "HIM_FREETEXT_296350"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "2",
+        "lineId": "de:NAHSH:01003|2:",
+        "matchId": "2",
+        "name": "Bus    2"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 2",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|2:::*"
+      },
+      {
+       "himIdL": [
+        "HIM_FREETEXT_296350"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "16",
+        "lineId": "de:NAHSH:01003|16:",
+        "matchId": "16",
+        "name": "Bus   16"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 16",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|16:::*"
+      },
+      {
+       "himIdL": [
+        "HIM_FREETEXT_291192",
+        "HIM_FREETEXT_292284",
+        "HIM_FREETEXT_296350"
+       ],
+       "prodCtx": {
+        "catCode": "5",
+        "catOut": "Bus     ",
+        "catOutL": "Bus",
+        "catOutS": "NB",
+        "line": "10",
+        "lineId": "de:NAHSH:01003|10:",
+        "matchId": "10",
+        "name": "Bus   10"
+       },
+       "cls": 32,
+       "icoX": 0,
+       "name": "Bus 10",
+       "oprX": 0,
+       "pid": "L::5::Bus::B0913584725::de:NAHSH:01003|10:::*"
+      }
+     ]
+    },
+    "jnyL": [
+     {
+      "ani": {
+       "dirGeo": [
+        15,
+        13,
+        16,
+        20,
+        18,
+        16,
+        16
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         0
+        ]
+       },
+       "proc": [
+        37,
+        40,
+        42,
+        45,
+        48,
+        51,
+        54
+       ],
+       "procAbs": [
+        1937,
+        1940,
+        1942,
+        1945,
+        1948,
+        1951,
+        1954
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+       ]
+      },
+      "pos": {
+       "x": 10675257,
+       "y": 53866321
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "220200",
+        "locX": 0
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222800",
+        "aTimeS": "222700",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "222800",
+        "dTimeS": "222700",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 8"
+        },
+        "aPltfS": {
+         "txt": "8"
+        },
+        "dPltfR": {
+         "txt": "Steig 8"
+        },
+        "dPltfS": {
+         "txt": "8"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223100",
+        "aTimeS": "223000",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 2
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 3"
+        },
+        "aPltfS": {
+         "txt": "3"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "225900",
+        "aTimeS": "225900",
+        "locX": 3
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 17,
+      "dirTxt": "Bad Schwartau ZOB",
+      "isBase": false,
+      "jid": "1|46535|1|100|24112026",
+      "proc": 37,
+      "prodX": 0
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        20,
+        19,
+        18,
+        18,
+        20,
+        23,
+        23
+       ],
+       "fLocX": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         1
+        ]
+       },
+       "proc": [
+        6,
+        16,
+        26,
+        36,
+        46,
+        56,
+        66
+       ],
+       "procAbs": [
+        2206,
+        2216,
+        2226,
+        2236,
+        2246,
+        2256,
+        2266
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+       ]
+      },
+      "pos": {
+       "x": 10671850,
+       "y": 53867220
+      },
+      "stopL": [
+       {
+        "dPltfR": {
+         "txt": "Steig 3"
+        },
+        "dPltfS": {
+         "txt": "3"
+        },
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "220400",
+        "locX": 4
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222900",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "222900",
+        "dTimeS": "222900",
+        "locX": 5
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 5"
+        },
+        "aPltfS": {
+         "txt": "5"
+        },
+        "dPltfR": {
+         "txt": "Steig 5"
+        },
+        "dPltfS": {
+         "txt": "5"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223000",
+        "aTimeS": "223000",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 6
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "225600",
+        "aTimeS": "225600",
+        "locX": 7
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 21,
+      "dirTxt": "Grillenweg",
+      "isBase": false,
+      "jid": "1|46515|1|100|24112026",
+      "proc": 6,
+      "prodX": 0
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        15,
+        13,
+        16,
+        20,
+        18,
+        16,
+        16
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         0
+        ]
+       },
+       "proc": [
+        37,
+        40,
+        42,
+        45,
+        48,
+        51,
+        54
+       ],
+       "procAbs": [
+        1237,
+        1240,
+        1242,
+        1245,
+        1248,
+        1251,
+        1254
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+       ]
+      },
+      "pos": {
+       "x": 10675257,
+       "y": 53866321
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "221200",
+        "locX": 8
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222800",
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "222800",
+        "dTimeS": "222600",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 8"
+        },
+        "aPltfS": {
+         "txt": "8"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223100",
+        "aTimeS": "222900",
+        "locX": 2
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 8"
+        },
+        "aPltfS": {
+         "txt": "8"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223100",
+        "aTimeS": "222900",
+        "locX": 2
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 17,
+      "dirTxt": "ZOB/Hauptbahnhof",
+      "isBase": false,
+      "jid": "1|46492|0|100|24112026",
+      "proc": 37,
+      "prodX": 1
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        15,
+        14,
+        15,
+        14,
+        13,
+        16,
+        20
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         2
+        ]
+       },
+       "proc": [
+        37,
+        40,
+        42,
+        45,
+        48,
+        51,
+        54
+       ],
+       "procAbs": [
+        1637,
+        1640,
+        1642,
+        1645,
+        1648,
+        1651,
+        1654
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+       ]
+      },
+      "pos": {
+       "x": 10675796,
+       "y": 53866267
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "215800",
+        "locX": 9
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222800",
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "222800",
+        "dTimeS": "222600",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 12"
+        },
+        "aPltfS": {
+         "txt": "12"
+        },
+        "dPltfR": {
+         "txt": "Steig 12"
+        },
+        "dPltfS": {
+         "txt": "12"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223100",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 10
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "224700",
+        "aTimeS": "224700",
+        "locX": 11
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 16,
+      "dirTxt": "Hamburger Straße",
+      "isBase": false,
+      "jid": "1|46455|1|100|24112026",
+      "proc": 37,
+      "prodX": 2
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "fLocX": [
+        6,
+        6,
+        6,
+        6,
+        6,
+        6,
+        6
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         3
+        ]
+       },
+       "proc": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       "procAbs": [
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300,
+        1300
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13
+       ]
+      },
+      "pos": {
+       "x": 10670717,
+       "y": 53865863
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "221000",
+        "locX": 12
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 5"
+        },
+        "aPltfS": {
+         "txt": "5"
+        },
+        "dPltfR": {
+         "txt": "Steig 5"
+        },
+        "dPltfS": {
+         "txt": "5"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222900",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 6
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223400",
+        "aTimeS": "223400",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223400",
+        "dTimeS": "223400",
+        "locX": 13
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "225900",
+        "aTimeS": "225900",
+        "locX": 14
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 0,
+      "dirTxt": "Blankenseer Dorfplatz",
+      "isBase": false,
+      "jid": "1|46433|1|100|24112026",
+      "proc": 0,
+      "prodX": 2
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        16,
+        16,
+        18,
+        15,
+        18,
+        19,
+        19
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         4
+        ]
+       },
+       "proc": [
+        72,
+        75,
+        78,
+        81,
+        84,
+        87,
+        90
+       ],
+       "procAbs": [
+        1272,
+        1275,
+        1278,
+        1281,
+        1284,
+        1287,
+        1290
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        16,
+        16
+       ]
+      },
+      "pos": {
+       "x": 10672848,
+       "y": 53866178
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "221000",
+        "locX": 15
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "222600",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 10"
+        },
+        "aPltfS": {
+         "txt": "10"
+        },
+        "dPltfR": {
+         "txt": "Steig 10"
+        },
+        "dPltfS": {
+         "txt": "10"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223000",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 16
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "224900",
+        "aTimeS": "224900",
+        "locX": 17
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 16,
+      "dirTxt": "Bahnhof Moisling",
+      "isBase": false,
+      "jid": "1|46378|0|100|24112026",
+      "proc": 72,
+      "prodX": 3
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "fLocX": [
+        19,
+        19,
+        19,
+        19,
+        19,
+        19,
+        19
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         5
+        ]
+       },
+       "proc": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       "procAbs": [
+        1400,
+        1400,
+        1400,
+        1400,
+        1400,
+        1400,
+        1400
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13
+       ]
+      },
+      "pos": {
+       "x": 10670438,
+       "y": 53865701
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "221000",
+        "locX": 18
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 6"
+        },
+        "aPltfS": {
+         "txt": "6"
+        },
+        "dPltfR": {
+         "txt": "Steig 6"
+        },
+        "dPltfS": {
+         "txt": "6"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222900",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 19
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223400",
+        "aTimeS": "223400",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223400",
+        "dTimeS": "223400",
+        "locX": 13
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "224900",
+        "aTimeS": "224900",
+        "locX": 20
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 0,
+      "dirTxt": "Eichholz",
+      "isBase": false,
+      "jid": "1|46299|1|100|24112026",
+      "proc": 0,
+      "prodX": 3
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        15,
+        15,
+        16,
+        16,
+        17,
+        15,
+        19
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         6
+        ]
+       },
+       "proc": [
+        72,
+        75,
+        78,
+        81,
+        84,
+        87,
+        90
+       ],
+       "procAbs": [
+        1372,
+        1375,
+        1378,
+        1381,
+        1384,
+        1387,
+        1390
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        22,
+        22,
+        22,
+        22,
+        22,
+        22,
+        22
+       ]
+      },
+      "pos": {
+       "x": 10673171,
+       "y": 53866178
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "220700",
+        "locX": 21
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "222600",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 11"
+        },
+        "aPltfS": {
+         "txt": "11"
+        },
+        "dPltfR": {
+         "txt": "Steig 11"
+        },
+        "dPltfS": {
+         "txt": "11"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223000",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 22
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "225600",
+        "aTimeS": "225600",
+        "locX": 23
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 16,
+      "dirTxt": "Stockelsdorf",
+      "isBase": false,
+      "jid": "1|46182|1|100|24112026",
+      "proc": 72,
+      "prodX": 4
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "fLocX": [
+        25,
+        25,
+        25,
+        25,
+        25,
+        25,
+        25
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         7
+        ]
+       },
+       "proc": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ],
+       "procAbs": [
+        2300,
+        2300,
+        2300,
+        2300,
+        2300,
+        2300,
+        2300
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        13,
+        13,
+        13,
+        13,
+        13,
+        13,
+        13
+       ]
+      },
+      "pos": {
+       "x": 10671059,
+       "y": 53865989
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "220500",
+        "locX": 24
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 4"
+        },
+        "aPltfS": {
+         "txt": "4"
+        },
+        "dPltfR": {
+         "txt": "Steig 4"
+        },
+        "dPltfS": {
+         "txt": "4"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222900",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 25
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223400",
+        "aTimeS": "223400",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223400",
+        "dTimeS": "223400",
+        "locX": 13
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "225000",
+        "aTimeS": "225000",
+        "locX": 26
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 0,
+      "dirTxt": "Estlandring",
+      "isBase": false,
+      "isRedir": true,
+      "jid": "1|46169|1|100|24112026",
+      "proc": 0,
+      "prodX": 4
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        16,
+        16,
+        16,
+        16,
+        16,
+        17,
+        17
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         8
+        ]
+       },
+       "proc": [
+        1,
+        4,
+        7,
+        10,
+        13,
+        16,
+        19
+       ],
+       "procAbs": [
+        2201,
+        2204,
+        2207,
+        2210,
+        2213,
+        2216,
+        2219
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10
+       ]
+      },
+      "pos": {
+       "x": 10678313,
+       "y": 53866456
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "220000",
+        "locX": 27
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222900",
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "222900",
+        "dTimeS": "222600",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 12"
+        },
+        "aPltfS": {
+         "txt": "12"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223200",
+        "aTimeS": "222900",
+        "locX": 10
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 12"
+        },
+        "aPltfS": {
+         "txt": "12"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223200",
+        "aTimeS": "222900",
+        "locX": 10
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 16,
+      "dirTxt": "ZOB/Hauptbahnhof",
+      "isBase": false,
+      "jid": "1|46142|0|100|24112026",
+      "proc": 1,
+      "prodX": 5
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        22,
+        22,
+        22,
+        20,
+        26,
+        27,
+        27
+       ],
+       "fLocX": [
+        29,
+        29,
+        29,
+        29,
+        29,
+        29,
+        29
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         9
+        ]
+       },
+       "proc": [
+        2,
+        7,
+        11,
+        16,
+        20,
+        25,
+        30
+       ],
+       "procAbs": [
+        2202,
+        2207,
+        2211,
+        2216,
+        2220,
+        2225,
+        2230
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+       ]
+      },
+      "pos": {
+       "x": 10672057,
+       "y": 53869629
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "220300",
+        "locX": 28
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "222900",
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "222900",
+        "dTimeS": "222600",
+        "locX": 29
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223100",
+        "aTimeS": "222800",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223100",
+        "dTimeS": "222800",
+        "locX": 5
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "224800",
+        "aTimeS": "224800",
+        "locX": 30
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 24,
+      "dirTxt": "Wesloer Brücke",
+      "isBase": false,
+      "jid": "1|45972|1|100|24112026",
+      "proc": 2,
+      "prodX": 6
+     },
+     {
+      "ani": {
+       "dirGeo": [
+        16,
+        16,
+        18,
+        14,
+        19,
+        19,
+        19
+       ],
+       "fLocX": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+       ],
+       "mSec": [
+        0,
+        5000,
+        10000,
+        15000,
+        20000,
+        25000,
+        30000
+       ],
+       "polyG": {
+        "polyXL": [
+         10
+        ]
+       },
+       "proc": [
+        72,
+        75,
+        78,
+        81,
+        84,
+        87,
+        90
+       ],
+       "procAbs": [
+        1172,
+        1175,
+        1178,
+        1181,
+        1184,
+        1187,
+        1190
+       ],
+       "state": [
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O",
+        "O"
+       ],
+       "stcOutputX": [
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        -1
+       ],
+       "tLocX": [
+        32,
+        32,
+        32,
+        32,
+        32,
+        32,
+        32
+       ]
+      },
+      "pos": {
+       "x": 10672785,
+       "y": 53866178
+      },
+      "stopL": [
+       {
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "221100",
+        "locX": 31
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeS": "222600",
+        "dInR": true,
+        "dInS": true,
+        "dTimeS": "222600",
+        "locX": 1
+       },
+       {
+        "aPltfR": {
+         "txt": "Steig 9"
+        },
+        "aPltfS": {
+         "txt": "9"
+        },
+        "dPltfR": {
+         "txt": "Steig 9"
+        },
+        "dPltfS": {
+         "txt": "9"
+        },
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "223000",
+        "aTimeS": "222900",
+        "dInR": true,
+        "dInS": true,
+        "dTimeR": "223200",
+        "dTimeS": "223200",
+        "locX": 32
+       },
+       {
+        "aOutR": true,
+        "aOutS": true,
+        "aTimeR": "225600",
+        "aTimeS": "225600",
+        "locX": 33
+       }
+      ],
+      "date": "20261124",
+      "dirGeo": 16,
+      "dirTxt": "Groß Parin",
+      "isBase": false,
+      "jid": "1|45945|0|100|24112026",
+      "proc": 72,
+      "prodX": 6
+     }
+    ],
+    "date": "20261124",
+    "fpB": "20260924",
+    "fpE": "20270720",
+    "planrtTS": "1795555728",
+    "time": "222903"
+   },
+   "err": "OK"
+  }
+ ],
+ "view": {
+  "id": "standard",
+  "index": 0,
+  "type": "WGS84"
+ },
+ "err": "OK",
+ "id": "iw4gjxmq62ytxm8x",
+ "lang": "deu",
+ "ver": "1.30"
+}
