@@ -217,6 +217,21 @@ describe('ViewEdit', () => {
     expect(api.updateView).toHaveBeenCalledWith(1, { clock_seconds: false })
   })
 
+  it('Vertretungsplan: ganze Breite ab 3 Seiten speichert substitutions_expand_pages', async () => {
+    // Only for live data: the embedded WebUntis page has no pages of its own
+    VIEWS[2].substitutions_source = 'monitor'
+    try {
+      await mount('/signage-admin/views/2')
+    } finally {
+      VIEWS[2].substitutions_source = 'embed'
+    }
+    const select = byLabel('Bei vielen Vertretungen ganze Breite für heute')
+    expect([...select.options].map((o) => o.textContent)).toEqual(['Aus', 'ab 2 Seiten', 'ab 3 Seiten', 'ab 4 Seiten'])
+    await act(async () => { choose(select, '3') })
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).toHaveBeenCalledWith(2, { substitutions_expand_pages: 3 })
+  })
+
   it('bietet in der Medien-Ansicht nur PDFs und Bilder an', async () => {
     await mount('/signage-admin/views/6')
     const select = container.querySelector('[data-editor-section="media"] select')

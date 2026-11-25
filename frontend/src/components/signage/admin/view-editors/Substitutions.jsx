@@ -66,6 +66,25 @@ const EXAM_OPTIONS = [
   { value: 'no', label: 'Nein', exams: false },
 ]
 const DEFAULT_NEXT_DAY_FROM = '16:00'
+const EXPAND_OPTIONS = [
+  { value: 0, label: 'Aus' },
+  { value: 2, label: 'ab 2 Seiten' },
+  { value: 3, label: 'ab 3 Seiten' },
+  { value: 4, label: 'ab 4 Seiten' },
+]
+
+function ExpandField({ draft, set }) {
+  const id = useId()
+  return (
+    <Field label="Bei vielen Vertretungen ganze Breite für heute" htmlFor={id}
+      help="Hat heute mehr Seiten, bekommt heute beide Hälften. Abfahrten bleiben immer stehen.">
+      <select id={id} value={draft.substitutions_expand_pages ?? 0} onChange={(e) => set('substitutions_expand_pages', Number(e.target.value))}
+        className={`${fieldClass} max-w-48`}>
+        {EXPAND_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </Field>
+  )
+}
 
 function NextDayField({ draft, set }) {
   const id = useId()
@@ -132,6 +151,7 @@ export default function SubstitutionsEditor({ draft, set }) {
           </Field>
         )}
         {source !== 'embed' && <NextDayField draft={draft} set={set} />}
+        {source !== 'embed' && <ExpandField draft={draft} set={set} />}
         <PageSecondsField draft={draft} set={set} />
         {/* Every source finally falls back to the embedded page, so the links always apply. */}
         {source === 'embed' ? (

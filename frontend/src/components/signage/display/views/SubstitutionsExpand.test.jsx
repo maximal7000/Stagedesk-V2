@@ -3,11 +3,17 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 
 // jsdom has no layout: every row counts as one, two rows make a page
+// A fresh card is unmeasured on its first render (like in the browser), measured from the second on
 vi.mock('../lib/pager', async (importOriginal) => {
   const real = await importOriginal()
+  const { useEffect, useState } = await import('react')
   return {
     ...real,
-    useChildHeights: (ref, deps) => deps[0].map(() => 1),
+    useChildHeights: (ref, deps) => {
+      const [ready, setReady] = useState(false)
+      useEffect(() => { setReady(true) }, [])
+      return ready ? deps[0].map(() => 1) : []
+    },
     paginateByHeight: (heights) => real.paginate(heights.map((_, i) => i), 2),
   }
 })

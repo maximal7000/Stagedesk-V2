@@ -122,6 +122,8 @@ function DayColumns({ data, seconds, onPageCount, twoColumns }) {
   const [todayPages, setTodayPages] = useState(0)
   const next = useCallback(() => setTurn((t) => t + 1), [])
   const reportToday = useCallback((n) => { setTodayPages(n); onPageCount?.(n) }, [onPageCount])
+  // Stable callbacks: a new one on every render would report again and render again, endlessly
+  const reportTodayPages = useCallback((pages) => reportToday(pages.length), [reportToday])
   const days = data.days
   const columns = useMemo(() => tableColumns(data), [data])
   const stacked = days.length > 1 && height > width && height / remPx >= days.length * MIN_DAY_HEIGHT_REM
@@ -136,7 +138,7 @@ function DayColumns({ data, seconds, onPageCount, twoColumns }) {
         : shown.map((i) => (
           <DayCard
             key={days[i].date ?? i} day={days[i]} news={i === 0 ? data.news : null} columns={columns} seconds={seconds}
-            onDone={oneByOne ? next : null} onPages={i === 0 ? (pages) => reportToday(pages.length) : null}
+            onDone={oneByOne ? next : null} onPages={i === 0 ? reportTodayPages : null}
           />
         ))}
     </div>
@@ -215,7 +217,10 @@ function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesF
     return paginateByHeight(heights, height)
   }, [rows, heights, height])
   const pages = pagesFrom ?? ownPages
-  useEffect(() => { onPages?.(ownPages) }, [onPages, ownPages])
+  // Report only measured pages: a fresh card counts all rows as one page until it has measured them, and
+  // that would switch the pair off and on again endlessly
+  const measured = !rows.length || heights.length === rows.length
+  useEffect(() => { if (measured) onPages?.(ownPages) }, [onPages, ownPages, measured])
   const pager = usePager(pageIndex == null ? pages : [], seconds)
   const index = pageIndex ?? pager.index
   const count = pages.length
