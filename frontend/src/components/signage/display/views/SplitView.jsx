@@ -1,5 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { expandWanted, staysExpanded } from '../lib/expand'
+import { setOverlay, useOverlay } from '../lib/overlay'
 import { VIEW_COMPONENTS } from './index'
 
 // Old side values without data (exam, clock, empty) stay empty. A view with its own frame takes part
@@ -52,8 +53,11 @@ export default function SplitView({ view }) {
     // Same answer: keep the state object, so reporting the count again does not re-render
     return Object.keys(next).every((k) => next[k] === prev[k]) ? prev : next
   }), [expandPages, ownFraction])
+  const overlaid = plan && state.expanded ? owner : null
+  useEffect(() => { setOverlay(view.id, overlaid) }, [view.id, overlaid])
+  useEffect(() => () => setOverlay(view.id, null), [view.id])
   // Busy day: today's plan takes the whole width as two equal columns (the split width does not count)
-  if (plan && state.expanded) {
+  if (overlaid) {
     return (
       <div className="relative h-full" data-split-overlay={owner}>
         <plan.View view={plan.sub} twoColumns onPageCount={decide} />
@@ -75,9 +79,12 @@ export default function SplitView({ view }) {
 
 function SplitFooter({ view }) {
   const data = view.data ?? {}
+  const overlay = useOverlay(view.id)
+  // Overlaid: both halves show the plan, so its footer spans the whole width
   const percent = clampPercent(data.left_percent)
   let weatherShown = false
-  const cells = [data.left, data.right].map((side) => {
+  const sides = overlay ? [data[overlay], null] : [data.left, data.right]
+  const cells = sides.map((side) => {
     const { View, sub } = sideView(view, side)
     if (!View?.Footer) return null
     // Two departure sides: the weather only once
@@ -86,6 +93,7 @@ function SplitFooter({ view }) {
     return <View.Footer view={{ ...sub, show_weather: showWeather }} />
   })
   if (!cells.some(Boolean)) return null
+  if (overlay) return <div data-split-footer="overlay" className="h-full min-w-0">{cells[0]}</div>
   return (
     <div className="grid h-full gap-[1.25rem]" style={{ gridTemplateColumns: `calc(${percent}cqw - 0.625rem) minmax(0, 1fr)` }}>
       <div className="min-w-0">{cells[0]}</div>
