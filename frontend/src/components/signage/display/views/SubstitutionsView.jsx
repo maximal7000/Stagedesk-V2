@@ -150,14 +150,17 @@ const pagesKey = (pages) => pages.map((p) => p.join(',')).join('|')
 // Today as two cards: the first shows pages 1, 3, ..., the second 2, 4, ...; one pager for both. The first
 // card pages; the second (without the head lines, so it has more room) shows the first card's pages.
 function DayPair({ day, news, columns, seconds, onPageCount }) {
-  const [pages, setPages] = useState([])
+  // Pages belong to the rows they were made from: after a refresh the second card waits for the new ones
+  const [paged, setPaged] = useState({ rows: null, pages: [] })
+  const pages = paged.rows === day.rows ? paged.pages : []
   const pairs = useMemo(() => Array.from({ length: Math.ceil(pages.length / 2) }, (_, i) => i), [pages.length])
   const { index } = usePager(pairs, seconds)
+  const rowsNow = day.rows
   const report = useCallback((next) => {
     // Compare by content: a re-measure yields new arrays with the same pages
-    setPages((prev) => (pagesKey(prev) === pagesKey(next) ? prev : next))
+    setPaged((prev) => (prev.rows === rowsNow && pagesKey(prev.pages) === pagesKey(next) ? prev : { rows: rowsNow, pages: next }))
     onPageCount?.(next.length)
-  }, [onPageCount])
+  }, [onPageCount, rowsNow])
   return (
     <>
       <DayCard day={day} news={news} columns={columns} seconds={seconds} pageIndex={2 * index} onPages={report} />
@@ -224,7 +227,8 @@ function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesF
   const pager = usePager(pageIndex == null ? pages : [], seconds)
   const index = pageIndex ?? pager.index
   const count = pages.length
-  const page = (pages[index] ?? []).map((i) => rows[i])
+  // filter: pages from an older row list never reach a row that is gone
+  const page = (pages[index] ?? []).map((i) => rows[i]).filter(Boolean)
   useEffect(() => {
     if (!onDone || !(seconds > 0)) return undefined
     const id = setTimeout(onDone, Math.max(1, count) * seconds * 1000)

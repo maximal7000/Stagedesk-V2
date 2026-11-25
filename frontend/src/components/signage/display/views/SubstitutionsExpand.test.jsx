@@ -67,6 +67,9 @@ describe('staysExpanded', () => {
     // At least half wide before: the half column has at least as many pages, no estimate needed
     expect(staysExpanded(3, 3, 0.6)).toBe(false)
     expect(staysExpanded(4, 3, 0.6)).toBe(true)
+    // Observed growth beats the width estimate: 2 pages at the side became 1 in the half column -> factor 2
+    expect(staysExpanded(2, 3, 0.45, 2)).toBe(true)
+    expect(staysExpanded(2, 3, 0.45)).toBe(false)
   })
 })
 
@@ -109,6 +112,24 @@ describe('Vertretungsplan: ganze Breite für heute', () => {
   })
 })
 
+describe('Neue Daten während der Doppelseite', () => {
+  it('weniger Zeilen, während eine hintere Doppelseite steht: kein Absturz, gültige Seiten', () => {
+    vi.useFakeTimers()
+    try {
+      const view = (n) => ({ id: 2, kind: 'substitutions', layout: 'wide', page_seconds: 15,
+        data: data([day(TODAY, 'Heute', n), day(TOMORROW, 'Morgen', 2)], 2) })
+      const el = render(<SubstitutionsView view={view(12)} />)
+      act(() => { vi.advanceTimersByTime(15000) })
+      expect(counts(el)).toEqual(['Seite 3 / 6', 'Seite 4 / 6'])
+      act(() => { root.render(<SubstitutionsView view={view(6)} />) })
+      expect(el.querySelectorAll('[data-substitutions-table] [data-substitution-row]').length).toBeGreaterThan(0)
+      expect(cards(el).every((c) => c.textContent.includes('19.10.'))).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 describe('Geteilt: Vertretungsplan überlagert Medien', () => {
   const screen = { slug: 'mensa', name: 'Mensa', orientation: 'landscape', scale: 'auto', power: true }
   const split = (other, todayRows) => ({
@@ -128,9 +149,30 @@ describe('Geteilt: Vertretungsplan überlagert Medien', () => {
     const el = render(show(split(media, 10)))
     expect(el.textContent).not.toContain('Keine Medien.')
     expect(counts(el)).toEqual(['Seite 1 / 5', 'Seite 2 / 5'])
-    const halves = [...el.querySelectorAll('[data-split-side]')]
-    expect(halves.map((h) => h.style.flex || h.style.flexBasis)).not.toContain('0 0 calc(60% - 0.625rem)')
+    // Overlay: no split halves (their width does not count), today as a pair of equal cards
+    expect(el.querySelector('[data-split-overlay="left"] [data-days="pair"]')).not.toBeNull()
+    expect(el.querySelectorAll('[data-split-side]')).toHaveLength(0)
     act(() => { root.render(show(split(media, 4))) })
+    expect(el.textContent).toContain('Keine Medien.')
+  })
+
+  it('fällt die Quelle auf die eingebettete Seite zurück, kommen die Medien zurück', () => {
+    const el = render(show(split(media, 10)))
+    expect(el.textContent).not.toContain('Keine Medien.')
+    const fallback = split(media, 0)
+    fallback.data.left.data = { ...fallback.data.left.data, mode: 'embed', embed_url: 'https://untis.example/', days: [] }
+    act(() => { root.render(show(fallback)) })
+    expect(el.textContent).toContain('Keine Medien.')
+  })
+
+  it('schmale Vertretungsplan-Seite (30 %): bleibt in der Doppelseite, solange es viele Seiten sind, und kehrt erst bei wenigen zurück', () => {
+    const narrow = (n) => ({ ...split(media, n), data: { ...split(media, n).data, left_percent: 30 } })
+    const el = render(show(narrow(6)))  // 3 pages > 2
+    expect(el.querySelector('[data-split-overlay]')).not.toBeNull()
+    act(() => { root.render(show(narrow(6))) })
+    expect(el.querySelector('[data-split-overlay]')).not.toBeNull()
+    act(() => { root.render(show(narrow(2))) })  // 1 page
+    expect(el.querySelector('[data-split-overlay]')).toBeNull()
     expect(el.textContent).toContain('Keine Medien.')
   })
 

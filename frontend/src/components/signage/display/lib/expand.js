@@ -4,9 +4,11 @@ export function expandWanted(pageCount, expandPages) {
 }
 
 // While expanded, a split side narrower than half had more pages before than the half column has now.
-// Estimate its own count (pages grow about inversely with the width) so it does not switch back and forth;
-// a side at least half wide had at most as many pages, the shown count decides.
-export function staysExpanded(pageCount, expandPages, ownFraction) {
-  const estimate = ownFraction > 0 && ownFraction < 0.5 ? Math.ceil((pageCount * 0.5) / ownFraction) : pageCount
-  return expandWanted(estimate, expandPages)
+// Estimate its own count so it does not switch back and forth: pages grow at least inversely with the width,
+// and `observedRatio` (pages before / pages in the first expanded count) catches rows that wrap more than
+// that. A side at least half wide had at most as many pages: the shown count decides.
+export function staysExpanded(pageCount, expandPages, ownFraction, observedRatio = 1) {
+  const byWidth = ownFraction > 0 && ownFraction < 0.5 ? 0.5 / ownFraction : 1
+  const factor = Math.max(byWidth, observedRatio > 1 ? observedRatio : 1)
+  return expandWanted(Math.ceil(pageCount * factor), expandPages)
 }
