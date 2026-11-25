@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { expandWanted } from '../lib/expand'
 import { useBoxSize } from '../lib/fit'
 import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../lib/format'
-import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
+import { paginateByHeight, paginatePair, useChildHeights, usePager } from '../lib/pager'
 import { Heading, PageCount } from './parts'
 
 const ROW_MIN_REM = 2.1875
@@ -145,26 +145,37 @@ function DayColumns({ data, seconds, onPageCount, twoColumns }) {
   )
 }
 
-const pagesKey = (pages) => pages.map((p) => p.join(',')).join('|')
-
-// Today as two cards: the first shows pages 1, 3, ..., the second 2, 4, ...; one pager for both. The first
-// card pages; the second (without the head lines, so it has more room) shows the first card's pages.
+// Today as two cards: the first shows pages 1, 3, ..., the second (rows only: no title, no head lines, no
+// column heads) the pages 2, 4, ... and holds more rows. The first card measures the rows and its own room,
+// the second only its room; one pager drives both.
 function DayPair({ day, news, columns, seconds, onPageCount }) {
-  // Pages belong to the rows they were made from: after a refresh the second card waits for the new ones
-  const [paged, setPaged] = useState({ rows: null, pages: [] })
-  const pages = paged.rows === day.rows ? paged.pages : []
+  // Measurements belong to the rows they were made from: after a refresh the cards wait for new ones
+  const [first, setFirst] = useState(null)
+  const [secondRoom, setSecondRoom] = useState(0)
+  const rows = day.rows
+  const current = first && first.rows === rows ? first : null
+  const pages = useMemo(
+    () => (current ? paginatePair(current.heights, current.room, secondRoom || current.room) : []),
+    [current, secondRoom],
+  )
   const pairs = useMemo(() => Array.from({ length: Math.ceil(pages.length / 2) }, (_, i) => i), [pages.length])
   const { index } = usePager(pairs, seconds)
-  const rowsNow = day.rows
-  const report = useCallback((next) => {
-    // Compare by content: a re-measure yields new arrays with the same pages
-    setPaged((prev) => (prev.rows === rowsNow && pagesKey(prev.pages) === pagesKey(next) ? prev : { rows: rowsNow, pages: next }))
-    onPageCount?.(next.length)
-  }, [onPageCount, rowsNow])
+  const measureFirst = useCallback(({ heights, room }) => {
+    setFirst((prev) => (prev && prev.rows === rows && prev.room === room && prev.heights.join() === heights.join()
+      ? prev : { rows, heights, room }))
+  }, [rows])
+  const measureSecond = useCallback(({ room }) => setSecondRoom(room), [])
+  // The decision (pair or not) uses the count a single card would have, as in the normal layout: the pair
+  // itself has fewer pages, and deciding on those would switch back and forth
+  const singleCount = useMemo(() => (current ? paginateByHeight(current.heights, current.room).length : null), [current])
+  useEffect(() => { if (singleCount != null) onPageCount?.(singleCount) }, [onPageCount, singleCount])
+  const range = pages.length ? { from: 2 * index, to: Math.min(2 * index + 1, pages.length - 1), count: pages.length } : null
   return (
     <>
-      <DayCard day={day} news={news} columns={columns} seconds={seconds} pageIndex={2 * index} onPages={report} />
-      <DayCard day={day} columns={columns} seconds={seconds} pageIndex={2 * index + 1} pagesFrom={pages} plainHead />
+      <DayCard day={day} news={news} columns={columns} seconds={seconds} pageIndex={2 * index} pagesFrom={pages}
+        onMeasure={measureFirst} pageRange={range} />
+      <DayCard day={day} columns={columns} seconds={seconds} pageIndex={2 * index + 1} pagesFrom={pages}
+        onMeasure={measureSecond} continuation />
     </>
   )
 }
@@ -207,8 +218,10 @@ function Message({ subject, children }) {
 }
 
 // pageIndex: shown page given from outside (pair); pagesFrom: use these pages instead of own paging;
-// onPages: reports the pages; plainHead: title only (second card of a pair).
-function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesFrom = null, onPages = null, plainHead = false }) {
+// onPages: reports the measured pages; onMeasure: reports row heights and the room for rows (pair);
+// pageRange: "Seite 1-2 / 5" for the first card of a pair; continuation: rows only (second card of a pair).
+function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesFrom = null, onPages = null,
+  onMeasure = null, pageRange = null, continuation = false }) {
   const bodyRef = useRef(null)
   const measureRef = useRef(null)
   const { width, height, remPx } = useBoxSize(bodyRef)
@@ -224,6 +237,10 @@ function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesF
   // that would switch the pair off and on again endlessly
   const measured = !rows.length || heights.length === rows.length
   useEffect(() => { if (measured) onPages?.(ownPages) }, [onPages, ownPages, measured])
+  // The continuation card measures no rows (the first card does), only its room
+  useEffect(() => {
+    if (onMeasure && (measured || continuation) && height > 0) onMeasure({ heights, room: height })
+  }, [onMeasure, measured, continuation, heights, height])
   const pager = usePager(pageIndex == null ? pages : [], seconds)
   const index = pageIndex ?? pager.index
   const count = pages.length
@@ -235,22 +252,26 @@ function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesF
     return () => clearTimeout(id)
   }, [onDone, count, seconds])
 
+  const pageLabel = pageRange
+    ? <PageCount index={pageRange.from} to={pageRange.to} count={pageRange.count} />
+    : index < count ? <PageCount index={index} count={count} /> : null
   return (
-    <section className="d-card flex min-h-0 min-w-0 flex-1 flex-col px-[1.5rem] pb-[1rem] pt-[1.375rem]">
-      <Heading size="text-[2rem]" aside={index < count ? <PageCount index={index} count={count} /> : null}>{dayTitle(day)}</Heading>
-      {!plainHead && (
+    <section data-day-card={continuation ? 'continuation' : 'day'}
+      className={`d-card flex min-h-0 min-w-0 flex-1 flex-col px-[1.5rem] pb-[1rem] ${continuation ? 'pt-[1rem]' : 'pt-[1.375rem]'}`}>
+      {!continuation && (
         <>
+          <Heading size="text-[2rem]" aside={pageLabel}>{dayTitle(day)}</Heading>
           <DayHead day={day} />
           {news && <Message>{news}</Message>}
           {(day.messages ?? []).map((m, i) => <Message key={i} subject={m.subject}>{m.body}</Message>)}
+          <div
+            className="d-head d-rule-bottom mt-[1.25rem] grid gap-x-[0.75rem] pb-[0.375rem] text-[1rem] uppercase tracking-[0.08em] text-(--d-muted)"
+            style={{ gridTemplateColumns: columns.template }}
+          >
+            {columns.keys.map((key) => <span key={key} data-column-head className="min-w-0">{COLUMN_DEFS[key].head}</span>)}
+          </div>
         </>
       )}
-      <div
-        className="d-head d-rule-bottom mt-[1.25rem] grid gap-x-[0.75rem] pb-[0.375rem] text-[1rem] uppercase tracking-[0.08em] text-(--d-muted)"
-        style={{ gridTemplateColumns: columns.template }}
-      >
-        {columns.keys.map((key) => <span key={key} data-column-head className="min-w-0">{COLUMN_DEFS[key].head}</span>)}
-      </div>
       <div ref={bodyRef} className="relative min-h-0 flex-1 overflow-hidden">
         {rows.length === 0
           ? <p className="d-text pt-[1rem] text-[1.375rem] text-(--d-muted)">Keine Vertretungen</p>
@@ -264,10 +285,13 @@ function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesF
               ))}
             </div>
           )}
-        {/* Measuring layer: all rows full width, invisible; provides the heights for paging */}
-        <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">
-          {rows.map((row, i) => <SubstitutionRow key={i} row={row} columns={columns} showLead />)}
-        </div>
+        {/* Measuring layer: all rows full width, invisible; provides the heights for paging (the pair's first
+            card measures for both cards) */}
+        {!continuation && (
+          <div ref={measureRef} aria-hidden="true" className="invisible absolute inset-x-0 top-0">
+            {rows.map((row, i) => <SubstitutionRow key={i} row={row} columns={columns} showLead />)}
+          </div>
+        )}
       </div>
     </section>
   )

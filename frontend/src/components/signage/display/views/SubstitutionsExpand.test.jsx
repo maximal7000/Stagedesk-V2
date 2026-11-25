@@ -15,8 +15,25 @@ vi.mock('../lib/pager', async (importOriginal) => {
       return ready ? deps[0].map(() => 1) : []
     },
     paginateByHeight: (heights) => real.paginate(heights.map((_, i) => i), 2),
+    // A pair: 2 rows on the first card of a pair, 3 on the second (it has no head lines, so more room)
+    paginatePair: (heights) => {
+      const pages = []
+      let start = 0
+      while (start < heights.length) {
+        const size = pages.length % 2 === 0 ? 2 : 3
+        pages.push(heights.slice(start, start + size).map((_, i) => start + i))
+        start += size
+      }
+      return pages
+    },
   }
 })
+
+// Cards have a size in the test (jsdom has no layout)
+vi.mock('../lib/fit', async (importOriginal) => ({
+  ...(await importOriginal()),
+  useBoxSize: () => ({ width: 2400, height: 1000, remPx: 16 }),
+}))
 
 const { default: SubstitutionsView } = await import('./SubstitutionsView')
 const { expandWanted, staysExpanded } = await import('../lib/expand')
@@ -48,7 +65,7 @@ afterEach(() => {
 })
 
 const cards = (el) => [...el.querySelectorAll('section')]
-const counts = (el) => cards(el).map((c) => (c.textContent.match(/Seite \d+ \/ \d+/) ?? [''])[0])
+const counts = (el) => cards(el).map((c) => (c.textContent.match(/Seite [\d–]+ \/ \d+/) ?? [''])[0])
 
 describe('expandWanted', () => {
   it('erst ab mehr Seiten als eingestellt, nie bei aus', () => {
@@ -79,12 +96,19 @@ describe('Vertretungsplan: ganze Breite für heute', () => {
     data: data([day(TODAY, 'Heute', todayRows), day(TOMORROW, 'Morgen', 2)], expand),
   })
 
-  it('heute mit 5 Seiten bei „ab 2 Seiten“: beide Felder zeigen heute, Seite 1 und 2, kein Morgen', () => {
+  it('heute mit 5 Seiten bei „ab 2 Seiten“: Doppelseite, rechts nur Zeilen, kein Morgen', () => {
     const el = render(<SubstitutionsView view={view(2)} />)
     expect(cards(el)).toHaveLength(2)
-    expect(cards(el).every((c) => c.textContent.includes('19.10.'))).toBe(true)
+    const [first, second] = cards(el)
+    expect(first.textContent).toContain('19.10.')
     expect(el.textContent).not.toContain('20.10.')
-    expect(counts(el)).toEqual(['Seite 1 / 5', 'Seite 2 / 5'])
+    // 10 rows: pages of 2 | 3 | 2 | 3 rows, the label of the pair on the left
+    expect(counts(el)).toEqual(['Seite 1–2 / 4', ''])
+    expect(second.getAttribute('data-day-card')).toBe('continuation')
+    expect(second.textContent).not.toContain('19.10.')
+    expect(second.querySelector('[data-column-head]')).toBeNull()
+    expect(first.querySelectorAll('[data-substitutions-table] [data-substitution-row]')).toHaveLength(2)
+    expect(second.querySelectorAll('[data-substitutions-table] [data-substitution-row]')).toHaveLength(3)
   })
 
   it('aus: heute und morgen wie bisher', () => {
@@ -101,8 +125,8 @@ describe('Vertretungsplan: ganze Breite für heute', () => {
   it('ungerade Seitenzahl: das zweite Feld der letzten Doppelseite bleibt leer', () => {
     vi.useFakeTimers()
     try {
-      const el = render(<SubstitutionsView view={view(2, 6)} />)  // 3 pages: (1, 2), (3, -)
-      expect(counts(el)).toEqual(['Seite 1 / 3', 'Seite 2 / 3'])
+      const el = render(<SubstitutionsView view={view(2, 6)} />)  // pages of 2 | 3 | 1 rows: (1, 2), (3, -)
+      expect(counts(el)).toEqual(['Seite 1–2 / 3', ''])
       act(() => { vi.advanceTimersByTime(15000) })
       expect(counts(el)).toEqual(['Seite 3 / 3', ''])
       expect(cards(el)[1].querySelectorAll('[data-substitutions-table] [data-substitution-row]')).toHaveLength(0)
@@ -120,10 +144,10 @@ describe('Neue Daten während der Doppelseite', () => {
         data: data([day(TODAY, 'Heute', n), day(TOMORROW, 'Morgen', 2)], 2) })
       const el = render(<SubstitutionsView view={view(12)} />)
       act(() => { vi.advanceTimersByTime(15000) })
-      expect(counts(el)).toEqual(['Seite 3 / 6', 'Seite 4 / 6'])
+      expect(counts(el)).toEqual(['Seite 3–4 / 5', ''])
       act(() => { root.render(<SubstitutionsView view={view(6)} />) })
       expect(el.querySelectorAll('[data-substitutions-table] [data-substitution-row]').length).toBeGreaterThan(0)
-      expect(cards(el).every((c) => c.textContent.includes('19.10.'))).toBe(true)
+      expect(cards(el)[0].textContent).toContain('19.10.')
     } finally {
       vi.useRealTimers()
     }
@@ -148,7 +172,7 @@ describe('Geteilt: Vertretungsplan überlagert Medien', () => {
   it('viele Seiten: die Medien weichen, heute steht halb-halb in zwei Spalten; wenige Seiten: Medien zurück', () => {
     const el = render(show(split(media, 10)))
     expect(el.textContent).not.toContain('Keine Medien.')
-    expect(counts(el)).toEqual(['Seite 1 / 5', 'Seite 2 / 5'])
+    expect(counts(el)).toEqual(['Seite 1–2 / 4', ''])
     // Overlay: no split halves (their width does not count), today as a pair of equal cards
     expect(el.querySelector('[data-split-overlay="left"] [data-days="pair"]')).not.toBeNull()
     expect(el.querySelectorAll('[data-split-side]')).toHaveLength(0)
@@ -174,6 +198,15 @@ describe('Geteilt: Vertretungsplan überlagert Medien', () => {
     act(() => { root.render(show(narrow(2))) })  // 1 page
     expect(el.querySelector('[data-split-overlay]')).toBeNull()
     expect(el.textContent).toContain('Keine Medien.')
+  })
+
+  it('die Fußzeile steht unter der linken Karte der Doppelseite (halbe Breite), nicht nach der Breite der geteilten Ansicht', () => {
+    const v = split(media, 10)
+    v.data.left.data = { ...v.data.left.data, source: 'monitor', updated_at: '2026-10-19T07:42:00', fetched_at: '2026-10-19T07:45:00' }
+    const el = render(show(v))
+    const grid = el.querySelector('.d-footer-row [style*="grid-template-columns"]')
+    expect(grid.style.gridTemplateColumns).toBe('calc(50cqw - 0.625rem) minmax(0, 1fr)')
+    expect(grid.firstElementChild.textContent).toContain('WebUntis')
   })
 
   it('Abfahrten als andere Seite bleiben immer stehen', () => {

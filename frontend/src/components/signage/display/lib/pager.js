@@ -14,6 +14,20 @@ export function paginateByHeight(heights, available) {
   return packByHeight(heights, available)
 }
 
+// Pages for a pair of cards: the first page of each pair fills `first`, the second `second` (the second card
+// has no head lines, so it holds more rows), and so on alternately.
+export function paginatePair(heights, first, second) {
+  const pages = []
+  let start = 0
+  while (start < heights.length) {
+    const room = pages.length % 2 === 0 ? first : second
+    const [page] = packByHeight(heights.slice(start), room)
+    pages.push(page.map((i) => i + start))
+    start += page.length
+  }
+  return pages
+}
+
 export function usePager(pages, seconds) {
   const count = pages.length
   const [raw, setRaw] = useState(0)
