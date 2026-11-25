@@ -347,7 +347,8 @@ def _substitutions_data(view, key_ok, now, compact=False, single_day=False):
     embed_url = (next_day or full) if compact else (full or next_day)
     result = substitutions.load(view, now, single_day=single_day) if key_ok else substitutions.empty()
     live = result['source'] not in (None, 'unavailable')
-    return {**result, 'embed_url': embed_url or None, 'mode': 'live' if live else 'embed'}
+    expand = view.substitutions_expand_pages if view.substitutions_expand_pages in (2, 3, 4) else 0
+    return {**result, 'embed_url': embed_url or None, 'mode': 'live' if live else 'embed', 'expand_pages': expand}
 
 
 def _split_side(view, content, key_ok, now):

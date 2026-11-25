@@ -121,6 +121,8 @@ class DisplayView(models.Model):
     # None = as in the WebUntis format (showExamSupervision)
     substitutions_show_exams = models.BooleanField(null=True, blank=True, default=None)
     substitutions_next_day_from = models.CharField(max_length=5, blank=True, default='16:00')
+    # More pages than this today (counted on the screen): today takes both halves. 0 = off, else 2 to 4.
+    substitutions_expand_pages = models.IntegerField(default=0)
     page_seconds = models.IntegerField(default=15, help_text="Sekunden pro Seite")
 
     SPLIT_CONTENT_CHOICES = [
