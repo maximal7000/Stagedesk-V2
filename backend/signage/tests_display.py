@@ -17,7 +17,7 @@ from .models import (
 
 TOP_KEYS = {'generated_at', 'reload_requested_at', 'screen', 'scheme', 'mode', 'view'}
 SCREEN_KEYS = {'slug', 'name', 'location', 'scale', 'orientation', 'power', 'scheme'}
-VIEW_KEYS = {'id', 'kind', 'layout', 'page_seconds', 'show_weather', 'weather', 'qr', 'data'}
+VIEW_KEYS = {'id', 'kind', 'layout', 'page_seconds', 'show_weather', 'weather', 'qr', 'data', 'clock_seconds'}
 DATA_KEYS = {
     'departures': {'stations', 'disruptions', 'columns', 'time_format', 'show_disruptions', 'strip_city',
                    'disruption_column', 'status'},
@@ -374,6 +374,10 @@ class ContractTest(DisplayTestBase):
         view.map_center = 'kaputt'
         self.assertEqual(self._payload(view)['view']['data']['right']['data'],
                          {'center': [53.8699, 10.6892], 'zoom': 16, 'lines': None})
+
+    def test_view_carries_clock_seconds(self):
+        self.assertIs(self._payload(self.view('info', slug='with'))['view']['clock_seconds'], True)
+        self.assertIs(self._payload(self.view('info', slug='without', clock_seconds=False))['view']['clock_seconds'], False)
 
     def test_split_side_with_media(self):
         image = MediaFile.objects.create(name='Plakat', file='monitor/img/p.png', kind='image', status='ready')

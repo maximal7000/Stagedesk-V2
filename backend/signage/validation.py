@@ -40,6 +40,7 @@ BOOL_FIELDS = {
     'transit_strip_city': 'Ortsnamen weglassen',
     'transit_show_via': 'Zwischenhalte anzeigen',
     'map_all_lines': 'Alle Linien',
+    'clock_seconds': 'Sekunden anzeigen',
 }
 WALK_MINUTES = (0, 60)
 MAX_DEPARTURES = (1, 50)

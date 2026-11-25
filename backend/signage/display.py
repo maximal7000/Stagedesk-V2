@@ -521,6 +521,7 @@ def _view_object(view, key_ok, now, single_day=False):
         'layout': view.effective_layout(),
         'page_seconds': view.page_seconds,
         'show_weather': view.show_weather,
+        'clock_seconds': view.clock_seconds is not False,
         'weather': _fetch_weather(view),
         'qr': qr,
         'data': _view_data(view, key_ok, now, single_day),
