@@ -194,18 +194,23 @@ class CecPowerWithSessionTests(unittest.TestCase):
         popen.script["pow 0"] = ["power status: standby\n"]
         self.assertEqual(power.status(), "standby")
 
-    def test_only_an_answer_confirms_the_state(self):
-        # Switched on by us, then off by the remote or a power test: our memory says "an".
-        popen = FakePopen({"pow 0": ["power status: unknown\n"]})
+    def test_switching_never_trusts_a_reported_state(self):
+        # LG signage displays answer "on" in standby; skipping on that left the screen dark
+        popen = FakePopen({"pow 0": ["power status: on\n"]})
         session = CecSession(popen=popen)
         self.addCleanup(session.close)
         power = CecPower({}, FakeRunner(), cec_session=session, sleep=lambda s: None)
-        power.set(True)
-        self.assertEqual(power.status(), "an")
         self.assertIsNone(power.confirmed_status())
-        popen.script["pow 0"] = ["power status: on\n"]
-        self.assertEqual(power.confirmed_status(), "an")
         self.assertIsNone(CecPower({}, FakeRunner()).confirmed_status())
+
+    def test_every_command_is_logged(self):
+        session = CecSession(popen=FakePopen())
+        self.addCleanup(session.close)
+        power = CecPower({}, FakeRunner(), cec_session=session, sleep=lambda s: None)
+        with self.assertLogs("stagedesk_agent.power", "INFO") as logs:
+            power.set(True)
+            power.set(False)
+        self.assertEqual([r.getMessage() for r in logs.records], ["CEC: on 0 gesendet", "CEC: standby 0 gesendet"])
 
     def test_hybrid_switches_on_through_the_session(self):
         popen = FakePopen()
