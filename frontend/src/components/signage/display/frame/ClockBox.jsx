@@ -14,11 +14,12 @@ function ClockTime({ time, seconds, className }) {
 
 // The only per-second rendering besides useClock users such as the retry countdown.
 // `seconds`: per view (DisplayView.clock_seconds); off shows HH:MM.
-export default function ClockBox({ now, weather, staleSince, variant = 'header', stacked = false, seconds = true, className = '' }) {
+// `row` (compact only): the "Stand" hint beside the time instead of below it, for a one-line footer.
+export default function ClockBox({ now, weather, staleSince, variant = 'header', stacked = false, seconds = true, row = false, className = '' }) {
   const tick = useClock()
   const time = now ?? tick
   if (variant === 'box') return <BoxClock time={time} weather={weather} staleSince={staleSince} seconds={seconds} className={className} />
-  if (variant === 'compact') return <CompactClock time={time} staleSince={staleSince} seconds={seconds} className={className} />
+  if (variant === 'compact') return <CompactClock time={time} staleSince={staleSince} seconds={seconds} row={row} className={className} />
   return <HeaderClock time={time} weather={weather} staleSince={staleSince} stacked={stacked} seconds={seconds} className={className} />
 }
 
@@ -83,7 +84,15 @@ function BoxClock({ time, weather, staleSince, seconds, className }) {
   )
 }
 
-function CompactClock({ time, staleSince, seconds, className }) {
+function CompactClock({ time, staleSince, seconds, row, className }) {
+  if (row) {
+    return (
+      <div className={`flex flex-row items-baseline gap-[1.5rem] ${className}`}>
+        {staleSince != null && <StaleHint since={staleSince} className="text-[1.5rem] text-(--d-fg-soft)" />}
+        <ClockTime time={time} seconds={seconds} className="leading-[0.9]" />
+      </div>
+    )
+  }
   return (
     <div className={`flex flex-col items-end ${className}`}>
       <ClockTime time={time} seconds={seconds} className="leading-[0.9]" />

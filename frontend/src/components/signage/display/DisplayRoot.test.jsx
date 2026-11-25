@@ -158,6 +158,17 @@ describe('DisplayRoot', () => {
     expect(el.querySelector('.d-footer .d-clock').classList.contains('d-clock-short')).toBe(true)
   })
 
+  it('Medien: der Stand-Hinweis steht neben der Uhr unter den Seiten, nicht darunter', () => {
+    const page = { url: '/media/p-0.webp', width: 1240, height: 1754, orientation: 'portrait' }
+    const view = { id: 6, kind: 'media', layout: 'normal', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: { seconds: 10, per_screen: 2, pages: [page, page] } }
+    const el = render({ payload: { screen, view, mode: null }, state: 'stale', lastOkAt })
+    const clock = el.querySelector('.d-footer .d-clock')
+    expect(clock.parentElement.textContent).toContain('Stand')
+    // One row: the footer is 4.75rem high, a second line would push the clock up into the pages
+    expect(clock.parentElement.classList.contains('flex-row')).toBe(true)
+  })
+
   describe('Uhr', () => {
     const departures = (extra = {}) => ({
       id: 2, kind: 'departures', layout: 'wide', page_seconds: 15, show_weather: false, weather: null, qr: null,
