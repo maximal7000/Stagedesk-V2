@@ -148,10 +148,12 @@ describe('DisplayRoot', () => {
       data: { seconds: 10, per_screen: perScreen, pages: [page, page] } })
     let el = render({ payload: { screen, view: media(2), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelectorAll('img[src="/media/p-0.webp"]')).toHaveLength(2)
-    expect(el.querySelector('.d-footer [data-clock="box"]')).not.toBeNull()
+    expect(el.querySelector('.d-footer .d-clock')).not.toBeNull()
+    // Seconds in fixed cells: the clock no longer jumps with the digit widths
+    expect(el.querySelectorAll('.d-footer .d-clock .inline-block')).toHaveLength(2)
     act(() => root.unmount())
     el = render({ payload: { screen, view: media(1), mode: null }, state: 'ok', lastOkAt })
-    expect(el.querySelector('[data-clock="box"]')).toBeNull()
+    expect(el.querySelector('.d-footer')).toBeNull()
   })
 
   it('wechselt das Schema ohne Neuladen', () => {
