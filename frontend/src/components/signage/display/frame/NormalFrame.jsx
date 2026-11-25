@@ -9,7 +9,7 @@ export default function NormalFrame({ scheme, clock, footer, wheel = true, strip
       <div
         className={`absolute inset-y-0 z-10 flex flex-col pb-[3.5rem] pt-[4.25rem] ${wheel ? 'left-[23.75rem]' : 'left-[6rem]'} ${stripe ? 'right-[13.75rem]' : 'right-[6rem]'}`}
       >
-        {clock && <ClockBox variant="header" weather={clock.showWeather ? clock.weather : null} staleSince={clock.staleSince} />}
+        {clock && <ClockBox variant="header" weather={clock.showWeather ? clock.weather : null} staleSince={clock.staleSince} seconds={clock.seconds !== false} />}
         <main className="relative min-h-0 flex-1">{children}</main>
         <FrameFooter>{footer}</FrameFooter>
       </div>

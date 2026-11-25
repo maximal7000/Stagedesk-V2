@@ -49,7 +49,7 @@ const inRange = (value, min, max) => value !== '' && value != null && Number.isI
 
 export const EDITABLE_FIELDS = [
   'name', 'kind', 'layout', 'page_seconds',
-  'show_weather', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
+  'show_weather', 'clock_seconds', 'weather_city', 'show_qr_code', 'qr_code_url', 'qr_code_label',
   'transit_stops', 'transit_disruption_rail', 'transit_disruption_bus', 'transit_disruption_rail_lines',
   'transit_disruption_bus_lines', 'transit_disruption_manual',
   'transit_duration', 'transit_columns', 'transit_time_format', 'transit_show_disruptions', 'transit_disruption_column', 'transit_strip_city', 'transit_source_db', 'transit_source_nahsh', 'transit_show_via', 'transit_disruption_hidden',

@@ -80,6 +80,7 @@ class DisplayViewSchema(Schema):
     show_announcements: bool
     show_countdown: bool
     show_weather: bool
+    clock_seconds: bool = True
     weather_city: str
     # Old per-view weather key: write-only, the global one wins
     weather_api_key: str = ''
@@ -169,6 +170,7 @@ class DisplayViewUpdateSchema(Schema):
     show_announcements: Optional[bool] = None
     show_countdown: Optional[bool] = None
     show_weather: Optional[bool] = None
+    clock_seconds: Optional[bool] = None
     weather_city: Optional[str] = None
     weather_api_key: Optional[str] = None
     pdf_mode: Optional[str] = None

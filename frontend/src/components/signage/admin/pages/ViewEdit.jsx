@@ -146,6 +146,8 @@ function GeneralSection({ draft, set, kindProblem }) {
         </Field>
         <div className="sm:col-span-2 space-y-3">
           <Checkbox label="Wetter anzeigen" help={weatherHelp(draft)} checked={draft.show_weather} onChange={(v) => set('show_weather', v)} />
+          <Checkbox label="Sekunden anzeigen" help="Aus: die Uhr zeigt nur Stunden und Minuten." checked={draft.clock_seconds !== false}
+            onChange={(v) => set('clock_seconds', v)} />
           {draft.show_weather && (
             <div className="ml-6.5 max-w-sm">
               <label htmlFor={ids.city} className="sr-only">Ort für das Wetter</label>

@@ -149,11 +149,55 @@ describe('DisplayRoot', () => {
     let el = render({ payload: { screen, view: media(2), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelectorAll('img[src="/media/p-0.webp"]')).toHaveLength(2)
     expect(el.querySelector('.d-footer .d-clock')).not.toBeNull()
-    // Seconds in fixed cells: the clock no longer jumps with the digit widths
-    expect(el.querySelectorAll('.d-footer .d-clock .inline-block')).toHaveLength(2)
+    expect(el.querySelector('.d-footer .d-clock .d-clock-sec').textContent).toMatch(/^\d{2}$/)
     act(() => root.unmount())
     el = render({ payload: { screen, view: media(1), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelector('.d-footer')).toBeNull()
+    act(() => root.unmount())
+    el = render({ payload: { screen, view: { ...media(2), clock_seconds: false }, mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('.d-footer .d-clock .d-clock-sec')).toBeNull()
+  })
+
+  it('Medien: der Stand-Hinweis steht neben der Uhr unter den Seiten, nicht darunter', () => {
+    const page = { url: '/media/p-0.webp', width: 1240, height: 1754, orientation: 'portrait' }
+    const view = { id: 6, kind: 'media', layout: 'normal', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: { seconds: 10, per_screen: 2, pages: [page, page] } }
+    const el = render({ payload: { screen, view, mode: null }, state: 'stale', lastOkAt })
+    const clock = el.querySelector('.d-footer .d-clock')
+    expect(clock.parentElement.textContent).toContain('Stand')
+    // One row: the footer is 4.75rem high, a second line would push the clock up into the pages
+    expect(clock.parentElement.classList.contains('flex-row')).toBe(true)
+  })
+
+  describe('Uhr', () => {
+    const departures = (extra = {}) => ({
+      id: 2, kind: 'departures', layout: 'wide', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: { stations: [], disruptions: [], columns: 4, time_format: 'minutes', show_disruptions: false, strip_city: true,
+        status: { fetched_at: null, sources: {} } },
+      ...extra,
+    })
+    const boxClock = (el) => el.querySelector('[data-clock="box"] .d-clock')
+
+    it('ohne Sekunden zeigt der Kasten HH:MM', () => {
+      const el = render({ payload: { screen, view: departures({ clock_seconds: false }), mode: null }, state: 'ok', lastOkAt })
+      expect(boxClock(el).textContent).toMatch(/^\d{2}:\d{2}$/)
+    })
+
+    it('nur die Sekunden stehen in einem festen Feld, die Uhrzeit selbst mitten im Kasten', () => {
+      const el = render({ payload: { screen, view: departures({ clock_seconds: true }), mode: null }, state: 'ok', lastOkAt })
+      const clock = boxClock(el)
+      const sec = clock.querySelector('.d-clock-sec')
+      expect(sec.textContent).toMatch(/^\d{2}$/)
+      expect(clock.textContent.endsWith(sec.textContent)).toBe(true)
+      // No fixed width on the whole time: it is as wide as its digits and centred by the box
+      expect([...clock.classList].some((c) => c.startsWith('w-') || c === 'd-clock-seconds' || c === 'd-clock-short')).toBe(false)
+      expect(clock.parentElement.classList.contains('justify-center')).toBe(true)
+    })
+
+    it('alte Daten ohne clock_seconds zeigen Sekunden', () => {
+      const el = render({ payload: { screen, view: departures(), mode: null }, state: 'ok', lastOkAt })
+      expect(boxClock(el).textContent).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+    })
   })
 
   it('wechselt das Schema ohne Neuladen', () => {

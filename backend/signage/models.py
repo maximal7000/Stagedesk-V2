@@ -153,6 +153,7 @@ class DisplayView(models.Model):
     show_countdown = models.BooleanField(default=True)
 
     show_weather = models.BooleanField(default=False)
+    clock_seconds = models.BooleanField(default=True, help_text="Uhr mit Sekunden (aus: nur Stunden und Minuten)")
     weather_city = models.CharField(max_length=100, blank=True)
     weather_api_key = models.CharField(max_length=64, blank=True)
     weather_cache = models.JSONField(default=dict, blank=True)

@@ -16,7 +16,7 @@ const VIEWS = {
       { id: 'b', name: 'Kohlmarkt', walk_minutes: 4, max_departures: 10 },
       { id: 'c', name: 'Sandstraße', walk_minutes: 3, max_departures: 10 },
     ],
-    transit_disruption_rail: true, transit_disruption_bus: true, rotation_items: [], media_items: [],
+    transit_disruption_rail: true, transit_disruption_bus: true, rotation_items: [], media_items: [], clock_seconds: true,
   },
   2: {
     id: 2, name: 'Vertretungsplan', slug: 'substitutions-plan', kind: 'substitutions', layout: 'auto', is_default: false,
@@ -206,6 +206,15 @@ describe('ViewEdit', () => {
     expect(container.textContent).not.toContain('Aktiv ist der gespeicherte Link')
     await act(async () => button('Speichern').click())
     expect(api.updateView).toHaveBeenCalledWith(2, { webuntis_url: 'https://eigen.example', webuntis_link_id: null })
+  })
+
+  it('Allgemein: Sekunden anzeigen ausschalten speichert clock_seconds', async () => {
+    await mount('/signage-admin/views/1')
+    const box = [...container.querySelectorAll('label')].find((l) => l.textContent.includes('Sekunden anzeigen')).querySelector('input')
+    expect(box.checked).toBe(true)
+    await act(async () => box.click())
+    await act(async () => button('Speichern').click())
+    expect(api.updateView).toHaveBeenCalledWith(1, { clock_seconds: false })
   })
 
   it('bietet in der Medien-Ansicht nur PDFs und Bilder an', async () => {
