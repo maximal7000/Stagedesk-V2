@@ -142,6 +142,18 @@ describe('DisplayRoot', () => {
     expect(el.textContent).toContain('Keine Medien.')
   })
 
+  it('Medien: mehrere Seiten nebeneinander bekommen die Uhr unten im Kasten, eine Seite die Uhr daneben', () => {
+    const page = { url: '/media/p-0.webp', width: 1240, height: 1754, orientation: 'portrait' }
+    const media = (perScreen) => ({ id: 6, kind: 'media', layout: 'normal', page_seconds: 15, show_weather: false, weather: null, qr: null,
+      data: { seconds: 10, per_screen: perScreen, pages: [page, page] } })
+    let el = render({ payload: { screen, view: media(2), mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelectorAll('img[src="/media/p-0.webp"]')).toHaveLength(2)
+    expect(el.querySelector('.d-footer [data-clock="box"]')).not.toBeNull()
+    act(() => root.unmount())
+    el = render({ payload: { screen, view: media(1), mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-clock="box"]')).toBeNull()
+  })
+
   it('wechselt das Schema ohne Neuladen', () => {
     const el = render({ payload: { screen, view, mode: null, scheme: 'light' }, state: 'ok', lastOkAt })
     const before = el.querySelector('.d-root')
