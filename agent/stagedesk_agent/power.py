@@ -110,7 +110,9 @@ class CecPower(PowerController):
         return result
 
     def _set(self, on):
-        self.command(f"on {self.device}" if on else f"standby {self.device}")
+        command = f"on {self.device}" if on else f"standby {self.device}"
+        self.command(command)
+        log.info("CEC: %s gesendet", command)
         self._known = "an" if on else "standby"
         return self._known
 
@@ -131,14 +133,10 @@ class CecPower(PowerController):
         return None
 
     def confirmed_status(self):
-        """Our own memory (last command, an earlier answer) is not confirmed: the TV may have been switched
-        by its remote or a power test since, and skipping on it left the TV off."""
-        if self.session is None:
-            return None
-        try:
-            return self._query()
-        except CecUnavailable:
-            return None
+        """Never confirmed, so switching always sends the command: some TVs (LG signage) answer "on" in
+        standby, and skipping on that left the screen dark. A TV already in the wanted state ignores the
+        command, and commands only go out when the wanted state changes."""
+        return None
 
     def _status(self):
         if self.session is not None:
