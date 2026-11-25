@@ -86,9 +86,10 @@ function Slide({ pages, layout, orientation, frame, fadeIn, clockBelow }) {
   }
   if (clockBelow) {
     const footer = (
-      // d-footer-item: the footer shows only with an item in it (display.css)
-      <div className="d-footer-item flex h-full justify-end">
-        <ClockBox variant="box" staleSince={frame.staleSince} />
+      // d-footer-item: the footer shows only with an item in it (display.css). No box: on the white frame
+      // a grey box looked like a stray element; the clock stands on its own, right-aligned under the pages.
+      <div className="d-footer-item flex h-full items-end justify-end">
+        <ClockBox variant="compact" staleSince={frame.staleSince} className="text-[4.25rem]" />
       </div>
     )
     return (
