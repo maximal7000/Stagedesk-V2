@@ -200,13 +200,13 @@ describe('Geteilt: Vertretungsplan überlagert Medien', () => {
     expect(el.textContent).toContain('Keine Medien.')
   })
 
-  it('die Fußzeile steht unter der linken Karte der Doppelseite (halbe Breite), nicht nach der Breite der geteilten Ansicht', () => {
+  it('beide Hälften Vertretungsplan: die Fußzeile geht über die ganze Breite, nicht nach der Breite der geteilten Ansicht', () => {
     const v = split(media, 10)
     v.data.left.data = { ...v.data.left.data, source: 'monitor', updated_at: '2026-10-19T07:42:00', fetched_at: '2026-10-19T07:45:00' }
     const el = render(show(v))
-    const grid = el.querySelector('.d-footer-row [style*="grid-template-columns"]')
-    expect(grid.style.gridTemplateColumns).toBe('calc(50cqw - 0.625rem) minmax(0, 1fr)')
-    expect(grid.firstElementChild.textContent).toContain('WebUntis')
+    expect(el.querySelector('.d-footer-row [style*="grid-template-columns"]')).toBeNull()
+    const full = el.querySelector('[data-split-footer="overlay"]')
+    expect(full.textContent).toContain('WebUntis')
   })
 
   it('Abfahrten als andere Seite bleiben immer stehen', () => {

@@ -80,8 +80,8 @@ export default function SplitView({ view }) {
 function SplitFooter({ view }) {
   const data = view.data ?? {}
   const overlay = useOverlay(view.id)
-  // Overlaid: the plan's footer stands under the pair's first card (half the width), nothing beside it
-  const percent = overlay ? 50 : clampPercent(data.left_percent)
+  // Overlaid: both halves show the plan, so its footer spans the whole width
+  const percent = clampPercent(data.left_percent)
   let weatherShown = false
   const sides = overlay ? [data[overlay], null] : [data.left, data.right]
   const cells = sides.map((side) => {
@@ -93,6 +93,7 @@ function SplitFooter({ view }) {
     return <View.Footer view={{ ...sub, show_weather: showWeather }} />
   })
   if (!cells.some(Boolean)) return null
+  if (overlay) return <div data-split-footer="overlay" className="h-full min-w-0">{cells[0]}</div>
   return (
     <div className="grid h-full gap-[1.25rem]" style={{ gridTemplateColumns: `calc(${percent}cqw - 0.625rem) minmax(0, 1fr)` }}>
       <div className="min-w-0">{cells[0]}</div>
