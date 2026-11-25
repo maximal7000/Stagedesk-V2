@@ -1,3 +1,5 @@
+import { useCallback, useState } from 'react'
+import { expandWanted, staysExpanded } from '../lib/expand'
 import { VIEW_COMPONENTS } from './index'
 
 // Old side values without data (exam, clock, empty) stay empty. A view with its own frame takes part
@@ -12,18 +14,49 @@ function sideView(view, side) {
   return { View, sub: { ...view, kind: side.kind, data: side.data } }
 }
 
+// Sides a busy substitution plan may take over; departures never (time-critical).
+const YIELDING = new Set(['media', 'info'])
+
+// The substitutions side and the side it may take over, if this split has such a pair.
+function overlayPair(data) {
+  for (const [own, other] of [['left', 'right'], ['right', 'left']]) {
+    if (data[own]?.kind === 'substitutions' && data[own]?.data && YIELDING.has(data[other]?.kind)) return own
+  }
+  return null
+}
+
 export default function SplitView({ view }) {
   const data = view.data ?? {}
+  const [state, setState] = useState({ pages: 0, expanded: false })
   const percent = clampPercent(data.left_percent)
   const left = sideView(view, data.left)
   const right = sideView(view, data.right)
+  const owner = overlayPair(data)
+  const plan = owner === 'left' ? left : owner === 'right' ? right : null
+  const expandPages = plan ? data[owner].data.expand_pages : 0
+  const ownFraction = (owner === 'left' ? percent : 100 - percent) / 100
+  // The count comes from what is shown: the side as it is, or the two half columns when expanded
+  const decide = useCallback((pages) => setState((prev) => {
+    const expanded = prev.expanded ? staysExpanded(pages, expandPages, ownFraction) : expandWanted(pages, expandPages)
+    // Same answer: keep the state object, so reporting the count again does not re-render
+    return prev.pages === pages && prev.expanded === expanded ? prev : { pages, expanded }
+  }), [expandPages, ownFraction])
+  // Busy day: today's plan takes the whole width as two equal columns (the split width does not count)
+  if (plan && state.expanded) {
+    return (
+      <div className="relative h-full" data-split-overlay={owner}>
+        <plan.View view={plan.sub} twoColumns onPageCount={decide} />
+      </div>
+    )
+  }
+  const report = (side) => (owner === side ? { onPageCount: decide } : {})
   return (
     <div className="flex h-full gap-[1.25rem]">
       <div className="relative min-w-0" style={{ flex: `0 0 calc(${percent}% - 0.625rem)` }} data-split-side="left">
-        {left.View && <left.View view={left.sub} />}
+        {left.View && <left.View view={left.sub} {...report('left')} />}
       </div>
       <div className="relative min-w-0 flex-1" data-split-side="right">
-        {right.View && <right.View view={right.sub} />}
+        {right.View && <right.View view={right.sub} {...report('right')} />}
       </div>
     </div>
   )

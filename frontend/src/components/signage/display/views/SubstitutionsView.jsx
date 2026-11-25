@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { expandWanted } from '../lib/expand'
 import { useBoxSize } from '../lib/fit'
 import { formatDayMonth, formatTime, formatWeekday, parseLocalDate } from '../lib/format'
 import { paginateByHeight, useChildHeights, usePager } from '../lib/pager'
@@ -85,7 +86,8 @@ function isLive(data) {
   return data.mode === 'live' && (data.days ?? []).length > 0
 }
 
-export default function SubstitutionsView({ view }) {
+// onPageCount: reports today's page count (split view decides on it); twoColumns: today as a pair of pages.
+export default function SubstitutionsView({ view, onPageCount, twoColumns = false }) {
   const data = view.data ?? {}
   if (!isLive(data)) {
     if (data.embed_url) return <EmbedFrame url={data.embed_url} />
@@ -101,7 +103,7 @@ export default function SubstitutionsView({ view }) {
       </div>
     )
   }
-  return <DayColumns data={data} seconds={view.page_seconds} />
+  return <DayColumns data={data} seconds={view.page_seconds} onPageCount={onPageCount} twoColumns={twoColumns} />
 }
 
 // Two days side by side; in an area taller than wide (portrait screen) one above the other. In narrow
@@ -110,26 +112,55 @@ export default function SubstitutionsView({ view }) {
 const STACK_BELOW_REM = 100
 const MIN_DAY_HEIGHT_REM = 30
 
-function DayColumns({ data, seconds }) {
+// Busy days (more pages than data.expand_pages): today takes both areas as a pair of pages instead of
+// tomorrow. Decided on the page count shown now; a pair card is never wider than a day card, so it has at
+// least as many pages and switching back needs the count to really drop (no flicker).
+function DayColumns({ data, seconds, onPageCount, twoColumns }) {
   const ref = useRef(null)
   const { width, height, remPx } = useBoxSize(ref)
   const [turn, setTurn] = useState(0)
+  const [todayPages, setTodayPages] = useState(0)
   const next = useCallback(() => setTurn((t) => t + 1), [])
+  const reportToday = useCallback((n) => { setTodayPages(n); onPageCount?.(n) }, [onPageCount])
   const days = data.days
   const columns = useMemo(() => tableColumns(data), [data])
   const stacked = days.length > 1 && height > width && height / remPx >= days.length * MIN_DAY_HEIGHT_REM
   const oneByOne = !stacked && days.length > 1 && width > 0 && width / remPx < STACK_BELOW_REM
+  const paired = twoColumns || (days.length > 1 && !oneByOne && expandWanted(todayPages, data.expand_pages))
   const shown = oneByOne ? [turn % days.length] : days.map((_, i) => i)
   return (
-    <div ref={ref} data-days={stacked ? 'stacked' : oneByOne ? 'one-by-one' : 'side-by-side'}
+    <div ref={ref} data-days={paired ? 'pair' : stacked ? 'stacked' : oneByOne ? 'one-by-one' : 'side-by-side'}
       className={`flex h-full gap-[1.25rem] ${stacked ? 'flex-col' : ''}`}>
-      {shown.map((i) => (
-        <DayCard
-          key={days[i].date ?? i} day={days[i]} news={i === 0 ? data.news : null} columns={columns} seconds={seconds}
-          onDone={oneByOne ? next : null}
-        />
-      ))}
+      {paired
+        ? <DayPair day={days[0]} news={data.news} columns={columns} seconds={seconds} onPageCount={reportToday} />
+        : shown.map((i) => (
+          <DayCard
+            key={days[i].date ?? i} day={days[i]} news={i === 0 ? data.news : null} columns={columns} seconds={seconds}
+            onDone={oneByOne ? next : null} onPages={i === 0 ? (pages) => reportToday(pages.length) : null}
+          />
+        ))}
     </div>
+  )
+}
+
+const pagesKey = (pages) => pages.map((p) => p.join(',')).join('|')
+
+// Today as two cards: the first shows pages 1, 3, ..., the second 2, 4, ...; one pager for both. The first
+// card pages; the second (without the head lines, so it has more room) shows the first card's pages.
+function DayPair({ day, news, columns, seconds, onPageCount }) {
+  const [pages, setPages] = useState([])
+  const pairs = useMemo(() => Array.from({ length: Math.ceil(pages.length / 2) }, (_, i) => i), [pages.length])
+  const { index } = usePager(pairs, seconds)
+  const report = useCallback((next) => {
+    // Compare by content: a re-measure yields new arrays with the same pages
+    setPages((prev) => (pagesKey(prev) === pagesKey(next) ? prev : next))
+    onPageCount?.(next.length)
+  }, [onPageCount])
+  return (
+    <>
+      <DayCard day={day} news={news} columns={columns} seconds={seconds} pageIndex={2 * index} onPages={report} />
+      <DayCard day={day} columns={columns} seconds={seconds} pageIndex={2 * index + 1} pagesFrom={pages} plainHead />
+    </>
   )
 }
 
@@ -170,18 +201,24 @@ function Message({ subject, children }) {
   )
 }
 
-function DayCard({ day, news, columns, seconds, onDone }) {
+// pageIndex: shown page given from outside (pair); pagesFrom: use these pages instead of own paging;
+// onPages: reports the pages; plainHead: title only (second card of a pair).
+function DayCard({ day, news, columns, seconds, onDone, pageIndex = null, pagesFrom = null, onPages = null, plainHead = false }) {
   const bodyRef = useRef(null)
   const measureRef = useRef(null)
   const { width, height, remPx } = useBoxSize(bodyRef)
   const rows = useMemo(() => day.rows ?? [], [day.rows])
   const heights = useChildHeights(measureRef, [rows, columns, width, remPx])
-  const pages = useMemo(() => {
+  const ownPages = useMemo(() => {
     if (!rows.length) return []
     if (heights.length !== rows.length) return [rows.map((_, i) => i)]
     return paginateByHeight(heights, height)
   }, [rows, heights, height])
-  const { index, count } = usePager(pages, seconds)
+  const pages = pagesFrom ?? ownPages
+  useEffect(() => { onPages?.(ownPages) }, [onPages, ownPages])
+  const pager = usePager(pageIndex == null ? pages : [], seconds)
+  const index = pageIndex ?? pager.index
+  const count = pages.length
   const page = (pages[index] ?? []).map((i) => rows[i])
   useEffect(() => {
     if (!onDone || !(seconds > 0)) return undefined
@@ -191,10 +228,14 @@ function DayCard({ day, news, columns, seconds, onDone }) {
 
   return (
     <section className="d-card flex min-h-0 min-w-0 flex-1 flex-col px-[1.5rem] pb-[1rem] pt-[1.375rem]">
-      <Heading size="text-[2rem]" aside={<PageCount index={index} count={count} />}>{dayTitle(day)}</Heading>
-      <DayHead day={day} />
-      {news && <Message>{news}</Message>}
-      {(day.messages ?? []).map((m, i) => <Message key={i} subject={m.subject}>{m.body}</Message>)}
+      <Heading size="text-[2rem]" aside={index < count ? <PageCount index={index} count={count} /> : null}>{dayTitle(day)}</Heading>
+      {!plainHead && (
+        <>
+          <DayHead day={day} />
+          {news && <Message>{news}</Message>}
+          {(day.messages ?? []).map((m, i) => <Message key={i} subject={m.subject}>{m.body}</Message>)}
+        </>
+      )}
       <div
         className="d-head d-rule-bottom mt-[1.25rem] grid gap-x-[0.75rem] pb-[0.375rem] text-[1rem] uppercase tracking-[0.08em] text-(--d-muted)"
         style={{ gridTemplateColumns: columns.template }}
