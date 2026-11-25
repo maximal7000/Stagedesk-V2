@@ -147,6 +147,7 @@ class DisplayViewSchema(Schema):
     substitutions_show_absences: bool = True
     substitutions_show_exams: Optional[bool] = None
     substitutions_next_day_from: str = '16:00'
+    substitutions_expand_pages: int = 0
     page_seconds: int = 15
     api_token: str
 
@@ -237,6 +238,7 @@ class DisplayViewUpdateSchema(Schema):
     # None means "as in the WebUntis format" here and may be set
     substitutions_show_exams: Optional[bool] = None
     substitutions_next_day_from: Optional[str] = None
+    substitutions_expand_pages: Optional[int] = None
     page_seconds: Optional[int] = None
 
 

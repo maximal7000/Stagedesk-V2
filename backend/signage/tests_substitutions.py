@@ -397,7 +397,7 @@ class DisplaySubstitutionsTest(SubstitutionsTestBase):
         view = self.view(webuntis_url='https://example.org/untis')
         data = display.build_payload(None, view, key_ok=True, now=MONDAY_8)['view']['data']
         self.assertEqual(set(data), {'source', 'fallback', 'group_by', 'columns', 'days', 'news',
-                                     'updated_at', 'fetched_at', 'embed_url', 'mode'})
+                                     'updated_at', 'fetched_at', 'embed_url', 'mode', 'expand_pages'})
         self.assertEqual((data['mode'], data['embed_url'], len(data['days'])),
                          ('live', 'https://example.org/untis', 2))
 

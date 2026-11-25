@@ -74,6 +74,9 @@ def _check_numbers(data):
     # Left width: clamped into the range as before, but never empty
     if 'split_left_percent' in data and not _is_int(data['split_left_percent']):
         raise HttpError(422, number_message('Breite links', 20, 80))
+    if 'substitutions_expand_pages' in data and not (
+            _is_int(data['substitutions_expand_pages']) and data['substitutions_expand_pages'] in (0, 2, 3, 4)):
+        raise HttpError(422, "Ganze Breite: Aus oder ab 2 bis 4 Seiten.")
     if 'map_zoom' in data and not (_is_int(data['map_zoom']) and 13 <= data['map_zoom'] <= 17):
         raise HttpError(422, number_message('Maßstab', 13, 17))
     if 'map_center' in data and parse_map_center(data['map_center']) is None:

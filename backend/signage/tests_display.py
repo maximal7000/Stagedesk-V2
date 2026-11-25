@@ -22,7 +22,7 @@ DATA_KEYS = {
     'departures': {'stations', 'disruptions', 'columns', 'time_format', 'show_disruptions', 'strip_city',
                    'disruption_column', 'status'},
     'substitutions': {'source', 'fallback', 'group_by', 'columns', 'days', 'news', 'updated_at',
-                      'fetched_at', 'embed_url', 'mode'},
+                      'fetched_at', 'embed_url', 'mode', 'expand_pages'},
     'split': {'left', 'right', 'left_percent'},
     'media': {'seconds', 'per_screen', 'pages'},
     'info': {'announcements', 'events', 'countdown'},
@@ -348,6 +348,22 @@ class ContractTest(DisplayTestBase):
         view.pdf_static_page = 2
         data = display.build_payload(None, view, key_ok=False, now=self.now)['view']['data']
         self.assertEqual([p['url'].rsplit('/', 1)[1] for p in data['pages']][:2], ['a-1.webp', 'a-2.webp'])
+
+    def test_substitutions_carry_expand_pages(self):
+        view = self.view('substitutions', substitutions_expand_pages=3)
+        self.assertEqual(self._payload(view)['view']['data']['expand_pages'], 3)
+        split = self.view('split', slug='s2', split_left='substitutions', split_right='media', substitutions_expand_pages=2)
+        self.assertEqual(self._payload(split)['view']['data']['left']['data']['expand_pages'], 2)
+        self.assertEqual(self._payload(self.view('substitutions', slug='s3'))['view']['data']['expand_pages'], 0)
+
+    def test_expand_pages_validation(self):
+        from ninja.errors import HttpError
+        from .validation import validate_view_data
+        for bad in (1, 5, -1, 'drei', True):
+            with self.assertRaises(HttpError, msg=bad):
+                validate_view_data({'substitutions_expand_pages': bad})
+        for good in (0, 2, 3, 4):
+            self.assertEqual(validate_view_data({'substitutions_expand_pages': good})['substitutions_expand_pages'], good)
 
     def test_split_side_with_announcements(self):
         Announcement.objects.create(title='Aula gesperrt', text='Generalprobe', is_active=True)

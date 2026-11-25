@@ -1,0 +1,918 @@
+{
+  "generated_at": "2026-10-19T08:42:00+00:00",
+  "reload_requested_at": null,
+  "screen": {
+    "slug": "glocke",
+    "name": "Glocke",
+    "location": "Pausenhalle",
+    "scale": "auto",
+    "orientation": "landscape",
+    "power": true,
+    "scheme": "light"
+  },
+  "scheme": "light",
+  "mode": null,
+  "view": {
+    "id": 8,
+    "kind": "split",
+    "layout": "wide",
+    "page_seconds": 15,
+    "show_weather": false,
+    "weather": null,
+    "qr": null,
+    "data": {
+      "left": {
+        "kind": "substitutions",
+        "data": {
+          "source": "monitor",
+          "fallback": false,
+          "group_by": "class",
+          "columns": {
+            "class": true,
+            "subject": true,
+            "teacher": true,
+            "room": true,
+            "note": true
+          },
+          "days": [
+            {
+              "date": "2026-10-19",
+              "label": "Heute",
+              "absent": [
+                {
+                  "name": "ZEB",
+                  "kind": "teacher",
+                  "periods": ""
+                },
+                {
+                  "name": "ÖLZ",
+                  "kind": "teacher",
+                  "periods": "1."
+                },
+                {
+                  "name": "BEC",
+                  "kind": "teacher",
+                  "periods": "3.–6."
+                },
+                {
+                  "name": "WAG",
+                  "kind": "teacher",
+                  "periods": "5."
+                },
+                {
+                  "name": "8b",
+                  "kind": "class",
+                  "periods": ""
+                }
+              ],
+              "affected": {
+                "classes": [
+                  "5a",
+                  "5b",
+                  "5c",
+                  "5d",
+                  "6a",
+                  "6b",
+                  "6c",
+                  "6d",
+                  "7a",
+                  "7b",
+                  "7c",
+                  "7d",
+                  "8a",
+                  "8b",
+                  "8c",
+                  "8d",
+                  "9a",
+                  "9b",
+                  "9c",
+                  "9d",
+                  "Ea",
+                  "Eb",
+                  "Ec",
+                  "Ed",
+                  "10a",
+                  "10b",
+                  "10c",
+                  "10d",
+                  "Q1a",
+                  "Q1c",
+                  "Q1d",
+                  "Q2a",
+                  "Q2b",
+                  "Q2c",
+                  "Q2d"
+                ],
+                "teachers": [
+                  "QUI",
+                  "BEC",
+                  "DOR",
+                  "GUT",
+                  "HRT",
+                  "ROT",
+                  "KLM",
+                  "LOR",
+                  "NIE",
+                  "T-K",
+                  "ROS",
+                  "FEN",
+                  "JOR",
+                  "SNR",
+                  "VAN"
+                ]
+              },
+              "messages": [
+                {
+                  "subject": "Aula",
+                  "body": "Ab der 5. Stunde ist die Aula für die Generalprobe gesperrt. Sportunterricht Q1 findet in Halle 2 statt."
+                }
+              ],
+              "rows": [
+                {
+                  "classes": [
+                    "5a"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "Fr",
+                  "teacher": "",
+                  "teacher_old": "T-K",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "5",
+                  "classes_label": "5a"
+                },
+                {
+                  "classes": [
+                    "5a"
+                  ],
+                  "group": "",
+                  "periods": "5.",
+                  "subject": "Mu",
+                  "teacher": "GUT",
+                  "teacher_old": "",
+                  "room": "209",
+                  "room_old": "201",
+                  "kind": "room_change",
+                  "kind_label": "Raumänderung",
+                  "note": "",
+                  "grade": "5",
+                  "classes_label": "5a"
+                },
+                {
+                  "classes": [
+                    "5b"
+                  ],
+                  "group": "",
+                  "periods": "1.–2.",
+                  "subject": "Rel",
+                  "teacher": "ROS",
+                  "teacher_old": "",
+                  "room": "112",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Bitte das Arbeitsheft mitbringen, die Übungen zu Kapitel 4 werden in der Stunde besprochen",
+                  "grade": "5",
+                  "classes_label": "5b"
+                },
+                {
+                  "classes": [
+                    "5b"
+                  ],
+                  "group": "",
+                  "periods": "4.",
+                  "subject": "De",
+                  "teacher": "JOR",
+                  "teacher_old": "SNR",
+                  "room": "307",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Aufgaben im Moodle",
+                  "grade": "5",
+                  "classes_label": "5b"
+                },
+                {
+                  "classes": [
+                    "5c"
+                  ],
+                  "group": "",
+                  "periods": "2.–3.",
+                  "subject": "Ch",
+                  "teacher": "",
+                  "teacher_old": "FEN",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "Aufgaben im Moodle",
+                  "grade": "5",
+                  "classes_label": "5c"
+                },
+                {
+                  "classes": [
+                    "5c"
+                  ],
+                  "group": "",
+                  "periods": "4.",
+                  "subject": "Fr",
+                  "teacher": "ROT",
+                  "teacher_old": "KLM",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "5",
+                  "classes_label": "5c"
+                },
+                {
+                  "classes": [
+                    "5d"
+                  ],
+                  "group": "",
+                  "periods": "1.",
+                  "subject": "Ma",
+                  "teacher": "VAN",
+                  "teacher_old": "",
+                  "room": "180",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "",
+                  "grade": "5",
+                  "classes_label": "5d"
+                },
+                {
+                  "classes": [
+                    "5d"
+                  ],
+                  "group": "",
+                  "periods": "7.–8.",
+                  "subject": "WiPo",
+                  "teacher": "JOR",
+                  "teacher_old": "HRT",
+                  "room": "214",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Aufgaben im Moodle",
+                  "grade": "5",
+                  "classes_label": "5d"
+                },
+                {
+                  "classes": [
+                    "6a"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "WiPo",
+                  "teacher": "LOR",
+                  "teacher_old": "KLM",
+                  "room": "179",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Selbststudium in der Bibliothek",
+                  "grade": "6",
+                  "classes_label": "6a"
+                },
+                {
+                  "classes": [
+                    "6a"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Bio",
+                  "teacher": "",
+                  "teacher_old": "QUI",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "6",
+                  "classes_label": "6a"
+                },
+                {
+                  "classes": [
+                    "6b"
+                  ],
+                  "group": "",
+                  "periods": "4.",
+                  "subject": "Ch",
+                  "teacher": "BEC",
+                  "teacher_old": "",
+                  "room": "104",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Bitte Zeichenmappe und Acrylfarben mitbringen, die Arbeit am Selbstporträt wird fortgesetzt und am Ende der Stunde eingesammelt",
+                  "grade": "6",
+                  "classes_label": "6b"
+                },
+                {
+                  "classes": [
+                    "6b"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "La",
+                  "teacher": "GUT",
+                  "teacher_old": "BEC",
+                  "room": "015",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "6",
+                  "classes_label": "6b"
+                },
+                {
+                  "classes": [
+                    "6c"
+                  ],
+                  "group": "",
+                  "periods": "2.",
+                  "subject": "Ch",
+                  "teacher": "LOR",
+                  "teacher_old": "ROS",
+                  "room": "180",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "6",
+                  "classes_label": "6c"
+                },
+                {
+                  "classes": [
+                    "6c"
+                  ],
+                  "group": "",
+                  "periods": "7.–8.",
+                  "subject": "Mu",
+                  "teacher": "FEN",
+                  "teacher_old": "",
+                  "room": "307",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "6",
+                  "classes_label": "6c"
+                },
+                {
+                  "classes": [
+                    "6d"
+                  ],
+                  "group": "",
+                  "periods": "3.–4.",
+                  "subject": "Geo",
+                  "teacher": "DOR",
+                  "teacher_old": "HRT",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Klausur",
+                  "grade": "6",
+                  "classes_label": "6d"
+                },
+                {
+                  "classes": [
+                    "6d"
+                  ],
+                  "group": "",
+                  "periods": "4.",
+                  "subject": "Ku",
+                  "teacher": "",
+                  "teacher_old": "VAN",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "6",
+                  "classes_label": "6d"
+                },
+                {
+                  "classes": [
+                    "7a"
+                  ],
+                  "group": "",
+                  "periods": "6.–7.",
+                  "subject": "Fr",
+                  "teacher": "QUI",
+                  "teacher_old": "",
+                  "room": "112",
+                  "room_old": "113",
+                  "kind": "room_change",
+                  "kind_label": "Raumänderung",
+                  "note": "Aufgaben im Moodle",
+                  "grade": "7",
+                  "classes_label": "7a"
+                },
+                {
+                  "classes": [
+                    "7a"
+                  ],
+                  "group": "",
+                  "periods": "7.–8.",
+                  "subject": "WiPo",
+                  "teacher": "HRT",
+                  "teacher_old": "",
+                  "room": "209",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Bitte das Arbeitsheft mitbringen, die Übungen zu Kapitel 4 werden in der Stunde besprochen",
+                  "grade": "7",
+                  "classes_label": "7a"
+                },
+                {
+                  "classes": [
+                    "7b"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "Bio",
+                  "teacher": "KLM",
+                  "teacher_old": "",
+                  "room": "307",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "",
+                  "grade": "7",
+                  "classes_label": "7b"
+                },
+                {
+                  "classes": [
+                    "7b"
+                  ],
+                  "group": "",
+                  "periods": "6.",
+                  "subject": "En",
+                  "teacher": "T-K",
+                  "teacher_old": "ROS",
+                  "room": "104",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Klausur",
+                  "grade": "7",
+                  "classes_label": "7b"
+                },
+                {
+                  "classes": [
+                    "7c"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "Ku",
+                  "teacher": "SNR",
+                  "teacher_old": "NIE",
+                  "room": "104",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Selbststudium in der Bibliothek",
+                  "grade": "7",
+                  "classes_label": "7c"
+                },
+                {
+                  "classes": [
+                    "7c"
+                  ],
+                  "group": "",
+                  "periods": "6.",
+                  "subject": "WiPo",
+                  "teacher": "GUT",
+                  "teacher_old": "",
+                  "room": "307",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "",
+                  "grade": "7",
+                  "classes_label": "7c"
+                },
+                {
+                  "classes": [
+                    "7d"
+                  ],
+                  "group": "",
+                  "periods": "5.",
+                  "subject": "WiPo",
+                  "teacher": "BEC",
+                  "teacher_old": "KLM",
+                  "room": "204",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "7",
+                  "classes_label": "7d"
+                },
+                {
+                  "classes": [
+                    "7d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Ma",
+                  "teacher": "SNR",
+                  "teacher_old": "",
+                  "room": "015",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Aufgaben im Moodle",
+                  "grade": "7",
+                  "classes_label": "7d"
+                },
+                {
+                  "classes": [
+                    "8a"
+                  ],
+                  "group": "",
+                  "periods": "6.",
+                  "subject": "Fr",
+                  "teacher": "FEN",
+                  "teacher_old": "",
+                  "room": "179",
+                  "room_old": "209",
+                  "kind": "room_change",
+                  "kind_label": "Raumänderung",
+                  "note": "",
+                  "grade": "8",
+                  "classes_label": "8a"
+                },
+                {
+                  "classes": [
+                    "8b"
+                  ],
+                  "group": "",
+                  "periods": "5.",
+                  "subject": "If",
+                  "teacher": "DOR",
+                  "teacher_old": "ROS",
+                  "room": "214",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "8",
+                  "classes_label": "8b"
+                },
+                {
+                  "classes": [
+                    "8c"
+                  ],
+                  "group": "",
+                  "periods": "8.",
+                  "subject": "Rel",
+                  "teacher": "NIE",
+                  "teacher_old": "FEN",
+                  "room": "179",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Klausur",
+                  "grade": "8",
+                  "classes_label": "8c"
+                },
+                {
+                  "classes": [
+                    "8d"
+                  ],
+                  "group": "",
+                  "periods": "7.–8.",
+                  "subject": "En",
+                  "teacher": "",
+                  "teacher_old": "SNR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "8",
+                  "classes_label": "8d"
+                },
+                {
+                  "classes": [
+                    "9a"
+                  ],
+                  "group": "",
+                  "periods": "4.–5.",
+                  "subject": "Bio",
+                  "teacher": "KLM",
+                  "teacher_old": "DOR",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "9",
+                  "classes_label": "9a"
+                },
+                {
+                  "classes": [
+                    "9b"
+                  ],
+                  "group": "",
+                  "periods": "1.",
+                  "subject": "Ku",
+                  "teacher": "",
+                  "teacher_old": "QUI",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "9",
+                  "classes_label": "9b"
+                },
+                {
+                  "classes": [
+                    "9c"
+                  ],
+                  "group": "",
+                  "periods": "1.",
+                  "subject": "Sp",
+                  "teacher": "VAN",
+                  "teacher_old": "",
+                  "room": "214",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "",
+                  "grade": "9",
+                  "classes_label": "9c"
+                },
+                {
+                  "classes": [
+                    "9d"
+                  ],
+                  "group": "",
+                  "periods": "7.",
+                  "subject": "Bio",
+                  "teacher": "BEC",
+                  "teacher_old": "",
+                  "room": "307",
+                  "room_old": "201",
+                  "kind": "room_change",
+                  "kind_label": "Raumänderung",
+                  "note": "",
+                  "grade": "9",
+                  "classes_label": "9d"
+                },
+                {
+                  "classes": [
+                    "10a"
+                  ],
+                  "group": "",
+                  "periods": "1.",
+                  "subject": "Mu",
+                  "teacher": "LOR",
+                  "teacher_old": "",
+                  "room": "112",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "",
+                  "grade": "10",
+                  "classes_label": "10a"
+                },
+                {
+                  "classes": [
+                    "10b"
+                  ],
+                  "group": "",
+                  "periods": "4.–5.",
+                  "subject": "Mu",
+                  "teacher": "LOR",
+                  "teacher_old": "JOR",
+                  "room": "204",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Klausur",
+                  "grade": "10",
+                  "classes_label": "10b"
+                },
+                {
+                  "classes": [
+                    "10c"
+                  ],
+                  "group": "",
+                  "periods": "8.",
+                  "subject": "If",
+                  "teacher": "",
+                  "teacher_old": "DOR",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "10",
+                  "classes_label": "10c"
+                },
+                {
+                  "classes": [
+                    "10d"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "If",
+                  "teacher": "JOR",
+                  "teacher_old": "GUT",
+                  "room": "204",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Selbststudium in der Bibliothek",
+                  "grade": "10",
+                  "classes_label": "10d"
+                },
+                {
+                  "classes": [
+                    "Ea"
+                  ],
+                  "group": "",
+                  "periods": "1.",
+                  "subject": "De",
+                  "teacher": "GUT",
+                  "teacher_old": "BEC",
+                  "room": "015",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Klausur",
+                  "grade": "E",
+                  "classes_label": "Ea"
+                },
+                {
+                  "classes": [
+                    "Eb"
+                  ],
+                  "group": "",
+                  "periods": "2.–3.",
+                  "subject": "Bio",
+                  "teacher": "",
+                  "teacher_old": "T-K",
+                  "room": "",
+                  "room_old": "",
+                  "kind": "cancelled",
+                  "kind_label": "Entfall",
+                  "note": "",
+                  "grade": "E",
+                  "classes_label": "Eb"
+                },
+                {
+                  "classes": [
+                    "Ec"
+                  ],
+                  "group": "",
+                  "periods": "6.–7.",
+                  "subject": "Sp",
+                  "teacher": "ROS",
+                  "teacher_old": "VAN",
+                  "room": "180",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Selbststudium in der Bibliothek",
+                  "grade": "E",
+                  "classes_label": "Ec"
+                },
+                {
+                  "classes": [
+                    "Ed"
+                  ],
+                  "group": "",
+                  "periods": "4.",
+                  "subject": "De",
+                  "teacher": "GUT",
+                  "teacher_old": "T-K",
+                  "room": "104",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "",
+                  "grade": "E",
+                  "classes_label": "Ed"
+                },
+                {
+                  "classes": [
+                    "Q1a"
+                  ],
+                  "group": "",
+                  "periods": "3.",
+                  "subject": "Ku",
+                  "teacher": "ROS",
+                  "teacher_old": "BEC",
+                  "room": "307",
+                  "room_old": "",
+                  "kind": "substitution",
+                  "kind_label": "Vertretung",
+                  "note": "Bitte Zeichenmappe und Acrylfarben mitbringen, die Arbeit am Selbstporträt wird fortgesetzt und am Ende der Stunde eingesammelt",
+                  "grade": "Q1",
+                  "classes_label": "Q1a"
+                },
+                {
+                  "classes": [
+                    "Q1c",
+                    "Q1d",
+                    "Q2a",
+                    "Q2b",
+                    "Q2d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Gr",
+                  "teacher": "JOR",
+                  "teacher_old": "",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "Q1",
+                  "classes_label": "Q1c, d"
+                },
+                {
+                  "classes": [
+                    "Q1c",
+                    "Q1d",
+                    "Q2a",
+                    "Q2b",
+                    "Q2d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "Gr",
+                  "teacher": "JOR",
+                  "teacher_old": "",
+                  "room": "062",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "Q2",
+                  "classes_label": "Q2a, b, d"
+                },
+                {
+                  "classes": [
+                    "Q2b",
+                    "Q2c",
+                    "Q2d"
+                  ],
+                  "group": "",
+                  "periods": "8.–9.",
+                  "subject": "If",
+                  "teacher": "T-K",
+                  "teacher_old": "",
+                  "room": "G10",
+                  "room_old": "",
+                  "kind": "other",
+                  "kind_label": "Text",
+                  "note": "Klausur",
+                  "grade": "Q2",
+                  "classes_label": "Q2b–d"
+                }
+              ]
+            }
+          ],
+          "news": null,
+          "updated_at": "2026-10-19T07:42:00+02:00",
+          "fetched_at": "2026-10-19T10:38:00+02:00",
+          "embed_url": "https://webuntis.example.org/WebUntis/monitor?school=katharineum&monitorType=subst",
+          "mode": "live",
+          "expand_pages": 2
+        }
+      },
+      "right": {
+        "kind": "media",
+        "data": {
+          "seconds": 10,
+          "per_screen": 1,
+          "pages": [
+            {
+              "url": "/media/monitor/pages/fixture-portrait.svg",
+              "width": 2715,
+              "height": 3840,
+              "orientation": "portrait"
+            }
+          ]
+        }
+      },
+      "left_percent": 55
+    }
+  }
+}
