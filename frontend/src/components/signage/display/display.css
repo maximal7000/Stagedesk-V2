@@ -58,11 +58,20 @@
   font-stretch: 100%;
 }
 
-/* Cabin has no tabular figures. A box as wide as "00:00:00" keeps the ticking clock from
-   shifting its neighbours; per-digit boxes would tear the narrow "1" apart. */
+/* Cabin has no tabular figures. The time starts at the same spot in a block as wide as the widest possible
+   time ("0" is the widest digit, 0.61 em; ":" 0.18 em), so neither the neighbours nor the digits before a
+   changing one move. Only the last digit shifts a little every ten seconds. */
 .d-clock {
   display: inline-block;
-  min-width: 4em;
+  text-align: left;
+}
+
+.d-clock-seconds {
+  width: 4.1em;
+}
+
+.d-clock-short {
+  width: 2.7em;
 }
 
 /* The footer row is as wide as the content above it, the clock box included: footer columns measured

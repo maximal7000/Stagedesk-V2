@@ -11,7 +11,7 @@ export default function WideFrame({ scheme, clock, footer, wheel = true, stripe 
         {(footer || clock) && (
           <div className="d-footer-row flex h-[4.75rem] shrink-0 gap-[1.25rem]">
             <div className="min-w-0 flex-1">{footer}</div>
-            {clock && <ClockBox variant="box" weather={clock.showWeather ? clock.weather : null} staleSince={clock.staleSince} />}
+            {clock && <ClockBox variant="box" weather={clock.showWeather ? clock.weather : null} staleSince={clock.staleSince} seconds={clock.seconds !== false} />}
           </div>
         )}
       </div>

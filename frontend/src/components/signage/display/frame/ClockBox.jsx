@@ -1,29 +1,25 @@
 import { useClock } from '../lib/useClock'
 import { formatLongDate, formatTemperature, formatTime, formatTimeSeconds, formatWeekday } from '../lib/format'
 
-// Cabin's digits differ in width ("1" is half a "0"), so the changing seconds sat a little left or right
-// every second. The two seconds digits get cells as wide as the widest digit ("0", 0.61 em); hours and
-// minutes stay proportional and only move once a minute.
-export function ClockDigits({ time }) {
-  const text = formatTimeSeconds(time)
-  const head = text.slice(0, -2)
+// Cabin's digits differ in width ("1" is half a "0"). The time starts at the same spot in a block as wide
+// as the widest possible time (.d-clock-seconds / .d-clock-short), so a changing last digit moves nothing
+// before it; the block itself is placed left, centred (box) or right.
+function ClockTime({ time, seconds, className }) {
   return (
-    <>
-      {head}
-      {[...text.slice(-2)].map((digit, i) => (
-        <span key={i} className="inline-block w-[0.61em] text-center">{digit}</span>
-      ))}
-    </>
+    <span className={`d-head d-clock ${seconds ? 'd-clock-seconds' : 'd-clock-short'} text-left whitespace-nowrap ${className}`}>
+      {seconds ? formatTimeSeconds(time) : formatTime(time)}
+    </span>
   )
 }
 
 // The only per-second rendering besides useClock users such as the retry countdown.
-export default function ClockBox({ now, weather, staleSince, variant = 'header', stacked = false, className = '' }) {
+// `seconds`: per view (DisplayView.clock_seconds); off shows HH:MM.
+export default function ClockBox({ now, weather, staleSince, variant = 'header', stacked = false, seconds = true, className = '' }) {
   const tick = useClock()
   const time = now ?? tick
-  if (variant === 'box') return <BoxClock time={time} weather={weather} staleSince={staleSince} className={className} />
-  if (variant === 'compact') return <CompactClock time={time} staleSince={staleSince} className={className} />
-  return <HeaderClock time={time} weather={weather} staleSince={staleSince} stacked={stacked} className={className} />
+  if (variant === 'box') return <BoxClock time={time} weather={weather} staleSince={staleSince} seconds={seconds} className={className} />
+  if (variant === 'compact') return <CompactClock time={time} staleSince={staleSince} seconds={seconds} className={className} />
+  return <HeaderClock time={time} weather={weather} staleSince={staleSince} stacked={stacked} seconds={seconds} className={className} />
 }
 
 function StaleHint({ since, className = '' }) {
@@ -35,11 +31,11 @@ function StaleHint({ since, className = '' }) {
   )
 }
 
-function HeaderClock({ time, weather, staleSince, stacked, className }) {
+function HeaderClock({ time, weather, staleSince, stacked, seconds, className }) {
   return (
     <header className={`flex items-end justify-between gap-[3rem] d-rule-bottom pb-[1.125rem] ${className}`}>
       <div className="flex items-baseline gap-[2.25rem]">
-        <span className="d-head d-clock text-[8.25rem] leading-[0.9] tracking-[-0.01em] whitespace-nowrap"><ClockDigits time={time} /></span>
+        <ClockTime time={time} seconds={seconds} className="text-[8.25rem] leading-[0.9] tracking-[-0.01em]" />
         {staleSince != null && <StaleHint since={staleSince} className="text-[1.75rem] text-(--d-fg-soft)" />}
       </div>
       <div className={`flex pb-[0.5rem] ${stacked ? 'flex-col items-end gap-[1.25rem]' : 'items-end gap-[3.5rem]'}`}>
@@ -62,7 +58,7 @@ function WeatherBlock({ weather }) {
   )
 }
 
-function BoxClock({ time, weather, staleSince, className }) {
+function BoxClock({ time, weather, staleSince, seconds, className }) {
   const side = weather || staleSince != null
   return (
     <div data-clock="box" className={`d-card flex min-w-[18rem] items-center justify-center gap-[1.75rem] px-[1.75rem] text-(--d-fg) ${className}`}>
@@ -82,15 +78,15 @@ function BoxClock({ time, weather, staleSince, className }) {
           )}
         </div>
       )}
-      <span className="d-head d-clock text-center text-[3.5rem] leading-none whitespace-nowrap"><ClockDigits time={time} /></span>
+      <ClockTime time={time} seconds={seconds} className="text-[3.5rem] leading-none" />
     </div>
   )
 }
 
-function CompactClock({ time, staleSince, className }) {
+function CompactClock({ time, staleSince, seconds, className }) {
   return (
     <div className={`flex flex-col items-end ${className}`}>
-      <span className="d-head d-clock text-right leading-[0.9] whitespace-nowrap"><ClockDigits time={time} /></span>
+      <ClockTime time={time} seconds={seconds} className="leading-[0.9]" />
       {staleSince != null && <StaleHint since={staleSince} className="mt-[0.75rem] text-[1.5rem] text-(--d-fg-soft)" />}
     </div>
   )
