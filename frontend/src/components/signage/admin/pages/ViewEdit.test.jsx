@@ -208,6 +208,18 @@ describe('ViewEdit', () => {
     expect(api.updateView).toHaveBeenCalledWith(2, { webuntis_url: 'https://eigen.example', webuntis_link_id: null })
   })
 
+  it('Allgemein: das Wetter-Ortsfeld steht direkt unter „Wetter anzeigen“, vor „Sekunden anzeigen“', async () => {
+    VIEWS[1].show_weather = true
+    try {
+      await mount('/signage-admin/views/1')
+    } finally {
+      VIEWS[1].show_weather = false
+    }
+    const city = container.querySelector('input[placeholder="Ort, zum Beispiel Lübeck"]')
+    const seconds = [...container.querySelectorAll('label')].find((l) => l.textContent.includes('Sekunden anzeigen'))
+    expect(city.compareDocumentPosition(seconds) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   it('Allgemein: Sekunden anzeigen ausschalten speichert clock_seconds', async () => {
     await mount('/signage-admin/views/1')
     const box = [...container.querySelectorAll('label')].find((l) => l.textContent.includes('Sekunden anzeigen')).querySelector('input')
