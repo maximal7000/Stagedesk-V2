@@ -1,13 +1,14 @@
 import { useClock } from '../lib/useClock'
 import { formatLongDate, formatTemperature, formatTime, formatTimeSeconds, formatWeekday } from '../lib/format'
 
-// Cabin's digits differ in width ("1" is half a "0"). The time starts at the same spot in a block as wide
-// as the widest possible time (.d-clock-seconds / .d-clock-short), so a changing last digit moves nothing
-// before it; the block itself is placed left, centred (box) or right.
+// Cabin's digits differ in width ("1" is half a "0"). Only the two seconds digits sit in a field as wide as
+// "00", left-aligned with their normal spacing, so a changing second moves nothing; the rest of the time
+// keeps its natural width and is placed normally (centred in boxes). It moves at most once a minute.
 function ClockTime({ time, seconds, className }) {
+  const text = seconds ? formatTimeSeconds(time) : formatTime(time)
   return (
-    <span className={`d-head d-clock ${seconds ? 'd-clock-seconds' : 'd-clock-short'} text-left whitespace-nowrap ${className}`}>
-      {seconds ? formatTimeSeconds(time) : formatTime(time)}
+    <span className={`d-head d-clock whitespace-nowrap ${className}`}>
+      {seconds ? <>{text.slice(0, -2)}<span className="d-clock-sec">{text.slice(-2)}</span></> : text}
     </span>
   )
 }

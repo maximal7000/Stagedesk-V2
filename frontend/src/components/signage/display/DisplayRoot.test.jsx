@@ -149,13 +149,13 @@ describe('DisplayRoot', () => {
     let el = render({ payload: { screen, view: media(2), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelectorAll('img[src="/media/p-0.webp"]')).toHaveLength(2)
     expect(el.querySelector('.d-footer .d-clock')).not.toBeNull()
-    expect(el.querySelector('.d-footer .d-clock').classList.contains('d-clock-seconds')).toBe(true)
+    expect(el.querySelector('.d-footer .d-clock .d-clock-sec').textContent).toMatch(/^\d{2}$/)
     act(() => root.unmount())
     el = render({ payload: { screen, view: media(1), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelector('.d-footer')).toBeNull()
     act(() => root.unmount())
     el = render({ payload: { screen, view: { ...media(2), clock_seconds: false }, mode: null }, state: 'ok', lastOkAt })
-    expect(el.querySelector('.d-footer .d-clock').classList.contains('d-clock-short')).toBe(true)
+    expect(el.querySelector('.d-footer .d-clock .d-clock-sec')).toBeNull()
   })
 
   it('Medien: der Stand-Hinweis steht neben der Uhr unter den Seiten, nicht darunter', () => {
@@ -183,11 +183,14 @@ describe('DisplayRoot', () => {
       expect(boxClock(el).textContent).toMatch(/^\d{2}:\d{2}$/)
     })
 
-    it('Zeit steht links in einem festen Block, der Block mitten im Kasten', () => {
+    it('nur die Sekunden stehen in einem festen Feld, die Uhrzeit selbst mitten im Kasten', () => {
       const el = render({ payload: { screen, view: departures({ clock_seconds: true }), mode: null }, state: 'ok', lastOkAt })
       const clock = boxClock(el)
-      expect(clock.classList.contains('d-clock-seconds')).toBe(true)
-      expect(clock.classList.contains('text-left')).toBe(true)
+      const sec = clock.querySelector('.d-clock-sec')
+      expect(sec.textContent).toMatch(/^\d{2}$/)
+      expect(clock.textContent.endsWith(sec.textContent)).toBe(true)
+      // No fixed width on the whole time: it is as wide as its digits and centred by the box
+      expect([...clock.classList].some((c) => c.startsWith('w-') || c === 'd-clock-seconds' || c === 'd-clock-short')).toBe(false)
       expect(clock.parentElement.classList.contains('justify-center')).toBe(true)
     })
 

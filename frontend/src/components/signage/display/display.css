@@ -58,20 +58,17 @@
   font-stretch: 100%;
 }
 
-/* Cabin has no tabular figures. The time starts at the same spot in a block as wide as the widest possible
-   time ("0" is the widest digit, 0.61 em; ":" 0.18 em), so neither the neighbours nor the digits before a
-   changing one move. Only the last digit shifts a little every ten seconds. */
+/* Cabin has no tabular figures ("1" 0.30 em, "0" 0.61 em). The seconds sit in a field as wide as "00",
+   left-aligned, so the time before them never moves with the ticking seconds; only the last digit shifts a
+   little every ten seconds. Hours and minutes keep their natural width, so a centred time stays centred. */
 .d-clock {
   display: inline-block;
+}
+
+.d-clock-sec {
+  display: inline-block;
+  width: 1.22em;
   text-align: left;
-}
-
-.d-clock-seconds {
-  width: 4.1em;
-}
-
-.d-clock-short {
-  width: 2.7em;
 }
 
 /* The footer row is as wide as the content above it, the clock box included: footer columns measured

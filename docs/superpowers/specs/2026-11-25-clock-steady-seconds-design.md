@@ -41,3 +41,9 @@ Manche Ansichten brauchen keine Sekunden.
 - Genaue Blockbreiten (an Cabin messen, mit kleinem Puffer).
 - Wo die Uhr den Schalter herbekommt (Prop durch Frame/ClockBox).
 - Tests und Screenshots.
+
+## Nachtrag (nach dem ersten Screenshot)
+Der fest breite Block für die ganze Uhrzeit ließ schmale Zeiten wie „10:42:00“ sichtbar links von der Mitte
+der Kästen stehen. Jetzt hat nur das Sekundenpaar ein festes Feld (1,22 em wie „00“, linksbündig); der Rest
+der Uhrzeit hat seine natürliche Breite und wird zentriert. Beim Sekundenwechsel bewegt sich weiter nichts
+davor; die Abweichung von der Mitte ist höchstens das halbe ungenutzte Sekundenfeld (rund 0,3 em).
