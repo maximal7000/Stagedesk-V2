@@ -10,7 +10,7 @@ export function CiWheel({ triple = false }) {
     <div
       data-wheel
       aria-hidden="true"
-      className={`d-wheel pointer-events-none absolute left-0 top-0 z-0 select-none ${import.meta.env.VITE_MEDIA_CLOCK === '3' ? 'h-[68%]' : 'h-full'}`}
+      className="d-wheel pointer-events-none absolute left-0 top-0 z-0 h-full select-none"
       style={{ WebkitMaskImage: `url(${url})`, maskImage: `url(${url})` }}
     >
       <img src={url} alt="" draggable="false" className="invisible h-full w-auto max-w-none" />

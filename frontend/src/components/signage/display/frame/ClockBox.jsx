@@ -21,7 +21,6 @@ export default function ClockBox({ now, weather, staleSince, variant = 'header',
   const time = now ?? tick
   if (variant === 'box') return <BoxClock time={time} weather={weather} staleSince={staleSince} seconds={seconds} className={className} />
   if (variant === 'corner') return <CornerClock time={time} staleSince={staleSince} seconds={seconds} className={className} />
-  if (variant === 'inline') return <InlineClock time={time} staleSince={staleSince} seconds={seconds} className={className} />
   if (variant === 'compact') return <CompactClock time={time} staleSince={staleSince} seconds={seconds} row={row} className={className} />
   return <HeaderClock time={time} weather={weather} staleSince={staleSince} stacked={stacked} seconds={seconds} className={className} />
 }
@@ -87,7 +86,7 @@ function BoxClock({ time, weather, staleSince, seconds, className }) {
   )
 }
 
-// Bottom left in the logo column of the frame: time, weekday and date, left-aligned.
+// Bottom of the logo column (NormalFrame corner): time, weekday and date, left-aligned.
 function CornerClock({ time, staleSince, seconds, className }) {
   return (
     <div data-clock="corner" className={`flex flex-col items-start ${className}`}>
@@ -97,17 +96,6 @@ function CornerClock({ time, staleSince, seconds, className }) {
         <div>{formatLongDate(time)}</div>
       </div>
       {staleSince != null && <StaleHint since={staleSince} className="mt-[0.75rem] text-[1.5rem] text-(--d-fg-soft)" />}
-    </div>
-  )
-}
-
-// One row: time, then weekday and date (footer under the pages, left)
-function InlineClock({ time, staleSince, seconds, className }) {
-  return (
-    <div data-clock="inline" className={`flex items-baseline gap-[1.75rem] ${className}`}>
-      <ClockTime time={time} seconds={seconds} className="leading-[0.9]" />
-      <span className="d-head text-[1.75rem] uppercase tracking-[0.06em] text-(--d-fg-soft)">{formatWeekday(time)}, {formatLongDate(time)}</span>
-      {staleSince != null && <StaleHint since={staleSince} className="text-[1.5rem] text-(--d-fg-soft)" />}
     </div>
   )
 }

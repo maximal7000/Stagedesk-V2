@@ -142,31 +142,42 @@ describe('DisplayRoot', () => {
     expect(el.textContent).toContain('Keine Medien.')
   })
 
-  it('Medien: mehrere Seiten nebeneinander bekommen die Uhr unten im Kasten, eine Seite die Uhr daneben', () => {
-    const page = { url: '/media/p-0.webp', width: 1240, height: 1754, orientation: 'portrait' }
-    const media = (perScreen) => ({ id: 6, kind: 'media', layout: 'normal', page_seconds: 15, show_weather: false, weather: null, qr: null,
-      data: { seconds: 10, per_screen: perScreen, pages: [page, page] } })
+  const mediaPage = { url: '/media/p-0.webp', width: 1240, height: 1754, orientation: 'portrait' }
+  const media = (perScreen, extra = {}) => ({ id: 6, kind: 'media', layout: 'normal', page_seconds: 15, show_weather: false, weather: null,
+    qr: null, data: { seconds: 10, per_screen: perScreen, pages: [mediaPage, mediaPage] }, ...extra })
+
+  it('Medien, Normal, mehrere Seiten: Uhr mit Datum unten in der Logo-Spalte, im Rahmen (CI-Schrift), keine Uhr-Zeile', () => {
     let el = render({ payload: { screen, view: media(2), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelectorAll('img[src="/media/p-0.webp"]')).toHaveLength(2)
-    expect(el.querySelector('.d-footer .d-clock')).not.toBeNull()
-    expect(el.querySelector('.d-footer .d-clock .d-clock-sec').textContent).toMatch(/^\d{2}$/)
+    const corner = el.querySelector('.d-root [data-frame-corner] [data-clock="corner"]')
+    expect(corner).not.toBeNull()
+    expect(corner.querySelector('.d-clock .d-clock-sec').textContent).toMatch(/^\d{2}$/)
+    expect(corner.textContent).toMatch(/Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag/i)
+    expect(el.querySelector('.d-footer')).toBeNull()
+    act(() => root.unmount())
+    el = render({ payload: { screen, view: media(2, { clock_seconds: false }), mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('[data-clock="corner"] .d-clock-sec')).toBeNull()
+  })
+
+  it('Medien, Breit, mehrere Seiten: Uhr unten rechts unter den Seiten; eine Seite: Uhr daneben', () => {
+    let el = render({ payload: { screen, view: media(2, { layout: 'wide' }), mode: null }, state: 'ok', lastOkAt })
+    expect(el.querySelector('.d-footer-row .d-clock')).not.toBeNull()
+    expect(el.querySelector('[data-clock="corner"]')).toBeNull()
     act(() => root.unmount())
     el = render({ payload: { screen, view: media(1), mode: null }, state: 'ok', lastOkAt })
     expect(el.querySelector('.d-footer')).toBeNull()
-    act(() => root.unmount())
-    el = render({ payload: { screen, view: { ...media(2), clock_seconds: false }, mode: null }, state: 'ok', lastOkAt })
-    expect(el.querySelector('.d-footer .d-clock .d-clock-sec')).toBeNull()
+    expect(el.querySelector('[data-clock="corner"]')).toBeNull()
   })
 
-  it('Medien: der Stand-Hinweis steht neben der Uhr unter den Seiten, nicht darunter', () => {
-    const page = { url: '/media/p-0.webp', width: 1240, height: 1754, orientation: 'portrait' }
-    const view = { id: 6, kind: 'media', layout: 'normal', page_seconds: 15, show_weather: false, weather: null, qr: null,
-      data: { seconds: 10, per_screen: 2, pages: [page, page] } }
-    const el = render({ payload: { screen, view, mode: null }, state: 'stale', lastOkAt })
-    const clock = el.querySelector('.d-footer .d-clock')
-    expect(clock.parentElement.textContent).toContain('Stand')
+  it('Medien: der Stand-Hinweis steht bei der Uhr in der Logo-Ecke bzw. neben der Uhr unter den Seiten', () => {
+    let el = render({ payload: { screen, view: media(2), mode: null }, state: 'stale', lastOkAt })
+    expect(el.querySelector('[data-clock="corner"]').textContent).toContain('Stand')
+    act(() => root.unmount())
+    el = render({ payload: { screen, view: media(2, { layout: 'wide' }), mode: null }, state: 'stale', lastOkAt })
+    const clock = el.querySelector('.d-footer-row .d-clock')
     // One row: the footer is 4.75rem high, a second line would push the clock up into the pages
     expect(clock.parentElement.classList.contains('flex-row')).toBe(true)
+    expect(clock.parentElement.textContent).toContain('Stand')
   })
 
   describe('Uhr', () => {
