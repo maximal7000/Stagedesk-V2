@@ -84,6 +84,20 @@ function Slide({ pages, layout, orientation, frame, fadeIn, clockBelow }) {
       </div>
     )
   }
+  // Layout "Normal" in landscape: the clock with weekday and date stands at the bottom of the logo column,
+  // under the wheel; no footer row, so the pages get the whole height
+  if (clockBelow && layout === 'normal' && orientation !== 'portrait' && frame.wheel !== false) {
+    const corner = <ClockBox variant="corner" staleSince={frame.staleSince} seconds={frame.seconds !== false} className="text-[3.75rem]" />
+    return (
+      <div className={`absolute inset-0 ${fade}`}>
+        <Frame layout={layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe} corner={corner}>
+          <div className="flex h-full gap-[1.5rem]">
+            {pages.map((p, i) => <Page key={`${p.url}-${i}`} page={p} framed />)}
+          </div>
+        </Frame>
+      </div>
+    )
+  }
   if (clockBelow) {
     const footer = (
       // d-footer-item: the footer shows only with an item in it (display.css). No box: on the white frame

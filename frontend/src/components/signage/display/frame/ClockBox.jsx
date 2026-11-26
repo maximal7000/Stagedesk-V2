@@ -20,6 +20,7 @@ export default function ClockBox({ now, weather, staleSince, variant = 'header',
   const tick = useClock()
   const time = now ?? tick
   if (variant === 'box') return <BoxClock time={time} weather={weather} staleSince={staleSince} seconds={seconds} className={className} />
+  if (variant === 'corner') return <CornerClock time={time} staleSince={staleSince} seconds={seconds} className={className} />
   if (variant === 'compact') return <CompactClock time={time} staleSince={staleSince} seconds={seconds} row={row} className={className} />
   return <HeaderClock time={time} weather={weather} staleSince={staleSince} stacked={stacked} seconds={seconds} className={className} />
 }
@@ -81,6 +82,20 @@ function BoxClock({ time, weather, staleSince, seconds, className }) {
         </div>
       )}
       <ClockTime time={time} seconds={seconds} className="text-[3.5rem] leading-none" />
+    </div>
+  )
+}
+
+// Bottom of the logo column (NormalFrame corner): time, weekday and date, left-aligned.
+function CornerClock({ time, staleSince, seconds, className }) {
+  return (
+    <div data-clock="corner" className={`flex flex-col items-start ${className}`}>
+      <ClockTime time={time} seconds={seconds} className="leading-[0.9]" />
+      <div className="d-head mt-[0.875rem] text-[1.75rem] font-normal uppercase leading-[1.3] tracking-[0.06em] text-(--d-fg-soft)">
+        <div>{formatWeekday(time)}</div>
+        <div>{formatLongDate(time)}</div>
+      </div>
+      {staleSince != null && <StaleHint since={staleSince} className="mt-[0.75rem] text-[1.5rem] text-(--d-fg-soft)" />}
     </div>
   )
 }
