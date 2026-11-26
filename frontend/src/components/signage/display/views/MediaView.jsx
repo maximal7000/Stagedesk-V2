@@ -86,7 +86,53 @@ function Slide({ pages, layout, orientation, frame, fadeIn, clockBelow }) {
   }
   // Layout "Normal" with the logo column: the clock stands at its bottom, under the logo; no footer row,
   // so the pages get the whole height
-  if (clockBelow && layout === 'normal' && orientation !== 'portrait' && frame.wheel !== false) {
+  const VARIANT = import.meta.env.VITE_MEDIA_CLOCK || 'logo'
+  if (clockBelow && layout === 'normal' && orientation !== 'portrait' && frame.wheel !== false && VARIANT === 'logo') {
+    return (
+      <div className={`absolute inset-0 ${fade}`}>
+        <Frame layout={layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
+          <div className="flex h-full gap-[1.5rem]">
+            {pages.map((p, i) => <Page key={`${p.url}-${i}`} page={p} framed />)}
+          </div>
+        </Frame>
+        <ClockBox variant="corner" staleSince={frame.staleSince} seconds={frame.seconds !== false}
+          className="absolute bottom-[3.5rem] left-[3rem] z-20 text-[4.25rem]" />
+      </div>
+    )
+  }
+  if (clockBelow && layout === 'normal' && VARIANT === '1') {
+    const footer = (
+      <div className="d-footer-item flex h-full items-end justify-start">
+        <ClockBox variant="inline" staleSince={frame.staleSince} seconds={frame.seconds !== false} className="text-[4.25rem]" />
+      </div>
+    )
+    return (
+      <div className={`absolute inset-0 ${fade}`}>
+        <Frame layout={layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe} footer={footer}>
+          <div className="flex h-full gap-[1.5rem]">
+            {pages.map((p, i) => <Page key={`${p.url}-${i}`} page={p} framed />)}
+          </div>
+        </Frame>
+      </div>
+    )
+  }
+  if (clockBelow && layout === 'normal' && VARIANT === '2') {
+    return (
+      <div className={`absolute inset-0 ${fade}`}>
+        <Frame layout={layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>
+          <div className="flex h-full gap-[2rem]">
+            <div className="flex shrink-0 flex-col justify-end">
+              <ClockBox variant="corner" staleSince={frame.staleSince} seconds={frame.seconds !== false} className="text-[3.5rem]" />
+            </div>
+            <div className="flex min-w-0 flex-1 gap-[1.5rem]">
+              {pages.map((p, i) => <Page key={`${p.url}-${i}`} page={p} framed />)}
+            </div>
+          </div>
+        </Frame>
+      </div>
+    )
+  }
+  if (clockBelow && layout === 'normal' && VARIANT === '3') {
     return (
       <div className={`absolute inset-0 ${fade}`}>
         <Frame layout={layout} scheme={frame.scheme} orientation={orientation} wheel={frame.wheel} stripe={frame.stripe}>

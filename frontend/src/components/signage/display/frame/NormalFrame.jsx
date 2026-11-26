@@ -5,9 +5,9 @@ export default function NormalFrame({ scheme, clock, footer, wheel = true, strip
   return (
     <div className={frameRootClass(scheme, 'normal')}>
       {wheel && <CiWheel />}
-      {stripe && <CiStripe className="w-[8rem]" />}
+      {stripe && <CiStripe className={import.meta.env.VITE_MEDIA_CLOCK === '2' ? 'w-[3rem]' : 'w-[8rem]'} />}
       <div
-        className={`absolute inset-y-0 z-10 flex flex-col pb-[3.5rem] pt-[4.25rem] ${wheel ? 'left-[23.75rem]' : 'left-[6rem]'} ${stripe ? 'right-[13.75rem]' : 'right-[6rem]'}`}
+        className={`absolute inset-y-0 z-10 flex flex-col pb-[3.5rem] pt-[4.25rem] ${wheel ? 'left-[23.75rem]' : 'left-[6rem]'} ${stripe ? (import.meta.env.VITE_MEDIA_CLOCK === '2' ? 'right-[8.75rem]' : 'right-[13.75rem]') : 'right-[6rem]'}`}
       >
         {clock && <ClockBox variant="header" weather={clock.showWeather ? clock.weather : null} staleSince={clock.staleSince} seconds={clock.seconds !== false} />}
         <main className="relative min-h-0 flex-1">{children}</main>
