@@ -48,7 +48,9 @@ const COLUMN_DEFS = {
   class: { head: 'Klasse', fr: 8, flag: 'class', cls: 'd-head font-medium', cell: (row) => row.classes_label },
   periods: { head: 'Std.', fr: 6, nowrap: true, cls: 'd-head', cell: (row) => row.periods },
   subject: {
-    head: 'Fach', fr: 6, flag: 'subject', nowrap: true, cls: 'd-text',
+    // Wraps like the room: a long subject ("Nachschreiben") stays in its column instead of running into the
+    // teacher column; short subjects fit on one line anyway
+    head: 'Fach', fr: 6, flag: 'subject', cls: 'd-text hyphens-auto',
     // A cancelled lesson: the subject struck through like a replaced value
     cell: (row) => (row.kind === 'cancelled' && row.subject ? <s className="text-(--d-muted)">{row.subject}</s> : row.subject),
   },
@@ -74,12 +76,29 @@ function tableColumns(data) {
     return !flag || flags[flag] !== false
   })
   const lead = groupBy === 'teacher' ? 'group' : 'class'
+  const fr = Object.fromEntries(keys.map((key) => [key, COLUMN_DEFS[key].fr]))
+  // The extra subject width comes from the note (it wraps anyway), so kind values like "Raumänderung" keep
+  // their room; without a note column the others give a little each
+  const extra = keys.includes('subject') ? subjectFr(data) - fr.subject : 0
+  fr.subject += extra
+  if (fr.note) fr.note -= extra
   return {
     keys,
     lead: (row) => (lead === 'group' ? row.group : row.classes_label),
     leadKey: lead,
-    template: keys.map((key) => `minmax(0, ${COLUMN_DEFS[key].fr}fr)`).join(' '),
+    template: keys.map((key) => `minmax(0, ${fr[key]}fr)`).join(' '),
   }
+}
+
+// Every row is its own grid with the same template, so a column cannot grow per row. A long subject word
+// ("Nachschreiben") widens the subject column for the whole plan, about 1.2 fr per letter, up to a limit;
+// beyond it the subject wraps in its column.
+const SUBJECT_FR_MAX = 18
+function subjectFr(data) {
+  const longest = (data.days ?? []).flatMap((day) => day.rows ?? [])
+    .flatMap((row) => String(row.subject ?? '').split(/\s+/))
+    .reduce((max, word) => Math.max(max, word.length), 0)
+  return Math.min(SUBJECT_FR_MAX, Math.max(COLUMN_DEFS.subject.fr, Math.ceil(longest * 1.2) + 1))
 }
 
 function isLive(data) {

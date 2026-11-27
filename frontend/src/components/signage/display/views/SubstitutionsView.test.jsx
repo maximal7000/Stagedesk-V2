@@ -109,6 +109,35 @@ describe('SubstitutionsView', () => {
     expect(rooms[1].querySelectorAll('wbr')).toHaveLength(2)
   })
 
+  it('langes Fach bricht in seiner Spalte um, auch durchgestrichen bei Entfall', () => {
+    const data = { days: [{
+      date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
+      rows: [row({ subject: 'Nachschreiben', kind: 'cancelled', kind_label: 'Entfall' })],
+    }] }
+    const el = render(<SubstitutionsView view={view(data)} />)
+    const subject = visible(el).querySelector('[data-column="subject"]')
+    expect(subject.querySelector('s').textContent).toBe('Nachschreiben')
+    expect(subject.className).not.toContain('whitespace-nowrap')
+    expect(subject.className).toContain('[overflow-wrap:anywhere]')
+  })
+
+  it('ein langes Fachwort macht die Fach-Spalte breiter, auf Kosten des Hinweises, kurze Fächer nicht', () => {
+    const template = (subjects) => {
+      const data = { days: [{
+        date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
+        rows: subjects.map((subject) => row({ subject })),
+      }] }
+      const el = render(<SubstitutionsView view={view(data)} />)
+      // Columns: class, periods, subject, teacher, room, kind, note
+      return visible(el).querySelector('[data-substitution-row]').style.gridTemplateColumns
+        .match(/\d+fr/g).map((v) => parseInt(v, 10))
+    }
+    expect(template(['De', 'En1'])).toEqual([8, 6, 6, 12, 10, 16, 27])
+    expect(template(['De', 'Nachschreiben'])).toEqual([8, 6, 17, 12, 10, 16, 16])
+    expect(template(['Wahlpflicht Naturwissenschaften'])).toEqual([8, 6, 18, 12, 10, 16, 15])
+    expect(template(['Info AG'])).toEqual([8, 6, 6, 12, 10, 16, 27])
+  })
+
   it('zeigt Altwerte durchgestrichen und die Art nach kind_label', () => {
     const data = { days: [{
       date: '2026-10-21', label: 'Heute', absent: [], affected: { classes: [], teachers: [] }, messages: [],
